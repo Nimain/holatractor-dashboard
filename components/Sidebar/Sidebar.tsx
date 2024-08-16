@@ -39,6 +39,12 @@ const getTranslation = (locale: string, translations: any) => {
   return translations[locale] || translations["en"];
 };
 
+type Translations = {
+  inventory: string;
+  billing: string;
+  settings: string;
+};
+
 const Sidebar = () => {
   const [activeLeftSIdeTag, setActiveLeftSideTag] = useState("Dashboard");
 
@@ -308,8 +314,7 @@ const Sidebar = () => {
         sv: "Attachments",
         en: "Attachments",
       }),
-      // route: "/Attachments",
-      route: "#",
+      route: "/Attachments",
     },
     {
       icon: (
@@ -515,7 +520,7 @@ const Sidebar = () => {
   ];
 
   // Define translations for "Inventory", "Billing", and "Settings"
-  const translations = {
+  const translations: Record<string, Translations> = {
     en: {
       inventory: "Inventory",
       billing: "Billing",
@@ -594,7 +599,7 @@ const Sidebar = () => {
 
       <div>
         <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
-          <Tooltip title={"Inventory"} placement="right">
+          <Tooltip title={translations[locale]?.inventory || translations.en.inventory} placement="right">
             <Image
               src={InsuranceIcon}
               className="w-[20px] h-auto object-cover"
@@ -631,7 +636,7 @@ const Sidebar = () => {
 
       <div>
           <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
-            <Tooltip title={"Billing"} placement="right">
+            <Tooltip title={translations[locale]?.billing || translations.en.billing} placement="right">
               <ReceiptIcon />
             </Tooltip>
           </div>
@@ -663,7 +668,7 @@ const Sidebar = () => {
       <div className="w-full h-[2px] bg-gray-300 rounded-full" />
 
           <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
-            <Tooltip title={"Settings"} placement="right">
+            <Tooltip title={translations[locale]?.settings || translations.en.settings} placement="right">
               <SettingsIcon />
             </Tooltip>
           </div>

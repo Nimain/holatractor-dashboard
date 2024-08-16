@@ -316,8 +316,7 @@ const ExpandedSidebar = () => {
         sv: "Attachments",
         en: "Attachments",
       }),
-      // route: "/Attachments",
-      route: "#",
+      route: "/Attachments",
     },
     {
       icon: (

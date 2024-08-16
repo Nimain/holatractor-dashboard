@@ -29,6 +29,11 @@ const Languages = () => {
     { name: "vsvenska", locale: "sv" },
   ];
 
+  // Find the name corresponding to the current locale
+  const currentLanguageName = allLanguages.find(
+    (lang) => lang.locale === language
+  )?.name || language; // Fallback to the locale if not found
+
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogTrigger asChild>
@@ -38,7 +43,7 @@ const Languages = () => {
             setDialogOpen(true);
           }}
         >
-          {language}
+          {currentLanguageName}
         </div>
       </DialogTrigger>
 
@@ -55,11 +60,13 @@ const Languages = () => {
             <p
               key={index}
               className={`px-[10px] py-[6px] rounded-md cursor-pointer ${
-                language === name
+                language === locale
                   ? "bg-green-400 text-white"
                   : "hover:bg-gray-200"
               } transition-all duration-500`}
-              onClick={() => dispatch(changeLanguage(locale))}
+              onClick={() => 
+                dispatch(changeLanguage(locale))
+              }
             >
               {name}
             </p>
