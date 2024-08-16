@@ -1,5 +1,6 @@
 "use client";
 
+import Menubar from "@/components/Menubar/Menubar";
 import { RootState } from "@/redux/store";
 import { uploadFileToS3 } from "@/utils/AWS/FileUpload";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
@@ -235,6 +236,8 @@ const NewAttachment = () => {
 
   return (
     <div className="w-full py-10 px-4 space-y-5">
+
+        <Menubar pagename={"New attachment"} />
 
     <Backdrop
         sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
