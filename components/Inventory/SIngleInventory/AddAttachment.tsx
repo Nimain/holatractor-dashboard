@@ -33,10 +33,9 @@ const AddAttachment = ({allAttachments, selectedAttachments,tractorId}: addAttac
 
     const router = useRouter()
 
-    // Assuming both arrays contain objects with unique IDs
-    const availableAttachments = allAttachments.filter(attachment =>
-        !selectedAttachments.some(selected => selected.id === attachment.id)
-    );
+    const availableAttachments = (allAttachments || []).filter(attachment =>
+        !(selectedAttachments || []).some(selected => selected.id === attachment.id)
+    );    
 
     function handleAddAttachment(attachmentId: string) {
         setAdding(true)

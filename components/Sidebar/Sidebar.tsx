@@ -207,28 +207,6 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={BookingIcon}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Bookings"
-        />
-      ),
-      name: getTranslation(locale, {
-        fr: "Réservations",
-        pt: "Reservas",
-        de: "Buchungen",
-        ko: "예약",
-        es: "Reservaciones",
-        sv: "Bokningar",
-        en: "Bookings",
-      }),
-      // route: "/Bookings/AllBookings",
-      route: "#",
-    },
-    {
-      icon: (
-        <Image
           src={BusinessIcon}
           className="w-[20px] h-auto object-cover"
           width={20}
@@ -334,8 +312,7 @@ const Sidebar = () => {
         sv: "Store",
         en: "Store",
       }),
-      // route: "/Store",
-      route: "#",
+      route: "/Store",
     },
   ];
 
@@ -426,6 +403,74 @@ const Sidebar = () => {
         en: "Accounting",
       }),
       // route: "/Accounting",
+      route: "#",
+    },
+  ];
+
+  const bookingList = [
+    {
+      icon: (
+        <Image
+          src={BookingIcon}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Bookings"
+        />
+      ),
+      name: getTranslation(locale, {
+        fr: "Réservations",
+        pt: "Reservas",
+        de: "Buchungen",
+        ko: "예약",
+        es: "Reservaciones",
+        sv: "Bokningar",
+        en: "Bookings",
+      }),
+      route: "/Bookings",
+    },
+    {
+      icon: (
+        <Image
+          src={BookingIcon}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Bookings"
+        />
+      ),
+      name: getTranslation(locale, {
+        fr: "Réservations",
+        pt: "Reservas",
+        de: "Buchungen",
+        ko: "예약",
+        es: "Reservaciones",
+        sv: "Bokningar",
+        en: "Bookings",
+      }),
+      // route: "/Bookings/Lease",
+      route: "#",
+    },
+    {
+      icon: (
+        <Image
+          src={BookingIcon}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Bookings"
+        />
+      ),
+      name: getTranslation(locale, {
+        fr: "Réservations",
+        pt: "Reservas",
+        de: "Buchungen",
+        ko: "예약",
+        es: "Reservaciones",
+        sv: "Bokningar",
+        en: "Bookings",
+      }),
+      // route: "/Bookings/Share",
       route: "#",
     },
   ];
@@ -593,6 +638,45 @@ const Sidebar = () => {
           );
         })}
       </ul>
+
+      <div className="w-full h-[2px] bg-gray-300 rounded-full" />
+
+      <div>
+        <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
+          <Tooltip title={"Bookings"} placement="right">
+            <Image
+              src={InsuranceIcon}
+              className="w-[20px] h-auto object-cover"
+              width={20}
+              height={20}
+              alt="Statements"
+            />
+          </Tooltip>
+        </div>
+
+        <ul className="flex flex-col gap-[8px] mt-[8px]">
+          {bookingList.map((listItem, index) => {
+            return (
+              <Link
+                href={`${listItem.route}`}
+                key={index}
+                className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
+                  LeftSideSctiveItem === listItem.name
+                    ? "bg-[#d5ebd6]"
+                    : "hover:bg-gray-200"
+                } drop-shadow-md rounded transition-all duration-500 relative`}
+                onClick={() => {
+                  setActiveLeftSideTag(listItem.name);
+                }}
+              >
+                <Tooltip title={listItem.name} placement="right">
+                  {listItem.icon}
+                </Tooltip>
+              </Link>
+            );
+          })}
+        </ul>
+      </div>
 
       <div className="w-full h-[2px] bg-gray-300 rounded-full" />
 
