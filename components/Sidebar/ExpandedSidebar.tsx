@@ -89,12 +89,9 @@ const ExpandedSidebar = () => {
     );
     if (activeTag && pathMap[activeTag] !== activeLeftSIdeTag) {
       setActiveLeftSideTag(pathMap[activeTag]);
+      dispatch(updateActiveMenu(pathMap[activeTag])); // Dispatch action to update the store
     }
-  }, [pathname]);
-
-  useEffect(() => {
-    dispatch(updateActiveMenu(activeLeftSIdeTag));
-  }, [activeLeftSIdeTag]);
+  }, [pathname, activeLeftSIdeTag, dispatch]);
 
   const topLeftSideList = [
     {

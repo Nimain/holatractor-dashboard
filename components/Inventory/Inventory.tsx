@@ -163,7 +163,7 @@ const InventorySection = () => {
           allTractors.map((tractorDetails, index) => {
             return (
               <Link
-                href={`/Tractors/${tractorDetails.id}`}
+                href={`/Inventory/${tractorDetails.id}`}
                 className="text-[18px] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer transition-all duration-500 hover:bg-white"
                 key={index}
               >
