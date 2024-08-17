@@ -15,15 +15,15 @@ import { useDropzone } from "react-dropzone";
 import { useSelector } from "react-redux";
 
 interface Translations {
-    name: string;
-    description: string;
-    dragDropText: string;
-    selectTractor: string;
-    noTractorsAvailable: string;
-    submit: string;
-    imageUploading: string;
-    creatingAttachment: string;
-  }
+  name: string;
+  description: string;
+  dragDropText: string;
+  selectTractor: string;
+  noTractorsAvailable: string;
+  submit: string;
+  imageUploading: string;
+  creatingAttachment: string;
+}
 
 const NewAttachment = () => {
   const [activeLanguage, setActiveLanguage] = useState("en");
@@ -32,8 +32,8 @@ const NewAttachment = () => {
   const [tractorType, setTractorType] = useState("");
   const [allTractors, setAllTractors] = useState<Inventory[]>([]);
 
-  const [imageUploading, setImageUploading] = useState(false)
-    const [creatingAttachment, setCreatingATtachment] = useState(false)
+  const [imageUploading, setImageUploading] = useState(false);
+  const [creatingAttachment, setCreatingATtachment] = useState(false);
 
   const [en_name, set_en_name] = useState("");
   const [en_description, set_en_description] = useState("");
@@ -65,7 +65,7 @@ const NewAttachment = () => {
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
 
-  const router = useRouter()
+  const router = useRouter();
 
   const { language: locale } = useSelector(
     (root: RootState) => root.ActiveLanguage
@@ -112,7 +112,8 @@ const NewAttachment = () => {
     fr: {
       name: "Nom",
       description: "Description",
-      dragDropText: "Glissez-déposez une image ici, ou cliquez pour en sélectionner une",
+      dragDropText:
+        "Glissez-déposez une image ici, ou cliquez pour en sélectionner une",
       selectTractor: "Sélectionnez un tracteur (facultatif)",
       noTractorsAvailable: "Aucun tracteur disponible",
       submit: "Soumettre",
@@ -122,7 +123,8 @@ const NewAttachment = () => {
     pt: {
       name: "Nome",
       description: "Descrição",
-      dragDropText: "Arraste e solte uma imagem aqui, ou clique para selecionar uma",
+      dragDropText:
+        "Arraste e solte uma imagem aqui, ou clique para selecionar uma",
       selectTractor: "Selecione o trator (opcional)",
       noTractorsAvailable: "Nenhum trator disponível",
       submit: "Enviar",
@@ -132,7 +134,8 @@ const NewAttachment = () => {
     de: {
       name: "Name",
       description: "Beschreibung",
-      dragDropText: "Ziehen Sie ein Bild hierher oder klicken Sie, um eines auszuwählen",
+      dragDropText:
+        "Ziehen Sie ein Bild hierher oder klicken Sie, um eines auszuwählen",
       selectTractor: "Traktor auswählen (optional)",
       noTractorsAvailable: "Keine Traktoren verfügbar",
       submit: "Einreichen",
@@ -152,7 +155,8 @@ const NewAttachment = () => {
     es: {
       name: "Nombre",
       description: "Descripción",
-      dragDropText: "Arrastra y suelta una imagen aquí, o haz clic para seleccionar una",
+      dragDropText:
+        "Arrastra y suelta una imagen aquí, o haz clic para seleccionar una",
       selectTractor: "Seleccionar tractor (opcional)",
       noTractorsAvailable: "No hay tractores disponibles",
       submit: "Enviar",
@@ -177,81 +181,105 @@ const NewAttachment = () => {
 
   async function handleAddTractor() {
     if (!en_name) {
-        errorMessage("Attachment name can't be empty")
-        return
+      errorMessage("Attachment name can't be empty");
+      return;
     }
     if (!en_description) {
-        errorMessage("Attachment description can't be empty")
-        return
+      errorMessage("Attachment description can't be empty");
+      return;
     }
-    let tractorImages
+    let tractorImages;
 
     if (selectedImage.length > 0) {
+      setImageUploading(true);
 
-        setImageUploading(true)
+      const uploadPromises = selectedImage.map(async (image) => {
+        const buffer = Buffer.from(await image.arrayBuffer());
+        return uploadFileToS3(buffer, image.name);
+      });
 
-        const uploadPromises = selectedImage.map(async (image) => {
-            const buffer = Buffer.from(await image.arrayBuffer());
-            return uploadFileToS3(buffer, image.name);
-        });
+      const fileUrls = await Promise.all(uploadPromises);
+      tractorImages = fileUrls;
 
-        const fileUrls = await Promise.all(uploadPromises);
-        tractorImages = fileUrls
-
-        setImageUploading(false)
+      setImageUploading(false);
     }
 
     const attachment = {
-        name:en_name,
-        description:en_description,
-        tractorId: tractorType,
-        images: tractorImages
-    }
-    setCreatingATtachment(true)
-    renderInstance.post("/attachment", attachment, {
+      name: en_name,
+      description: en_description,
+      tractorId: tractorType,
+      images: tractorImages,
+    };
+    setCreatingATtachment(true);
+    renderInstance
+      .post("/attachment", attachment, {
         headers: {
-            Authorization: `Bearer ${access_token}`,
-        }
-    }).then((res) => {
+          Authorization: `Bearer ${access_token}`,
+        },
+      })
+      .then((res) => {
         if (res.status === 201) {
-            successMessage("Attachment added")
-            router.refresh()
+          successMessage("Attachment added");
+          router.refresh();
         }
-    }).catch((err) => {
-
-        if (err.response && err.response.status === 409 && err.response.data.message === "Only admin users can create new attachments") {
-            errorMessage("Only admin can add new attachments")
-        } else if (err.response && err.response.status === 409 && err.response.data.message === "A attachment with the same name is already exist") {
-            errorMessage("Name already taken")
-        } else if (err.response && err.response.status === 409 && err.response.data.message === "Tractor with the given id does not present") {
-            errorMessage("Selected tractor is not present")
+      })
+      .catch((err) => {
+        if (
+          err.response &&
+          err.response.status === 409 &&
+          err.response.data.message ===
+            "Only admin users can create new attachments"
+        ) {
+          errorMessage("Only admin can add new attachments");
+        } else if (
+          err.response &&
+          err.response.status === 409 &&
+          err.response.data.message ===
+            "A attachment with the same name is already exist"
+        ) {
+          errorMessage("Name already taken");
+        } else if (
+          err.response &&
+          err.response.status === 409 &&
+          err.response.data.message ===
+            "Tractor with the given id does not present"
+        ) {
+          errorMessage("Selected tractor is not present");
         } else {
-            errorMessage("Some error occurred")
+          errorMessage("Some error occurred");
         }
-
-    }).finally(() => {
-        setCreatingATtachment(false)
-    })
-}
+      })
+      .finally(() => {
+        setCreatingATtachment(false);
+      });
+  }
 
   return (
-    <div className="w-full py-10 px-4 space-y-5">
+    <div className="w-full py-10 px-4 flex flex-col gap-5 items-center">
+      <Menubar pagename={"New attachment"} />
 
-        <Menubar pagename={"New attachment"} />
-
-    <Backdrop
-        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
-        open={fetchingAttachments || imageUploading || creatingAttachment}>
-
+      <Backdrop
+        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        open={fetchingAttachments || imageUploading || creatingAttachment}
+      >
         {fetchingAttachments && <CircularProgress />}
 
-        {imageUploading && <p>{translations[locale]?.imageUploading || translations.en?.imageUploading}</p>}
+        {imageUploading && (
+          <p>
+            {translations[locale]?.imageUploading ||
+              translations.en?.imageUploading}
+          </p>
+        )}
 
-        {creatingAttachment && <p>{translations[locale]?.creatingAttachment || translations.en?.creatingAttachment}</p>}
+        {creatingAttachment && (
+          <p>
+            {translations[locale]?.creatingAttachment ||
+              translations.en?.creatingAttachment}
+          </p>
+        )}
+      </Backdrop>
 
-    </Backdrop>
-
-      <div className="w-full flex flex-wrap gap-5">
+      <div className="w-full flex flex-wrap gap-5 items-center justify-center">
         {allLanguages.map((details, index) => {
           return (
             <div
@@ -272,7 +300,7 @@ const NewAttachment = () => {
       </div>
 
       {activeLanguage === "en" && (
-        <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px]">
+        <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px] mx-auto">
           <div className="flex flex-col gap-[4px] w-full">
             <label className="text-[18px]">Name</label>
 
@@ -306,7 +334,7 @@ const NewAttachment = () => {
       )}
 
       {activeLanguage === "fr" && (
-        <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px]">
+        <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px] mx-auto">
           <div className="flex flex-col gap-[4px] w-full">
             <label className="text-[18px]">Name</label>
 
@@ -340,7 +368,7 @@ const NewAttachment = () => {
       )}
 
       {activeLanguage === "pt" && (
-        <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px]">
+        <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px] mx-auto">
           <div className="flex flex-col gap-[4px] w-full">
             <label className="text-[18px]">Name</label>
 
@@ -374,7 +402,7 @@ const NewAttachment = () => {
       )}
 
       {activeLanguage === "de" && (
-        <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px]">
+        <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px] mx-auto">
           <div className="flex flex-col gap-[4px] w-full">
             <label className="text-[18px]">Name</label>
 
@@ -408,7 +436,7 @@ const NewAttachment = () => {
       )}
 
       {activeLanguage === "ko" && (
-        <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px]">
+        <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px] mx-auto">
           <div className="flex flex-col gap-[4px] w-full">
             <label className="text-[18px]">Name</label>
 
@@ -442,7 +470,7 @@ const NewAttachment = () => {
       )}
 
       {activeLanguage === "es" && (
-        <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px]">
+        <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px] mx-auto">
           <div className="flex flex-col gap-[4px] w-full">
             <label className="text-[18px]">Name</label>
 
@@ -476,7 +504,7 @@ const NewAttachment = () => {
       )}
 
       {activeLanguage === "sv" && (
-        <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px]">
+        <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px] mx-auto">
           <div className="flex flex-col gap-[4px] w-full">
             <label className="text-[18px]">Name</label>
 
@@ -509,7 +537,7 @@ const NewAttachment = () => {
         </div>
       )}
 
-      <div className="max-w-[600px]">
+      <div className="max-w-[600px] mx-auto">
         <div
           {...getRootProps()}
           className="dropzone text-center border-dashed border-2 border-gray-300 p-6 rounded-md"
@@ -517,12 +545,13 @@ const NewAttachment = () => {
           <input {...getInputProps()} />
           <p className="text-gray-600">
             Drag 'n' drop an image here, or click to select one
-            {translations[locale]?.dragDropText || translations.en?.dragDropText}
+            {translations[locale]?.dragDropText ||
+              translations.en?.dragDropText}
           </p>
         </div>
       </div>
 
-      <div className="w-full my-[4px] flex items-center flex-wrap gap-[20px] max-w-[600px]">
+      <div className="w-full my-[4px] flex items-center flex-wrap gap-[20px] max-w-[600px] mx-auto">
         {selectedImage.length > 0 &&
           selectedImage.map((image, index) => {
             return (
@@ -538,10 +567,11 @@ const NewAttachment = () => {
           })}
       </div>
 
-      <div className="w-full flex items-center gap-[20px] max-w-[600px]">
+      <div className="w-full flex items-center gap-[20px] max-w-[600px] mx-auto">
         <div className="flex flex-col gap-[4px] w-full">
           <label htmlFor="model_number_input" className="text-[18px]">
-            {translations[locale]?.selectTractor || translations.en.selectTractor}
+            {translations[locale]?.selectTractor ||
+              translations.en.selectTractor}
           </label>
 
           <div className="px-[10px] py-[4px] border border-black rounded-md text-[16px]">
@@ -551,10 +581,16 @@ const NewAttachment = () => {
                 setTractorType(e.target.value);
               }}
             >
-              <option defaultChecked={true}>{translations[locale]?.selectTractor || translations.en.selectTractor}</option>
+              <option defaultChecked={true}>
+                {translations[locale]?.selectTractor ||
+                  translations.en.selectTractor}
+              </option>
 
               {allTractors.length === 0 && (
-                <option>{translations[locale]?.noTractorsAvailable || translations.en.noTractorsAvailable}</option>
+                <option>
+                  {translations[locale]?.noTractorsAvailable ||
+                    translations.en.noTractorsAvailable}
+                </option>
               )}
 
               {allTractors.map((tractorDetails, index) => {
@@ -570,11 +606,14 @@ const NewAttachment = () => {
       </div>
 
       <button
-                        name='submit_button'
-                        className='py-[10px] px-4 w-fit bg-black font-bold text-white rounded-md'
-                        onClick={() => { handleAddTractor() }}>
-                        {translations[locale]?.submit || translations.en?.submit}
-                    </button>
+        name="submit_button"
+        className="py-[10px] px-4 w-fit bg-black font-bold text-white rounded-md mx-auto"
+        onClick={() => {
+          handleAddTractor();
+        }}
+      >
+        {translations[locale]?.submit || translations.en?.submit}
+      </button>
     </div>
   );
 };

@@ -66,7 +66,7 @@ const ExpandedSidebar = () => {
     "/Roles": "Roles",
     "/Permissions": "Permission",
     "/Users": "Users",
-    "/Tractors": "Tractors",
+    "/Inventory": "Tractors",
     "/Subscription": "Subscriptions",
     "/Business": "Business",
     "/Dealers": "Dealers",
@@ -294,8 +294,7 @@ const ExpandedSidebar = () => {
         sv: "Traktorer",
         en: "Tractors",
       }),
-      // route: "/Tractors/AllTractors",
-      route: "#",
+      route: "/Inventory",
     },
     {
       icon: (
@@ -568,7 +567,7 @@ const ExpandedSidebar = () => {
       whileInView={{
         left: "0px",
       }}
-      className={`w-[300px] p-[30px] flex flex-col gap-[20px] box-content bg-[#ededed] transition-all duration-500 absolute ${sidebarShow ? "translate-x-0" : "-translate-x-full"} top-0 z-10`}
+      className={`w-[200px] p-5 flex flex-col gap-[20px] box-content bg-[#ededed] transition-all duration-500 absolute ${sidebarShow ? "translate-x-0" : "-translate-x-full"} top-0 z-10`}
     >
       {/* <p className='text-primaryColor hidden text-[20px] font-[600] w-full 1200px:flex items-center justify-center'>
                 Holatractor

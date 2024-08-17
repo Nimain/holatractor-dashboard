@@ -68,7 +68,7 @@ const Sidebar = () => {
     "/Roles": "Roles",
     "/Permissions": "Permission",
     "/Users": "Users",
-    "/Tractors": "Tractors",
+    "/Inventory": "Tractors",
     "/Subscription": "Subscriptions",
     "/Business": "Business",
     "/Dealers": "Dealers",
@@ -292,8 +292,7 @@ const Sidebar = () => {
         sv: "Traktorer",
         en: "Tractors",
       }),
-      // route: "/Tractors/AllTractors",
-      route: "#",
+      route: "/Inventory",
     },
     {
       icon: (
