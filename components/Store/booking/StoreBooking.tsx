@@ -1,78 +1,83 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from 'react'
-import { Pagination, Autoplay } from 'swiper/modules';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import 'swiper/css';
-import 'swiper/css/autoplay';
-import 'swiper/css/navigation';
-import 'swiper/css/pagination';
-import 'swiper/css/scrollbar';
-import Image from 'next/image';
-import { useCookie } from 'next-cookie';
-import { Backdrop, CircularProgress } from '@mui/material';
-import { renderInstance } from '@/utils/Axios/RenderInstance';
-import { useParams } from 'next/navigation';
-import { errorMessage, successMessage } from '@/utils/Toastify/Messages';
-import { AttachmentInStore, TractorInStore } from '@/utils/Types/types';
+import { useEffect, useState } from "react";
+import { Pagination, Autoplay } from "swiper/modules";
+import { Swiper, SwiperSlide } from "swiper/react";
+import "swiper/css";
+import "swiper/css/autoplay";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
+import "swiper/css/scrollbar";
+import Image from "next/image";
+import { useCookie } from "next-cookie";
+import { Backdrop, CircularProgress } from "@mui/material";
+import { renderInstance } from "@/utils/Axios/RenderInstance";
+import { useParams } from "next/navigation";
+import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
+import { AttachmentInStore, TractorInStore } from "@/utils/Types/types";
 
 const StoreBooking = () => {
-
-  const [zipCode, setZipCode] = useState('');
-  const [country, setCountry] = useState('us');
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [startDate, setstartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [BookingHours, setBookingHours] = useState('');
-  const [roadName, setRoadName] = useState('');
+  const [zipCode, setZipCode] = useState("");
+  const [country, setCountry] = useState("us");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [startDate, setstartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [BookingHours, setBookingHours] = useState("");
+  const [roadName, setRoadName] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingTractors, setLoadingTractors] = useState(false);
   const [loadingAttachments, setLoadingAttachments] = useState(false);
 
-  const [allTractors, setAllTractors] = useState<TractorInStore[]>([])
-  const [allAttachments, setAllAttachments] = useState<AttachmentInStore[]>([])
+  const [allTractors, setAllTractors] = useState<TractorInStore[]>([]);
+  const [allAttachments, setAllAttachments] = useState<AttachmentInStore[]>([]);
 
-  const [selectedTractorIds, setSelectedTractorIds] = useState<string[]>([])
+  const [selectedTractorIds, setSelectedTractorIds] = useState<string[]>([]);
 
-  const { slug } = useParams()
+  const { slug } = useParams();
 
-  const { cookie } = useCookie()
-  const user = cookie.get("user")
-  const access_token = cookie.get("access_token")
+  const { cookie } = useCookie();
+  const user = cookie.get("user");
+  const access_token = cookie.get("access_token");
 
   function fetchTractors() {
-    setLoadingTractors(true)
-    renderInstance.get(`/store/${slug}`)
+    setLoadingTractors(true);
+    renderInstance
+      .get(`/store/${slug}`)
       .then((res) => {
-        setAllTractors(res.data.TractorInStore)
-      }).catch((err) => {
-        errorMessage("Error fetching tractors")
-        console.log(err)
-      }).finally(() => { setLoadingTractors(false) })
+        console.log(res.data)
+        setAllTractors(res.data.TractorInStore);
+      })
+      .catch((err) => {
+        errorMessage("Error fetching tractors");
+        console.log(err);
+      })
+      .finally(() => {
+        setLoadingTractors(false);
+      });
   }
 
   function handleBookClick(tractorId: string) {
-    setSelectedTractorIds(prevIds => {
+    setSelectedTractorIds((prevIds) => {
       if (prevIds.includes(tractorId)) {
         // If already selected, remove it
-        return prevIds.filter(id => id !== tractorId);
+        return prevIds.filter((id) => id !== tractorId);
       } else {
         // Otherwise, add it
         return [...prevIds, tractorId];
       }
     });
-  };
+  }
 
   useEffect(() => {
     if (slug) {
-      fetchTractors()
+      fetchTractors();
     }
-  }, [slug])
+  }, [slug]);
 
   function handleBooking() {
-    setLoading(true)
+    setLoading(true);
     const booking = {
       location_name: roadName,
       location_address: address,
@@ -86,38 +91,47 @@ const StoreBooking = () => {
       end_date: BookingHours === "more" ? new Date(endDate) : "",
       booking_hours: BookingHours === "more" ? "" : BookingHours,
       tractor_ids: selectedTractorIds,
-      attachment_ids: []
-    }
+      attachment_ids: [],
+    };
 
-    renderInstance.post('/booking', booking, {
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-      }
-    }).then((res) => {
-      successMessage("Booked successful")
-    }).catch((err) => {
-      errorMessage("Some error occurred")
-    }).finally(() => {
-setLoading(false)
-    })
+    renderInstance
+      .post("/booking", booking, {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      })
+      .then((res) => {
+        successMessage("Booked successful");
+      })
+      .catch((err) => {
+        errorMessage("Some error occurred");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }
 
   return (
     <div className="w-full h-full flex flex-col gap-5 py-10">
+      <Backdrop
+        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        open={loading}
+      >
+        <CircularProgress />
+      </Backdrop>
 
-<Backdrop
-                sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
-                open={loading}>
-                  <CircularProgress />
-                </Backdrop>
-
-      <p className='text-2xl font-bold text-center'>
+      <p className="text-2xl font-bold text-center">
         Give your location details
       </p>
 
       <div className="w-full p-4 grid gap-8 grid-cols-3">
         <div className="mb-4 w-full">
-          <label htmlFor="country" className="block text-sm font-medium text-gray-700">Country</label>
+          <label
+            htmlFor="country"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Country
+          </label>
           <input
             type="text"
             id="country"
@@ -128,7 +142,12 @@ setLoading(false)
         </div>
 
         <div className="mb-4 w-full">
-          <label htmlFor="zipCode" className="block text-sm font-medium text-gray-700">Zip Code</label>
+          <label
+            htmlFor="zipCode"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Zip Code
+          </label>
           <input
             type="text"
             id="zipCode"
@@ -139,7 +158,12 @@ setLoading(false)
         </div>
 
         <div className="mb-4">
-          <label htmlFor="address" className="block text-sm font-medium text-gray-700">Address</label>
+          <label
+            htmlFor="address"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Address
+          </label>
           <input
             type="text"
             id="address"
@@ -150,7 +174,12 @@ setLoading(false)
         </div>
 
         <div className="mb-4">
-          <label htmlFor="city" className="block text-sm font-medium text-gray-700">City</label>
+          <label
+            htmlFor="city"
+            className="block text-sm font-medium text-gray-700"
+          >
+            City
+          </label>
           <input
             type="text"
             id="city"
@@ -161,7 +190,12 @@ setLoading(false)
         </div>
 
         <div className="mb-4">
-          <label htmlFor="state" className="block text-sm font-medium text-gray-700">State</label>
+          <label
+            htmlFor="state"
+            className="block text-sm font-medium text-gray-700"
+          >
+            State
+          </label>
           <input
             type="text"
             id="state"
@@ -172,7 +206,12 @@ setLoading(false)
         </div>
 
         <div className="mb-4">
-          <label htmlFor="roadName" className="block text-sm font-medium text-gray-700">Road Name</label>
+          <label
+            htmlFor="roadName"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Road Name
+          </label>
           <input
             type="text"
             id="roadName"
@@ -183,7 +222,12 @@ setLoading(false)
         </div>
 
         <div className="mb-4">
-          <label htmlFor="roadName" className="block text-sm font-medium text-gray-700">Start date</label>
+          <label
+            htmlFor="roadName"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Start date
+          </label>
           <input
             type="date"
             id="startDate"
@@ -194,8 +238,20 @@ setLoading(false)
         </div>
 
         <div className="mb-4">
-          <label htmlFor="roadName" className="block text-sm font-medium text-gray-700">Booking hours</label>
-          <select name="bookingHours" id="bookingHours" onChange={(e) => { setBookingHours(e.target.value) }} className="mt-1 block w-full px-2 py-2 text-base border border-gray-300 sm:text-sm rounded-md">
+          <label
+            htmlFor="roadName"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Booking hours
+          </label>
+          <select
+            name="bookingHours"
+            id="bookingHours"
+            onChange={(e) => {
+              setBookingHours(e.target.value);
+            }}
+            className="mt-1 block w-full px-2 py-2 text-base border border-gray-300 sm:text-sm rounded-md"
+          >
             <option defaultChecked={true}>Choose booking hours</option>
             <option value="One_Hour">1 hour</option>
             <option value="Two_Hours">2 hour</option>
@@ -209,10 +265,14 @@ setLoading(false)
           </select>
         </div>
 
-        {
-          BookingHours === "more" &&
+        {BookingHours === "more" && (
           <div className="mb-4">
-            <label htmlFor="roadName" className="block text-sm font-medium text-gray-700">Start date</label>
+            <label
+              htmlFor="roadName"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Start date
+            </label>
             <input
               type="date"
               id="endDate"
@@ -221,214 +281,157 @@ setLoading(false)
               className="mt-1 block w-full px-2 py-2 text-base border border-gray-300 sm:text-sm rounded-md"
             />
           </div>
-        }
+        )}
       </div>
 
-      <p className='text-lg font-bold w-full text-left p-4'>
-        Tractors:
-      </p>
+      <p className="text-lg font-bold w-full text-left p-4">Tractors:</p>
 
-      <div
-        className="px-4 py-2 w-full">
+      <div className="px-4 py-2 w-full">
+        {loadingTractors ? (
+          <p className="text-center text-lg text-gray-600 font-bold">
+            Loading Tractors
+          </p>
+        ) : allTractors.length === 0 ? (
+          <p className="text-center text-lg text-gray-600 font-bold">
+            0 Tractors available in this store
+          </p>
+        ) : (
+          <div className="w-full grid gap-5 grid-cols-4">
+            {allTractors.map((tractor, index) => {
+              return (
+                <div
+                  key={index}
+                  className="w-full drop-shadow-md px-2 rounded-md border flex gap-2 flex-col"
+                >
+                    <Swiper
+                      modules={[Autoplay, Pagination]}
+                      spaceBetween={0}
+                      slidesPerView={1}
+                      loop={true}
+                      pagination={true}
+                      autoplay={true}
+                      className="w-full h-full"
+                    >
+                      {tractor.baseTractor.images.map((image, index) => {
+                        return (
+                          <SwiperSlide key={index}>
+                            <Image
+                              src={image}
+                              alt="tractor_image"
+                              className="w-full h-40 object-cover rounded-xl"
+                              width={300}
+                              height={400}
+                              unoptimized={true}
+                            />
+                          </SwiperSlide>
+                        );
+                      })}
+                    </Swiper>
 
-        {
-          loadingTractors ?
-            <p className='text-center text-lg text-gray-600 font-bold'>
-              Loading Tractors
-            </p>
-            :
-            allTractors.length === 0 ?
-              <p className='text-center text-lg text-gray-600 font-bold'>
-                0 Tractors available in this store
-              </p>
-              :
-              <div className="w-full grid gap-5 grid-cols-4">
-                {
-                  allTractors.map((tractor, index) => {
-                    return (
-                      <div key={index}
-                        className='w-full drop-shadow-md px-2 rounded-md border flex gap-2 flex-col'>
+                  <p>
+                    <span className="font-medium">Minimum Price: </span>{" "}
+                    {tractor.min_price}/hr
+                  </p>
+                  <p>
+                    <span className="font-medium">Maximum Price: </span>{" "}
+                    {tractor.max_price}/hr
+                  </p>
 
-                        {
-                          tractor.images.length === 0 ?
-                            <Swiper
-                              modules={[Autoplay, Pagination]}
-                              spaceBetween={0}
-                              slidesPerView={1}
-                              loop={true}
-                              pagination={true}
-                              autoplay={true}
-                              className='w-full h-full'>
-                              {
-                                tractor.baseTractor.images.map((image, index) => {
-                                  return (
-                                    <SwiperSlide key={index}>
-                                      <Image
-                                        src={image}
-                                        alt='tractor_image'
-                                        className='w-full h-40 object-cover rounded-xl'
-                                        width={300}
-                                        height={400}
-                                        unoptimized={true} />
-                                    </SwiperSlide>
-                                  )
-                                })
-                              }
-                            </Swiper>
-                            :
-                            <Swiper
-                              modules={[Autoplay, Pagination]}
-                              spaceBetween={0}
-                              slidesPerView={1}
-                              loop={true}
-                              pagination={true}
-                              autoplay={true}
-                              className='w-full h-full'>
-                              {
-                                tractor.images.map((image, index) => {
-                                  return (
-                                    <SwiperSlide key={index}>
-                                      <Image
-                                        src={image}
-                                        alt='tractor_image'
-                                        className='w-full h-40 object-cover rounded-xl'
-                                        width={300}
-                                        height={400}
-                                        unoptimized={true} />
-                                    </SwiperSlide>
-                                  )
-                                })
-                              }
-                            </Swiper>
-                        }
-
-                        <p>
-                          <span className='font-medium'>Price: </span> {tractor.hourly_price}/hr
-                        </p>
-
-                        <button
-                          name="Book button"
-                          className='px-4 py-2 rounded bg-black text-white'
-                          onClick={()=>{handleBookClick(tractor.id)}}>
-                          {selectedTractorIds.includes(tractor.id) ? 'Remove' : 'Book'}
-                        </button>
-
-                      </div>
-                    )
-                  })
-                }
-              </div>
-        }
-
+                  <button
+                    name="Book button"
+                    className="px-4 py-2 rounded bg-black text-white"
+                    onClick={() => {
+                      handleBookClick(tractor.id);
+                    }}
+                  >
+                    {selectedTractorIds.includes(tractor.id)
+                      ? "Remove"
+                      : "Book"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      <p className='text-lg font-bold w-full text-left p-4'>
-        Attachments:
-      </p>
+      <p className="text-lg font-bold w-full text-left p-4">Attachments:</p>
 
-      <div
-        className="px-4 py-2 w-full">
+      <div className="px-4 py-2 w-full">
+        {loadingAttachments ? (
+          <p className="text-center text-lg text-gray-600 font-bold">
+            Loading Tractors
+          </p>
+        ) : allAttachments.length === 0 ? (
+          <p className="text-center text-lg text-gray-600 font-bold">
+            0 Tractors available in this store
+          </p>
+        ) : (
+          <div className="w-full grid gap-5 grid-cols-4">
+            {allAttachments.map((tractor, index) => {
+              console.log(tractor);
+              return (
+                <div
+                  key={index}
+                  className="w-full drop-shadow-md px-2 rounded-md border flex gap-2 flex-col"
+                >
+                    <Swiper
+                      modules={[Autoplay, Pagination]}
+                      spaceBetween={0}
+                      slidesPerView={1}
+                      loop={true}
+                      pagination={true}
+                      autoplay={true}
+                      className="w-full h-full"
+                    >
+                      {tractor.baseAttachment.images.map((image, index) => {
+                        return (
+                          <SwiperSlide key={index}>
+                            <Image
+                              src={image}
+                              alt="tractor_image"
+                              className="w-full h-40 object-cover rounded-xl"
+                              width={300}
+                              height={400}
+                              unoptimized={true}
+                            />
+                          </SwiperSlide>
+                        );
+                      })}
+                    </Swiper>
 
-        {
-          loadingAttachments ?
-            <p className='text-center text-lg text-gray-600 font-bold'>
-              Loading Tractors
-            </p>
-            :
-            allAttachments.length === 0 ?
-              <p className='text-center text-lg text-gray-600 font-bold'>
-                0 Tractors available in this store
-              </p>
-              :
-              <div className="w-full grid gap-5 grid-cols-4">
-                {
-                  allAttachments.map((tractor, index) => {
-                    console.log(tractor)
-                    return (
-                      <div key={index}
-                        className='w-full drop-shadow-md px-2 rounded-md border flex gap-2 flex-col'>
+                  <p>
+                    <span className="font-medium">Minimum Price: </span>{" "}
+                    {tractor.min_price}/hr
+                  </p>
 
-                        {
-                          tractor.images.length === 0 ?
-                            <Swiper
-                              modules={[Autoplay, Pagination]}
-                              spaceBetween={0}
-                              slidesPerView={1}
-                              loop={true}
-                              pagination={true}
-                              autoplay={true}
-                              className='w-full h-full'>
-                              {
-                                tractor.baseAttachment.images.map((image, index) => {
-                                  return (
-                                    <SwiperSlide key={index}>
-                                      <Image
-                                        src={image}
-                                        alt='tractor_image'
-                                        className='w-full h-40 object-cover rounded-xl'
-                                        width={300}
-                                        height={400}
-                                        unoptimized={true} />
-                                    </SwiperSlide>
-                                  )
-                                })
-                              }
-                            </Swiper>
-                            :
-                            <Swiper
-                              modules={[Autoplay, Pagination]}
-                              spaceBetween={0}
-                              slidesPerView={1}
-                              loop={true}
-                              pagination={true}
-                              autoplay={true}
-                              className='w-full h-full'>
-                              {
-                                tractor.images.map((image, index) => {
-                                  return (
-                                    <SwiperSlide key={index}>
-                                      <Image
-                                        src={image}
-                                        alt='tractor_image'
-                                        className='w-full h-40 object-cover rounded-xl'
-                                        width={300}
-                                        height={400}
-                                        unoptimized={true} />
-                                    </SwiperSlide>
-                                  )
-                                })
-                              }
-                            </Swiper>
-                        }
+                  <p>
+                    <span className="font-medium">Maximum Price: </span>{" "}
+                    {tractor.max_price}/hr
+                  </p>
 
-                        <p>
-                          <span className='font-medium'>Price: </span> {tractor.hourly_price}/hr
-                        </p>
-
-                        <button
-                          name="Book button"
-                          className='px-4 py-2 rounded bg-black text-white'>
-                          Book
-                        </button>
-
-                      </div>
-                    )
-                  })
-                }
-              </div>
-        }
-
+                  <button
+                    name="Book button"
+                    className="px-4 py-2 rounded bg-black text-white"
+                  >
+                    Book
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <button
         name="Book button"
-        className='px-4 py-2 rounded bg-black text-white mx-auto mt-2'
-        onClick={handleBooking}>
+        className="px-4 py-2 rounded bg-black text-white mx-auto mt-2"
+        onClick={handleBooking}
+      >
         Proceed
       </button>
-
     </div>
-  )
-}
+  );
+};
 
-export default StoreBooking
+export default StoreBooking;

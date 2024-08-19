@@ -33,11 +33,16 @@ const SingleStore = () => {
     function fetchStoreDetails() {
         if (slug) {
             setFetchingStoreDetails(true)
-            renderInstance.get(`/store/${slug}`)
+            renderInstance.get(`/store/${slug}`, {
+                headers: {
+                    Authorization: `Bearer ${access_token}`,
+                }
+            })
                 .then((res) => {
                     setStoreDetails(res.data)
                 }).catch((err) => {
                     errorMessage("Error fetching store details")
+                    console.log(err)
                 }).finally(() => { setFetchingStoreDetails(false) })
         }
     }

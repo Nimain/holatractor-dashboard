@@ -180,7 +180,7 @@ const StoreSection = () => {
         }).catch((err) => {
 
             if (err.response && err.response.status === 409 && err.response.data.message === "Store already present") errorMessage("Store already present")
-            else if (err.response && err.response.status === 409 && err.response.data.message === "Wrong owner id") errorMessage("Wrong owner id")
+            else if (err.response && err.response.status === 409 && err.response.data.message === "Wrong owner id") errorMessage("You are not an owner. You are not allowed to create a store.")
             else if (err.response && err.response.status === 409 && err.response.data.message === "The user is not owner") errorMessage("The user is not an owner")
             else errorMessage("Some error occurred")
 

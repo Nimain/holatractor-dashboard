@@ -249,9 +249,9 @@ export interface User {
     id: string;
     baseTractorId: string;
     base_id: string;
-    hourly_price: number;
+    min_price: number;
+    max_price: number;
     store_id: string;
-    images: string[];
     createdAt: Date;
     updatedAt: Date;
     baseTractor: Tractor;
@@ -265,9 +265,9 @@ export interface User {
     id: string;
     baseAttachmentId: string;
     base_id: string;
-    hourly_price: number;
+    min_price: number;
+    max_price: number;
     store_id: string;
-    images: string[];
     createdAt: Date;
     updatedAt: Date;
     baseAttachment: Attachment;

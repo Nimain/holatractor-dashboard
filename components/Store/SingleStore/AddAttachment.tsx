@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, SetStateAction } from "react";
 import AddIcon from "@mui/icons-material/Add";
 import { Inventory, AttachmentInStore, Attachment } from "@/utils/Types/types";
 import { useCookie } from "next-cookie";
@@ -26,7 +26,11 @@ import { useDropzone } from "react-dropzone";
 // import { isNumberObject } from "util/types";
 import { uploadFileToS3 } from "@/utils/AWS/FileUpload";
 import { useParams, useRouter } from "next/navigation";
-import { Backdrop } from "@mui/material";
+import { Backdrop, Slider, SliderProps } from "@mui/material";
+
+function valuetext(value: any) {
+  return `${value}$`;
+}
 
 const AddAttachment = ({
   alreadyTractors,
@@ -37,36 +41,28 @@ const AddAttachment = ({
   const [selectedTractorId, setSelectedTractorId] = useState("");
   const [allTractors, setAllTractors] = useState<Attachment[]>([]);
   const [fetchingRoles, setFetchingRoles] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<File[]>([]);
-  const [hourlyPrice, setHourlyPrice] = useState("");
-  const [imageUploading, setImageUploading] = useState(false);
-  const [creating, setCreating] = useState(false)
+  const [creating, setCreating] = useState(false);
+  const [value, setValue] = useState([20, 100000]);
 
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
 
-  const { slug } = useParams()
-  const { refresh } = useRouter()
+  const { slug } = useParams();
+  const { refresh } = useRouter();
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    setSelectedImage((prevImages) => [...prevImages, ...acceptedFiles]);
-  }, []);
-
-  const { getRootProps, getInputProps } = useDropzone({
-    onDrop,
-    accept: {
-      "image/*": [],
-    },
-    multiple: false,
-  });
+  const handleChange: SliderProps['onChange'] = (event, newValue) => {
+  setValue(newValue as number[]);
+};
 
   function fetchAllTractors() {
     if (access_token) {
       setFetchingRoles(true);
       renderInstance
-      .get("/attachment", {headers: {
-        Authorization: `Bearer ${access_token}`,
-    }})
+        .get("/attachment", {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+          },
+        })
         .then((res) => {
           if (res.status === 200) {
             const availableTractors = res.data.filter(
@@ -93,47 +89,32 @@ const AddAttachment = ({
   }, []);
 
   async function saveTractor() {
-    if (!selectedImage) {
-      errorMessage("Please give at least one image");
-      return;
-    }
-
-    if (!hourlyPrice) {
-      errorMessage("Please give the price details");
-      return;
-    }
-
-    // if (!isNumberObject(hourlyPrice)) {
-    //   errorMessage("Please enter a valid price");
-    //   return;
-    // }
-    let storeImages = "";
-
-    if (selectedImage.length > 0) {
-      setImageUploading(true);
-      const buffer = Buffer.from(await selectedImage[0].arrayBuffer());
-      storeImages = await uploadFileToS3(buffer, selectedImage[0].name);
-      setImageUploading(false);
-    }
 
     const addTractorDto = {
       attachment_ids: [selectedTractorId],
-      hourly_price: hourlyPrice,
-      images: storeImages,
-      store_id: slug
-    }
+      min_price: `${value[0]}`,
+      max_price: `${value[1]}`,
+      store_id: slug,
+    };
 
-    setCreating(true)
-    renderInstance.post('/store/addAttachments', addTractorDto, {
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-    }
-    }).then((res)=>{
-      successMessage("Successful")
-      refresh()
-    }).catch((err)=>{
-      errorMessage("Some error occurred")
-    }).finally(()=>{setCreating(false)})
+    setCreating(true);
+    renderInstance
+      .post("/store/addAttachments", addTractorDto, {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      })
+      .then((res) => {
+        successMessage("Successful");
+        refresh();
+      })
+      .catch((err) => {
+        console.log(err)
+        errorMessage("Some error occurred");
+      })
+      .finally(() => {
+        setCreating(false);
+      });
   }
 
   return (
@@ -175,40 +156,46 @@ const AddAttachment = ({
             "No tractors available to show"
           ) : selectedTractorId ? (
             <div className="w-full h-full flex flex-col items-center justify-center gap-5">
-              <div
-                {...getRootProps()}
-                className="dropzone text-center border-dashed border-2 border-gray-300 p-6 rounded-md w-full"
-              >
-                <input {...getInputProps()} />
-                <p className="text-gray-600">
-                  Drag 'n' drop an image here, or click to select one
-                </p>
-              </div>
-              <div className="w-full my-[4px] flex items-center flex-wrap gap-[20px]">
-                {selectedImage.length > 0 &&
-                  selectedImage.map((image, index) => (
-                    <Image
-                      alt="image"
-                      src={URL.createObjectURL(image)}
-                      key={index}
-                      width={80}
-                      height={80}
-                      className="object-cover w-[80px] h-[80px] cursor-pointer rounded-md"
-                    />
-                  ))}
-              </div>
               <div className="flex flex-col gap-[4px] w-full">
-                <label className="text-[18px]">Hourly price</label>
-                <div className="px-[10px] py-[4px] border border-black rounded-md text-[16px]">
+                <label className="text-[18px]">
+                  Select minimum and maximum price per hour
+                </label>
+                <Slider
+  getAriaLabel={() => 'Temperature range'}
+  value={value}
+  onChange={handleChange}
+  valueLabelDisplay="auto"
+  getAriaValueText={valuetext}
+/>
+              </div>
+
+              <div className="w-full">
+                <div className="flex flex-col gap-[4px] w-fit">
+                  <label className="text-[18px]">Min price</label>
+                  <div className="px-[10px] py-[4px] border border-black rounded-md text-[16px]">
                   <input
-                    type="text"
+                    type="number"
                     placeholder="Hourly price"
                     className="outline-none bg-transparent border-none w-full"
-                    value={hourlyPrice}
+                    value={value[0]}
                     onChange={(e) => {
-                      setHourlyPrice(e.target.value);
+                      setValue([Number(e.target.value), value[1]]);
                     }}
                   />
+                </div>
+                </div>
+                <div className="flex flex-col gap-[4px] w-fit">
+                  <label className="text-[18px]">Max price</label>
+                  <div className="px-[10px] py-[4px] border border-black rounded-md text-[16px]">
+                  <input
+                    type="number"
+                    className="outline-none bg-transparent border-none w-full"
+                    value={value[1]}
+                    onChange={(e) => {
+                      setValue([value[0], Number(e.target.value)]);
+                    }}
+                  />
+                </div>
                 </div>
               </div>
 
@@ -289,17 +276,11 @@ const AddAttachment = ({
         </div>
 
         <Backdrop
-                sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
-                open={creating || imageUploading}>
-
-                  {
-                    creating && <p>Adding to store</p>
-                  }
-                  {
-                    imageUploading && <p>Uploading image</p>
-                  }
-
-                </Backdrop>
+          sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+          open={creating}
+        >
+          {creating && <p>Adding to store</p>}
+        </Backdrop>
       </DialogContent>
     </Dialog>
   );

@@ -102,7 +102,7 @@ const ProfileComponent = () => {
       </DialogTrigger>
 
       <DialogContent
-        className="bg-white max-h-[90vh] overflow-auto"
+        className="bg-white max-h-[90vh] w-fit overflow-auto"
         style={{ scrollbarWidth: "none" }}
       >
         <DialogHeader>
@@ -110,7 +110,7 @@ const ProfileComponent = () => {
         </DialogHeader>
 
         <div
-          className={`bg-white transition-all duration-500 h-fit max-h-[90vh] p-[30px] rounded-xl text-black text-[18px] flex flex-col gap-[10px] w-[500px] overflow-auto`}
+          className={`bg-white transition-all w-fit duration-500 h-fit max-h-[90vh] p-[30px] rounded-xl text-black text-[18px] flex flex-col gap-[10px] overflow-auto`}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="w-full flex flex-col gap-[20px] relative">
