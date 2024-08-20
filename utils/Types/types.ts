@@ -64,6 +64,7 @@ export interface User {
     ratings: Rating[];
     TractorInStore: TractorInStore[];
     AttachmentInStore: AttachmentInStore[];
+    country: Country[]
   }
   
   export interface Module {
@@ -214,6 +215,8 @@ export interface User {
     city: string;
     created_by: string;
     base_id: string;
+    min_price: number;
+    max_price: number;
     createdAt: Date;
     updatedAt: Date;
     tractor: Tractor;
@@ -249,8 +252,7 @@ export interface User {
     id: string;
     baseTractorId: string;
     base_id: string;
-    min_price: number;
-    max_price: number;
+    hourly_price: number;
     store_id: string;
     createdAt: Date;
     updatedAt: Date;
@@ -265,8 +267,7 @@ export interface User {
     id: string;
     baseAttachmentId: string;
     base_id: string;
-    min_price: number;
-    max_price: number;
+    hourly_price: number;
     store_id: string;
     createdAt: Date;
     updatedAt: Date;
@@ -347,6 +348,18 @@ export interface User {
     createdAt: Date;
     updatedAt: Date;
   }
+
+  export interface Country {
+    id: string;
+    name: string;
+    region: string;
+    country_code: string;
+    base_id: string;
+    createdAt: Date;
+    updatedAt: Date;
+    base: Base[]; // Relation to Base model
+  }
+  
 
   export enum AuthType {
     GOOGLE = "GOOGLE",

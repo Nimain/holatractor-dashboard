@@ -544,6 +544,27 @@ const Sidebar = () => {
     {
       icon: (
         <Image
+          src={UsersIcon}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Country"
+        />
+      ),
+      name: getTranslation(locale, {
+        fr: "Utilisateurs",
+        pt: "Comercial",
+        de: "Benutzer",
+        ko: "사용자",
+        es: "Usuarios",
+        sv: "Användare",
+        en: "Country",
+      }),
+      route: "/Country",
+    },
+    {
+      icon: (
+        <Image
           src={AffiliationIcon}
           className="w-[20px] h-auto object-cover"
           width={20}
