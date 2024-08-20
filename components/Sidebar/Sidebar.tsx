@@ -606,7 +606,7 @@ const Sidebar = () => {
 
   return (
     <div
-      className={`w-[36px] p-[10px] transition-all duration- flex flex-col gap-[20px] box-content bg-[#ededed]`}
+      className={`w-[36px] p-[10px] transition-all duration- flex flex-col gap-[20px] box-content bg-[#ededed] h-[1480px]`}
     >
       <Image
         alt="Logo"

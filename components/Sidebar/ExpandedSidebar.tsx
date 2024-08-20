@@ -605,7 +605,7 @@ const ExpandedSidebar = () => {
 
   return (
     <motion.div
-      className={`w-[200px] p-5 flex flex-col gap-[20px] box-content bg-[#ededed] transition-all duration-500 absolute ${sidebarShow ? "translate-x-0" : "-translate-x-full"} top-0 z-10`}
+      className={`w-[200px] p-5 flex flex-col gap-[20px] box-content bg-[#ededed] h-[1480px] transition-all duration-500 absolute ${sidebarShow ? "translate-x-0" : "-translate-x-full"} top-0 z-10`}
     >
       {/* <p className='text-primaryColor hidden text-[20px] font-[600] w-full 1200px:flex items-center justify-center'>
                 Holatractor

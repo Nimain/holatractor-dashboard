@@ -13,7 +13,7 @@ const SidebarWrapper = ({ children }: { children: ReactNode }) => {
       >
         <Sidebar />
         <div
-        className={`transition-all duration-500 ${sidebarShow ? "pl-[190px]" : "pl-0"} w-full h-full bg-[#e5e5e5]`}
+        className={`transition-all duration-500 ${sidebarShow ? "pl-[190px]" : "pl-0"} w-full`}
       >
         {children}
       </div>
