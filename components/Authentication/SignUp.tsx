@@ -53,6 +53,12 @@ const SignUp = () => {
   const [date, setDate] = useState<Date>();
   const [dateOpen, setDateOpen] = useState(false);
 
+  function handleDateChange(e: any) {
+    const tempDate = new Date(e)
+    setDate(tempDate)
+    setDateOpen(false)
+  }
+
   const splitFullName = (fullName: string) => {
     const nameParts = fullName.trim().split(/\s+/); // Split by spaces
     const firstName = nameParts.shift(); // Take the first element as the first name
@@ -539,7 +545,7 @@ const SignUp = () => {
               <div>
                 {
                   dateOpen ?
-                  <Calendar mode="single" selected={date} onSelect={setDate} />
+                  <Calendar mode="single" selected={date} onSelect={e=>{ handleDateChange(e) }} />
                   :
                   <Button
                     variant={"outline"}
