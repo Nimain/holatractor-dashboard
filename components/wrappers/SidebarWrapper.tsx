@@ -9,12 +9,14 @@ const SidebarWrapper = ({ children }: { children: ReactNode }) => {
     const { sidebarShow } = useSelector((root: RootState) => root.SidebarShow);
   return (
     <div
-        className={`${
-          sidebarShow ? "" : ""
-        } w-full min-h-[100vh] max-h-fit flex`}
+        className={`w-full min-h-[100vh] max-h-fit flex`}
       >
         <Sidebar />
+        <div
+        className={`transition-all duration-500 ${sidebarShow ? "pl-[190px]" : "pl-0"} w-full h-full bg-[#e5e5e5]`}
+      >
         {children}
+      </div>
       </div>
   )
 }

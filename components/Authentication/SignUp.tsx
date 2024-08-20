@@ -10,11 +10,19 @@ import { useState, useEffect, SetStateAction } from "react";
 import { countries } from "./CountryCodes";
 import { Role } from "@/utils/Types/types";
 import Image from "next/image";
-import Datepicker from "react-tailwindcss-datepicker";
 import Link from "next/link";
 import Logo from "@/assets/logo.png";
-import { DateValueType } from "react-tailwindcss-datepicker/dist/types";
 import CryptoJS from "crypto-js";
+import { format } from "date-fns";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 const SignUp = () => {
   const [name, setName] = useState("");
@@ -42,41 +50,8 @@ const SignUp = () => {
 
   const { cookie } = useCookie();
 
-  const [dobDate, setDobDate] = useState<{
-    startDate: Date | null;
-    endDate: Date | null;
-  }>({
-    startDate: null,
-    endDate: null,
-  });
-  
-  const handleDobDateChange = (newValue: DateValueType) => {
-    if (
-      newValue &&
-      typeof newValue === "object" &&
-      "startDate" in newValue &&
-      "endDate" in newValue
-    ) {
-      const startDate =
-        newValue.startDate instanceof Date
-          ? newValue.startDate
-          : newValue.startDate
-          ? new Date(newValue.startDate)
-          : null;
-  
-      const endDate =
-        newValue.endDate instanceof Date
-          ? newValue.endDate
-          : newValue.endDate
-          ? new Date(newValue.endDate)
-          : null;
-  
-      setDobDate({
-        startDate,
-        endDate,
-      });
-    }
-  };
+  const [date, setDate] = useState<Date>();
+  const [dateOpen, setDateOpen] = useState(false);
 
   const splitFullName = (fullName: string) => {
     const nameParts = fullName.trim().split(/\s+/); // Split by spaces
@@ -216,9 +191,9 @@ const SignUp = () => {
       return;
     }
 
-    if (!dobDate || !dobDate.startDate) {
-        errorMessage("Please select your date of birth");
-        return;
+    if (!date) {
+      errorMessage("Please select your date of birth");
+      return;
     }
 
     if (!gender) {
@@ -255,7 +230,7 @@ const SignUp = () => {
       country_code: selectedCode,
       mobile: phoneNumber,
       image: imageUrl,
-      age: calculateAge(new Date(dobDate.startDate)),
+      age: calculateAge(new Date(date)),
       gender,
       role_id: selectedRoles,
       authType: "EMAIL",
@@ -503,7 +478,8 @@ const SignUp = () => {
         )}
 
         {subscriptionBool && !imageUploading && !loading && (
-          <div className="bg-white p-[30px] w-[80vw] 768px:w-[60vw] rounded-xl text-black flex flex-col gap-[20px]">
+          <div className="bg-white p-[30px] w-[80vw] 768px:w-[60vw] max-h-[90vh] rounded-xl text-black flex flex-col gap-[20px] z-10 overflow-auto"
+            style={{ scrollbarWidth: "none" }}>
             <div className="flex items-center justify-center w-full">
               {image ? (
                 <Image
@@ -558,14 +534,28 @@ const SignUp = () => {
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 flex flex-col">
               <label htmlFor="">Select your date of birth</label>
-              <Datepicker
-                value={dobDate}
-                onChange={handleDobDateChange}
-                asSingle={true}
-                useRange={false}
-              />
+              <div>
+                {
+                  dateOpen ?
+                  <Calendar mode="single" selected={date} onSelect={setDate} />
+                  :
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-[280px] justify-start text-left font-normal",
+                      !date && "text-muted-foreground"
+                    )}
+                    onClick={() => {
+                      setDateOpen(true);
+                    }}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                }
+              </div>
             </div>
 
             <select

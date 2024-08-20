@@ -30,6 +30,8 @@ import {
   PermissionsIcon,
   RolesIcon,
   UsersIcon,
+  LogIcon,
+  LogOutIcon,
 } from "@/assets/sidebar/SidebarImages";
 import Link from "next/link";
 import { Tooltip } from "@mui/material";
@@ -432,7 +434,7 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={BookingIcon}
+          src={LogIcon}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -446,7 +448,7 @@ const Sidebar = () => {
         ko: "예약",
         es: "Reservaciones",
         sv: "Bokningar",
-        en: "Bookings",
+        en: "Lease",
       }),
       // route: "/Bookings/Lease",
       route: "#",
@@ -454,7 +456,7 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={BookingIcon}
+          src={LogOutIcon}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -468,7 +470,7 @@ const Sidebar = () => {
         ko: "예약",
         es: "Reservaciones",
         sv: "Bokningar",
-        en: "Bookings",
+        en: "Share",
       }),
       // route: "/Bookings/Share",
       route: "#",

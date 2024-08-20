@@ -21,6 +21,8 @@ import {
   AccountingIcon,
   AffiliationIcon,
   InsuranceIcon,
+  LogIcon,
+  LogOutIcon,
   PermissionsIcon,
   RolesIcon,
   UsersIcon,
@@ -431,7 +433,7 @@ const ExpandedSidebar = () => {
     {
       icon: (
         <Image
-          src={BookingIcon}
+          src={LogIcon}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -445,7 +447,7 @@ const ExpandedSidebar = () => {
         ko: "예약",
         es: "Reservaciones",
         sv: "Bokningar",
-        en: "Bookings",
+        en: "Lease",
       }),
       // route: "/Bookings/Lease",
       route: "#",
@@ -453,7 +455,7 @@ const ExpandedSidebar = () => {
     {
       icon: (
         <Image
-          src={BookingIcon}
+          src={LogOutIcon}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -467,7 +469,7 @@ const ExpandedSidebar = () => {
         ko: "예약",
         es: "Reservaciones",
         sv: "Bokningar",
-        en: "Bookings",
+        en: "Share",
       }),
       // route: "/Bookings/Share",
       route: "#",
@@ -603,12 +605,6 @@ const ExpandedSidebar = () => {
 
   return (
     <motion.div
-      initial={{
-        left: "36px",
-      }}
-      whileInView={{
-        left: "0px",
-      }}
       className={`w-[200px] p-5 flex flex-col gap-[20px] box-content bg-[#ededed] transition-all duration-500 absolute ${sidebarShow ? "translate-x-0" : "-translate-x-full"} top-0 z-10`}
     >
       {/* <p className='text-primaryColor hidden text-[20px] font-[600] w-full 1200px:flex items-center justify-center'>
