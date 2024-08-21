@@ -45,6 +45,7 @@ type Translations = {
   inventory: string;
   billing: string;
   settings: string;
+  bookings: string;
 };
 
 const Sidebar = () => {
@@ -108,13 +109,11 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        fr: "Tableau de bord",
-        pt: "Painel",
-        de: "Armaturenbrett",
-        ko: "계기반",
-        es: "Panel",
-        sv: "Instrumentbräda",
         en: "Dashboard",
+        es: "Panel",
+        ay: "Kuntasiña",
+        qu: "Rimanakuyta apakuy",
+        gn: "Tembikuaa",
       }),
       route: "/",
     },
@@ -129,15 +128,12 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        fr: "Fermes",
-        pt: "Fazendas",
-        de: "Bauernhöfe",
-        ko: "전원",
-        es: "Granjas",
-        sv: "Gårdar",
         en: "Farms",
+        es: "Granjas",
+        ay: "Chhijllaña",
+        qu: "Qichwasqa",
+        gn: "Ñemityha",
       }),
-      // route: "/Farms/AllFarms",
       route: "#",
     },
     {
@@ -151,15 +147,12 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        fr: "Agents",
-        pt: "Agentes",
-        de: "Agenten",
-        ko: "자치령 대표",
-        es: "Agentes",
-        sv: "Agenter",
         en: "Agents",
+        es: "Agentes",
+        ay: "Aruskipiri",
+        qu: "Waqaypa qhapaqkuna",
+        gn: "Agente",
       }),
-      // route: "/Agents",
       route: "#",
     },
     {
@@ -173,15 +166,12 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        fr: "Concessionnaires",
-        pt: "Revendedores",
-        de: "Händler",
-        ko: "딜러",
-        es: "Distribuidores",
-        sv: "Återförsäljare",
         en: "Dealers",
+        es: "Distribuidores",
+        ay: "Wanakuta",
+        qu: "Haqllaqkuna",
+        gn: "Mba’apoha",
       }),
-      // route: "/Dealers",
       route: "#",
     },
     {
@@ -195,15 +185,12 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        fr: "Les opérateurs",
-        pt: "Operadores",
-        de: "Betreiber",
-        ko: "운영자",
-        es: "Operadores",
-        sv: "Operatörer",
         en: "Operators",
+        es: "Operadores",
+        ay: "Jach'a uywiri",
+        qu: "Qhapaq ruwariq",
+        gn: "Omoñangáva",
       }),
-      // route: "/Operators",
       route: "#",
     },
     {
@@ -217,15 +204,12 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        fr: "Entreprise",
-        pt: "Negócios",
-        de: "Geschäft",
-        ko: "사업",
-        es: "Negocio",
-        sv: "Företag",
         en: "Business",
+        es: "Negocio",
+        ay: "Kamani",
+        qu: "Ruwasqa",
+        gn: "Negósio",
       }),
-      // route: "/Business",
       route: "#",
     },
     {
@@ -239,15 +223,12 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        fr: "Abonnements",
-        pt: "Assinaturas",
-        de: "Abonnements",
-        ko: "구독",
-        es: "Suscripciones",
-        sv: "Prenumerationer",
         en: "Subscriptions",
+        es: "Suscripciones",
+        ay: "Churasa",
+        qu: "Qhatariynin",
+        gn: "Ñemity",
       }),
-      // route: "/Subscription",
       route: "#",
     },
   ];
@@ -264,13 +245,11 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        fr: "Tracteurs",
-        pt: "Tratores",
-        de: "Traktoren",
-        ko: "트랙터",
-        es: "Tractores",
-        sv: "Traktorer",
         en: "Tractors",
+        es: "Tractores",
+        ay: "Wichari",
+        qu: "Qhapaqyaq",
+        gn: "Traktór",
       }),
       route: "/Inventory",
     },
@@ -285,13 +264,11 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        fr: "Attachments",
-        pt: "Attachments",
-        de: "Attachments",
-        ko: "Attachments",
-        es: "Attachments",
-        sv: "Attachments",
         en: "Attachments",
+        es: "Adjuntos",
+        ay: "Uchawi",
+        qu: "Aqha",
+        gn: "Jepya",
       }),
       route: "/Attachments",
     },
@@ -306,13 +283,11 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        fr: "Store",
-        pt: "Store",
-        de: "Store",
-        ko: "Store",
-        es: "Store",
-        sv: "Store",
         en: "Store",
+        es: "Tienda",
+        ay: "Wawa",
+        qu: "Qatari",
+        gn: "Nda’ari",
       }),
       route: "/Store",
     },
@@ -330,15 +305,12 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        fr: "Déclarations",
-        pt: "Declarações",
-        de: "Aussagen",
-        ko: "진술",
-        es: "Declaraciones",
-        sv: "Uttalanden",
         en: "Statements",
+        es: "Declaraciones",
+        ay: "Jach’a qilqaña",
+        qu: "Yachayniyuq",
+        gn: "Ñe’ēpa",
       }),
-      // route: "/Statements",
       route: "#",
     },
     {
@@ -352,15 +324,12 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        fr: "Historique de paiement",
-        pt: "Histórico de pagamento",
-        de: "Zahlungshistorie",
-        ko: "결제 내역",
+        en: "Payment History",
         es: "Historial de pagos",
-        sv: "Betalningshistorik",
-        en: "Payment history",
+        ay: "Qullqi qhippacha",
+        qu: "Qullqi ch’akchinay",
+        gn: "Rekuérdo repóha",
       }),
-      // route: "/PaymentHistory",
       route: "#",
     },
     {
@@ -374,15 +343,12 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        fr: "Méthodes de payement",
-        pt: "Métodos de Pagamento",
-        de: "Zahlungsarten",
-        ko: "결제 방법",
+        en: "Payment Methods",
         es: "Métodos de pago",
-        sv: "Betalningsmetoder",
-        en: "Payment methods",
+        ay: "Qullqi lurañani",
+        qu: "Qullqi llank’ay",
+        gn: "Ñemongueta",
       }),
-      // route: "/PaymentMethods",
       route: "#",
     },
     {
@@ -396,15 +362,12 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        fr: "Comptabilité",
-        pt: "Contabilidade",
-        de: "Buchhaltung",
-        ko: "회계",
-        es: "Contabilidad",
-        sv: "Bokföring",
         en: "Accounting",
+        es: "Contabilidad",
+        ay: "Qillqaña",
+        qu: "Qataña",
+        gn: "Contabilidad",
       }),
-      // route: "/Accounting",
       route: "#",
     },
   ];
@@ -421,13 +384,11 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        fr: "Réservations",
-        pt: "Reservas",
-        de: "Buchungen",
-        ko: "예약",
-        es: "Reservaciones",
-        sv: "Bokningar",
         en: "Bookings",
+        es: "Reservaciones",
+        ay: "Manq’asa",
+        qu: "Qhapaq ñakariy",
+        gn: "Tavisa",
       }),
       route: "/Bookings",
     },
@@ -438,19 +399,16 @@ const Sidebar = () => {
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
-          alt="Bookings"
+          alt="Lease"
         />
       ),
       name: getTranslation(locale, {
-        fr: "Réservations",
-        pt: "Reservas",
-        de: "Buchungen",
-        ko: "예약",
-        es: "Reservaciones",
-        sv: "Bokningar",
         en: "Lease",
+        es: "Arrendamiento",
+        ay: "Uru purisiri",
+        qu: "Masi",
+        gn: "Ipotĩ",
       }),
-      // route: "/Bookings/Lease",
       route: "#",
     },
     {
@@ -460,19 +418,16 @@ const Sidebar = () => {
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
-          alt="Bookings"
+          alt="Share"
         />
       ),
       name: getTranslation(locale, {
-        fr: "Réservations",
-        pt: "Reservas",
-        de: "Buchungen",
-        ko: "예약",
-        es: "Reservaciones",
-        sv: "Bokningar",
         en: "Share",
+        es: "Compartir",
+        ay: "Ayniri",
+        qu: "Rimanakuy",
+        gn: "Mboja’aha",
       }),
-      // route: "/Bookings/Share",
       route: "#",
     },
   ];
@@ -489,13 +444,11 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        fr: "Les rôles",
-        pt: "Funções",
-        de: "Rollen",
-        ko: "역할",
-        es: "Roles",
-        sv: "Roller",
         en: "Roles",
+        es: "Roles",
+        ay: "Tukuyani",
+        qu: "Llamk’aqkuna",
+        gn: "Ñangarekóva",
       }),
       route: "/Roles",
     },
@@ -510,13 +463,11 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        fr: "Autorisation",
-        pt: "Permissão",
-        de: "Erlaubnis",
-        ko: "허가",
-        es: "Permiso",
-        sv: "Lov",
         en: "Permission",
+        es: "Permiso",
+        ay: "Ayniri",
+        qu: "Hap'iy",
+        gn: "Permiso",
       }),
       route: "/Permissions",
     },
@@ -531,13 +482,11 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        fr: "Utilisateurs",
-        pt: "Comercial",
-        de: "Benutzer",
-        ko: "사용자",
-        es: "Usuarios",
-        sv: "Användare",
         en: "Users",
+        es: "Usuarios",
+        ay: "Jach'a uywiri",
+        qu: "Runa",
+        gn: "Póry",
       }),
       route: "/Users",
     },
@@ -552,13 +501,11 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        fr: "Utilisateurs",
-        pt: "Comercial",
-        de: "Benutzer",
-        ko: "사용자",
-        es: "Usuarios",
-        sv: "Användare",
         en: "Country",
+        es: "País",
+        ay: "Marka",
+        qu: "Suyu",
+        gn: "Tetã",
       }),
       route: "/Country",
     },
@@ -573,18 +520,16 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        fr: "Notifications",
-        pt: "Notificações",
-        de: "Benachrichtigungen",
-        ko: "알림",
-        es: "Notificaciones",
-        sv: "Aviseringar",
         en: "Notifications",
+        es: "Notificaciones",
+        ay: "Yatiyaña",
+        qu: "Rimaykunap",
+        gn: "Aviso",
       }),
-      // route: "/Notifications",
       route: "#",
     },
   ];
+  
 
   // Define translations for "Inventory", "Billing", and "Settings"
   const translations: Record<string, Translations> = {
@@ -592,38 +537,34 @@ const Sidebar = () => {
       inventory: "Inventory",
       billing: "Billing",
       settings: "Settings",
-    },
-    fr: {
-      inventory: "Inventaire",
-      billing: "Facturation",
-      settings: "Paramètres",
-    },
-    pt: {
-      inventory: "Inventário",
-      billing: "Faturamento",
-      settings: "Configurações",
-    },
-    de: {
-      inventory: "Inventar",
-      billing: "Abrechnung",
-      settings: "Einstellungen",
-    },
-    ko: {
-      inventory: "재고",
-      billing: "청구",
-      settings: "설정",
+      bookings: "Bookings",
     },
     es: {
       inventory: "Inventario",
       billing: "Facturación",
       settings: "Configuraciones",
+      bookings: "Reservas",
     },
-    sv: {
-      inventory: "Inventering",
-      billing: "Fakturering",
-      settings: "Inställningar",
+    ay: {
+      inventory: "Lurawi utanaka",
+      billing: "Jisk'a qallta",
+      settings: "Qillqatanaka",
+      bookings: "Qillqatapxañani",
+    },
+    qu: {
+      inventory: "Hawa llaqtaqmasi",
+      billing: "Wasiwi",
+      settings: "Chaskiykuna",
+      bookings: "Llamk'apay",
+    },
+    gn: {
+      inventory: "Ñemitype",
+      billing: "Kamby rehegua",
+      settings: "Ñemohenda",
+      bookings: "Jehechauka",
     },
   };
+  
 
   return (
     <div
@@ -666,13 +607,13 @@ const Sidebar = () => {
 
       <div>
         <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
-          <Tooltip title={"Bookings"} placement="right">
+          <Tooltip title={translations[locale]?.bookings || translations.en.bookings} placement="right">
             <Image
               src={InsuranceIcon}
               className="w-[20px] h-auto object-cover"
               width={20}
               height={20}
-              alt="Statements"
+              alt="Bookings"
             />
           </Tooltip>
         </div>

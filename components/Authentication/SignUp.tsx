@@ -240,11 +240,7 @@ const SignUp = () => {
     setLoading(true);
 
     renderInstance
-      .post("/user/signup", user, {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      })
+      .post("/user/signup", user)
       .then((res) => {
         if (res.status === 201 && res.data.access_token) {
           const expiryDate = new Date();

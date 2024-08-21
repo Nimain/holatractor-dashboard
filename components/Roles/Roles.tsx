@@ -391,7 +391,7 @@ const handleEditRoleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         {fetchingRoles ? (
           <p>Fetching roles</p>
         ) : (
-          roles.length === 0 && <p>No roles present</p>
+          roles.length === 1 && <p>No roles present</p>
         )}
 
         {roles.length !== 0 &&

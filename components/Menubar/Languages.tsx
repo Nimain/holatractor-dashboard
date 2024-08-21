@@ -13,6 +13,11 @@ import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { changeLanguage } from "@/redux/Language/ActiveLanguage";
 
+type Translations = {
+  selectLanguage: string;
+  close: string;
+}
+
 const Languages = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -21,18 +26,43 @@ const Languages = () => {
 
   const allLanguages = [
     { name: "English", locale: "en" },
-    { name: "française", locale: "fr" },
-    { name: "Português", locale: "pt" },
-    { name: "Deutsch", locale: "de" },
-    { name: "한국인", locale: "ko" },
     { name: "Español", locale: "es" },
-    { name: "vsvenska", locale: "sv" },
+    { name: "Aymara", locale: "ay" },
+    { name: "Quechua", locale: "qu" },
+    { name: "Guarani", locale: "gn" },
   ];
+  
+  const { language: locale } = useSelector(
+    (root: RootState) => root.ActiveLanguage
+  );
 
   // Find the name corresponding to the current locale
   const currentLanguageName = allLanguages.find(
     (lang) => lang.locale === language
   )?.name || language; // Fallback to the locale if not found
+
+  const translations: Record<string, Translations> = {
+    en: {
+      selectLanguage: "Select your preferred language",
+      close: "Close",
+    },
+    es: {
+      selectLanguage: "Seleccione su idioma preferido",
+      close: "Cerrar",
+    },
+    ay: {
+      selectLanguage: "Akhamawa jaqi arump jaysiña",
+      close: "Khititaña",
+    },
+    qu: {
+      selectLanguage: "Sut'iykimpaq rimayta akllay",
+      close: "Wañuy",
+    },
+    gn: {
+      selectLanguage: "Elei ñe'êmboyvegua",
+      close: "Ñemboty",
+    },
+  };  
 
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -52,7 +82,9 @@ const Languages = () => {
         style={{ scrollbarWidth: "none" }}
       >
         <DialogHeader>
-          <p className="text-2xl font-bold">Select your prefered language</p>
+          <p className="text-2xl font-bold">
+          {translations[locale]?.selectLanguage || translations.en.selectLanguage}
+          </p>
         </DialogHeader>
 
         <div className="w-[320px] bg-white text-black rounded-md px-[30px] py-[30px] flex flex-col gap-[6px] box-border relative">
@@ -82,7 +114,7 @@ const Languages = () => {
                 setDialogOpen(false);
               }}
             >
-              Close
+              {translations[locale].close || translations.en.close}
             </button>
           </DialogClose>
         </DialogFooter>
