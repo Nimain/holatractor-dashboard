@@ -4,7 +4,7 @@ import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { Country } from "@/utils/Types/types";
 import { Backdrop, CircularProgress } from "@mui/material";
-import { MoreVerticalIcon } from "lucide-react";
+import { Check, ChevronsUpDown, MoreVerticalIcon } from "lucide-react";
 import { useCookie } from "next-cookie";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -18,17 +18,23 @@ import {
 } from "@/components/ui/dialog";
 import AddIcon from "@mui/icons-material/Add";
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import subcontinentRegions from "@/utils/AllSubContinentDetails";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import subcontinentRegions, { countryArray } from "@/utils/AllSubContinentDetails";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import { Button } from "../ui/button";
+import { cn } from "@/lib/utils";
 
 const CountrySection = () => {
   const [bacOpen, setBacOpen] = useState(false);
@@ -38,6 +44,7 @@ const CountrySection = () => {
   const [editOptionShow, setEditOptionShow] = useState(-1);
 
   const [addNewCountry, setAddNewCountry] = useState(false)
+  const [popoverOpen, setPopoverOpen] = useState(false)
   const [newCountry, setNewCountry] = useState("")
   const [countryCode, setCountryCode] = useState("")
 
@@ -114,18 +121,18 @@ const CountrySection = () => {
     return isCountry; // Return null if the country is not found
   }
 
-  function handleCreateCountry(){
-    if(!newCountry){
+  function handleCreateCountry() {
+    if (!newCountry) {
       errorMessage("Please select a country")
       return
     }
 
-    if(!validateCountry(newCountry)){
+    if (!validateCountry(newCountry)) {
       errorMessage("Invalid country")
       return
     }
 
-    if(!countryCode){
+    if (!countryCode) {
       errorMessage("Please give the country code")
       return
     }
@@ -139,15 +146,15 @@ const CountrySection = () => {
       headers: {
         Authorization: `Bearer ${access_token}`,
       },
-    }).then((res)=>{
+    }).then((res) => {
       successMessage("Added")
       setNewCountry("")
       setCountryCode("")
       setAddNewCountry(false)
       fetchAllCountry()
-    }).catch((err)=>{
+    }).catch((err) => {
       errorMessage("Some error occurred")
-    }).finally(()=>{
+    }).finally(() => {
       setBacOpen(false)
       refresh()
     })
@@ -199,47 +206,60 @@ const CountrySection = () => {
                 Select country and region
               </label>
 
-              <Select
-                onValueChange={(value) => {
-                  setNewCountry(value); // Set the selected country name to newCountry state
-                }}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a country" />
-                </SelectTrigger>
-                <SelectContent>
-                  {
-                    Object.keys(subcontinentRegions).map((continent, index) => {
-                      return (
-                        <SelectGroup key={index}>
-                          <SelectLabel>
-                            {continent}
-                          </SelectLabel>
-                          {
-                            subcontinentRegions[continent].map((country, i) => {
-                              return (
-                                <SelectItem key={i} value={country}>
-                                  {country}
-                                </SelectItem>
-                              )
-                            })
-                          }
-                        </SelectGroup>
-                      )
-                    })
-                  }
-                </SelectContent>
-              </Select>
+              <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    // aria-expanded={popoverOpen}
+                    className="w-full justify-between"
+                  >
+                    {newCountry
+                      ? countryArray.find((country) => country === newCountry) && newCountry
+                      : "Select country..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput placeholder="Search country..." />
+                    <CommandList>
+                      <CommandEmpty>No country found.</CommandEmpty>
+                      <CommandGroup>
+                        {countryArray.map((country) => (
+                          <CommandItem
+                            key={country}
+                            value={country}
+                            onSelect={(currentValue) => {
+                              setNewCountry(country)
+                              setPopoverOpen(false)
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                newCountry === country ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {country}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
 
               {
                 newCountry && (
                   <div className="grid w-full items-center gap-1.5">
                     <Label htmlFor="country_code">Country code</Label>
-                    <Input 
-                    type="text" 
-                    id="country_code" 
-                    placeholder="e.x - +91" 
-                    value={countryCode} 
-                    onChange={e=>{setCountryCode(e.target.value)}} />
+                    <Input
+                      type="text"
+                      id="country_code"
+                      placeholder="e.x - +91"
+                      value={countryCode}
+                      onChange={e => { setCountryCode(e.target.value) }} />
                   </div>
                 )
               }
@@ -276,7 +296,7 @@ const CountrySection = () => {
         {fetchingContry ? (
           <p>Fetching list</p>
         ) : (
-          country.length === 0 && <p>No present present</p>
+          country.length === 0 && <p>No country present</p>
         )}
 
         {country.length !== 0 &&

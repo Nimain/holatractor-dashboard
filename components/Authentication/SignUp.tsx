@@ -18,6 +18,7 @@ import { Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import Datepicker from "react-tailwindcss-datepicker";
 
 const SignUp = () => {
   const [name, setName] = useState("");
@@ -47,6 +48,7 @@ const SignUp = () => {
 
   const [date, setDate] = useState<Date>();
   const [dateOpen, setDateOpen] = useState(false);
+  const [year, setYear] = useState('')
 
   function handleDateChange(e: any) {
     const tempDate = new Date(e)
@@ -144,7 +146,7 @@ const SignUp = () => {
     setSubscriptionBool(true);
   }
 
-  function handleSubscriptionBool() {}
+  function handleSubscriptionBool() { }
 
   function calculateAge(dob: Date) {
     const diff = Date.now() - dob.getTime();
@@ -167,8 +169,6 @@ const SignUp = () => {
       password,
       "m4AfXfQ&1brl3LjQFYO"
     ).toString();
-
-    const access_token = cookie.get("access_token");
 
     const { firstName, middleName, lastName } = splitFullName(name);
 
@@ -386,13 +386,11 @@ const SignUp = () => {
                   return (
                     <div
                       key={index}
-                      className={`w-full 768px:w-[300px] ${
-                        selectedRoles === roleItmes.id
+                      className={`w-full 768px:w-[300px] ${selectedRoles === roleItmes.id
                           ? "bg-green-200"
                           : "bg-white"
-                      } ${
-                        roleItmes.name === "admin" && "hidden"
-                      } flex items-center justify-center py-[20px] px-[20px] rounded-md shadow-xl border-[2px]`}
+                        } ${roleItmes.name === "admin" && "hidden"
+                        } flex items-center justify-center py-[20px] px-[20px] rounded-md shadow-xl border-[2px]`}
                       // onClick={() => {
                       //     setSelectedRoles(pre => pre.includes(roleItmes.name) ?
                       //         pre.filter(old => old !== roleItmes.name) :
@@ -536,21 +534,21 @@ const SignUp = () => {
               <div>
                 {
                   dateOpen ?
-                  <Calendar mode="single" selected={date} onSelect={e=>{ handleDateChange(e) }} />
-                  :
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-[280px] justify-start text-left font-normal",
-                      !date && "text-muted-foreground"
-                    )}
-                    onClick={() => {
-                      setDateOpen(true);
-                    }}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, "PPP") : <span>Pick a date</span>}
-                  </Button>
+                    <Calendar mode="single" selected={date} onSelect={e => { handleDateChange(e) }} />
+                    :
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-[280px] justify-start text-left font-normal",
+                        !date && "text-muted-foreground"
+                      )}
+                      onClick={() => {
+                        setDateOpen(true);
+                      }}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {date ? format(date, "PPP") : <span>Pick a date</span>}
+                    </Button>
                 }
               </div>
             </div>
