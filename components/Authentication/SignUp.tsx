@@ -19,8 +19,11 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import Datepicker from "react-tailwindcss-datepicker";
+import SignupCard from "./SignupCard";
 
 const SignUp = () => {
+  const [isSignUpCard, setIsSignUpCard] = useState(false)
+
   const [name, setName] = useState("");
 
   const [open, setOpen] = useState(false);
@@ -54,6 +57,15 @@ const SignUp = () => {
     const tempDate = new Date(e)
     setDate(tempDate)
     setDateOpen(false)
+  }
+
+  function handleNameChage(name: string) {
+    setName(name)
+    
+    const { lastName } = splitFullName(name)
+
+    if(lastName) setIsSignUpCard(true)
+      else setIsSignUpCard(false)
   }
 
   const splitFullName = (fullName: string) => {
@@ -387,8 +399,8 @@ const SignUp = () => {
                     <div
                       key={index}
                       className={`w-full 768px:w-[300px] ${selectedRoles === roleItmes.id
-                          ? "bg-green-200"
-                          : "bg-white"
+                        ? "bg-green-200"
+                        : "bg-white"
                         } ${roleItmes.name === "admin" && "hidden"
                         } flex items-center justify-center py-[20px] px-[20px] rounded-md shadow-xl border-[2px]`}
                       // onClick={() => {
@@ -534,7 +546,8 @@ const SignUp = () => {
               <div>
                 {
                   dateOpen ?
-                    <Calendar mode="single" selected={date} onSelect={e => { handleDateChange(e) }} />
+                    // <Calendar mode="single" selected={date} onSelect={(e: any) => { handleDateChange(e) }} />
+                    <></>
                     :
                     <Button
                       variant={"outline"}
@@ -562,7 +575,7 @@ const SignUp = () => {
               </option>
               <option value="male">Male</option>
               <option value="female">Female</option>
-              <option value="male">Others</option>
+              <option value="others">Others</option>
             </select>
 
             <div className="px-[20px] py-[10px] w-full border-[2px] rounded-md">
@@ -663,19 +676,24 @@ const SignUp = () => {
                 className="bg-transparent outline-none border-none text-black"
                 value={name}
                 onChange={(e) => {
-                  setName(e.target.value);
+                  handleNameChage(e.target.value);
                 }}
               />
             </div>
-            <button
+              {
+                isSignUpCard ?
+                <SignupCard name={name} />
+                :
+                <button
               name="Name_next_button"
               className="p-[10px] w-[30%] flex items-center justify-center bg-[#AB0F0C]"
               onClick={() => {
-                handleInitialSignInClick();
+                errorMessage("Please give your name")
               }}
             >
               Next
             </button>
+              }
           </div>
         </div>
 
