@@ -241,7 +241,7 @@ const SignupCard = ({ name }: { name: string }) => {
             image: imageUrl,
             dob: new Date(date),
             gender,
-            role_id: selectedRole,
+            role_id: selectedRole.data,
             authType: "EMAIL",
             location_name,
             location_address,
@@ -253,8 +253,6 @@ const SignupCard = ({ name }: { name: string }) => {
             document_number,
             expiry_date
         };
-
-        console.log("Creating")
 
         renderInstance
             .post("/operator", user)
@@ -271,7 +269,6 @@ const SignupCard = ({ name }: { name: string }) => {
                         router.push("/login");
                     }, 3000);
                 }
-                console.log(res)
             })
             .catch((err) => {
                 if (
@@ -295,7 +292,6 @@ const SignupCard = ({ name }: { name: string }) => {
                 } else {
                     errorMessage("Internal server error");
                 }
-                console.log(err)
             })
             .finally(() => {
                 setLoading(false);

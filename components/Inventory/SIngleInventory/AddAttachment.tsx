@@ -17,6 +17,7 @@ import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages';
 import { Backdrop } from '@mui/material';
 import Image from 'next/image';
+import { Button } from '@/components/ui/button';
 
 interface addAttachmentProps {
     allAttachments: Attachment[];
@@ -64,14 +65,14 @@ const AddAttachment = ({allAttachments, selectedAttachments,tractorId}: addAttac
 
     return (
         <div>
-            <button
-                name='new_tractor_add'
-                className='px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px]'
+            <Button
+                name='new_attachment_add'
+                className='flex items-center justify-center gap-[10px] text-xl font-medium'
             onClick={() => { setOpen(true) }}
             >
                 <AddIcon />
-                <span>Add tractor</span>
-            </button>
+                <span>Add attachment</span>
+            </Button>
 
             <Backdrop
                 sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}

@@ -1,12 +1,21 @@
 "use client";
 
 import Menubar from "@/components/Menubar/Menubar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { RootState } from "@/redux/store";
 import { uploadFileToS3 } from "@/utils/AWS/FileUpload";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { Inventory } from "@/utils/Types/types";
 import { Backdrop, CircularProgress } from "@mui/material";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { useCookie } from "next-cookie";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -34,21 +43,10 @@ const NewAttachment = () => {
 
   const [imageUploading, setImageUploading] = useState(false);
   const [creatingAttachment, setCreatingATtachment] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false)
 
   const [en_name, set_en_name] = useState("");
   const [en_description, set_en_description] = useState("");
-  const [fr_name, set_fr_name] = useState("");
-  const [fr_description, set_fr_description] = useState("");
-  const [pt_name, set_pt_name] = useState("");
-  const [pt_description, set_pt_description] = useState("");
-  const [de_name, set_de_name] = useState("");
-  const [de_description, set_de_description] = useState("");
-  const [ko_name, set_ko_name] = useState("");
-  const [ko_description, set_ko_description] = useState("");
-  const [es_name, set_es_name] = useState("");
-  const [es_description, set_es_description] = useState("");
-  const [sv_name, set_sv_name] = useState("");
-  const [sv_description, set_sv_description] = useState("");
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     setSelectedImage((prevImages) => [...prevImages, ...acceptedFiles]);
@@ -89,13 +87,11 @@ const NewAttachment = () => {
   }
 
   const allLanguages = [
-    { name: "English *", locale: "en" },
-    { name: "française", locale: "fr" },
-    { name: "Português", locale: "pt" },
-    { name: "Deutsch", locale: "de" },
-    { name: "한국인", locale: "ko" },
+    { name: "English", locale: "en" },
     { name: "Español", locale: "es" },
-    { name: "vsvenska", locale: "sv" },
+    { name: "Aymara", locale: "ay" },
+    { name: "Quechua", locale: "qu" },
+    { name: "Guarani", locale: "gn" },
   ];
 
   const translations: Record<string, Translations> = {
@@ -188,6 +184,11 @@ const NewAttachment = () => {
       errorMessage("Attachment description can't be empty");
       return;
     }
+    if (!selectedImage) {
+      errorMessage("Upload atleast one image");
+      return;
+    }
+
     let tractorImages;
 
     if (selectedImage.length > 0) {
@@ -228,21 +229,21 @@ const NewAttachment = () => {
           err.response &&
           err.response.status === 409 &&
           err.response.data.message ===
-            "Only admin users can create new attachments"
+          "Only admin users can create new attachments"
         ) {
           errorMessage("Only admin can add new attachments");
         } else if (
           err.response &&
           err.response.status === 409 &&
           err.response.data.message ===
-            "A attachment with the same name is already exist"
+          "A attachment with the same name is already exist"
         ) {
           errorMessage("Name already taken");
         } else if (
           err.response &&
           err.response.status === 409 &&
           err.response.data.message ===
-            "Tractor with the given id does not present"
+          "Tractor with the given id does not present"
         ) {
           errorMessage("Selected tractor is not present");
         } else {
@@ -284,11 +285,10 @@ const NewAttachment = () => {
           return (
             <div
               key={index}
-              className={`text-xl font-medium px-4 py-2 transition border border-t-0 border-l-0 border-r-0 border-purple-500 ${
-                details.locale === activeLanguage
+              className={`text-xl font-medium px-4 py-2 transition border border-t-0 border-l-0 border-r-0 border-purple-500 ${details.locale === activeLanguage
                   ? "border-b-4 text-primaryColor"
                   : "border-b-0"
-              } cursor-pointer`}
+                } cursor-pointer`}
               onClick={() => {
                 setActiveLanguage(details.locale);
               }}
@@ -299,311 +299,234 @@ const NewAttachment = () => {
         })}
       </div>
 
-      {activeLanguage === "en" && (
-        <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px] mx-auto">
-          <div className="flex flex-col gap-[4px] w-full">
-            <label className="text-[18px]">Name</label>
+      <Card className="max-w-[600px] w-full p-5">
 
-            <div className="px-[10px] py-[4px] border border-black rounded-md text-[16px]">
-              <input
-                type="text"
-                placeholder="Attachment name"
-                className="outline-none bg-transparent border-none w-full"
-                value={en_name}
-                onChange={(e) => {
-                  set_en_name(e.target.value);
-                }}
-              />
+        <CardContent className="max-w-[600px] w-full space-y-4">
+
+          {activeLanguage === "en" && (
+            <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px] mx-auto">
+
+              <div className="space-y-2 w-full">
+                <Label htmlFor="attachment_name">Attachment name</Label>
+                <Input
+                  id="attachment_name"
+                  className="w-full"
+                  placeholder='e.g - cultivator'
+                  value={en_name}
+                  onChange={(e) => {
+                    set_en_name(e.target.value);
+                  }} />
+              </div>
+
+              <div className="grid w-full gap-1.5">
+                <Label htmlFor="message">Attachment description</Label>
+                <Textarea
+                  placeholder="Type your description here."
+                  id="message"
+                  className="resize-none w-full"
+                  value={en_description}
+                  onChange={(e) => {
+                    set_en_description(e.target.value);
+                  }} />
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="flex flex-col gap-[4px] w-full">
-            <label className="text-[18px]">Description</label>
+          {activeLanguage === "es" && (
+            <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px] mx-auto">
 
-            <div className="px-[10px] py-[4px] border border-black rounded-md text-[16px]">
-              <textarea
-                className="resize-none w-full min-h-20 outline-none border-none"
-                value={en_description}
-                onChange={(e) => {
-                  set_en_description(e.target.value);
-                }}
-              />
+              <div className="space-y-2 w-full">
+                <Label htmlFor="attachment_name">Attachment name</Label>
+                <Input
+                  id="attachment_name"
+                  className="w-full"
+                  placeholder='e.g - cultivator'
+                  value={en_name}
+                  onChange={(e) => {
+                    set_en_name(e.target.value);
+                  }} />
+              </div>
+
+              <div className="grid w-full gap-1.5">
+                <Label htmlFor="message">Attachment description</Label>
+                <Textarea
+                  placeholder="Type your description here."
+                  id="message"
+                  className="resize-none w-full"
+                  value={en_description}
+                  onChange={(e) => {
+                    set_en_description(e.target.value);
+                  }} />
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {activeLanguage === "fr" && (
-        <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px] mx-auto">
-          <div className="flex flex-col gap-[4px] w-full">
-            <label className="text-[18px]">Name</label>
+          {activeLanguage === "ay" && (
+            <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px] mx-auto">
 
-            <div className="px-[10px] py-[4px] border border-black rounded-md text-[16px]">
-              <input
-                type="text"
-                placeholder="Attachment name"
-                className="outline-none bg-transparent border-none w-full"
-                value={fr_name}
-                onChange={(e) => {
-                  set_fr_name(e.target.value);
-                }}
-              />
+              <div className="space-y-2 w-full">
+                <Label htmlFor="attachment_name">Attachment name</Label>
+                <Input
+                  id="attachment_name"
+                  className="w-full"
+                  placeholder='e.g - cultivator'
+                  value={en_name}
+                  onChange={(e) => {
+                    set_en_name(e.target.value);
+                  }} />
+              </div>
+
+              <div className="grid w-full gap-1.5">
+                <Label htmlFor="message">Attachment description</Label>
+                <Textarea
+                  placeholder="Type your description here."
+                  id="message"
+                  className="resize-none w-full"
+                  value={en_description}
+                  onChange={(e) => {
+                    set_en_description(e.target.value);
+                  }} />
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="flex flex-col gap-[4px] w-full">
-            <label className="text-[18px]">Description</label>
+          {activeLanguage === "qu" && (
+            <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px] mx-auto">
 
-            <div className="px-[10px] py-[4px] border border-black rounded-md text-[16px]">
-              <textarea
-                className="resize-none w-full min-h-20 outline-none border-none"
-                value={fr_description}
-                onChange={(e) => {
-                  set_fr_description(e.target.value);
-                }}
-              />
+              <div className="space-y-2 w-full">
+                <Label htmlFor="attachment_name">Attachment name</Label>
+                <Input
+                  id="attachment_name"
+                  className="w-full"
+                  placeholder='e.g - cultivator'
+                  value={en_name}
+                  onChange={(e) => {
+                    set_en_name(e.target.value);
+                  }} />
+              </div>
+
+              <div className="grid w-full gap-1.5">
+                <Label htmlFor="message">Attachment description</Label>
+                <Textarea
+                  placeholder="Type your description here."
+                  id="message"
+                  className="resize-none w-full"
+                  value={en_description}
+                  onChange={(e) => {
+                    set_en_description(e.target.value);
+                  }} />
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {activeLanguage === "pt" && (
-        <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px] mx-auto">
-          <div className="flex flex-col gap-[4px] w-full">
-            <label className="text-[18px]">Name</label>
+          {activeLanguage === "gn" && (
+            <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px] mx-auto">
 
-            <div className="px-[10px] py-[4px] border border-black rounded-md text-[16px]">
-              <input
-                type="text"
-                placeholder="Attachment name"
-                className="outline-none bg-transparent border-none w-full"
-                value={pt_name}
-                onChange={(e) => {
-                  set_pt_name(e.target.value);
-                }}
-              />
+              <div className="space-y-2 w-full">
+                <Label htmlFor="attachment_name">Attachment name</Label>
+                <Input
+                  id="attachment_name"
+                  className="w-full"
+                  placeholder='e.g - cultivator'
+                  value={en_name}
+                  onChange={(e) => {
+                    set_en_name(e.target.value);
+                  }} />
+              </div>
+
+              <div className="grid w-full gap-1.5">
+                <Label htmlFor="message">Attachment description</Label>
+                <Textarea
+                  placeholder="Type your description here."
+                  id="message"
+                  className="resize-none w-full"
+                  value={en_description}
+                  onChange={(e) => {
+                    set_en_description(e.target.value);
+                  }} />
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="flex flex-col gap-[4px] w-full">
-            <label className="text-[18px]">Description</label>
-
-            <div className="px-[10px] py-[4px] border border-black rounded-md text-[16px]">
-              <textarea
-                className="resize-none w-full min-h-20 outline-none border-none"
-                value={pt_description}
-                onChange={(e) => {
-                  set_pt_description(e.target.value);
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeLanguage === "de" && (
-        <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px] mx-auto">
-          <div className="flex flex-col gap-[4px] w-full">
-            <label className="text-[18px]">Name</label>
-
-            <div className="px-[10px] py-[4px] border border-black rounded-md text-[16px]">
-              <input
-                type="text"
-                placeholder="Attachment name"
-                className="outline-none bg-transparent border-none w-full"
-                value={de_name}
-                onChange={(e) => {
-                  set_de_name(e.target.value);
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-[4px] w-full">
-            <label className="text-[18px]">Description</label>
-
-            <div className="px-[10px] py-[4px] border border-black rounded-md text-[16px]">
-              <textarea
-                className="resize-none w-full min-h-20 outline-none border-none"
-                value={de_description}
-                onChange={(e) => {
-                  set_de_description(e.target.value);
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeLanguage === "ko" && (
-        <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px] mx-auto">
-          <div className="flex flex-col gap-[4px] w-full">
-            <label className="text-[18px]">Name</label>
-
-            <div className="px-[10px] py-[4px] border border-black rounded-md text-[16px]">
-              <input
-                type="text"
-                placeholder="Attachment name"
-                className="outline-none bg-transparent border-none w-full"
-                value={ko_name}
-                onChange={(e) => {
-                  set_ko_name(e.target.value);
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-[4px] w-full">
-            <label className="text-[18px]">Description</label>
-
-            <div className="px-[10px] py-[4px] border border-black rounded-md text-[16px]">
-              <textarea
-                className="resize-none w-full min-h-20 outline-none border-none"
-                value={ko_description}
-                onChange={(e) => {
-                  set_ko_description(e.target.value);
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeLanguage === "es" && (
-        <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px] mx-auto">
-          <div className="flex flex-col gap-[4px] w-full">
-            <label className="text-[18px]">Name</label>
-
-            <div className="px-[10px] py-[4px] border border-black rounded-md text-[16px]">
-              <input
-                type="text"
-                placeholder="Attachment name"
-                className="outline-none bg-transparent border-none w-full"
-                value={es_name}
-                onChange={(e) => {
-                  set_es_name(e.target.value);
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-[4px] w-full">
-            <label className="text-[18px]">Description</label>
-
-            <div className="px-[10px] py-[4px] border border-black rounded-md text-[16px]">
-              <textarea
-                className="resize-none w-full min-h-20 outline-none border-none"
-                value={es_description}
-                onChange={(e) => {
-                  set_es_description(e.target.value);
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeLanguage === "sv" && (
-        <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px] mx-auto">
-          <div className="flex flex-col gap-[4px] w-full">
-            <label className="text-[18px]">Name</label>
-
-            <div className="px-[10px] py-[4px] border border-black rounded-md text-[16px]">
-              <input
-                type="text"
-                placeholder="Attachment name"
-                className="outline-none bg-transparent border-none w-full"
-                value={sv_name}
-                onChange={(e) => {
-                  set_sv_name(e.target.value);
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-[4px] w-full">
-            <label className="text-[18px]">Description</label>
-
-            <div className="px-[10px] py-[4px] border border-black rounded-md text-[16px]">
-              <textarea
-                className="resize-none w-full min-h-20 outline-none border-none"
-                value={sv_description}
-                onChange={(e) => {
-                  set_sv_description(e.target.value);
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="max-w-[600px] mx-auto">
-        <div
-          {...getRootProps()}
-          className="dropzone text-center border-dashed border-2 border-gray-300 p-6 rounded-md"
-        >
-          <input {...getInputProps()} />
-          <p className="text-gray-600">
-            Drag 'n' drop an image here, or click to select one
-            {translations[locale]?.dragDropText ||
-              translations.en?.dragDropText}
-          </p>
-        </div>
-      </div>
-
-      <div className="w-full my-[4px] flex items-center flex-wrap gap-[20px] max-w-[600px] mx-auto">
-        {selectedImage.length > 0 &&
-          selectedImage.map((image, index) => {
-            return (
-              <Image
-                alt="image"
-                src={URL.createObjectURL(image)}
-                key={index}
-                width={80}
-                height={80}
-                className="object-cover w-[80px] h-[80px] cursor-pointer rounded-md"
-              />
-            );
-          })}
-      </div>
-
-      <div className="w-full flex items-center gap-[20px] max-w-[600px] mx-auto">
-        <div className="flex flex-col gap-[4px] w-full">
-          <label htmlFor="model_number_input" className="text-[18px]">
-            {translations[locale]?.selectTractor ||
-              translations.en.selectTractor}
-          </label>
-
-          <div className="px-[10px] py-[4px] border border-black rounded-md text-[16px]">
-            <select
-              className="outline-none bg-transparent border-none w-full"
-              onChange={(e) => {
-                setTractorType(e.target.value);
-              }}
+          <div className="max-w-[600px] mx-auto">
+            <div
+              {...getRootProps()}
+              className="dropzone text-center border-dashed border-2 border-gray-300 p-6 rounded-md"
             >
-              <option defaultChecked={true}>
-                {translations[locale]?.selectTractor ||
-                  translations.en.selectTractor}
-              </option>
+              <input {...getInputProps()} />
+              <p className="text-gray-600">
+                Drag 'n' drop an image here, or click to select one
+                {translations[locale]?.dragDropText ||
+                  translations.en?.dragDropText}
+              </p>
+            </div>
+          </div>
 
-              {allTractors.length === 0 && (
-                <option>
-                  {translations[locale]?.noTractorsAvailable ||
-                    translations.en.noTractorsAvailable}
-                </option>
-              )}
-
-              {allTractors.map((tractorDetails, index) => {
+          <div className="w-full my-[4px] flex items-center flex-wrap gap-[20px] max-w-[600px] mx-auto">
+            {selectedImage.length > 0 &&
+              selectedImage.map((image, index) => {
                 return (
-                  <option value={tractorDetails.tractor.id} key={index}>
-                    {tractorDetails.tractor.name}
-                  </option>
+                  <Image
+                    alt="image"
+                    src={URL.createObjectURL(image)}
+                    key={index}
+                    width={80}
+                    height={80}
+                    className="object-cover w-[80px] h-[80px] cursor-pointer rounded-md"
+                  />
                 );
               })}
-            </select>
           </div>
-        </div>
-      </div>
+
+          <div className="w-full flex items-center gap-[20px] max-w-[600px] mx-auto">
+            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    // aria-expanded={popoverOpen}
+                    className="w-full justify-between"
+                  >
+                    {tractorType
+                      ? allTractors.find((country) => country.tractor.name === tractorType) && tractorType
+                      : "Select inventory..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput placeholder="Search inventory..." />
+                    <CommandList>
+                      <CommandEmpty>No country found.</CommandEmpty>
+                      <CommandGroup>
+                        {allTractors.map((country, index) => (
+                          <CommandItem
+                            key={index}
+                            value={country.tractor.name}
+                            onSelect={(currentValue) => {
+                              setTractorType(country.tractor.name)
+                              setPopoverOpen(false)
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                tractorType === country.tractor.type ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {country.tractor.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+          </div>
+
+        </CardContent>
+
+      </Card>
 
       <button
         name="submit_button"
