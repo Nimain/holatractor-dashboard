@@ -655,7 +655,7 @@ const SignupCard = ({ name }: { name: string }) => {
                                                         <p>No countries are available</p>
                                                         :
                                                         <div className="space-y-1">
-                                                            <Label htmlFor="phonrnumber">Phone number</Label>
+                                                            <Label htmlFor="phonrnumber">Country name</Label>
                                                             <div className="w-full space-y-2">
                                                                 <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                                                                     <PopoverTrigger asChild>
@@ -784,7 +784,7 @@ const SignupCard = ({ name }: { name: string }) => {
                                                         onClick={() => { set_expiry_date_false(true) }}
                                                     >
                                                         <CalendarIcon className="mr-2 h-4 w-4" />
-                                                        {expiry_date ? format(expiry_date, "PPP") : <span>Pick a date</span>}
+                                                        {expiry_date ? format(expiry_date, "PPP") : <span>Expiry date</span>}
                                                     </Button>
                                                 </PopoverTrigger>
                                                 <PopoverContent className="flex w-fit flex-col space-y-2 p-2">

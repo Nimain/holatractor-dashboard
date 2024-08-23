@@ -27,6 +27,8 @@ import { useDropzone } from "react-dropzone";
 import { uploadFileToS3 } from "@/utils/AWS/FileUpload";
 import { useParams, useRouter } from "next/navigation";
 import { Backdrop, Slider, SliderProps } from "@mui/material";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 function valuetext(value: any) {
   return `${value}$`;
@@ -42,17 +44,14 @@ const AddAttachment = ({
   const [allTractors, setAllTractors] = useState<Attachment[]>([]);
   const [fetchingRoles, setFetchingRoles] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [value, setValue] = useState([20, 100000]);
+  const [hourlyPrice, setHourlyPrice] = useState<number>();
+  const [inventory_id, set_inventoey_id] = useState("")
 
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
 
   const { slug } = useParams();
   const { refresh } = useRouter();
-
-  const handleChange: SliderProps['onChange'] = (event, newValue) => {
-  setValue(newValue as number[]);
-};
 
   function fetchAllTractors() {
     if (access_token) {
@@ -92,8 +91,8 @@ const AddAttachment = ({
 
     const addTractorDto = {
       attachment_ids: [selectedTractorId],
-      min_price: `${value[0]}`,
-      max_price: `${value[1]}`,
+      hourly_price: `${hourlyPrice}`,
+      inventory_id,
       store_id: slug,
     };
 
@@ -157,46 +156,14 @@ const AddAttachment = ({
           ) : selectedTractorId ? (
             <div className="w-full h-full flex flex-col items-center justify-center gap-5">
               <div className="flex flex-col gap-[4px] w-full">
-                <label className="text-[18px]">
-                  Select minimum and maximum price per hour
-                </label>
-                <Slider
-  getAriaLabel={() => 'Temperature range'}
-  value={value}
-  onChange={handleChange}
-  valueLabelDisplay="auto"
-  getAriaValueText={valuetext}
-/>
-              </div>
-
-              <div className="w-full">
-                <div className="flex flex-col gap-[4px] w-fit">
-                  <label className="text-[18px]">Min price</label>
-                  <div className="px-[10px] py-[4px] border border-black rounded-md text-[16px]">
-                  <input
-                    type="number"
-                    placeholder="Hourly price"
-                    className="outline-none bg-transparent border-none w-full"
-                    value={value[0]}
-                    onChange={(e) => {
-                      setValue([Number(e.target.value), value[1]]);
-                    }}
-                  />
-                </div>
-                </div>
-                <div className="flex flex-col gap-[4px] w-fit">
-                  <label className="text-[18px]">Max price</label>
-                  <div className="px-[10px] py-[4px] border border-black rounded-md text-[16px]">
-                  <input
-                    type="number"
-                    className="outline-none bg-transparent border-none w-full"
-                    value={value[1]}
-                    onChange={(e) => {
-                      setValue([value[0], Number(e.target.value)]);
-                    }}
-                  />
-                </div>
-                </div>
+                <Label>
+                  Hourly price
+                </Label>
+                <Input
+                  type="number"
+                  placeholder='Give hourly price'
+                  value={hourlyPrice}
+                  onChange={e => { setHourlyPrice(Number(e.target.value)) }} />
               </div>
 
               <button
