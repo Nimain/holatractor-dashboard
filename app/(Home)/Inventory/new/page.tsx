@@ -62,7 +62,7 @@ const NewInventory = () => {
   }
 
   const handleAddInventory = async () => {
-    if(!selectedImage){
+    if(selectedImage.length === 0){
       errorMessage("Please give atleast one image")
       return
     }

@@ -184,7 +184,7 @@ const NewAttachment = () => {
       errorMessage("Attachment description can't be empty");
       return;
     }
-    if (!selectedImage) {
+    if (selectedImage.length === 0) {
       errorMessage("Upload atleast one image");
       return;
     }
@@ -504,7 +504,7 @@ const NewAttachment = () => {
                             key={index}
                             value={country.tractor.name}
                             onSelect={(currentValue) => {
-                              setTractorType(country.tractor.name)
+                              setTractorType(country.tractor.id)
                               setPopoverOpen(false)
                             }}
                           >

@@ -52,6 +52,8 @@ const AddTractor = ({
   const [allTractors, setAllTractors] = useState<Inventory[]>([]);
   const [fetchingRoles, setFetchingRoles] = useState(false);
   const [hourlyPrice, setHourlyPrice] = useState<number>();
+  const [minPrice, setHMinPrice] = useState<number>(0);
+  const [maxPrice, setMaxPrice] = useState<number>(0);
   const [document_number, set_document_number] = useState("")
   const [expiry_date, set_expiry_date] = useState<Date>()
   const [expiry_date_false, set_expiry_date_false] = useState(false)
@@ -118,6 +120,11 @@ const AddTractor = ({
 
     if(!document_number){
       errorMessage("Manually enter the number plate details")
+      return
+    }
+
+    if(hourlyPrice > maxPrice || hourlyPrice < minPrice) {
+      errorMessage(`Price should be between ${minPrice} and ${maxPrice}`)
       return
     }
 
@@ -375,6 +382,8 @@ const AddTractor = ({
                     className="px-4 py-2 bg-black text-white rounded-md mx-auto w-full"
                     onClick={() => {
                       setSelectedTractorId(details.tractor_id);
+                      setHMinPrice(Number(details.min_price))
+                      setMaxPrice(Number(details.max_price))
                       set_inventoey_id(details.id)
                     }}
                   >
