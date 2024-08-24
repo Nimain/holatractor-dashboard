@@ -325,11 +325,11 @@ const SignupCard = ({ name }: { name: string }) => {
                 </DialogHeader>
 
                 <Backdrop
-        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-        open={loading}
-      >
-        <CircularProgress />
-      </Backdrop>
+                    sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+                    open={loading}
+                >
+                    <CircularProgress />
+                </Backdrop>
 
                 <div
                     className="bg-white rounded-xl p-[30px] text-black flex gap-[16px] flex-col relative max-h-[80vh] overflow-auto"
@@ -607,7 +607,7 @@ const SignupCard = ({ name }: { name: string }) => {
 
                                     <Card>
                                         <CardContent className="space-y-2 py-2">
-                                        <div className="space-y-1">
+                                            <div className="space-y-1">
                                                 <Label htmlFor="location_name">Address line 1</Label>
                                                 <Input
                                                     id="location_name"
@@ -615,7 +615,7 @@ const SignupCard = ({ name }: { name: string }) => {
                                                     value={location_name}
                                                     onChange={e => { set_location_name(e.target.value) }} />
                                             </div>
-                                        <div className="space-y-1">
+                                            <div className="space-y-1">
                                                 <Label htmlFor="location_address">Address line 2</Label>
                                                 <Input
                                                     id="location_address"
@@ -623,7 +623,7 @@ const SignupCard = ({ name }: { name: string }) => {
                                                     value={location_address}
                                                     onChange={e => { set_location_address(e.target.value) }} />
                                             </div>
-                                        <div className="space-y-1">
+                                            <div className="space-y-1">
                                                 <Label htmlFor="location_city">City</Label>
                                                 <Input
                                                     id="location_city"
@@ -631,7 +631,7 @@ const SignupCard = ({ name }: { name: string }) => {
                                                     value={location_city}
                                                     onChange={e => { set_location_city(e.target.value) }} />
                                             </div>
-                                        <div className="space-y-1">
+                                            <div className="space-y-1">
                                                 <Label htmlFor="location_state">State</Label>
                                                 <Input
                                                     id="location_state"
@@ -639,7 +639,7 @@ const SignupCard = ({ name }: { name: string }) => {
                                                     value={location_state}
                                                     onChange={e => { set_location_state(e.target.value) }} />
                                             </div>
-                                        <div className="space-y-1">
+                                            <div className="space-y-1">
                                                 <Label htmlFor="location_zip_code">Zip code</Label>
                                                 <Input
                                                     id="location_zip_code"
@@ -816,7 +816,7 @@ const SignupCard = ({ name }: { name: string }) => {
                                             </Popover>
                                         </CardContent>
                                         <CardFooter className='w-full flex items-center justify-center'>
-                                            <Button onClick={()=>{operatorRegister()}}>
+                                            <Button onClick={() => { operatorRegister() }}>
                                                 Sign up
                                             </Button>
                                         </CardFooter>

@@ -3,47 +3,55 @@
 import { useEffect, useState } from 'react'
 import AddIcon from '@mui/icons-material/Add';
 import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTrigger,
-  } from "@/components/ui/dialog";
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Store } from '@/utils/Types/types';
 import { useCookie } from 'next-cookie';
 import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Button } from '../ui/button';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
+import { cn } from '@/lib/utils';
 
 const NewBooking = () => {
-    const [open, setOpen] = useState(false)
-    const [allStores, setAllStores] = useState<Store[]>([])
-    const [fetchingStores, setFetchingStores] = useState(false)
+  const [open, setOpen] = useState(false)
+  const [allStores, setAllStores] = useState<Store[]>([])
+  const [fetchingStores, setFetchingStores] = useState(false)
 
-    const { cookie } = useCookie()
-    const access_token = cookie.get("access_token")
+  const [popoverOpen, setPopoverOpen] = useState(true)
+  const [storeName, setStoreName] = useState("")
 
-    function fetchAllStores() {
-        if (access_token) {
-            setFetchingStores(true)
-            renderInstance.get("/store", {
-                headers: {
-                    Authorization: `Bearer ${access_token}`,
-                }
-            })
-                .then((res) => {
-                    if (res.status === 200) setAllStores(res.data)
-                }).catch((err) => {
-                    errorMessage("Error in fetching inventory lists")
-                }).finally(() => { setFetchingStores(false) })
-        } else errorMessage("Admin not logged in")
-    }
+  const { cookie } = useCookie()
+  const access_token = cookie.get("access_token")
 
-    useEffect(() => {
-        fetchAllStores()
-    }, [])
+  function fetchAllStores() {
+    if (access_token) {
+      setFetchingStores(true)
+      renderInstance.get("/store", {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        }
+      })
+        .then((res) => {
+          if (res.status === 200) setAllStores(res.data)
+        }).catch((err) => {
+          errorMessage("Error in fetching inventory lists")
+        }).finally(() => { setFetchingStores(false) })
+    } else errorMessage("Admin not logged in")
+  }
+
+  useEffect(() => {
+    fetchAllStores()
+  }, [])
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -70,19 +78,19 @@ const NewBooking = () => {
           </p>
         </DialogHeader>
 
-        <div
-          className={`bg-white rounded-xl p-[30px] grid grid-cols-4 gap-5 relative overflow-auto`}
-          style={{ scrollbarWidth: "none" }}
-        >
-          {fetchingStores ? (
-            "Wait a minute. Loading..."
-          ) : allStores.length === 0 ? (
-            "No stores available"
-          ) : (
-            allStores.map((details, index) => {
-              return (
-                <div
+        <Command>
+          <CommandInput placeholder="Search store..." />
+          <CommandList className={`bg-white rounded-xl p-6 grid grid-cols-4 gap-5 relative overflow-auto h-[80vh]`}>
+            <CommandEmpty>No store found.</CommandEmpty>
+            <CommandGroup className='w-full'>
+              {allStores.map((details, index) => (
+                <CommandItem
                   key={index}
+                  value={details.name}
+                  onSelect={(currentValue) => {
+                    setStoreName(details.name)
+                    setPopoverOpen(false)
+                  }}
                   className={`border-2 rounded-xl flex flex-col gap-5 p-2`}
                 >
                   {details.image ? (
@@ -119,16 +127,16 @@ const NewBooking = () => {
                   </div>
 
                   <Link
-                  href={`/Store/${details.id}/booking`}
+                    href={`/Store/${details.id}/booking`}
                     className="px-4 py-2 bg-black text-white rounded-md mx-auto w-full"
                   >
                     Select
                   </Link>
-                </div>
-              );
-            })
-          )}
-        </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
       </DialogContent>
     </Dialog>
   )
