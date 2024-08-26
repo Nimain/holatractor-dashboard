@@ -46,6 +46,7 @@ type Translations = {
   billing: string;
   settings: string;
   bookings: string;
+  users: string
 };
 
 const Sidebar = () => {
@@ -478,25 +479,6 @@ const Sidebar = () => {
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
-          alt="Users"
-        />
-      ),
-      name: getTranslation(locale, {
-        en: "Users",
-        es: "Usuarios",
-        ay: "Jach'a uywiri",
-        qu: "Runa",
-        gn: "Póry",
-      }),
-      route: "/Users",
-    },
-    {
-      icon: (
-        <Image
-          src={UsersIcon}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
           alt="Country"
         />
       ),
@@ -530,6 +512,84 @@ const Sidebar = () => {
     },
   ];
   
+  const UsersOptions = [
+    {
+      icon: (
+        <Image
+          src={RolesIcon}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Roles"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Owner",
+        es: "",
+        ay: "",
+        qu: "",
+        gn: "",
+      }),
+      route: "/#",
+    },
+    {
+      icon: (
+        <Image
+          src={PermissionsIcon}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Permission"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Agent",
+        es: "",
+        ay: "",
+        qu: "",
+        gn: "",
+      }),
+      route: "/#",
+    },
+    {
+      icon: (
+        <Image
+          src={UsersIcon}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Country"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Dealer",
+        es: "",
+        ay: "",
+        qu: "",
+        gn: "",
+      }),
+      route: "/#",
+    },
+    {
+      icon: (
+        <Image
+          src={AffiliationIcon}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Notifications"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Operator",
+        es: "",
+        ay: "",
+        qu: "",
+        gn: "",
+      }),
+      route: "#",
+    },
+  ];
 
   // Define translations for "Inventory", "Billing", and "Settings"
   const translations: Record<string, Translations> = {
@@ -538,30 +598,35 @@ const Sidebar = () => {
       billing: "Billing",
       settings: "Settings",
       bookings: "Bookings",
+      users: "Users"
     },
     es: {
       inventory: "Inventario",
       billing: "Facturación",
       settings: "Configuraciones",
       bookings: "Reservas",
+      users: "Usuarios"
     },
     ay: {
       inventory: "Lurawi utanaka",
       billing: "Jisk'a qallta",
       settings: "Qillqatanaka",
       bookings: "Qillqatapxañani",
+      users: "Jach'a uywiri"
     },
     qu: {
       inventory: "Hawa llaqtaqmasi",
       billing: "Wasiwi",
       settings: "Chaskiykuna",
       bookings: "Llamk'apay",
+      users: "Runa"
     },
     gn: {
       inventory: "Ñemitype",
       billing: "Kamby rehegua",
       settings: "Ñemohenda",
       bookings: "Jehechauka",
+      users: "Póry"
     },
   };
   
@@ -602,6 +667,45 @@ const Sidebar = () => {
           );
         })}
       </ul>
+
+      <div className="w-full h-[2px] bg-gray-300 rounded-full" />
+
+      <div>
+        <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
+          <Tooltip title={translations[locale]?.users || translations.en.users} placement="right">
+            <Image
+              src={InsuranceIcon}
+              className="w-[20px] h-auto object-cover"
+              width={20}
+              height={20}
+              alt="Bookings"
+            />
+          </Tooltip>
+        </div>
+
+        <ul className="flex flex-col gap-[8px] mt-[8px]">
+          {UsersOptions.map((listItem, index) => {
+            return (
+              <Link
+                href={`${listItem.route}`}
+                key={index}
+                className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
+                  LeftSideSctiveItem === listItem.name
+                    ? "bg-[#d5ebd6]"
+                    : "hover:bg-gray-200"
+                } drop-shadow-md rounded transition-all duration-500 relative`}
+                onClick={() => {
+                  setActiveLeftSideTag(listItem.name);
+                }}
+              >
+                <Tooltip title={listItem.name} placement="right">
+                  {listItem.icon}
+                </Tooltip>
+              </Link>
+            );
+          })}
+        </ul>
+      </div>
 
       <div className="w-full h-[2px] bg-gray-300 rounded-full" />
 

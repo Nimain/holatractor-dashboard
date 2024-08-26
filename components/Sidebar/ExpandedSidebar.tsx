@@ -42,6 +42,7 @@ type Translations = {
   billing: string;
   settings: string;
   bookings: string;
+  users: string
 };
 
 const ExpandedSidebar = () => {
@@ -477,25 +478,6 @@ const ExpandedSidebar = () => {
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
-          alt="Users"
-        />
-      ),
-      name: getTranslation(locale, {
-        en: "Users",
-        es: "Usuarios",
-        ay: "Jach'a uywiri",
-        qu: "Runa",
-        gn: "Póry",
-      }),
-      route: "/Users",
-    },
-    {
-      icon: (
-        <Image
-          src={UsersIcon}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
           alt="Country"
         />
       ),
@@ -529,6 +511,84 @@ const ExpandedSidebar = () => {
     },
   ];
   
+  const UsersOptions = [
+    {
+      icon: (
+        <Image
+          src={RolesIcon}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Roles"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Owner",
+        es: "",
+        ay: "",
+        qu: "",
+        gn: "",
+      }),
+      route: "/#",
+    },
+    {
+      icon: (
+        <Image
+          src={PermissionsIcon}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Permission"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Agent",
+        es: "",
+        ay: "",
+        qu: "",
+        gn: "",
+      }),
+      route: "/#",
+    },
+    {
+      icon: (
+        <Image
+          src={UsersIcon}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Country"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Dealer",
+        es: "",
+        ay: "",
+        qu: "",
+        gn: "",
+      }),
+      route: "/#",
+    },
+    {
+      icon: (
+        <Image
+          src={AffiliationIcon}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Notifications"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Operator",
+        es: "",
+        ay: "",
+        qu: "",
+        gn: "",
+      }),
+      route: "#",
+    },
+  ];
 
   // Define translations for "Inventory", "Billing", and "Settings"
   const translations: Record<string, Translations> = {
@@ -537,30 +597,35 @@ const ExpandedSidebar = () => {
       billing: "Billing",
       settings: "Settings",
       bookings: "Bookings",
+      users: "Users"
     },
     es: {
       inventory: "Inventario",
       billing: "Facturación",
       settings: "Configuraciones",
       bookings: "Reservas",
+      users: "Usuarios"
     },
     ay: {
       inventory: "Lurawi utanaka",
       billing: "Jisk'a qallta",
       settings: "Qillqatanaka",
       bookings: "Qillqatapxañani",
+      users: "Jach'a uywiri"
     },
     qu: {
       inventory: "Hawa llaqtaqmasi",
       billing: "Wasiwi",
       settings: "Chaskiykuna",
       bookings: "Llamk'apay",
+      users: "Runa"
     },
     gn: {
       inventory: "Ñemitype",
       billing: "Kamby rehegua",
       settings: "Ñemohenda",
       bookings: "Jehechauka",
+      users: "Póry"
     },
   };
 
@@ -608,6 +673,41 @@ const ExpandedSidebar = () => {
           );
         })}
       </ul>
+
+      <div className="w-full h-[2px] bg-gray-300 rounded-full" />
+
+      <div>
+        <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
+          {translations[locale]?.users || translations.en.users}
+        </p>
+
+        <ul className="flex flex-col gap-[8px] mt-[8px]">
+          {UsersOptions.map((listItem, index) => {
+            return (
+              <Link
+                href={`${listItem.route}`}
+                key={index}
+                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
+                  LeftSideSctiveItem === listItem.name
+                    ? "bg-[#d5ebd6]"
+                    : "hover:bg-gray-200"
+                } drop-shadow-md rounded transition-all duration-500 relative`}
+              >
+                {listItem.icon}
+                <span
+                  className={`${
+                    LeftSideSctiveItem === listItem.name
+                      ? "text-black"
+                      : "text-gray-600"
+                  }`}
+                >
+                  {listItem.name}
+                </span>
+              </Link>
+            );
+          })}
+        </ul>
+      </div>
 
       <div className="w-full h-[2px] bg-gray-300 rounded-full" />
 
