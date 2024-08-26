@@ -1,5 +1,6 @@
 "use client"
 
+import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbSeparator } from '../ui/breadcrumb'
 import { useEffect, useState } from 'react'
 import {
     Dialog,
@@ -40,9 +41,8 @@ import { uploadFileToS3 } from '@/utils/AWS/FileUpload'
 import { useCookie } from 'next-cookie'
 import { useRouter } from 'next/navigation'
 import { Separator } from '../ui/separator'
-import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbSeparator } from '../ui/breadcrumb'
 
-const OperatorRegister = ({ name }: { name: string }) => {
+const AgentRegister = ({ name }: { name: string }) => {
     const [open, setOpen] = useState(false)
     const [fetchingContry, setFetchingCountry] = useState(false);
     const [popoverOpen, setPopoverOpen] = useState(false)
@@ -200,7 +200,7 @@ const OperatorRegister = ({ name }: { name: string }) => {
         ).toString();
 
         setLoading(true)
-        const selectedRole = await renderInstance.get('/role/getIdByName/operator')
+        const selectedRole = await renderInstance.get('/role/getIdByName/agent')
         if (!selectedRole) {
             errorMessage("Currently not possible to register")
             setLoading(false)
@@ -253,11 +253,11 @@ const OperatorRegister = ({ name }: { name: string }) => {
             location_country,
             attachment: attachmentLink,
             document_number,
-            expiry_date
+            expiry_date,
         };
 
         renderInstance
-            .post("/operator", user)
+            .post("/agent", user)
             .then((res) => {
                 if (res.status === 201 && res.data.access_token) {
                     const expiryDate = new Date();
@@ -306,20 +306,21 @@ const OperatorRegister = ({ name }: { name: string }) => {
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
+
             <DialogTrigger asChild>
                 <Button
-                className="text-xl font-medium"
-                variant={"default"}
+                    className="text-xl font-medium"
+                    variant={"default"}
                     onClick={() => {
                         setOpen(true)
                     }}
                 >
-                    Continue as operator
+                    Continue as agent
                 </Button>
             </DialogTrigger>
 
             <DialogContent
-                className="bg-white h-[90vh] w-[1200px] overflow-auto"
+                className="bg-white h-[90vh] overflow-auto"
                 style={{ scrollbarWidth: "none" }}
             >
 
@@ -331,90 +332,90 @@ const OperatorRegister = ({ name }: { name: string }) => {
                 </Backdrop>
 
                 <div
-                    className="bg-white rounded-xl text-black flex gap-[16px] flex-col relative w-full h-[90vh] overflow-auto"
+                    className="bg-white rounded-xl text-black flex gap-[16px] flex-col relative w-[950px] h-[90vh] overflow-auto"
                     style={{ scrollbarWidth: "none" }}
                 >
 
                     <Tabs className="w-full h-full" defaultValue='stepone'>
 
-                    <TabsList className='w-full bg-transparent'>
+                        <TabsList className='w-full bg-transparent'>
 
-<Breadcrumb className="w-full">
+                            <Breadcrumb className="w-full">
 
-    <BreadcrumbList className='w-full flex items-center justify-between bg-transparent'>
+                                <BreadcrumbList className='w-full flex items-center justify-between bg-transparent'>
 
-        <BreadcrumbItem className='w-fit'>
+                                    <BreadcrumbItem className='w-fit'>
 
-            <TabsTrigger
-                value="stepone"
-                className='bg-transparent flex items-center px-0'>
-                <Button
-                    className={`bg-white hover:bg-transparent pl-1 pr-0 ${(name && agEmail && agPassword && agnewCountry && agnumber) ? "text-green-400" : "text-black"}`}>
-                    Step One
-                </Button>
-            </TabsTrigger>
+                                        <TabsTrigger
+                                            value="stepone"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className={`bg-white hover:bg-transparent pl-1 pr-0 ${(name && agEmail && agPassword && agnewCountry && agnumber) ? "text-green-400" : "text-black"}`}>
+                                                Step One
+                                            </Button>
+                                        </TabsTrigger>
 
-        </BreadcrumbItem>
+                                    </BreadcrumbItem>
 
-        <BreadcrumbSeparator>
-            <Separator
-                className={`w-36 h-1 rounded-full ${(date && gender) ? "bg-green-400" : "bg-gray-400"}`} />
-        </BreadcrumbSeparator>
+                                    <BreadcrumbSeparator>
+                                        <Separator
+                                            className={`w-36 h-1 rounded-full ${(date && gender) ? "bg-green-400" : "bg-gray-400"}`} />
+                                    </BreadcrumbSeparator>
 
-        <BreadcrumbItem className='w-fit'>
+                                    <BreadcrumbItem className='w-fit'>
 
-            <TabsTrigger
-                value="steptwo"
-                className='bg-transparent flex items-center px-0'>
-                <Button
-                    className={`bg-white hover:bg-transparent pl-1 pr-0 ${(date && gender) ? "text-green-400" : "text-black"}`}>
-                    Step Two
-                </Button>
-            </TabsTrigger>
+                                        <TabsTrigger
+                                            value="steptwo"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className={`bg-white hover:bg-transparent pl-1 pr-0 ${(date && gender) ? "text-green-400" : "text-black"}`}>
+                                                Step Two
+                                            </Button>
+                                        </TabsTrigger>
 
-        </BreadcrumbItem>
+                                    </BreadcrumbItem>
 
-        <BreadcrumbSeparator>
-            <Separator
-                className={`w-36 h-1 rounded-full ${(location_name && location_address && location_city && location_state && location_zip_code && location_country) ? "bg-green-400" : "bg-gray-400"}`} />
-        </BreadcrumbSeparator>
+                                    <BreadcrumbSeparator>
+                                        <Separator
+                                            className={`w-36 h-1 rounded-full ${(location_name && location_address && location_city && location_state && location_zip_code && location_country) ? "bg-green-400" : "bg-gray-400"}`} />
+                                    </BreadcrumbSeparator>
 
-        <BreadcrumbItem className='w-fit'>
+                                    <BreadcrumbItem className='w-fit'>
 
-            <TabsTrigger
-                value="stepthree"
-                className='bg-transparent flex items-center px-0'>
-                <Button
-                    className={`bg-white hover:bg-transparent pl-1 pr-0 ${(location_name && location_address && location_city && location_state && location_zip_code && location_country) ? "text-green-400" : "text-black"}`}>
-                    Step Three
-                </Button>
-            </TabsTrigger>
+                                        <TabsTrigger
+                                            value="stepthree"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className={`bg-white hover:bg-transparent pl-1 pr-0 ${(location_name && location_address && location_city && location_state && location_zip_code && location_country) ? "text-green-400" : "text-black"}`}>
+                                                Step Three
+                                            </Button>
+                                        </TabsTrigger>
 
-        </BreadcrumbItem>
+                                    </BreadcrumbItem>
 
-        <BreadcrumbSeparator>
-            <Separator
-                className={`w-36 h-1 rounded-full ${(attachment && document_number) ? "bg-green-400" : "bg-gray-400"}`} />
-        </BreadcrumbSeparator>
+                                    <BreadcrumbSeparator>
+                                        <Separator
+                                            className={`w-36 h-1 rounded-full ${(attachment && document_number) ? "bg-green-400" : "bg-gray-400"}`} />
+                                    </BreadcrumbSeparator>
 
-        <BreadcrumbItem className="w-fit">
+                                    <BreadcrumbItem className="w-fit">
 
-            <TabsTrigger
-                value="stepfour"
-                className='bg-transparent flex items-center px-0'>
-                <Button
-                    className={`bg-white hover:bg-transparent pl-1 pr-0 ${(attachment && document_number) ? "text-green-400" : "text-black"}`}>
-                    Step Four
-                </Button>
-            </TabsTrigger>
+                                        <TabsTrigger
+                                            value="stepfour"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className={`bg-white hover:bg-transparent pl-1 pr-0 ${(attachment && document_number) ? "text-green-400" : "text-black"}`}>
+                                                Step Four
+                                            </Button>
+                                        </TabsTrigger>
 
-        </BreadcrumbItem>
+                                    </BreadcrumbItem>
 
-    </BreadcrumbList>
+                                </BreadcrumbList>
 
-</Breadcrumb>
+                            </Breadcrumb>
 
-</TabsList>
+                        </TabsList>
 
                         <TabsContent value="stepone" className='w-full'>
 
@@ -897,11 +898,12 @@ const OperatorRegister = ({ name }: { name: string }) => {
                         </TabsContent>
 
                     </Tabs>
-
                 </div>
+
             </DialogContent>
+
         </Dialog>
     )
 }
 
-export default OperatorRegister
+export default AgentRegister

@@ -8,6 +8,8 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 import OperatorRegister from './OperatorRegister'
+import AgentRegister from './AgentRegister'
+import OwnerRegister from './OwnerRegister'
 
 const SignupCard = ({ name }: { name: string }) => {
     const [open, setOpen] = useState(false)
@@ -41,6 +43,20 @@ const SignupCard = ({ name }: { name: string }) => {
                             Do you want to be an operator?
                         </p>
                         <OperatorRegister name={name} />
+                    </div>
+
+                    <div className='flex items-center gap-2'>
+                        <p className='text-lg font-medium whitespace-nowrap'>
+                            Do you want to be an agent?
+                        </p>
+                        <AgentRegister name={name} />
+                    </div>
+
+                    <div className='flex items-center gap-2'>
+                        <p className='text-lg font-medium whitespace-nowrap'>
+                            Do you want to be an owner?
+                        </p>
+                        <OwnerRegister name={name} />
                     </div>
 
                 </div>
