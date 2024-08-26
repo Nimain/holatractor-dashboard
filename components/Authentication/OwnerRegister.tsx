@@ -907,11 +907,6 @@ const OwnerRegister = ({ name }: { name: string }) => {
                                         </PopoverContent>
                                     </Popover>
                                 </CardContent>
-                                <CardFooter className='w-full flex items-center justify-center'>
-                                    <Button onClick={() => { operatorRegister() }}>
-                                        Create account
-                                    </Button>
-                                </CardFooter>
                             </Card>
 
                         </TabsContent>

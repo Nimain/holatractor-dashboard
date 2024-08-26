@@ -265,7 +265,7 @@ const NewStore = () => {
                             </div>
                         </div>
                         {
-                            user.isAdmin &&
+                            user.isAdmin.includes("admin") &&
                             <div
                                 className='w-[90%] flex items-center gap-[20px]'>
 
