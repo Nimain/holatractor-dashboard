@@ -10,7 +10,7 @@ import Image from 'next/image';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
-import { Country, User } from '@/utils/Types/types';
+import { Country, Owner, User } from '@/utils/Types/types';
 import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
@@ -33,8 +33,9 @@ const NewStore = () => {
     const [closingTime, setClosingTime] = useState("");
     const [closingDays, setClosingDays] = useState<string[]>([]);
 
-    const [allOwners, setAllOwners] = useState<User[]>([])
+    const [allOwners, setAllOwners] = useState<Owner[]>([])
     const [owner, setOwner] = useState("")
+    const [ownerName, setOwnerName] = useState("")
     const [fetchingStores, setFetchingStores] = useState(false)
     const [popoverOpen, setPopoverOpen] = useState(false)
 
@@ -114,13 +115,9 @@ const NewStore = () => {
             return;
         }
 
-        if (user.isAdmin && !owner) {
+        if (user.isAdmin.includes("admin") && !owner) {
             errorMessage("Please select an owner")
             return
-        }
-
-        if (!user.isAdmin) {
-            setOwner(user.userId)
         }
 
         if (!location_name || !location_address || !location_city || !location_state || !location_zip_code || !location_zip_country) {
@@ -144,7 +141,7 @@ const NewStore = () => {
             closing_time: new Date(`1970-01-01T${closingTime}:00.000Z`),
             closing_days: closingDays,
             image: storeImages,
-            owner_user_id: owner,
+            owner_user_id: user.isAdmin.includes("admin") ? owner : user.userId,
             location_name,
             location_address,
             location_city,
@@ -172,7 +169,7 @@ const NewStore = () => {
                 setOpen(false)
             }
         }).catch((err) => {
-
+console.log(err)
             if (err.response && err.response.status === 409 && err.response.data.message === "Store already present") errorMessage("Store already present")
             else if (err.response && err.response.status === 409 && err.response.data.message === "Wrong owner id") errorMessage("You are not an owner. You are not allowed to create a store.")
             else if (err.response && err.response.status === 409 && err.response.data.message === "The user is not owner") errorMessage("The user is not an owner")
@@ -290,7 +287,7 @@ const NewStore = () => {
                                                             className="w-full justify-between"
                                                         >
                                                             {owner
-                                                                ? allOwners.find((country) => `${country.first_name} ${country.middle_name ? country.middle_name : ''} ${country.last_name}` === owner) && owner
+                                                                ? allOwners.find((country) => `${country.user.first_name} ${country.user.middle_name ? country.user.middle_name : ''} ${country.user.last_name}` === ownerName) && ownerName
                                                                 : "Select owner..."}
                                                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                         </Button>
@@ -301,21 +298,23 @@ const NewStore = () => {
                                                             <CommandList>
                                                                 <CommandEmpty>No owner found.</CommandEmpty>
                                                                 <CommandGroup>
-                                                                    {allOwners.map((country, index) => {
-                                                                        const name = `${country.first_name} ${country.middle_name ? country.middle_name : ''} ${country.last_name}`
+                                                                    {allOwners.map((country: Owner, index) => {
+                                                                        console.log(country)
+                                                                        const name = `${country.user.first_name} ${country.user.middle_name ? country.user.middle_name : ''} ${country.user.last_name}`
                                                                         return (
                                                                             <CommandItem
                                                                                 key={index}
                                                                                 value={name}
                                                                                 onSelect={(currentValue) => {
-                                                                                    setOwner(name)
+                                                                                    setOwner(country.id)
+                                                                                    setOwnerName(name)
                                                                                     setPopoverOpen(false)
                                                                                 }}
                                                                             >
                                                                                 <Check
                                                                                     className={cn(
                                                                                         "mr-2 h-4 w-4",
-                                                                                        owner === name ? "opacity-100" : "opacity-0"
+                                                                                        owner === country.id ? "opacity-100" : "opacity-0"
                                                                                     )}
                                                                                 />
                                                                                 {name}

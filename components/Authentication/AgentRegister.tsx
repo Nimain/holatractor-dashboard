@@ -75,7 +75,8 @@ const AgentRegister = ({ name }: { name: string }) => {
     const [expiry_date_year, set_expiry_date_year] = useState<number>(new Date().getFullYear())
     const [attachment, setattachment] = useState<File | null>(null);
 
-    const { cookie } = useCookie()
+    const { cookie } = useCookie();
+  const access_token = cookie.get("access_token");
 
     const router = useRouter()
 
@@ -128,6 +129,10 @@ const AgentRegister = ({ name }: { name: string }) => {
     }
 
     async function operatorRegister() {
+        if(!access_token){
+            errorMessage("You are not allowed to create an agent account")
+            return
+        }
         if (!agEmail) {
             errorMessage("Please add the email")
             return
@@ -257,7 +262,11 @@ const AgentRegister = ({ name }: { name: string }) => {
         };
 
         renderInstance
-            .post("/agent", user)
+            .post("/agent", user, {
+                headers: {
+                  Authorization: `Bearer ${access_token}`,
+                },
+              })
             .then((res) => {
                 if (res.status === 201 && res.data.access_token) {
                     const expiryDate = new Date();

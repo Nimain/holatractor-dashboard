@@ -139,63 +139,6 @@ const ExpandedSidebar = () => {
     {
       icon: (
         <Image
-          src={AgentIcon}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Agents"
-        />
-      ),
-      name: getTranslation(locale, {
-        en: "Agents",
-        es: "Agentes",
-        ay: "Aruskipiri",
-        qu: "Waqaypa qhapaqkuna",
-        gn: "Agente",
-      }),
-      route: "#",
-    },
-    {
-      icon: (
-        <Image
-          src={DealersIcon}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Dealers"
-        />
-      ),
-      name: getTranslation(locale, {
-        en: "Dealers",
-        es: "Distribuidores",
-        ay: "Wanakuta",
-        qu: "Haqllaqkuna",
-        gn: "Mba’apoha",
-      }),
-      route: "#",
-    },
-    {
-      icon: (
-        <Image
-          src={OperatorsIcon}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Operators"
-        />
-      ),
-      name: getTranslation(locale, {
-        en: "Operators",
-        es: "Operadores",
-        ay: "Jach'a uywiri",
-        qu: "Qhapaq ruwariq",
-        gn: "Omoñangáva",
-      }),
-      route: "#",
-    },
-    {
-      icon: (
-        <Image
           src={BusinessIcon}
           className="w-[20px] h-auto object-cover"
           width={20}
@@ -529,64 +472,65 @@ const ExpandedSidebar = () => {
         qu: "",
         gn: "",
       }),
-      route: "/#",
+      route: "/Owner",
     },
+    
     {
       icon: (
         <Image
-          src={PermissionsIcon}
+          src={AgentIcon}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
-          alt="Permission"
+          alt="Agents"
         />
       ),
       name: getTranslation(locale, {
-        en: "Agent",
-        es: "",
-        ay: "",
-        qu: "",
-        gn: "",
+        en: "Agents",
+        es: "Agentes",
+        ay: "Aruskipiri",
+        qu: "Waqaypa qhapaqkuna",
+        gn: "Agente",
       }),
-      route: "/#",
+      route: "/Agent",
     },
     {
       icon: (
         <Image
-          src={UsersIcon}
+          src={DealersIcon}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
-          alt="Country"
+          alt="Dealers"
         />
       ),
       name: getTranslation(locale, {
-        en: "Dealer",
-        es: "",
-        ay: "",
-        qu: "",
-        gn: "",
-      }),
-      route: "/#",
-    },
-    {
-      icon: (
-        <Image
-          src={AffiliationIcon}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Notifications"
-        />
-      ),
-      name: getTranslation(locale, {
-        en: "Operator",
-        es: "",
-        ay: "",
-        qu: "",
-        gn: "",
+        en: "Dealers",
+        es: "Distribuidores",
+        ay: "Wanakuta",
+        qu: "Haqllaqkuna",
+        gn: "Mba’apoha",
       }),
       route: "#",
+    },
+    {
+      icon: (
+        <Image
+          src={OperatorsIcon}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Operators"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Operators",
+        es: "Operadores",
+        ay: "Jach'a uywiri",
+        qu: "Qhapaq ruwariq",
+        gn: "Omoñangáva",
+      }),
+      route: "/Operator",
     },
   ];
 
