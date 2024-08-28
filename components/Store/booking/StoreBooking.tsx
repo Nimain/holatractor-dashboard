@@ -15,6 +15,9 @@ import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { useParams } from "next/navigation";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { AttachmentInStore, TractorInStore } from "@/utils/Types/types";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 const StoreBooking = () => {
   const [zipCode, setZipCode] = useState("");
@@ -34,6 +37,13 @@ const StoreBooking = () => {
   const [allAttachments, setAllAttachments] = useState<AttachmentInStore[]>([]);
 
   const [selectedTractorIds, setSelectedTractorIds] = useState<string[]>([]);
+  const [selectedAttachmentIds, setSelectedAttachmentIds] = useState<string[]>([])
+
+  // Step state variables
+  const [stepOne, setStepOne] = useState(false)
+  const [stepTwo, setStepTwo] = useState(false)
+  const [stepThree, setStepThree] = useState(false)
+  const [setStepFour, setStepFoursetStepFour] = useState(false)
 
   const { slug } = useParams();
 
@@ -46,8 +56,8 @@ const StoreBooking = () => {
     renderInstance
       .get(`/store/${slug}`)
       .then((res) => {
-        console.log(res.data)
         setAllTractors(res.data.TractorInStore);
+        setAllAttachments(res.data.AttachmentInStore);
       })
       .catch((err) => {
         errorMessage("Error fetching tractors");
@@ -70,6 +80,16 @@ const StoreBooking = () => {
     });
   }
 
+  function handleBookAttachmentClick(attachmentId: string) {
+    setSelectedAttachmentIds((prevIds) => {
+      if (prevIds.includes(attachmentId)) {
+        return prevIds.filter((id) => id !== attachmentId);
+      } else {
+        return [...prevIds, attachmentId];
+      }
+    });
+  }
+
   useEffect(() => {
     if (slug) {
       fetchTractors();
@@ -88,10 +108,10 @@ const StoreBooking = () => {
       user_id: user.userId,
       store_id: slug,
       start_date: new Date(startDate),
-      end_date: BookingHours === "more" ? new Date(endDate) : "",
+      end_date: BookingHours === "more" ? new Date(endDate) : new Date(),
       booking_hours: BookingHours === "more" ? "" : BookingHours,
       tractor_ids: selectedTractorIds,
-      attachment_ids: [],
+      attachment_ids: selectedAttachmentIds,
     };
 
     renderInstance
@@ -101,10 +121,12 @@ const StoreBooking = () => {
         },
       })
       .then((res) => {
+        console.log(res)
         successMessage("Booked successful");
       })
       .catch((err) => {
         errorMessage("Some error occurred");
+        console.log(err)
       })
       .finally(() => {
         setLoading(false);
@@ -119,6 +141,41 @@ const StoreBooking = () => {
       >
         <CircularProgress />
       </Backdrop>
+
+      <Dialog
+        open={stepOne} onOpenChange={setStepOne}>
+
+        <DialogContent
+          className="bg-white max-h-[90vh] overflow-auto"
+          style={{ scrollbarWidth: "none" }}
+        >
+
+          <Label className="mb-3">
+            Booking hours
+            </Label>
+
+          <Select
+            onValueChange={(value) => {setBookingHours(value)}}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select booking hours" />
+            </SelectTrigger>
+            <SelectContent>
+                  <SelectItem value="One_Hour">1 hour</SelectItem>
+            <SelectItem value="Two_Hours">2 hour</SelectItem>
+            <SelectItem value="Three_Hours">3 hour</SelectItem>
+            <SelectItem value="Four_Hours">4 hour</SelectItem>
+            <SelectItem value="Five_Hours">5 hour</SelectItem>
+            <SelectItem value="Six_Hours">6 hour</SelectItem>
+            <SelectItem value="Seven_Hours">7 hour</SelectItem>
+            <SelectItem value="Eight_Hours">8 hour</SelectItem>
+            <SelectItem value="more">More than 8 hours</SelectItem>
+            </SelectContent>
+          </Select>
+
+        </DialogContent>
+
+      </Dialog>
 
       <p className="text-2xl font-bold text-center">
         Give your location details
@@ -303,38 +360,34 @@ const StoreBooking = () => {
                   key={index}
                   className="w-full drop-shadow-md px-2 rounded-md border flex gap-2 flex-col"
                 >
-                    <Swiper
-                      modules={[Autoplay, Pagination]}
-                      spaceBetween={0}
-                      slidesPerView={1}
-                      loop={true}
-                      pagination={true}
-                      autoplay={true}
-                      className="w-full h-full"
-                    >
-                      {tractor.baseTractor.images.map((image, index) => {
-                        return (
-                          <SwiperSlide key={index}>
-                            <Image
-                              src={image}
-                              alt="tractor_image"
-                              className="w-full h-40 object-cover rounded-xl"
-                              width={300}
-                              height={400}
-                              unoptimized={true}
-                            />
-                          </SwiperSlide>
-                        );
-                      })}
-                    </Swiper>
+                  <Swiper
+                    modules={[Autoplay, Pagination]}
+                    spaceBetween={0}
+                    slidesPerView={1}
+                    loop={true}
+                    pagination={true}
+                    autoplay={true}
+                    className="w-full h-full"
+                  >
+                    {tractor.baseTractor.images.map((image, index) => {
+                      return (
+                        <SwiperSlide key={index}>
+                          <Image
+                            src={image}
+                            alt="tractor_image"
+                            className="w-full h-40 object-cover rounded-xl"
+                            width={300}
+                            height={400}
+                            unoptimized={true}
+                          />
+                        </SwiperSlide>
+                      );
+                    })}
+                  </Swiper>
 
                   <p>
-                    <span className="font-medium">Minimum Price: </span>{" "}
-                    {tractor.min_price}/hr
-                  </p>
-                  <p>
-                    <span className="font-medium">Maximum Price: </span>{" "}
-                    {tractor.max_price}/hr
+                    <span className="font-medium">Hourly Price: </span>{" "}
+                    {tractor.hourly_price}/hr
                   </p>
 
                   <button
@@ -375,46 +428,46 @@ const StoreBooking = () => {
                   key={index}
                   className="w-full drop-shadow-md px-2 rounded-md border flex gap-2 flex-col"
                 >
-                    <Swiper
-                      modules={[Autoplay, Pagination]}
-                      spaceBetween={0}
-                      slidesPerView={1}
-                      loop={true}
-                      pagination={true}
-                      autoplay={true}
-                      className="w-full h-full"
-                    >
-                      {tractor.baseAttachment.images.map((image, index) => {
-                        return (
-                          <SwiperSlide key={index}>
-                            <Image
-                              src={image}
-                              alt="tractor_image"
-                              className="w-full h-40 object-cover rounded-xl"
-                              width={300}
-                              height={400}
-                              unoptimized={true}
-                            />
-                          </SwiperSlide>
-                        );
-                      })}
-                    </Swiper>
+                  <Swiper
+                    modules={[Autoplay, Pagination]}
+                    spaceBetween={0}
+                    slidesPerView={1}
+                    loop={true}
+                    pagination={true}
+                    autoplay={true}
+                    className="w-full h-full"
+                  >
+                    {tractor.baseAttachment.images.map((image, index) => {
+                      return (
+                        <SwiperSlide key={index}>
+                          <Image
+                            src={image}
+                            alt="tractor_image"
+                            className="w-full h-40 object-cover rounded-xl"
+                            width={300}
+                            height={400}
+                            unoptimized={true}
+                          />
+                        </SwiperSlide>
+                      );
+                    })}
+                  </Swiper>
 
                   <p>
-                    <span className="font-medium">Minimum Price: </span>{" "}
-                    {tractor.min_price}/hr
-                  </p>
-
-                  <p>
-                    <span className="font-medium">Maximum Price: </span>{" "}
-                    {tractor.max_price}/hr
+                    <span className="font-medium">Hourly Price: </span>{" "}
+                    {tractor.hourly_price}/hr
                   </p>
 
                   <button
                     name="Book button"
                     className="px-4 py-2 rounded bg-black text-white"
+                    onClick={() => {
+                      handleBookAttachmentClick(tractor.id);
+                    }}
                   >
-                    Book
+                    {selectedAttachmentIds.includes(tractor.id)
+                      ? "Remove"
+                      : "Book"}
                   </button>
                 </div>
               );

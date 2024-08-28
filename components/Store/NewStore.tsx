@@ -169,7 +169,6 @@ const NewStore = () => {
                 setOpen(false)
             }
         }).catch((err) => {
-console.log(err)
             if (err.response && err.response.status === 409 && err.response.data.message === "Store already present") errorMessage("Store already present")
             else if (err.response && err.response.status === 409 && err.response.data.message === "Wrong owner id") errorMessage("You are not an owner. You are not allowed to create a store.")
             else if (err.response && err.response.status === 409 && err.response.data.message === "The user is not owner") errorMessage("The user is not an owner")
@@ -299,7 +298,6 @@ console.log(err)
                                                                 <CommandEmpty>No owner found.</CommandEmpty>
                                                                 <CommandGroup>
                                                                     {allOwners.map((country: Owner, index) => {
-                                                                        console.log(country)
                                                                         const name = `${country.user.first_name} ${country.user.middle_name ? country.user.middle_name : ''} ${country.user.last_name}`
                                                                         return (
                                                                             <CommandItem

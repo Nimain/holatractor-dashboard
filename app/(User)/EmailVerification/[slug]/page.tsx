@@ -5,6 +5,7 @@ import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
 import { useCookie } from 'next-cookie'
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { decode } from "jsonwebtoken"
 
 const EmailVerification = () => {
     const [loading, setLoading] = useState(false)
@@ -18,17 +19,27 @@ const EmailVerification = () => {
 
     function verifyEmailToken(){
         setLoading(true)
-        renderInstance.get(`/user/email_token_verify/${slug}`, {
+        renderInstance.post(`/user/email_token_verify/${slug}`, {}, {
             headers: {
                 Authorization: `Bearer ${access_token}`,
               },
         }).then((res)=>{
             successMessage("Email verified")
+
+            const user = decode(res.data)
+
+                const expiryDate = new Date();
+                expiryDate.setDate(expiryDate.getDate() + 1);
+
+                // Set the cookie with the calculated expiry date
+                cookie.set('user', user, { path: '/', expires: expiryDate });
+
             setTimeout(() => {
                 replace("/")
             }, 1000);
         }).catch((err)=>{
             errorMessage("Some error occurred")
+            console.log(err)
         }).finally(()=>{ setLoading(false) })
     }
 
