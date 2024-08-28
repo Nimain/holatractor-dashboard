@@ -42,21 +42,21 @@ const SignupCard = ({ name }: { name: string }) => {
                         <p className='text-lg font-medium whitespace-nowrap'>
                             Do you want to be an operator?
                         </p>
-                        <OperatorRegister name={name} />
+                        <OperatorRegister name={name} inPage={false} />
                     </div>
 
                     <div className='flex items-center gap-2'>
                         <p className='text-lg font-medium whitespace-nowrap'>
                             Do you want to be an agent?
                         </p>
-                        <AgentRegister name={name} />
+                        <AgentRegister name={name} inPage={false} />
                     </div>
 
                     <div className='flex items-center gap-2'>
                         <p className='text-lg font-medium whitespace-nowrap'>
                             Do you want to be an owner?
                         </p>
-                        <OwnerRegister name={name} />
+                        <OwnerRegister name={name} inPage={false} />
                     </div>
 
                 </div>

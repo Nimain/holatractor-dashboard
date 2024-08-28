@@ -29,7 +29,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
-import { CalendarIcon, Check, ChevronsUpDown, Eye, EyeOff } from 'lucide-react'
+import { AtSign, CalendarIcon, Check, ChevronsUpDown, DatabaseZap, Eye, EyeOff, MapPinned, VenetianMask } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
 import { format, setYear } from 'date-fns'
@@ -41,8 +41,9 @@ import { useCookie } from 'next-cookie'
 import { useRouter } from 'next/navigation'
 import { Separator } from '../ui/separator'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbSeparator } from '../ui/breadcrumb'
+import AddIcon from '@mui/icons-material/Add';
 
-const OperatorRegister = ({ name }: { name: string }) => {
+const OperatorRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => {
     const [open, setOpen] = useState(false)
     const [fetchingContry, setFetchingCountry] = useState(false);
     const [popoverOpen, setPopoverOpen] = useState(false)
@@ -76,6 +77,7 @@ const OperatorRegister = ({ name }: { name: string }) => {
     const [attachment, setattachment] = useState<File | null>(null);
 
     const { cookie } = useCookie()
+    const access_token = cookie.get("access_token");
 
     const router = useRouter()
 
@@ -256,48 +258,96 @@ const OperatorRegister = ({ name }: { name: string }) => {
             expiry_date
         };
 
-        renderInstance
-            .post("/operator", user)
-            .then((res) => {
-                if (res.status === 201 && res.data.access_token) {
-                    const expiryDate = new Date();
-                    expiryDate.setDate(expiryDate.getDate() + 1);
+        inPage ?
+            renderInstance
+                .post("/operator", user, {
+                    headers: {
+                        Authorization: `Bearer ${access_token}`,
+                    },
+                })
+                .then((res) => {
+                    if (res.status === 201 && res.data.access_token) {
+                        const expiryDate = new Date();
+                        expiryDate.setDate(expiryDate.getDate() + 1);
 
-                    // Set the cookie with the calculated expiry date
-                    cookie.remove("access_token", { path: "/" });
+                        // Set the cookie with the calculated expiry date
+                        cookie.remove("access_token", { path: "/" });
 
-                    successMessage("User sign up successfully");
-                    setTimeout(() => {
-                        router.push("/login");
-                    }, 3000);
-                }
-            })
-            .catch((err) => {
-                if (
-                    err.response &&
-                    err.response.status === 409 &&
-                    err.response.data.message === "User already exists"
-                ) {
-                    errorMessage("Email already taken");
-                } else if (
-                    err.response &&
-                    err.response.status === 409 &&
-                    err.response.data.message === "Only admin users can create new users"
-                ) {
-                    errorMessage("Only admin users can create new users");
-                } else if (
-                    err.response &&
-                    err.response.status === 409 &&
-                    err.response.data.message === "Something went wrong"
-                ) {
-                    errorMessage("Something went wrong");
-                } else {
-                    errorMessage("Internal server error");
-                }
-            })
-            .finally(() => {
-                setLoading(false);
-            });
+                        successMessage("User sign up successfully");
+                        setTimeout(() => {
+                            router.push("/login");
+                        }, 3000);
+                    }
+                })
+                .catch((err) => {
+                    if (
+                        err.response &&
+                        err.response.status === 409 &&
+                        err.response.data.message === "User already exists"
+                    ) {
+                        errorMessage("Email already taken");
+                    } else if (
+                        err.response &&
+                        err.response.status === 409 &&
+                        err.response.data.message === "Only admin users can create new users"
+                    ) {
+                        errorMessage("Only admin users can create new users");
+                    } else if (
+                        err.response &&
+                        err.response.status === 409 &&
+                        err.response.data.message === "Something went wrong"
+                    ) {
+                        errorMessage("Something went wrong");
+                    } else {
+                        errorMessage("Internal server error");
+                    }
+                })
+                .finally(() => {
+                    setLoading(false);
+                })
+            :
+            renderInstance
+                .post("/operator", user)
+                .then((res) => {
+                    if (res.status === 201 && res.data.access_token) {
+                        const expiryDate = new Date();
+                        expiryDate.setDate(expiryDate.getDate() + 1);
+
+                        // Set the cookie with the calculated expiry date
+                        cookie.remove("access_token", { path: "/" });
+
+                        successMessage("User sign up successfully");
+                        setTimeout(() => {
+                            router.push("/login");
+                        }, 3000);
+                    }
+                })
+                .catch((err) => {
+                    if (
+                        err.response &&
+                        err.response.status === 409 &&
+                        err.response.data.message === "User already exists"
+                    ) {
+                        errorMessage("Email already taken");
+                    } else if (
+                        err.response &&
+                        err.response.status === 409 &&
+                        err.response.data.message === "Only admin users can create new users"
+                    ) {
+                        errorMessage("Only admin users can create new users");
+                    } else if (
+                        err.response &&
+                        err.response.status === 409 &&
+                        err.response.data.message === "Something went wrong"
+                    ) {
+                        errorMessage("Something went wrong");
+                    } else {
+                        errorMessage("Internal server error");
+                    }
+                })
+                .finally(() => {
+                    setLoading(false);
+                })
     }
 
     useEffect(() => {
@@ -308,13 +358,14 @@ const OperatorRegister = ({ name }: { name: string }) => {
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button
-                className="text-xl font-medium"
-                variant={"default"}
+                    className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto"
+                    variant={"default"}
                     onClick={() => {
                         setOpen(true)
                     }}
                 >
-                    Continue as operator
+                    {inPage && <AddIcon />}
+                    {inPage ? "Create an operator" : "Continue as operator"}
                 </Button>
             </DialogTrigger>
 
@@ -337,84 +388,84 @@ const OperatorRegister = ({ name }: { name: string }) => {
 
                     <Tabs className="w-full h-full" defaultValue='stepone'>
 
-                    <TabsList className='w-full bg-transparent'>
+                        <TabsList className='w-full bg-transparent'>
 
-<Breadcrumb className="w-full">
+                            <Breadcrumb className="w-full">
 
-    <BreadcrumbList className='w-full flex items-center justify-between bg-transparent'>
+                                <BreadcrumbList className='w-full flex items-center justify-between bg-transparent'>
 
-        <BreadcrumbItem className='w-fit'>
+                                    <BreadcrumbItem className='w-fit'>
 
-            <TabsTrigger
-                value="stepone"
-                className='bg-transparent flex items-center px-0'>
-                <Button
-                    className={`bg-white hover:bg-transparent pl-1 pr-0 ${(name && agEmail && agPassword && agnewCountry && agnumber) ? "text-green-400" : "text-black"}`}>
-                    Step One
-                </Button>
-            </TabsTrigger>
+                                        <TabsTrigger
+                                            value="stepone"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className={`bg-white hover:bg-transparent pl-1 pr-0 ${(name && agEmail && agPassword && agnewCountry && agnumber) ? "text-green-400" : "text-black"}`}>
+                                                <AtSign />
+                                            </Button>
+                                        </TabsTrigger>
 
-        </BreadcrumbItem>
+                                    </BreadcrumbItem>
 
-        <BreadcrumbSeparator>
-            <Separator
-                className={`w-36 h-1 rounded-full ${(date && gender) ? "bg-green-400" : "bg-gray-400"}`} />
-        </BreadcrumbSeparator>
+                                    <BreadcrumbSeparator>
+                                        <Separator
+                                            className={`w-44 h-1 rounded-full ${(date && gender) ? "bg-green-400" : "bg-gray-400"}`} />
+                                    </BreadcrumbSeparator>
 
-        <BreadcrumbItem className='w-fit'>
+                                    <BreadcrumbItem className='w-fit'>
 
-            <TabsTrigger
-                value="steptwo"
-                className='bg-transparent flex items-center px-0'>
-                <Button
-                    className={`bg-white hover:bg-transparent pl-1 pr-0 ${(date && gender) ? "text-green-400" : "text-black"}`}>
-                    Step Two
-                </Button>
-            </TabsTrigger>
+                                        <TabsTrigger
+                                            value="steptwo"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className={`bg-white hover:bg-transparent pl-1 pr-0 ${(date && gender) ? "text-green-400" : "text-black"}`}>
+                                                <VenetianMask />
+                                            </Button>
+                                        </TabsTrigger>
 
-        </BreadcrumbItem>
+                                    </BreadcrumbItem>
 
-        <BreadcrumbSeparator>
-            <Separator
-                className={`w-36 h-1 rounded-full ${(location_name && location_address && location_city && location_state && location_zip_code && location_country) ? "bg-green-400" : "bg-gray-400"}`} />
-        </BreadcrumbSeparator>
+                                    <BreadcrumbSeparator>
+                                        <Separator
+                                            className={`w-44 h-1 rounded-full ${(location_name && location_address && location_city && location_state && location_zip_code && location_country) ? "bg-green-400" : "bg-gray-400"}`} />
+                                    </BreadcrumbSeparator>
 
-        <BreadcrumbItem className='w-fit'>
+                                    <BreadcrumbItem className='w-fit'>
 
-            <TabsTrigger
-                value="stepthree"
-                className='bg-transparent flex items-center px-0'>
-                <Button
-                    className={`bg-white hover:bg-transparent pl-1 pr-0 ${(location_name && location_address && location_city && location_state && location_zip_code && location_country) ? "text-green-400" : "text-black"}`}>
-                    Step Three
-                </Button>
-            </TabsTrigger>
+                                        <TabsTrigger
+                                            value="stepthree"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className={`bg-white hover:bg-transparent pl-1 pr-0 ${(location_name && location_address && location_city && location_state && location_zip_code && location_country) ? "text-green-400" : "text-black"}`}>
+                                                <MapPinned />
+                                            </Button>
+                                        </TabsTrigger>
 
-        </BreadcrumbItem>
+                                    </BreadcrumbItem>
 
-        <BreadcrumbSeparator>
-            <Separator
-                className={`w-36 h-1 rounded-full ${(attachment && document_number) ? "bg-green-400" : "bg-gray-400"}`} />
-        </BreadcrumbSeparator>
+                                    <BreadcrumbSeparator>
+                                        <Separator
+                                            className={`w-44 h-1 rounded-full ${(attachment && document_number) ? "bg-green-400" : "bg-gray-400"}`} />
+                                    </BreadcrumbSeparator>
 
-        <BreadcrumbItem className="w-fit">
+                                    <BreadcrumbItem className="w-fit">
 
-            <TabsTrigger
-                value="stepfour"
-                className='bg-transparent flex items-center px-0'>
-                <Button
-                    className={`bg-white hover:bg-transparent pl-1 pr-0 ${(attachment && document_number) ? "text-green-400" : "text-black"}`}>
-                    Step Four
-                </Button>
-            </TabsTrigger>
+                                        <TabsTrigger
+                                            value="stepfour"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className={`bg-white hover:bg-transparent pl-1 pr-0 ${(attachment && document_number) ? "text-green-400" : "text-black"}`}>
+                                                <DatabaseZap />
+                                            </Button>
+                                        </TabsTrigger>
 
-        </BreadcrumbItem>
+                                    </BreadcrumbItem>
 
-    </BreadcrumbList>
+                                </BreadcrumbList>
 
-</Breadcrumb>
+                            </Breadcrumb>
 
-</TabsList>
+                        </TabsList>
 
                         <TabsContent value="stepone" className='w-full'>
 
@@ -547,6 +598,19 @@ const OperatorRegister = ({ name }: { name: string }) => {
                                         }
                                     </div>
                                 </CardContent>
+
+                                <CardFooter>
+                                    <TabsList className='w-full flex items-center justify-end bg-transparent'>
+                                        <TabsTrigger
+                                            value="steptwo"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
+                                                Next
+                                            </Button>
+                                        </TabsTrigger>
+                                    </TabsList>
+                                </CardFooter>
                             </Card>
 
                         </TabsContent>
@@ -671,6 +735,27 @@ const OperatorRegister = ({ name }: { name: string }) => {
                                         </Select>
                                     </div>
                                 </CardContent>
+
+                                <CardFooter>
+                                    <TabsList className='w-full flex items-center justify-between bg-transparent'>
+                                        <TabsTrigger
+                                            value="stepone"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
+                                                Back
+                                            </Button>
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                            value="stepthree"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
+                                                Next
+                                            </Button>
+                                        </TabsTrigger>
+                                    </TabsList>
+                                </CardFooter>
                             </Card>
 
                         </TabsContent>
@@ -776,6 +861,27 @@ const OperatorRegister = ({ name }: { name: string }) => {
                                                 </div>
                                     }
                                 </CardContent>
+
+                                <CardFooter>
+                                    <TabsList className='w-full flex items-center justify-between bg-transparent'>
+                                        <TabsTrigger
+                                            value="steptwo"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
+                                                Back
+                                            </Button>
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                            value="stepfour"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
+                                                Next
+                                            </Button>
+                                        </TabsTrigger>
+                                    </TabsList>
+                                </CardFooter>
                             </Card>
 
                         </TabsContent>
@@ -887,7 +993,17 @@ const OperatorRegister = ({ name }: { name: string }) => {
                                         </PopoverContent>
                                     </Popover>
                                 </CardContent>
-                                <CardFooter className='w-full flex items-center justify-center'>
+                                <CardFooter className='w-full flex items-center justify-between'>
+                                <TabsList className='w-full flex items-center justify-start bg-transparent'>
+                                        <TabsTrigger
+                                            value="stepthree"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
+                                                Back
+                                            </Button>
+                                        </TabsTrigger>
+                                    </TabsList>
                                     <Button onClick={() => { operatorRegister() }}>
                                         Create account
                                     </Button>

@@ -10,68 +10,72 @@ import CryptoJS from "crypto-js";
 import { decode } from "jsonwebtoken"
 import { renderInstance } from '@/utils/Axios/RenderInstance'
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
+import { Label } from '../ui/label'
+import { Input } from '../ui/input'
+import { Eye, EyeOff } from 'lucide-react'
 
 const LogInPage = () => {
-  
-  const [email, setEmail] = useState("")
-  const [passwrd, setPassword] = useState("")
 
-  const [loading, setLoading] = useState(false)
-  const router = useRouter()
+    const [email, setEmail] = useState("")
+    const [passwrd, setPassword] = useState("")
+    const [passwrdShow, setPasswordShow] = useState(false)
 
-  const { cookie } = useCookie();
+    const [loading, setLoading] = useState(false)
+    const router = useRouter()
 
-  function handleLogin(e: any) {
-    e.preventDefault()
-    setLoading(true)
+    const { cookie } = useCookie();
 
-    const encryptedPassword = CryptoJS.AES.encrypt(
-        passwrd,
-        "m4AfXfQ&1brl3LjQFYO"
-    ).toString();
+    function handleLogin(e: any) {
+        e.preventDefault()
+        setLoading(true)
 
-    renderInstance.post("/user/login", {
-        email: email.trim(),
-        password: encryptedPassword,
-        authType: "EMAIL"
-    }).then((res) => {
-        if (res.status === 201 && res.data.access_token) {
+        const encryptedPassword = CryptoJS.AES.encrypt(
+            passwrd,
+            "m4AfXfQ&1brl3LjQFYO"
+        ).toString();
 
-            const user = decode(res.data.access_token)
+        renderInstance.post("/user/login", {
+            email: email.trim(),
+            password: encryptedPassword,
+            authType: "EMAIL"
+        }).then((res) => {
+            if (res.status === 201 && res.data.access_token) {
 
-            const expiryDate = new Date();
-            expiryDate.setDate(expiryDate.getDate() + 1);
+                const user = decode(res.data.access_token)
 
-            // Set the cookie with the calculated expiry date
-            cookie.set('access_token', res.data.access_token, { path: '/', expires: expiryDate });
-            cookie.set('user', user, { path: '/', expires: expiryDate });
+                const expiryDate = new Date();
+                expiryDate.setDate(expiryDate.getDate() + 1);
 
-            successMessage("Log in successfull")
-            setEmail("")
-            setPassword("")
-            setTimeout(() => {
-                router.push("/")
-            }, 1000);
-        }
-    }).catch((err) => {
-        if (err.response && err.response.status === 409 && err.response.data.message === "User not found") {
-            errorMessage("User not found")
-            setEmail("")
-            setPassword("")
-        } else if (err.response && err.response.status === 409 && err.response.data.message === "Wrong password") {
-            errorMessage("Wrong password")
-            setPassword("")
-        } else {
-            errorMessage("Some error occured")
-            console.log(err)
-        }
-    }).finally(() => {
-        setLoading(false)
-    })
-}
+                // Set the cookie with the calculated expiry date
+                cookie.set('access_token', res.data.access_token, { path: '/', expires: expiryDate });
+                cookie.set('user', user, { path: '/', expires: expiryDate });
 
-  return (
-    <div className='w-full min-h-[100vh] max-h-fit flex items-center justify-center text-[18px]'>
+                successMessage("Log in successfull")
+                setEmail("")
+                setPassword("")
+                setTimeout(() => {
+                    router.push("/")
+                }, 1000);
+            }
+        }).catch((err) => {
+            if (err.response && err.response.status === 409 && err.response.data.message === "User not found") {
+                errorMessage("User not found")
+                setEmail("")
+                setPassword("")
+            } else if (err.response && err.response.status === 409 && err.response.data.message === "Wrong password") {
+                errorMessage("Wrong password")
+                setPassword("")
+            } else {
+                errorMessage("Some error occured")
+                console.log(err)
+            }
+        }).finally(() => {
+            setLoading(false)
+        })
+    }
+
+    return (
+        <div className='w-full min-h-[100vh] max-h-fit flex items-center justify-center text-[18px]'>
 
             <Image
                 src={"https://wallpapercave.com/wp/wp10547889.jpg"}
@@ -96,43 +100,42 @@ const LogInPage = () => {
 
                     <div className='w-full'>
 
-                        <label htmlFor="log_in_email">
+                        <Label htmlFor="log_in_email">
                             Email
-                        </label>
+                        </Label>
 
-                        <div
-                            className='px-[20px] py-[10px] rounded-md w-full overflow-hidden border-[2px] mt-[10px]'>
-
-                            <input
-                                type="email"
-                                name="log_in_email"
-                                id="log_in_email"
-                                className='outline-none border-none w-full'
-                                placeholder='Enter your email'
-                                value={email}
-                                onChange={e => { setEmail(e.target.value) }} />
-
-                        </div>
+                        <Input
+                            type="email"
+                            name="log_in_email"
+                            id="log_in_email"
+                            placeholder='Enter your email'
+                            value={email}
+                            onChange={e => { setEmail(e.target.value) }} />
 
                     </div>
 
                     <div className='w-full'>
 
-                        <label htmlFor="log_in_email">
+                        <Label>
                             Password
-                        </label>
+                        </Label>
 
-                        <div
-                            className='px-[20px] py-[10px] rounded-md w-full overflow-hidden border-[2px] mt-[10px]'>
+                        <div className='flex items-center gap-3'>
 
-                            <input
-                                type="password"
-                                name="log_in_email"
-                                id="log_in_email"
-                                className='outline-none border-none w-full'
-                                placeholder='Enter your password'
+                            <Input
+                                id="password"
+                                type={`${passwrdShow ? "text" : "password"}`}
+                                placeholder='********'
                                 value={passwrd}
-                                onChange={e => setPassword(e.target.value)} />
+                                onChange={e => { setPassword(e.target.value) }} />
+                            <div onClick={() => { setPasswordShow(pre => !pre) }}>
+                                {
+                                    passwrdShow ?
+                                        <EyeOff />
+                                        :
+                                        <Eye />
+                                }
+                            </div>
 
                         </div>
 
@@ -163,7 +166,7 @@ const LogInPage = () => {
             </div>
 
         </div>
-  )
+    )
 }
 
 export default LogInPage

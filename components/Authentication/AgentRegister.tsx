@@ -30,7 +30,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
-import { CalendarIcon, Check, ChevronsUpDown, Eye, EyeOff } from 'lucide-react'
+import { AtSign, CalendarIcon, Check, ChevronsUpDown, DatabaseZap, Eye, EyeOff, MapPinned, VenetianMask } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
 import { format, setYear } from 'date-fns'
@@ -41,8 +41,9 @@ import { uploadFileToS3 } from '@/utils/AWS/FileUpload'
 import { useCookie } from 'next-cookie'
 import { useRouter } from 'next/navigation'
 import { Separator } from '../ui/separator'
+import AddIcon from '@mui/icons-material/Add';
 
-const AgentRegister = ({ name }: { name: string }) => {
+const AgentRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => {
     const [open, setOpen] = useState(false)
     const [fetchingContry, setFetchingCountry] = useState(false);
     const [popoverOpen, setPopoverOpen] = useState(false)
@@ -318,13 +319,14 @@ const AgentRegister = ({ name }: { name: string }) => {
 
             <DialogTrigger asChild>
                 <Button
-                    className="text-xl font-medium"
+                    className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto"
                     variant={"default"}
                     onClick={() => {
                         setOpen(true)
                     }}
                 >
-                    Continue as agent
+                    {inPage && <AddIcon />}
+                    {inPage ? "Create an agent" : "Continue as agent"}
                 </Button>
             </DialogTrigger>
 
@@ -347,7 +349,7 @@ const AgentRegister = ({ name }: { name: string }) => {
 
                     <Tabs className="w-full h-full" defaultValue='stepone'>
 
-                        <TabsList className='w-full bg-transparent'>
+                        <TabsList className='w-full bg-transparent my-6'>
 
                             <Breadcrumb className="w-full">
 
@@ -360,7 +362,7 @@ const AgentRegister = ({ name }: { name: string }) => {
                                             className='bg-transparent flex items-center px-0'>
                                             <Button
                                                 className={`bg-white hover:bg-transparent pl-1 pr-0 ${(name && agEmail && agPassword && agnewCountry && agnumber) ? "text-green-400" : "text-black"}`}>
-                                                Step One
+                                                <AtSign />
                                             </Button>
                                         </TabsTrigger>
 
@@ -368,7 +370,7 @@ const AgentRegister = ({ name }: { name: string }) => {
 
                                     <BreadcrumbSeparator>
                                         <Separator
-                                            className={`w-36 h-1 rounded-full ${(date && gender) ? "bg-green-400" : "bg-gray-400"}`} />
+                                            className={`w-44 h-1 rounded-full ${(date && gender) ? "bg-green-400" : "bg-gray-400"}`} />
                                     </BreadcrumbSeparator>
 
                                     <BreadcrumbItem className='w-fit'>
@@ -378,7 +380,7 @@ const AgentRegister = ({ name }: { name: string }) => {
                                             className='bg-transparent flex items-center px-0'>
                                             <Button
                                                 className={`bg-white hover:bg-transparent pl-1 pr-0 ${(date && gender) ? "text-green-400" : "text-black"}`}>
-                                                Step Two
+                                                <VenetianMask />
                                             </Button>
                                         </TabsTrigger>
 
@@ -386,7 +388,7 @@ const AgentRegister = ({ name }: { name: string }) => {
 
                                     <BreadcrumbSeparator>
                                         <Separator
-                                            className={`w-36 h-1 rounded-full ${(location_name && location_address && location_city && location_state && location_zip_code && location_country) ? "bg-green-400" : "bg-gray-400"}`} />
+                                            className={`w-44 h-1 rounded-full ${(location_name && location_address && location_city && location_state && location_zip_code && location_country) ? "bg-green-400" : "bg-gray-400"}`} />
                                     </BreadcrumbSeparator>
 
                                     <BreadcrumbItem className='w-fit'>
@@ -396,7 +398,7 @@ const AgentRegister = ({ name }: { name: string }) => {
                                             className='bg-transparent flex items-center px-0'>
                                             <Button
                                                 className={`bg-white hover:bg-transparent pl-1 pr-0 ${(location_name && location_address && location_city && location_state && location_zip_code && location_country) ? "text-green-400" : "text-black"}`}>
-                                                Step Three
+                                                <MapPinned />
                                             </Button>
                                         </TabsTrigger>
 
@@ -404,7 +406,7 @@ const AgentRegister = ({ name }: { name: string }) => {
 
                                     <BreadcrumbSeparator>
                                         <Separator
-                                            className={`w-36 h-1 rounded-full ${(attachment && document_number) ? "bg-green-400" : "bg-gray-400"}`} />
+                                            className={`w-44 h-1 rounded-full ${(attachment && document_number) ? "bg-green-400" : "bg-gray-400"}`} />
                                     </BreadcrumbSeparator>
 
                                     <BreadcrumbItem className="w-fit">
@@ -414,7 +416,7 @@ const AgentRegister = ({ name }: { name: string }) => {
                                             className='bg-transparent flex items-center px-0'>
                                             <Button
                                                 className={`bg-white hover:bg-transparent pl-1 pr-0 ${(attachment && document_number) ? "text-green-400" : "text-black"}`}>
-                                                Step Four
+                                                <DatabaseZap />
                                             </Button>
                                         </TabsTrigger>
 
@@ -557,6 +559,19 @@ const AgentRegister = ({ name }: { name: string }) => {
                                         }
                                     </div>
                                 </CardContent>
+
+                                <CardFooter>
+                                    <TabsList className='w-full flex items-center justify-end bg-transparent'>
+                                        <TabsTrigger
+                                            value="steptwo"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
+                                                Next
+                                            </Button>
+                                        </TabsTrigger>
+                                    </TabsList>
+                                </CardFooter>
                             </Card>
 
                         </TabsContent>
@@ -681,6 +696,27 @@ const AgentRegister = ({ name }: { name: string }) => {
                                         </Select>
                                     </div>
                                 </CardContent>
+
+                                <CardFooter>
+                                    <TabsList className='w-full flex items-center justify-between bg-transparent'>
+                                        <TabsTrigger
+                                            value="stepone"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
+                                                Back
+                                            </Button>
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                            value="stepthree"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
+                                                Next
+                                            </Button>
+                                        </TabsTrigger>
+                                    </TabsList>
+                                </CardFooter>
                             </Card>
 
                         </TabsContent>
@@ -786,6 +822,27 @@ const AgentRegister = ({ name }: { name: string }) => {
                                                 </div>
                                     }
                                 </CardContent>
+
+                                <CardFooter>
+                                    <TabsList className='w-full flex items-center justify-between bg-transparent'>
+                                        <TabsTrigger
+                                            value="steptwo"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
+                                                Back
+                                            </Button>
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                            value="stepfour"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
+                                                Next
+                                            </Button>
+                                        </TabsTrigger>
+                                    </TabsList>
+                                </CardFooter>
                             </Card>
 
                         </TabsContent>
@@ -897,7 +954,17 @@ const AgentRegister = ({ name }: { name: string }) => {
                                         </PopoverContent>
                                     </Popover>
                                 </CardContent>
-                                <CardFooter className='w-full flex items-center justify-center'>
+                                <CardFooter className='w-full flex items-center justify-between'>
+                                <TabsList className='w-full flex items-center justify-start bg-transparent'>
+                                        <TabsTrigger
+                                            value="stepthree"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
+                                                Back
+                                            </Button>
+                                        </TabsTrigger>
+                                    </TabsList>
                                     <Button onClick={() => { operatorRegister() }}>
                                         Create account
                                     </Button>

@@ -576,7 +576,7 @@ const Sidebar = () => {
 
   return (
     <div
-      className={`w-[36px] p-[10px] transition-all duration- flex flex-col gap-[20px] box-content bg-[#ededed] h-[1480px]`}
+      className={`w-[36px] p-[10px] transition-all duration-500 flex flex-col gap-[20px] box-content bg-[#ededed] h-[1580px]`}
     >
       <Image
         alt="Logo"
