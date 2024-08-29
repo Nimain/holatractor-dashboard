@@ -1,5 +1,6 @@
 import React from 'react'
 import Menubar from '../Menubar/Menubar'
+import BookingChart from './BookingChart'
 
 const Dashboard = () => {
   return (
@@ -9,6 +10,8 @@ const Dashboard = () => {
       <Menubar pagename={'Dashboard'} />
 
       {/* <StoreBooking /> */}
+
+      <BookingChart />
 
     </div>
   )

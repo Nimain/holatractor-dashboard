@@ -1,3 +1,5 @@
+import Roles from "@/components/Roles/Roles";
+
 export interface User {
   id: string;
   first_name: string;
@@ -34,6 +36,8 @@ export interface User {
   OwnerCreator: Owner[];
   Agent: Agent[];
   AgentCreator: Agent[];
+  Farmer: Farmer[];
+  FarmerCreator: Farmer[];
 }
 
 export interface Role {
@@ -49,6 +53,7 @@ export interface Role {
   operator: Operator[];
   owner: Owner[];
   agent: Agent[];
+  Farmer: Farmer[];
 }
 
 export interface UserProfile {
@@ -79,6 +84,7 @@ export interface Base {
   OperatorBookingJob: OperatorBookingJob[];
   Owner: Owner[];
   Agent: Agent[];
+  Farmer: Farmer[];
 }
 
 export interface Module {
@@ -354,21 +360,17 @@ export interface AttachmentInStoreRating {
 
 export interface Farmer {
   id: string;
-  first_name: string;
-  middle_name?: string | null;
-  last_name: string;
-  email: string;
-  password?: string | null;
-  googleId?: string | null;
-  mobile: string;
-  country_code: string;
-  image?: string | null;
-  dob: Date;
-  age: number;
-  gender: string;
-  base_id: string;
+  user_id: string;
+  role_id: string;
+  created_by?: string;
+  Status: number;
+  base_id: string;  
   createdAt: Date;
   updatedAt: Date;
+  role: Role;
+  user: User;
+  createor?: User;
+  base: Base;
 }
 
 export interface Country {
