@@ -27,7 +27,7 @@ const BookingChart = () => {
       } satisfies ChartConfig
 
   return (
-    <ChartContainer config={chartConfig} className="min-h-[200px] max-h-[80vh] w-full">
+    <ChartContainer config={chartConfig} className="min-h-[200px] max-h-[60vh] w-full max-w-[1200px] mx-auto">
       <BarChart accessibilityLayer data={chartData}>
         <Bar dataKey="desktop" fill="var(--color-desktop)" radius={4} />
         <Bar dataKey="mobile" fill="var(--color-mobile)" radius={4} />

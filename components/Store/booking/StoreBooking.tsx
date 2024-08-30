@@ -14,7 +14,7 @@ import { Backdrop, CircularProgress } from "@mui/material";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { useParams } from "next/navigation";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
-import { AttachmentInStore, Country, Farmer, TractorInStore } from "@/utils/Types/types";
+import { AttachmentInStore, Booking, Country, Farmer, TractorInStore } from "@/utils/Types/types";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -58,6 +58,9 @@ const StoreBooking = () => {
   const [stepTwo, setStepTwo] = useState(false)
   const [stepThree, setStepThree] = useState(false)
   const [stepFour, setStepFour] = useState(false)
+  const [stepFive, setStepFive] = useState(false)
+
+  const [booking, setBooking] = useState<Booking | null>(null)
 
   const { slug } = useParams();
 
@@ -133,7 +136,7 @@ const StoreBooking = () => {
       location_state: state,
       location_zip_code: zipCode,
       location_country: countryName,
-      user_id: user.isAdmin.includes("farmer") ? farmerId : user.userId,
+      user_id: user.isAdmin.includes("farmer") ? user.userId : farmerId,
       store_id: slug,
       start_date: new Date(startDate),
       end_date: BookingHours === "more" ? new Date(endDate) : new Date(),
@@ -142,6 +145,8 @@ const StoreBooking = () => {
       attachment_ids: selectedAttachmentIds,
     };
 
+    console.log(booking)
+
     renderInstance
       .post("/booking", booking, {
         headers: {
@@ -149,8 +154,12 @@ const StoreBooking = () => {
         },
       })
       .then((res) => {
-        console.log(res)
-        successMessage("Booked successful");
+        if(res.status === 201){
+          successMessage("Booked successful");
+          setStepFour(false)
+          setStepFive(true)
+          setBooking(res.data)
+        }
       })
       .catch((err) => {
         errorMessage("Some error occurred");
@@ -281,6 +290,15 @@ const StoreBooking = () => {
     .finally(()=>{setFetchingFarmers(false)})
   }
 
+  function formatDateToDDMMYYYY(date: Date): string {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-based in JavaScript
+    const year = date.getFullYear();
+  
+    return `${day}-${month}-${year}`;
+  }
+  
+
   return (
     <div className="w-full h-full flex flex-col gap-5 py-10">
       <Backdrop
@@ -294,7 +312,7 @@ const StoreBooking = () => {
         open={stepOne} onOpenChange={setStepOne}>
 
         <DialogContent
-          className="bg-white max-h-[90vh] overflow-auto"
+          className="bg-white max-h-[90vh] w-[400px] overflow-auto"
           style={{ scrollbarWidth: "none" }}
         >
 
@@ -425,7 +443,7 @@ const StoreBooking = () => {
         open={stepTwo} onOpenChange={setStepTwo}>
 
         <DialogContent
-          className="bg-white max-h-[90vh] overflow-auto"
+          className="bg-white max-h-[90vh] w-[400px] overflow-auto"
           style={{ scrollbarWidth: "none" }}
         >
 
@@ -551,7 +569,7 @@ const StoreBooking = () => {
         >
 
           <div
-            className="bg-white rounded-xl text-black flex gap-[16px] flex-col relative w-[950px] h-[90vh] overflow-auto"
+            className="bg-white rounded-xl text-black flex gap-[16px] flex-col relative w-[950px] h-fit max-h-[90vh] overflow-auto"
             style={{ scrollbarWidth: "none" }}
           >
 
@@ -646,7 +664,7 @@ const StoreBooking = () => {
         >
 
           <div
-            className="bg-white rounded-xl text-black flex gap-[16px] flex-col relative w-[950px] h-[90vh] overflow-auto"
+            className="bg-white rounded-xl text-black flex gap-[16px] flex-col relative w-[950px] h-fit max-h-[90vh] overflow-auto"
             style={{ scrollbarWidth: "none" }}
           >
 
@@ -728,6 +746,54 @@ const StoreBooking = () => {
           </Button>
 
         </DialogContent>
+
+      </Dialog>
+
+      <Dialog
+      open={stepFive} onOpenChange={setStepFive}>
+
+<DialogContent
+          className="bg-white max-h-[90vh] overflow-auto"
+          style={{ scrollbarWidth: "none" }}
+        >
+
+          <div
+            className="bg-white rounded-xl text-black flex gap-[16px] flex-col relative w-[950px] h-[500px] max-h-[90vh] overflow-auto"
+            style={{ scrollbarWidth: "none" }}
+          >
+
+            <p className="text-2xl font-medium text-center mb-3">
+              Confirm your booking
+            </p>
+
+            {
+              booking && <div className="w-full">
+
+<p className="text-base font-medium text-center">
+              Booking Id: {booking.id}
+            </p>
+
+            <p>
+              From {formatDateToDDMMYYYY(booking.start_date)}
+            </p>
+
+            <p>
+              {
+                booking.booking_hours && booking.booking_hours === BookingHours ?
+                <p>
+                  {booking.end_date && `To ${formatDateToDDMMYYYY(booking.end_date)}`}
+                </p>
+                :
+                `Total duration: ${booking.booking_hours}`
+              }
+            </p>
+
+              </div>
+            }
+
+            </div>
+
+            </DialogContent>
 
       </Dialog>
     </div>
