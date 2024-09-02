@@ -155,25 +155,6 @@ const ExpandedSidebar = () => {
       }),
       route: "#",
     },
-    {
-      icon: (
-        <Image
-          src={SubcriptionsIcon}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Subscriptions"
-        />
-      ),
-      name: getTranslation(locale, {
-        en: "Subscriptions",
-        es: "Suscripciones",
-        ay: "Churasa",
-        qu: "Qhatariynin",
-        gn: "Ñemity",
-      }),
-      route: "#",
-    },
   ];
 
   const inventoryList = [
@@ -370,6 +351,25 @@ const ExpandedSidebar = () => {
         ay: "Ayniri",
         qu: "Rimanakuy",
         gn: "Mboja’aha",
+      }),
+      route: "#",
+    },
+    {
+      icon: (
+        <Image
+          src={SubcriptionsIcon}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Subscriptions"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Subscriptions",
+        es: "Suscripciones",
+        ay: "Churasa",
+        qu: "Qhatariynin",
+        gn: "Ñemity",
       }),
       route: "#",
     },

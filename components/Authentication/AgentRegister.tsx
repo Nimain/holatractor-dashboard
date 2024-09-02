@@ -496,7 +496,7 @@ const AgentRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                                                         <Input
                                                             id="phonrnumber"
                                                             placeholder='e.g - 12345678'
-                                                            type='text'
+                                                            type='tel'
                                                             value={agnumber}
                                                             onChange={e => { setagNumber(e.target.value) }} />
                                                     </div>

@@ -20,6 +20,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { cn } from '@/lib/utils';
 import { uploadFileToS3 } from '@/utils/AWS/FileUpload';
 import { ScrollArea } from '../ui/scroll-area';
+import { useRouter } from 'next/navigation';
 
 const NewStore = () => {
     const [open, setOpen] = useState(false)
@@ -50,6 +51,8 @@ const NewStore = () => {
 
     const [country, setCountry] = useState<Country[]>([]);
     const [fetchingContry, setFetchingCountry] = useState(false);
+
+    const { refresh } = useRouter()
 
     const { cookie } = useCookie()
     const access_token = cookie.get("access_token")
@@ -167,6 +170,10 @@ const NewStore = () => {
                 setClosingDays([]);
                 setOwner("");
                 setOpen(false)
+
+                setTimeout(() => {
+                    refresh()
+                }, 1000);
             }
         }).catch((err) => {
             if (err.response && err.response.status === 409 && err.response.data.message === "Store already present") errorMessage("Store already present")

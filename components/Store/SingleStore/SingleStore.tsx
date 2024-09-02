@@ -1,9 +1,6 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import AddIcon from '@mui/icons-material/Add';
-import { Backdrop } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
 import { Pagination, Autoplay } from 'swiper/modules';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
@@ -86,9 +83,9 @@ const SingleStore = () => {
     if (!storeDetails) {
         return <div>No store details details available.</div>;
     }
-    
-  return (
-    <div
+
+    return (
+        <div
             className='py-[30px] w-full flex flex-col gap-[30px]'>
 
             <div
@@ -113,7 +110,7 @@ const SingleStore = () => {
                     </p>
 
                     <p className='text-[20px] font-[600]'>
-                        {`${storeDetails.owner.first_name} ${storeDetails.owner.middle_name ?? ""} ${storeDetails.owner.last_name}`}
+                        {storeDetails.agentOwner ? `${storeDetails.agentOwner.user.first_name} ${storeDetails.agentOwner.user.middle_name ?? ""} ${storeDetails.agentOwner.user.last_name}` : `${storeDetails.owner.user.first_name} ${storeDetails.owner.user.middle_name ?? ""} ${storeDetails.owner.user.last_name}`}
                     </p>
 
                 </div>
@@ -206,34 +203,63 @@ const SingleStore = () => {
                 <div
                     className='w-full grid grid-cols-3 gap-[20px]'>
 
-                    { /*
-                        storeDetails.stock.length === 0 ?
-                            <p>You have not created any inventory</p>
+                    {
+                        storeDetails.TractorInStore.length === 0 ?
+                            <p>You have not added any inventory</p>
                             :
-                            storeDetails.stock.map((stock, i) => {
+                            storeDetails.TractorInStore.map((stock, i) => {
                                 return (
                                     <div
-                                        className='px-[20px] py-[20px] rounded-md bg-white flex flex-col gap-[10px] cursor-pointer'
-                                        key={i}>
+                                        key={i}
+                                        className={`border-2 rounded-xl w-full flex flex-col gap-5 p-2`}
+                                    >
+                                        {stock.baseTractor.images.length === 0 ? (
+                                            <Image
+                                                src={"https://wallpapercave.com/wp/wp13088808.jpg"}
+                                                alt="tractor_image"
+                                                className="w-full h-32 object-cover rounded-xl"
+                                                width={300}
+                                                height={400}
+                                                unoptimized={true}
+                                            />
+                                        ) : (
+                                            <Swiper
+                                                modules={[Autoplay, Pagination]}
+                                                spaceBetween={0}
+                                                slidesPerView={1}
+                                                loop={true}
+                                                pagination={true}
+                                                autoplay={true}
+                                                className="w-full h-full"
+                                            >
+                                                {stock.baseTractor.images.map((image, i) => {
+                                                    return (
+                                                        <SwiperSlide key={i}>
+                                                            <Image
+                                                                src={image}
+                                                                alt="tractor_image"
+                                                                className="w-full h-full object-cover rounded-xl"
+                                                                width={300}
+                                                                height={400}
+                                                                unoptimized={true}
+                                                            />
+                                                        </SwiperSlide>
+                                                    );
+                                                })}
+                                            </Swiper>
+                                        )}
 
-                                        <p className='text-xl font-medium text-gray-600'>
-                                            <b>Created at</b> {formatTimeOnly(stock.createdAt)} {formatDateOnly(stock.createdAt)}
-                                        </p>
-
-                                        <p className='text-[20px] font-[600]'>
-                                            <b>Total tractors: </b> {stock.inventory_id.length}
-                                        </p>
-
-                                        <div
-                                            className='w-full flex items-center flex-wrap justify-center gap-2'>
-                                            <RemoveInventory allTractors={allTractors} selectedTractors={stock.inventory_id} storeStockId={stock.id} />
-                                            <AddInventory allTractors={allTractors} selectedTractors={stock.inventory_id} storeStockId={stock.id} />
+                                        <div>
+                                            <strong>{stock.baseTractor.name}</strong>
+                                            <p>
+                                                <strong>Model:</strong>
+                                                <span>{stock.baseTractor.model}</span>
+                                            </p>
                                         </div>
-
                                     </div>
                                 )
                             })
-                    */ }
+                    }
 
                 </div>
 
@@ -247,48 +273,77 @@ const SingleStore = () => {
                         Total attachment: {storeDetails.AttachmentInStore.length}
                     </p>
 
-                    <AddAttachment alreadyTractors={storeDetails.AttachmentInStore}  />
+                    <AddAttachment alreadyTractors={storeDetails.AttachmentInStore} />
 
                 </div>
 
                 <div
                     className='w-full grid grid-cols-3 gap-[20px]'>
 
-                    { /*
-                        storeDetails.stock.length === 0 ?
-                            <p>You have not created any inventory</p>
+{
+                        storeDetails.AttachmentInStore.length === 0 ?
+                            <p>You have not added any inventory</p>
                             :
-                            storeDetails.stock.map((stock, i) => {
+                            storeDetails.AttachmentInStore.map((stock, i) => {
                                 return (
                                     <div
-                                        className='px-[20px] py-[20px] rounded-md bg-white flex flex-col gap-[10px] cursor-pointer'
-                                        key={i}>
+                                        key={i}
+                                        className={`border-2 rounded-xl w-full flex flex-col gap-5 p-2`}
+                                    >
+                                        {stock.baseAttachment.images.length === 0 ? (
+                                            <Image
+                                                src={"https://wallpapercave.com/wp/wp13088808.jpg"}
+                                                alt="tractor_image"
+                                                className="w-full h-32 object-cover rounded-xl"
+                                                width={300}
+                                                height={400}
+                                                unoptimized={true}
+                                            />
+                                        ) : (
+                                            <Swiper
+                                                modules={[Autoplay, Pagination]}
+                                                spaceBetween={0}
+                                                slidesPerView={1}
+                                                loop={true}
+                                                pagination={true}
+                                                autoplay={true}
+                                                className="w-full h-full"
+                                            >
+                                                {stock.baseAttachment.images.map((image, i) => {
+                                                    return (
+                                                        <SwiperSlide key={i}>
+                                                            <Image
+                                                                src={image}
+                                                                alt="tractor_image"
+                                                                className="w-full h-full object-cover rounded-xl"
+                                                                width={300}
+                                                                height={400}
+                                                                unoptimized={true}
+                                                            />
+                                                        </SwiperSlide>
+                                                    );
+                                                })}
+                                            </Swiper>
+                                        )}
 
-                                        <p className='text-xl font-medium text-gray-600'>
-                                            <b>Created at</b> {formatTimeOnly(stock.createdAt)} {formatDateOnly(stock.createdAt)}
-                                        </p>
-
-                                        <p className='text-[20px] font-[600]'>
-                                            <b>Total tractors: </b> {stock.inventory_id.length}
-                                        </p>
-
-                                        <div
-                                            className='w-full flex items-center flex-wrap justify-center gap-2'>
-                                            <RemoveInventory allTractors={allTractors} selectedTractors={stock.inventory_id} storeStockId={stock.id} />
-                                            <AddInventory allTractors={allTractors} selectedTractors={stock.inventory_id} storeStockId={stock.id} />
+                                        <div>
+                                            <strong>{stock.baseAttachment.name}</strong>
+                                            <p>
+                                                <strong>Model:</strong>
+                                                <span>{stock.baseAttachment.description}</span>
+                                            </p>
                                         </div>
-
                                     </div>
                                 )
                             })
-                    */ }
+                    }
 
                 </div>
 
             </div>
 
         </div>
-  )
+    )
 }
 
 export default SingleStore

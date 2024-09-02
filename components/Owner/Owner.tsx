@@ -6,6 +6,11 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { Owner } from '@/utils/Types/types';
 import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
+import { Dialog, DialogClose, DialogContent, DialogFooter, DialogTrigger } from '../ui/dialog';
+import { Button } from '../ui/button';
+import { Label } from '../ui/label';
+import { Input } from '../ui/input';
+import OwnerRegister from '../Authentication/OwnerRegister';
 
 const OwnerSection = () => {
     const [activeHover, setActiveHover] = useState('')
@@ -13,6 +18,9 @@ const OwnerSection = () => {
     const [loading, setLoading] = useState(false)
 
     const [users, setUsers] = useState<Owner[]>([])
+    const [open, setOpen] = useState(false)
+    const [newOwnerName, setNewOwnerName] = useState("")
+    const [isSignUpCard, setIsSignUpCard] = useState(false)
 
     function fetchAllUsers() {
         setLoading(true)
@@ -24,6 +32,24 @@ const OwnerSection = () => {
             }).finally(() => {
                 setLoading(false)
             })
+    }
+
+    const splitFullName = (fullName: string) => {
+        const nameParts = fullName.trim().split(/\s+/); // Split by spaces
+        const firstName = nameParts.shift(); // Take the first element as the first name
+        const lastName = nameParts.pop(); // Take the last element as the last name
+        const middleName = nameParts.join(" "); // Join the rest as middle name
+
+        return { firstName, middleName, lastName };
+    };
+
+    function handleNameChage(name: string) {
+        setNewOwnerName(name)
+
+        const { lastName } = splitFullName(name)
+
+        if (lastName) setIsSignUpCard(true)
+        else setIsSignUpCard(false)
     }
 
     useEffect(() => {
@@ -48,9 +74,65 @@ const OwnerSection = () => {
         <div
             className='mt-[40px] text-[18px]'>
 
-            <p className='mb-[20px] text-[22px] font-[600]'>
-                All owners
-            </p>
+            <div className='mb-[20px] w-full flex items-center justify-between'>
+
+                <p className='text-[22px] font-[600]'>
+                    Total owners: {users.length}
+                </p>
+
+                <Dialog open={open} onOpenChange={setOpen}>
+                    <DialogTrigger asChild>
+                        <Button
+                            name="Name_next_button"
+                            onClick={() => {
+                                setOpen(true)
+                            }}
+                        >
+                            New owner
+                        </Button>
+                    </DialogTrigger>
+
+                    <DialogContent
+                        className="bg-white h-fit min-w-[400px] max-w-[400px] overflow-auto"
+                        style={{ scrollbarWidth: "none" }}
+                    >
+
+                        <Label className='mb-2 text-lg font-medium'>
+                            Name
+                        </Label>
+
+                        <Input
+                            value={newOwnerName}
+                            onChange={e => { handleNameChage(e.target.value) }}
+                            className='w-full' />
+
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button onClick={() => { setOpen(false) }}>
+                                    Cancel
+                                </Button>
+                            </DialogClose>
+
+                            {
+                                isSignUpCard ?
+                                    <OwnerRegister inPage={true} name={newOwnerName} />
+                                    :
+                                    <Button
+                                        name="Name_next_button"
+                                        onClick={() => {
+                                            errorMessage("Please give your name")
+                                        }}
+                                    >
+                                        Next
+                                    </Button>
+                            }
+                        </DialogFooter>
+
+                    </DialogContent>
+
+                </Dialog>
+
+            </div>
 
             <div
                 className='text-[20px] font-[600] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer'>

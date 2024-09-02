@@ -260,7 +260,7 @@ const OperatorRegister = ({ name, inPage }: { name: string; inPage: boolean; }) 
 
         inPage ?
             renderInstance
-                .post("/operator", user, {
+                .post("/operator/createWithCreator", user, {
                     headers: {
                         Authorization: `Bearer ${access_token}`,
                     },
@@ -364,8 +364,7 @@ const OperatorRegister = ({ name, inPage }: { name: string; inPage: boolean; }) 
                         setOpen(true)
                     }}
                 >
-                    {inPage && <AddIcon />}
-                    {inPage ? "Create an operator" : "Continue as operator"}
+                    {inPage ? "Continue" : "Continue as operator"}
                 </Button>
             </DialogTrigger>
 
@@ -535,7 +534,7 @@ const OperatorRegister = ({ name, inPage }: { name: string; inPage: boolean; }) 
                                                         <Input
                                                             id="phonrnumber"
                                                             placeholder='e.g - 12345678'
-                                                            type='text'
+                                                            type='tel'
                                                             value={agnumber}
                                                             onChange={e => { setagNumber(e.target.value) }} />
                                                     </div>

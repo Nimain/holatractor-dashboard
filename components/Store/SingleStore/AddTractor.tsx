@@ -267,7 +267,7 @@ const AddTractor = ({
                 )}
               </div>
               <div className="space-y-1 w-full">
-                <Label htmlFor="liscenceNumber">Liscence ID</Label>
+                <Label htmlFor="liscenceNumber">Tractor number plate</Label>
                 <Input
                   id="liscenceNumber"
                   placeholder='e.g - es0012390'

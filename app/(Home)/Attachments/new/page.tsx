@@ -39,6 +39,7 @@ const NewAttachment = () => {
   const [selectedImage, setSelectedImage] = useState<File[]>([]);
   const [fetchingAttachments, setFetchingAttachments] = useState(false);
   const [tractorType, setTractorType] = useState("");
+  const [tractorName, setTractorName] = useState("");
   const [allTractors, setAllTractors] = useState<Inventory[]>([]);
 
   const [imageUploading, setImageUploading] = useState(false);
@@ -487,8 +488,8 @@ const NewAttachment = () => {
                     // aria-expanded={popoverOpen}
                     className="w-full justify-between"
                   >
-                    {tractorType
-                      ? allTractors.find((country) => country.tractor.name === tractorType) && tractorType
+                    {tractorName
+                      ? allTractors.find((country) => country.tractor.name === tractorName) && tractorName
                       : "Select inventory..."}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
@@ -497,7 +498,7 @@ const NewAttachment = () => {
                   <Command>
                     <CommandInput placeholder="Search inventory..." />
                     <CommandList>
-                      <CommandEmpty>No country found.</CommandEmpty>
+                      <CommandEmpty>No inventory found.</CommandEmpty>
                       <CommandGroup>
                         {allTractors.map((country, index) => (
                           <CommandItem
@@ -505,6 +506,7 @@ const NewAttachment = () => {
                             value={country.tractor.name}
                             onSelect={(currentValue) => {
                               setTractorType(country.tractor.id)
+                              setTractorName(country.tractor.name)
                               setPopoverOpen(false)
                             }}
                           >

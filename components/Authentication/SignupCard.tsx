@@ -45,12 +45,12 @@ const SignupCard = ({ name }: { name: string }) => {
                         <OperatorRegister name={name} inPage={false} />
                     </div>
 
-                    <div className='flex items-center gap-2'>
+                    {/* <div className='flex items-center gap-2'>
                         <p className='text-lg font-medium whitespace-nowrap'>
                             Do you want to be an agent?
                         </p>
                         <AgentRegister name={name} inPage={false} />
-                    </div>
+                    </div> */}
 
                     <div className='flex items-center gap-2'>
                         <p className='text-lg font-medium whitespace-nowrap'>

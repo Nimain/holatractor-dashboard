@@ -22,9 +22,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { CalendarIcon, Check, ChevronsUpDown } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
 
 const StoreBooking = () => {
   const [zipCode, setZipCode] = useState("");
@@ -33,8 +35,8 @@ const StoreBooking = () => {
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
-  const [startDate, setstartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setstartDate] = useState<Date>();
+  const [endDate, setEndDate] = useState<Date>();
   const [BookingHours, setBookingHours] = useState("");
   const [roadName, setRoadName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -61,6 +63,7 @@ const StoreBooking = () => {
   const [stepFive, setStepFive] = useState(false)
 
   const [booking, setBooking] = useState<Booking | null>(null)
+  const [bookingConfirm, setBookingConfirm] = useState(false)
 
   const { slug } = useParams();
 
@@ -139,13 +142,11 @@ const StoreBooking = () => {
       user_id: user.isAdmin.includes("farmer") ? user.userId : farmerId,
       store_id: slug,
       start_date: new Date(startDate),
-      end_date: BookingHours === "more" ? new Date(endDate) : new Date(),
+      end_date: BookingHours === "more" ? endDate : new Date(),
       booking_hours: BookingHours === "more" ? "" : BookingHours,
       tractor_ids: selectedTractorIds,
       attachment_ids: selectedAttachmentIds,
     };
-
-    console.log(booking)
 
     renderInstance
       .post("/booking", booking, {
@@ -155,7 +156,6 @@ const StoreBooking = () => {
       })
       .then((res) => {
         if(res.status === 201){
-          successMessage("Booked successful");
           setStepFour(false)
           setStepFive(true)
           setBooking(res.data)
@@ -174,7 +174,7 @@ const StoreBooking = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Resetting the time to midnight
 
-    const selectedStartDate = new Date(startDate);
+    const selectedStartDate = startDate ? new Date(startDate) : new Date()
     selectedStartDate.setHours(0, 0, 0, 0); // Resetting the time to midnight
 
     let selectedEndDate = endDate ? new Date(endDate) : null;
@@ -290,12 +290,39 @@ const StoreBooking = () => {
     .finally(()=>{setFetchingFarmers(false)})
   }
 
-  function formatDateToDDMMYYYY(date: Date): string {
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-based in JavaScript
-    const year = date.getFullYear();
-  
-    return `${day}-${month}-${year}`;
+  const formatDateToDDMMYYYY = (date: string | Date): string => {
+    const options: Intl.DateTimeFormatOptions = {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    };
+
+    const dateObj = typeof date === "string" ? new Date(date) : date;
+
+    return dateObj.toLocaleDateString(undefined, options);
+};
+
+  function userBookingConfirm() {
+    if(booking && booking.id){
+      setBookingConfirm(true)
+      renderInstance.patch(`/booking/${booking.id}/owner_confirm`, {}, {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      }).then((res)=>{
+        successMessage("Successfully booked")
+        setTimeout(() => {
+          setStepFive(false)
+        }, 1000);
+      }).catch((err)=>{
+        console.log(err)
+        errorMessage("Some error occurred. Please try again...")
+      }).finally(()=>{setBookingConfirm(false)})
+    } else {
+      errorMessage("Booking is not available")
+    }
   }
   
 
@@ -303,7 +330,7 @@ const StoreBooking = () => {
     <div className="w-full h-full flex flex-col gap-5 py-10">
       <Backdrop
         sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-        open={loading}
+        open={loading || bookingConfirm}
       >
         <CircularProgress />
       </Backdrop>
@@ -341,31 +368,55 @@ const StoreBooking = () => {
 
           {
             BookingHours && <>
-              <Label className="mb-3 mt-5">
-                Start date
-              </Label>
-
-              <Input
-                type="date"
-                id="startDate"
-                value={startDate}
-                onChange={(e) => setstartDate(e.target.value)}
-              />
+              <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant={"outline"}
+          className={cn(
+            "w-[280px] justify-start text-left font-normal",
+            !startDate && "text-muted-foreground"
+          )}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {startDate ? format(startDate, "PPP") : <span>Pick a start date</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0">
+        <Calendar
+          mode="single"
+          selected={startDate}
+          onSelect={setstartDate}
+          initialFocus
+        />
+      </PopoverContent>
+    </Popover>
             </>
           }
 
           {
             BookingHours === "more" && <>
-              <Label className="mb-3 mt-5">
-                End date
-              </Label>
-
-              <Input
-                type="date"
-                id="endDate"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
+              <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant={"outline"}
+          className={cn(
+            "w-[280px] justify-start text-left font-normal",
+            !endDate && "text-muted-foreground"
+          )}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {endDate ? format(endDate, "PPP") : <span>Pick an end date</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0">
+        <Calendar
+          mode="single"
+          selected={endDate}
+          onSelect={setEndDate}
+          initialFocus
+        />
+      </PopoverContent>
+    </Popover>
             </>
           }
 
@@ -787,6 +838,33 @@ const StoreBooking = () => {
                 `Total duration: ${booking.booking_hours}`
               }
             </p>
+
+            <p>
+              Attachment cost: {booking.total_attachment_cost}
+              Tractor cost: {booking.total_tractor_cost}
+              Service charge: {booking.total_service_charge}
+              Total tax: {booking.total_tax}
+              Total distance cost: {booking.total_distance_cost}
+              Total cost: {booking.total_cost}
+            </p>
+
+            <p>
+              Total distance: {booking.distance}
+            </p>
+
+            <div
+            className="w-full flex items-center justify-center gap-4 flex-wrap">
+              <Button
+              className="bg-green-400"
+              onClick={userBookingConfirm}>
+                Confirm
+              </Button>
+              <Button
+              className="bg-red-400"
+              onClick={()=>{setStepFive(false)}}>
+                Cancel
+              </Button>
+            </div>
 
               </div>
             }
