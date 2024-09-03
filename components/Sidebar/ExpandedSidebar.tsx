@@ -32,6 +32,7 @@ import { usePathname } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 import { updateActiveMenu } from "@/redux/Sidebar/SidebarShow";
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 
 const getTranslation = (locale: string, translations: any) => {
   return translations[locale] || translations["en"];
@@ -47,6 +48,11 @@ type Translations = {
 
 const ExpandedSidebar = () => {
   const [activeLeftSIdeTag, setActiveLeftSideTag] = useState("Dashboard");
+  const [inventoryShow, setInventoryShow] = useState(false)
+  const [billingShow, setBillingShow] = useState(false)
+  const [bookingShow, setBookingShow] = useState(false)
+  const [settingShow, setSettingShow] = useState(false)
+  const [userShow, setUserShow] = useState(false)
 
   const pathname = usePathname();
 
@@ -436,6 +442,25 @@ const ExpandedSidebar = () => {
     {
       icon: (
         <Image
+          src={UsersIcon}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="City"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "City",
+        es: "",
+        ay: "",
+        qu: "",
+        gn: "",
+      }),
+      route: "/City",
+    },
+    {
+      icon: (
+        <Image
           src={AffiliationIcon}
           className="w-[20px] h-auto object-cover"
           width={20}
@@ -453,7 +478,7 @@ const ExpandedSidebar = () => {
       route: "#",
     },
   ];
-  
+
   const UsersOptions = [
     {
       icon: (
@@ -474,7 +499,7 @@ const ExpandedSidebar = () => {
       }),
       route: "/Owner",
     },
-    
+
     {
       icon: (
         <Image
@@ -575,7 +600,7 @@ const ExpandedSidebar = () => {
 
   return (
     <motion.div
-      className={`w-[200px] p-5 flex flex-col gap-[20px] box-content bg-[#ededed] h-[1580px] transition-all duration-500 absolute ${sidebarShow ? "translate-x-0" : "-translate-x-full"} top-0 z-10`}
+      className={`w-[200px] p-5 flex flex-col gap-[20px] box-content bg-[#ededed] h-fit min-h-screen transition-all duration-500 absolute ${sidebarShow ? "translate-x-0" : "-translate-x-full"} top-0 z-10`}
     >
       {/* <p className='text-primaryColor hidden text-[20px] font-[600] w-full 1200px:flex items-center justify-center'>
                 Holatractor
@@ -597,19 +622,17 @@ const ExpandedSidebar = () => {
             <Link
               href={`${listItem.route}`}
               key={index}
-              className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
-                LeftSideSctiveItem === listItem.name
+              className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${LeftSideSctiveItem === listItem.name
                   ? "bg-[#d5ebd6]"
                   : "hover:bg-gray-200"
-              } drop-shadow-md rounded transition-all duration-500 relative`}
+                } drop-shadow-md rounded transition-all duration-500 relative`}
             >
               {listItem.icon}
               <span
-                className={`${
-                  LeftSideSctiveItem === listItem.name
+                className={`${LeftSideSctiveItem === listItem.name
                     ? "text-black"
                     : "text-gray-600"
-                }`}
+                  }`}
               >
                 {listItem.name}
               </span>
@@ -621,29 +644,40 @@ const ExpandedSidebar = () => {
       <div className="w-full h-[2px] bg-gray-300 rounded-full" />
 
       <div>
-        <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
-          {translations[locale]?.users || translations.en.users}
-        </p>
+        <div className="flex items-center justify-between">
+
+          <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
+            {translations[locale]?.users || translations.en.users}
+          </p>
+
+          <div onClick={() => { setUserShow(pre => !pre) }}>
+            {
+              userShow ? 
+              <ChevronDown className="rotate-180 transition-all duration-500" /> 
+              : 
+              <ChevronDown className="rotate-0 transition-all duration-500" />
+            }
+          </div>
+
+        </div>
 
         <ul className="flex flex-col gap-[8px] mt-[8px]">
-          {UsersOptions.map((listItem, index) => {
+          {userShow && UsersOptions.map((listItem, index) => {
             return (
               <Link
                 href={`${listItem.route}`}
                 key={index}
-                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
-                  LeftSideSctiveItem === listItem.name
+                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${LeftSideSctiveItem === listItem.name
                     ? "bg-[#d5ebd6]"
                     : "hover:bg-gray-200"
-                } drop-shadow-md rounded transition-all duration-500 relative`}
+                  } drop-shadow-md rounded transition-all duration-500 relative`}
               >
                 {listItem.icon}
                 <span
-                  className={`${
-                    LeftSideSctiveItem === listItem.name
+                  className={`${LeftSideSctiveItem === listItem.name
                       ? "text-black"
                       : "text-gray-600"
-                  }`}
+                    }`}
                 >
                   {listItem.name}
                 </span>
@@ -656,29 +690,41 @@ const ExpandedSidebar = () => {
       <div className="w-full h-[2px] bg-gray-300 rounded-full" />
 
       <div>
+        
+        <div className="flex items-center justify-between">
+
         <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
           {translations[locale]?.bookings || translations.en.bookings}
         </p>
 
+          <div onClick={() => { setBookingShow(pre => !pre) }}>
+            {
+              bookingShow ? 
+              <ChevronDown className="rotate-180 transition-all duration-500" /> 
+              : 
+              <ChevronDown className="rotate-0 transition-all duration-500" />
+            }
+          </div>
+
+        </div>
+
         <ul className="flex flex-col gap-[8px] mt-[8px]">
-          {bookingList.map((listItem, index) => {
+          {bookingShow && bookingList.map((listItem, index) => {
             return (
               <Link
                 href={`${listItem.route}`}
                 key={index}
-                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
-                  LeftSideSctiveItem === listItem.name
+                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${LeftSideSctiveItem === listItem.name
                     ? "bg-[#d5ebd6]"
                     : "hover:bg-gray-200"
-                } drop-shadow-md rounded transition-all duration-500 relative`}
+                  } drop-shadow-md rounded transition-all duration-500 relative`}
               >
                 {listItem.icon}
                 <span
-                  className={`${
-                    LeftSideSctiveItem === listItem.name
+                  className={`${LeftSideSctiveItem === listItem.name
                       ? "text-black"
                       : "text-gray-600"
-                  }`}
+                    }`}
                 >
                   {listItem.name}
                 </span>
@@ -691,62 +737,41 @@ const ExpandedSidebar = () => {
       <div className="w-full h-[2px] bg-gray-300 rounded-full" />
 
       <div>
+        
+        <div className="flex items-center justify-between">
+
         <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
           {translations[locale]?.inventory || translations.en.inventory}
         </p>
 
+          <div onClick={() => { setInventoryShow(pre => !pre) }}>
+            {
+              inventoryShow ? 
+              <ChevronDown className="rotate-180 transition-all duration-500" /> 
+              : 
+              <ChevronDown className="rotate-0 transition-all duration-500" />
+            }
+          </div>
+
+        </div>
+
         <ul className="flex flex-col gap-[8px] mt-[8px]">
-          {inventoryList.map((listItem, index) => {
+          {inventoryShow && inventoryList.map((listItem, index) => {
             return (
               <Link
                 href={`${listItem.route}`}
                 key={index}
-                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
-                  LeftSideSctiveItem === listItem.name
+                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${LeftSideSctiveItem === listItem.name
                     ? "bg-[#d5ebd6]"
                     : "hover:bg-gray-200"
-                } drop-shadow-md rounded transition-all duration-500 relative`}
+                  } drop-shadow-md rounded transition-all duration-500 relative`}
               >
                 {listItem.icon}
                 <span
-                  className={`${
-                    LeftSideSctiveItem === listItem.name
+                  className={`${LeftSideSctiveItem === listItem.name
                       ? "text-black"
                       : "text-gray-600"
-                  }`}
-                >
-                  {listItem.name}
-                </span>
-              </Link>
-            );
-          })}
-        </ul>
-      </div>
-
-      <div>
-        <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
-          {translations[locale]?.billing || translations.en.billing}
-        </p>
-
-        <ul className="flex flex-col gap-[8px] mt-[8px]">
-          {middleLeftSideList.map((listItem, index) => {
-            return (
-              <Link
-                href={`${listItem.route}`}
-                key={index}
-                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
-                  LeftSideSctiveItem === listItem.name
-                    ? "bg-[#d5ebd6]"
-                    : "hover:bg-gray-200"
-                } drop-shadow-md rounded transition-all duration-500 relative`}
-              >
-                {listItem.icon}
-                <span
-                  className={`${
-                    LeftSideSctiveItem === listItem.name
-                      ? "text-black"
-                      : "text-gray-600"
-                  }`}
+                    }`}
                 >
                   {listItem.name}
                 </span>
@@ -759,29 +784,88 @@ const ExpandedSidebar = () => {
       <div className="w-full h-[2px] bg-gray-300 rounded-full" />
 
       <div>
+        
+        <div className="flex items-center justify-between">
+
         <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
-          {translations[locale]?.settings || translations.en.settings}
+          {translations[locale]?.billing || translations.en.billing}
         </p>
 
+          <div onClick={() => { setBillingShow(pre => !pre) }}>
+            {
+              billingShow ?
+              <ChevronDown className="rotate-180 transition-all duration-500" /> 
+              : 
+              <ChevronDown className="rotate-0 transition-all duration-500" />
+            }
+          </div>
+
+        </div>
+
         <ul className="flex flex-col gap-[8px] mt-[8px]">
-          {SettingsOptions.map((listItem, index) => {
+          {billingShow && middleLeftSideList.map((listItem, index) => {
             return (
               <Link
                 href={`${listItem.route}`}
                 key={index}
-                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
-                  LeftSideSctiveItem === listItem.name
+                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${LeftSideSctiveItem === listItem.name
                     ? "bg-[#d5ebd6]"
                     : "hover:bg-gray-200"
-                } drop-shadow-md rounded transition-all duration-500 relative`}
+                  } drop-shadow-md rounded transition-all duration-500 relative`}
               >
                 {listItem.icon}
                 <span
-                  className={`${
-                    LeftSideSctiveItem === listItem.name
+                  className={`${LeftSideSctiveItem === listItem.name
                       ? "text-black"
                       : "text-gray-600"
-                  }`}
+                    }`}
+                >
+                  {listItem.name}
+                </span>
+              </Link>
+            );
+          })}
+        </ul>
+      </div>
+
+      <div className="w-full h-[2px] bg-gray-300 rounded-full" />
+
+      <div>
+        
+        <div className="flex items-center justify-between">
+
+        <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
+          {translations[locale]?.settings || translations.en.settings}
+        </p>
+
+          <div onClick={() => { setSettingShow(pre => !pre) }}>
+            {
+              settingShow ? 
+              <ChevronDown className="rotate-180 transition-all duration-500" /> 
+              : 
+              <ChevronDown className="rotate-0 transition-all duration-500" />
+            }
+          </div>
+
+        </div>
+
+        <ul className="flex flex-col gap-[8px] mt-[8px]">
+          {settingShow && SettingsOptions.map((listItem, index) => {
+            return (
+              <Link
+                href={`${listItem.route}`}
+                key={index}
+                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${LeftSideSctiveItem === listItem.name
+                    ? "bg-[#d5ebd6]"
+                    : "hover:bg-gray-200"
+                  } drop-shadow-md rounded transition-all duration-500 relative`}
+              >
+                {listItem.icon}
+                <span
+                  className={`${LeftSideSctiveItem === listItem.name
+                      ? "text-black"
+                      : "text-gray-600"
+                    }`}
                 >
                   {listItem.name}
                 </span>

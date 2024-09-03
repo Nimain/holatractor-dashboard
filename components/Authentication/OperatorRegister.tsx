@@ -267,16 +267,7 @@ const OperatorRegister = ({ name, inPage }: { name: string; inPage: boolean; }) 
                 })
                 .then((res) => {
                     if (res.status === 201 && res.data.access_token) {
-                        const expiryDate = new Date();
-                        expiryDate.setDate(expiryDate.getDate() + 1);
-
-                        // Set the cookie with the calculated expiry date
-                        cookie.remove("access_token", { path: "/" });
-
-                        successMessage("User sign up successfully");
-                        setTimeout(() => {
-                            router.push("/login");
-                        }, 3000);
+                        successMessage("Created successfully")
                     }
                 })
                 .catch((err) => {

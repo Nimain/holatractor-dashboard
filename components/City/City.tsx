@@ -1,51 +1,36 @@
-"use client";
+"use client"
 
-import { renderInstance } from "@/utils/Axios/RenderInstance";
-import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
-import { Country } from "@/utils/Types/types";
-import { Backdrop, CircularProgress } from "@mui/material";
-import { Check, ChevronsUpDown, MoreVerticalIcon } from "lucide-react";
-import { useCookie } from "next-cookie";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { renderInstance } from '@/utils/Axios/RenderInstance';
+import { errorMessage, successMessage } from '@/utils/Toastify/Messages';
+import { City, Country } from '@/utils/Types/types';
+import { Backdrop, CircularProgress } from '@mui/material';
+import { useCookie } from 'next-cookie';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react'
+import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTrigger } from '../ui/dialog';
 import AddIcon from "@mui/icons-material/Add";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import subcontinentRegions, { countryArray } from "@/utils/AllSubContinentDetails";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
-import { Button } from "../ui/button";
-import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Button } from '../ui/button';
+import { Check, ChevronsUpDown, MoreVerticalIcon } from 'lucide-react';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
+import { cn } from '@/lib/utils';
+import { Label } from '../ui/label';
+import { Input } from '../ui/input';
 
-const CountrySection = () => {
+const CitySection = () => {
+
   const [bacOpen, setBacOpen] = useState(false);
   const [fetchingContry, setFetchingCountry] = useState(false);
+  const [fetchingCity, setFetchingCity] = useState(false);
   const [deleteContry, setDeleteCountry] = useState(false);
   const [country, setCountry] = useState<Country[]>([]);
+  const [city, setCity] = useState<City[]>([]);
   const [editOptionShow, setEditOptionShow] = useState(-1);
 
   const [addNewCountry, setAddNewCountry] = useState(false)
   const [popoverOpen, setPopoverOpen] = useState(false)
   const [newCountry, setNewCountry] = useState("")
+  const [newCountryId, setNewCountryId] = useState("")
   const [countryCode, setCountryCode] = useState("")
 
   const { cookie } = useCookie();
@@ -65,10 +50,29 @@ const CountrySection = () => {
         setCountry(res.data);
       })
       .catch((err) => {
-        errorMessage("Error fetching countries");
+        errorMessage("Error fetching cities");
       })
       .finally(() => {
         setFetchingCountry(false);
+      });
+  }
+
+  function fetchAllCity() {
+    setFetchingCity(true);
+    renderInstance
+      .get("/city", {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      })
+      .then((res) => {
+        setCity(res.data);
+      })
+      .catch((err) => {
+        errorMessage("Error fetching cities");
+      })
+      .finally(() => {
+        setFetchingCity(false);
       });
   }
 
@@ -76,25 +80,18 @@ const CountrySection = () => {
     e.preventDefault();
     setDeleteCountry(true);
     renderInstance
-      .delete(`/country/${roleid}`, {
+      .delete(`/city/${roleid}`, {
         headers: {
           Authorization: `Bearer ${access_token}`,
         },
       })
       .then((res) => {
-        if (res.status === 200 && res.data === "Deleted")
+        if (res.status === 200)
           successMessage(res.data);
         refresh();
       })
       .catch((err) => {
-        console.log(err)
-        if (
-          err.response &&
-          err.response.status === 409 &&
-          err.response.data.message === "Wrong role id"
-        ) {
-          errorMessage("Wrong role id");
-        } else errorMessage("Some error occured while deleting the role");
+        errorMessage("Some error occured while deleting the role");
       })
       .finally(() => {
         fetchAllCountry();
@@ -102,46 +99,21 @@ const CountrySection = () => {
       });
   }
 
-  function getContinentByCountry(countryName: string): string | null {
-    for (const continent in subcontinentRegions) {
-      if (subcontinentRegions[continent].includes(countryName)) {
-        return continent;
-      }
-    }
-    return null; // Return null if the country is not found
-  }
-
-  function validateCountry(countryName: string): boolean {
-    let isCountry = false
-    for (const continent in subcontinentRegions) {
-      if (subcontinentRegions[continent].includes(countryName)) {
-        isCountry = true
-      }
-    }
-    return isCountry; // Return null if the country is not found
-  }
-
   function handleCreateCountry() {
-    if (!newCountry) {
+    if (!newCountryId) {
       errorMessage("Please select a country")
       return
     }
 
-    if (!validateCountry(newCountry)) {
-      errorMessage("Invalid country")
-      return
-    }
-
     if (!countryCode) {
-      errorMessage("Please give the country code")
+      errorMessage("Please give the city name")
       return
     }
 
     setBacOpen(true)
-    renderInstance.post("/country", {
-      name: newCountry,
-      region: getContinentByCountry(newCountry),
-      country_code: countryCode
+    renderInstance.post("/city", {
+      name: countryCode,
+      country_id: newCountryId
     }, {
       headers: {
         Authorization: `Bearer ${access_token}`,
@@ -162,6 +134,7 @@ const CountrySection = () => {
 
   useEffect(() => {
     fetchAllCountry();
+    fetchAllCity();
   }, []);
 
   return (
@@ -170,7 +143,7 @@ const CountrySection = () => {
         sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
         open={bacOpen || deleteContry || fetchingContry}
       >
-        {bacOpen && <p>Adding this country to the list</p>}
+        {bacOpen && <p>Adding this city to the list</p>}
         {deleteContry && <p>Deleting</p>}
         {fetchingContry && <CircularProgress />}
       </Backdrop>
@@ -186,25 +159,25 @@ const CountrySection = () => {
               }}
             >
               <AddIcon />
-              Add new country
+              Add new city
             </button>
           </DialogTrigger>
 
           <DialogContent
-            className="bg-white max-h-[90vh] overflow-auto"
+            className="bg-white max-h-[90vh] max-w-[600px] overflow-auto"
             style={{ scrollbarWidth: "none" }}
           >
             <DialogHeader>
-              <p className="text-2xl font-bold text-center">Give country details</p>
+              <p className="text-2xl font-bold text-center">Give city details</p>
             </DialogHeader>
 
             <div
               className="bg-white rounded-xl p-[30px] text-black flex gap-[16px] flex-col relative max-h-[80vh] overflow-auto"
               style={{ scrollbarWidth: "none" }}
             >
-              <label htmlFor="new_role_name" className="text-[26px] font-[600]">
-                Select country and region
-              </label>
+              <Label htmlFor="new_role_name" className="text-lg font-[600]">
+                Select country
+              </Label>
 
               <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                 <PopoverTrigger asChild>
@@ -215,7 +188,7 @@ const CountrySection = () => {
                     className="w-full justify-between"
                   >
                     {newCountry
-                      ? countryArray.find((country) => country === newCountry) && newCountry
+                      ? country.find((countryDel) => countryDel.name === newCountry) && newCountry
                       : "Select country..."}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
@@ -225,25 +198,32 @@ const CountrySection = () => {
                     <CommandInput placeholder="Search country..." />
                     <CommandList>
                       <CommandEmpty>No country found.</CommandEmpty>
-                      <CommandGroup>
-                        {countryArray.map((country) => (
-                          <CommandItem
-                            key={country}
-                            value={country}
-                            onSelect={(currentValue) => {
-                              setNewCountry(country)
-                              setPopoverOpen(false)
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                newCountry === country ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {country}
-                          </CommandItem>
-                        ))}
+                      <CommandGroup className='w-full'>
+                        {fetchingContry ?
+                          <p>Fetching all country list</p>
+                          :
+                          country.length === 0 ?
+                            <p>No countries available</p>
+                            :
+                            country.map((countryDel, i) => (
+                              <CommandItem
+                                key={i}
+                                value={countryDel.name}
+                                onSelect={(currentValue) => {
+                                  setNewCountry(countryDel.name)
+                                  setNewCountryId(countryDel.id)
+                                  setPopoverOpen(false)
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    newCountry === countryDel.name ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {countryDel.name}
+                              </CommandItem>
+                            ))}
                       </CommandGroup>
                     </CommandList>
                   </Command>
@@ -253,11 +233,11 @@ const CountrySection = () => {
               {
                 newCountry && (
                   <div className="grid w-full items-center gap-1.5">
-                    <Label htmlFor="country_code">Country code</Label>
+                    <Label htmlFor="country_code" className="text-lg font-[600]">City name</Label>
                     <Input
                       type="text"
                       id="country_code"
-                      placeholder="e.x - +91"
+                      placeholder="London"
                       value={countryCode}
                       onChange={e => { setCountryCode(e.target.value) }} />
                   </div>
@@ -293,14 +273,14 @@ const CountrySection = () => {
       </div>
 
       <div className="grid grid-cols-4 gap-8 w-full">
-        {fetchingContry ? (
+        {fetchingCity ? (
           <p>Fetching list</p>
         ) : (
-          country.length === 0 && <p>No country present</p>
+          city.length === 0 && <p>No city present</p>
         )}
 
-        {country.length !== 0 &&
-          country.map((role, index) => {
+        {city.length !== 0 &&
+          city.map((role, index) => {
             return (
               <div
                 className={`bg-white flex-1 flex flex-col gap-2 px-2 w-full py-[20px] shadow-xl rounded-md text-[18px] cursor-pointer relative`}
@@ -329,17 +309,17 @@ const CountrySection = () => {
                   </div>
                 )}
                 <p className="flex items-center gap-1">
-                  <strong>{role.name}</strong> ({role.region})
+                  <strong>{role.name}</strong>
                 </p>
                 <p className="flex items-center gap-1">
-                  <strong>Country code</strong> {role.country_code}
+                  <strong>Country</strong> {role.country.name}
                 </p>
               </div>
             );
           })}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default CountrySection;
+export default CitySection

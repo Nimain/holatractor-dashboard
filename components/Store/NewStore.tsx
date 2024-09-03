@@ -10,7 +10,7 @@ import Image from 'next/image';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
-import { Country, Owner, User } from '@/utils/Types/types';
+import { City, Country, Owner, User } from '@/utils/Types/types';
 import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
@@ -41,6 +41,7 @@ const NewStore = () => {
     const [popoverOpen, setPopoverOpen] = useState(false)
 
     const [popoverOpenCountry, setPopoverOpenCountry] = useState(false)
+    const [popoverOpenCity, setPopoverOpenCity] = useState(false)
 
     const [location_name, set_location_name] = useState("")
     const [location_address, set_location_address] = useState("")
@@ -51,6 +52,9 @@ const NewStore = () => {
 
     const [country, setCountry] = useState<Country[]>([]);
     const [fetchingContry, setFetchingCountry] = useState(false);
+
+    const [fetchingCity, setFetchingCity] = useState(false);
+    const [city, setCity] = useState<City[]>([]);
 
     const { refresh } = useRouter()
 
@@ -69,6 +73,21 @@ const NewStore = () => {
         },
         multiple: false,
     });
+
+    function fetchAllCity() {
+        setFetchingCity(true);
+        renderInstance
+            .get("/city")
+            .then((res) => {
+                setCity(res.data);
+            })
+            .catch((err) => {
+                errorMessage("Error fetching cities");
+            })
+            .finally(() => {
+                setFetchingCity(false);
+            });
+    }
 
     function fetchAllOwners() {
         if (access_token) {
@@ -192,6 +211,10 @@ const NewStore = () => {
         fetchAllCountry()
     }, [])
 
+    useEffect(() => {
+        if (location_zip_country) fetchAllCity()
+    }, [location_zip_country])
+
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -203,13 +226,13 @@ const NewStore = () => {
                     }}
                 >
                     <AddIcon />
-                    <span>Add tractor</span>
+                    <span>Add store</span>
                 </button>
             </DialogTrigger>
 
             <DialogContent className='p-[20px] w-full max-w-[600px] h-[80vh] overflow-auto'>
 
-            <div className='text-[18px] flex flex-col gap-[10px] relative w-full max-h-[80vh] overflow-auto' style={{ scrollbarWidth: "none" }}>
+                <div className='text-[18px] flex flex-col gap-[10px] relative w-full max-h-[80vh] overflow-auto' style={{ scrollbarWidth: "none" }}>
 
                     <Backdrop
                         sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
@@ -337,31 +360,7 @@ const NewStore = () => {
 
                             </div>
                         }
-                        <div className='space-y-2 w-[90%]'>
-                            <Label>Location name</Label>
-                            <Input type="text" placeholder='Store location name' className='outline-none bg-transparent border-none w-full' value={location_name} onChange={e => { set_location_name(e.target.value) }} />
 
-                        </div>
-                        <div className='space-y-2 w-[90%]'>
-                            <Label>Store address</Label>
-                            <Input type="text" placeholder='Store address' className='outline-none bg-transparent border-none w-full' value={location_address} onChange={e => { set_location_address(e.target.value) }} />
-
-                        </div>
-                        <div className='space-y-2 w-[90%]'>
-                            <Label>City</Label>
-                            <Input type="text" placeholder='City' className='outline-none bg-transparent border-none w-full' value={location_city} onChange={e => { set_location_city(e.target.value) }} />
-
-                        </div>
-                        <div className='space-y-2 w-[90%]'>
-                            <Label>State</Label>
-                            <Input type="text" placeholder='State' className='outline-none bg-transparent border-none w-full' value={location_state} onChange={e => { set_location_state(e.target.value) }} />
-
-                        </div>
-                        <div className='space-y-2 w-[90%]'>
-                            <Label>Location zip code</Label>
-                            <Input type="text" placeholder='Zipcode' className='outline-none bg-transparent border-none w-full' value={location_zip_code} onChange={e => { set_location_zip_code(e.target.value) }} />
-
-                        </div>
                         {
                             fetchingContry ?
                                 <CircularProgress />
@@ -418,6 +417,96 @@ const NewStore = () => {
                                         </div>
                                     </div>
                         }
+                        {
+                            location_zip_country &&
+                            <div className='space-y-2 w-[90%]'>
+                                <Label>City</Label>
+                                {
+                                    fetchingCity ?
+                                        <p>Fetching cities</p>
+                                        :
+                                        city.length === 0 ?
+                                            <p>No cities are available for this country</p>
+                                            :
+                                            <div className="w-full space-y-2">
+                                                <Popover open={popoverOpenCity} onOpenChange={setPopoverOpenCity}>
+                                                    <PopoverTrigger asChild>
+                                                        <Button
+                                                            variant="outline"
+                                                            role="combobox"
+                                                            // aria-expanded={popoverOpen}
+                                                            className="w-full justify-between"
+                                                        >
+                                                            {location_city
+                                                                ? city.find((cityDetails) => cityDetails.name === location_city) && location_city
+                                                                : "Select city..."}
+                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-full p-0">
+                                                        <Command>
+                                                            <CommandInput placeholder="Search country..." />
+                                                            <CommandList>
+                                                                <CommandEmpty>No city found.</CommandEmpty>
+                                                                <CommandGroup className='w-full'>
+                                                                    {city.map((cityDetails) => (
+                                                                        <CommandItem
+                                                                            key={cityDetails.name}
+                                                                            value={cityDetails.name}
+                                                                            onSelect={(currentValue) => {
+                                                                                set_location_city(cityDetails.name)
+                                                                                setPopoverOpenCity(false)
+                                                                            }}
+                                                                            className={`${location_zip_country !== cityDetails.country.name && "hidden"}`}
+                                                                        >
+                                                                            <Check
+                                                                                className={cn(
+                                                                                    "mr-2 h-4 w-4",
+                                                                                    location_city === cityDetails.name ? "opacity-100" : "opacity-0"
+                                                                                )}
+                                                                            />
+                                                                            {cityDetails.name}
+                                                                        </CommandItem>
+                                                                    ))}
+                                                                </CommandGroup>
+                                                            </CommandList>
+                                                        </Command>
+                                                    </PopoverContent>
+                                                </Popover>
+                                            </div>
+                                }
+                            </div>
+                        }
+                        {
+                            location_city &&
+                            <div className='space-y-2 w-[90%]'>
+                                <Label>Location name</Label>
+                                <Input type="text" placeholder='Store location name' className='outline-none bg-transparent border-none w-full' value={location_name} onChange={e => { set_location_name(e.target.value) }} />
+
+                            </div>
+                        }
+                        {
+                            location_city &&
+                            <div className='space-y-2 w-[90%]'>
+                                <Label>Store address</Label>
+                                <Input type="text" placeholder='Store address' className='outline-none bg-transparent border-none w-full' value={location_address} onChange={e => { set_location_address(e.target.value) }} />
+                            </div>
+                        }
+                        {
+                            location_city &&
+                            <div className='space-y-2 w-[90%]'>
+                                <Label>State</Label>
+                                <Input type="text" placeholder='State' className='outline-none bg-transparent border-none w-full' value={location_state} onChange={e => { set_location_state(e.target.value) }} />
+                            </div>
+                        }
+                        {
+                            location_city &&
+                            <div className='space-y-2 w-[90%]'>
+                                <Label>Location zip code</Label>
+                                <Input type="text" placeholder='Zipcode' className='outline-none bg-transparent border-none w-full' value={location_zip_code} onChange={e => { set_location_zip_code(e.target.value) }} />
+                            </div>
+                        }
+
                         <button name='submit_button' className='py-[10px] w-[90%] mx-auto bg-black font-bold text-white rounded-md' onClick={handleAddStore}>
                             Submit
                         </button>

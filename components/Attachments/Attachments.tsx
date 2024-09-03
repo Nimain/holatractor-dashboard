@@ -11,6 +11,7 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import Image from "next/image";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage } from "@/utils/Toastify/Messages";
+import NullImage from "@/assets/AnimateIcons/Attachment.svg"
 
 const Attachments = () => {
   const [activeHover, setActiveHover] = useState("");
@@ -123,7 +124,15 @@ const Attachments = () => {
 
       <div className="flex flex-col gap-[5px] mt-[20px]">
         {allAttachments.length === 0 ? (
-          <p>No attachments availabe</p>
+          <div className="w-full h-full flex items-center justify-center">
+          <Image
+          src={NullImage}
+          alt="No image found"
+          className="w-[400px] h-auto object-cover"
+          width={400}
+          height={400}
+          unoptimized={true} />
+      </div>
         ) : (
           allAttachments.map((tractorDetails, index) => {
             return (

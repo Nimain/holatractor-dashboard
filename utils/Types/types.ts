@@ -83,6 +83,7 @@ export interface Base {
   Owner: Owner[];
   Agent: Agent[];
   Farmer: Farmer[];
+  City: City[]
 }
 
 export interface Module {
@@ -141,6 +142,14 @@ export interface Tractor {
   id: string;
   name: string;
   description: string;
+  es_name?        :String;
+  es_description? : string;
+  ay_name?        : string;
+  ay_description? : string;
+  qu_name?        : string;
+  qu_description? : string;
+  gn_name?        : string;
+  gn_description? : string;
   images: string[];
   model?: string | null;
   type: TractorType;
@@ -158,6 +167,14 @@ export interface Attachment {
   id: string;
   name: string;
   description: string;
+  es_name?        :String;
+  es_description? : string;
+  ay_name?        : string;
+  ay_description? : string;
+  qu_name?        : string;
+  qu_description? : string;
+  gn_name?        : string;
+  gn_description? : string;
   images: string[];
   tractorId: string[];
   base_id: string;
@@ -182,10 +199,10 @@ export interface BookingAttachment {
 
 export interface Location {
   id: string;
-  name: string;
-  address: string;
-  city: string;
-  state: string;
+  name?: string;
+  address?: string;
+  city?: string;
+  state?: string;
   zip_code: string;
   country: string;
   base_id: string;
@@ -280,6 +297,8 @@ export interface TractorInStore {
   base_id: string;
   hourly_price: number;
   store_id: string;
+  lat?: string;
+  lan?: string;
   createdAt: Date;
   updatedAt: Date;
   baseTractor: Tractor;
@@ -380,6 +399,18 @@ export interface Country {
   createdAt: Date;
   updatedAt: Date;
   base: Base[]; // Relation to Base model
+  City: City[];
+}
+
+export interface City {
+  id: string;
+  name: string;
+  country_id: string;
+  base_id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  base: Base;
+  country: Country
 }
 
 export interface Operator {

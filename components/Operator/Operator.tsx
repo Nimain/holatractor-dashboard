@@ -11,6 +11,8 @@ import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import OperatorRegister from '../Authentication/OperatorRegister';
+import Image from 'next/image';
+import NullImage from "@/assets/AnimateIcons/Operator.svg"
 
 const OperatorSection = () => {
     const [activeHover, setActiveHover] = useState('')
@@ -264,7 +266,15 @@ const OperatorSection = () => {
                 {
                     loading ? <p>Fetching operators</p>
                         :
-                        users.length === 0 ? <p>No operatpors present</p> :
+                        users.length === 0 ? <div className="w-full h-full flex items-center justify-center">
+                        <Image
+                        src={NullImage}
+                        alt="No image found"
+                        className="w-[400px] h-auto object-cover"
+                        width={400}
+                        height={400}
+                        unoptimized={true} />
+                    </div> :
                             users.map((details, index) => {
                                 const name = `${details.user.first_name} ${details.user.middle_name ? details.user.middle_name + ' ' : ''}${details.user.last_name}`
                                 return (

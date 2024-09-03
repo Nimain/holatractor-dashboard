@@ -11,6 +11,8 @@ import { Dialog, DialogClose, DialogContent, DialogFooter, DialogTrigger } from 
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import AgentRegister from '../Authentication/AgentRegister';
+import NullImage from "@/assets/AnimateIcons/Agent.svg"
+import Image from 'next/image';
 
 const AgentSection = () => {
     const [activeHover, setActiveHover] = useState('')
@@ -264,7 +266,15 @@ const AgentSection = () => {
                 {
                     loading ? <p>Fetching agents</p>
                         :
-                        users.length === 0 ? <p>No agents present</p> :
+                        users.length === 0 ? <div className="w-full h-full flex items-center justify-center">
+                            <Image
+                            src={NullImage}
+                            alt="No image found"
+                            className="w-[400px] h-auto object-cover"
+                            width={400}
+                            height={400}
+                            unoptimized={true} />
+                        </div> :
                             users.map((details, index) => {
                                 const name = `${details.user.first_name} ${details.user.middle_name ? details.user.middle_name + ' ' : ''}${details.user.last_name}`
                                 return (

@@ -12,6 +12,7 @@ import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages';
 import { Store, User } from '@/utils/Types/types';
 import NewStore from './NewStore';
+import NullImage from "@/assets/AnimateIcons/Store.svg"
 
 const StoreSection = () => {
     const [activeHover, setActiveHover] = useState('')
@@ -191,7 +192,15 @@ const StoreSection = () => {
             <div className='flex flex-col gap-[5px] mt-[20px]'>
 
                 {
-                    allStores.length === 0 ? <p>You havr not created any store</p>
+                    allStores.length === 0 ? <div className="w-full h-full flex items-center justify-center">
+                    <Image
+                    src={NullImage}
+                    alt="No image found"
+                    className="w-[400px] h-auto object-cover"
+                    width={400}
+                    height={400}
+                    unoptimized={true} />
+                </div>
                         :
                         allStores.map((tractorDetails, index) => {
                             return (

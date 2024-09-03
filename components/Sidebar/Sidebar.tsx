@@ -437,6 +437,25 @@ const Sidebar = () => {
     {
       icon: (
         <Image
+          src={UsersIcon}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="City"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "City",
+        es: "",
+        ay: "",
+        qu: "",
+        gn: "",
+      }),
+      route: "/City",
+    },
+    {
+      icon: (
+        <Image
           src={AffiliationIcon}
           className="w-[20px] h-auto object-cover"
           width={20}
@@ -576,8 +595,9 @@ const Sidebar = () => {
 
   return (
     <div
-      className={`w-[36px] p-[10px] transition-all duration-500 flex flex-col gap-[20px] box-content bg-[#ededed] h-[1580px]`}
+      className={`w-[36px] p-[10px] transition-all duration-500 box-content bg-[#ededed]`}
     >
+      <div className={`w-full transition-all duration-500 box-content bg-[#ededed] h-fit min-h-screen ${sidebarShow ? "hidden" : "flex flex-col gap-[20px]"}`}>
       <Image
         alt="Logo"
         src={LOGO}
@@ -789,6 +809,7 @@ const Sidebar = () => {
             );
           })}
         </ul>
+        </div>
         <ExpandedSidebar />
     </div>
   );

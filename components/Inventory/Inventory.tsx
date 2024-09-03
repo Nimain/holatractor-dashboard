@@ -9,8 +9,9 @@ import { useState, useEffect } from "react";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import Link from "next/link";
-import Image from "next/image";
 import AddIcon from "@mui/icons-material/Add";
+import Image from 'next/image';
+import NullImage from "@/assets/AnimateIcons/Tractor.svg"
 
 const InventorySection = () => {
   const [activeHover, setActiveHover] = useState("");
@@ -158,7 +159,15 @@ const InventorySection = () => {
 
       <div className="flex flex-col gap-[5px] mt-[20px]">
         {allTractors.length === 0 ? (
-          <p>No Inventory's present</p>
+          <div className="w-full h-full flex items-center justify-center">
+          <Image
+          src={NullImage}
+          alt="No image found"
+          className="w-[400px] h-auto object-cover"
+          width={400}
+          height={400}
+          unoptimized={true} />
+      </div>
         ) : (
           allTractors.map((tractorDetails, index) => {
             return (
