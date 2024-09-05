@@ -266,11 +266,11 @@ const OperatorSection = () => {
                 {
                     loading ? <p>Fetching operators</p>
                         :
-                        users.length === 0 ? <div className="w-full h-full flex items-center justify-center">
+                        users.length === 0 ? <div className="w-full h-full min-h-[80vh] flex items-center justify-center">
                         <Image
                         src={NullImage}
                         alt="No image found"
-                        className="w-[400px] h-auto object-cover"
+                        className="w-[400px] lg:w-[700px] h-auto object-cover"
                         width={400}
                         height={400}
                         unoptimized={true} />

@@ -16,15 +16,12 @@ import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { Button } from '../ui/button';
-import { Check, ChevronsUpDown } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
-import { cn } from '@/lib/utils';
 
 const NewBooking = () => {
   const [open, setOpen] = useState(false)
   const [allStores, setAllStores] = useState<Store[]>([])
+  const [ownerName, setOwnerName] = useState("")
   const [fetchingStores, setFetchingStores] = useState(false)
 
   const [popoverOpen, setPopoverOpen] = useState(true)
@@ -83,57 +80,59 @@ const NewBooking = () => {
           <CommandList className={`bg-white rounded-xl p-6 grid grid-cols-4 gap-5 relative overflow-auto h-[80vh]`}>
             <CommandEmpty>No store found.</CommandEmpty>
             <CommandGroup className='w-full'>
-              {allStores.map((details, index) => (
-                <CommandItem
-                  key={index}
-                  value={details.name}
-                  onSelect={(currentValue) => {
-                    setStoreName(details.name)
-                    setPopoverOpen(false)
-                  }}
-                  className={`border-2 rounded-xl flex flex-col gap-5 p-2`}
-                >
-                  {details.image ? (
-                    <Image
-                      src={details.image}
-                      alt="tractor_image"
-                      className="w-full h-32 object-cover rounded-xl"
-                      width={300}
-                      height={400}
-                      unoptimized={true}
-                    />
-                  ) : (
-                    <Image
-                      src={"https://wallpapercave.com/wp/wp13088808.jpg"}
-                      alt="tractor_image"
-                      className="w-full h-32 object-cover rounded-xl"
-                      width={300}
-                      height={400}
-                      unoptimized={true}
-                    />
-                  )}
-
-                  <div>
-                    <strong>{details.name}</strong>
-                    <p>
-                      <strong>Description:</strong>
-                      <span>{details.description}</span>
-                    </p>
-                    <p>
-                      <strong>Owner:</strong>
-                      <span>{`${details.owner.first_name} ${details.owner.middle_name ?? ""} ${details.owner.last_name}`}
-                      </span>
-                    </p>
-                  </div>
-
-                  <Link
-                    href={`/Store/${details.id}/booking`}
-                    className="px-4 py-2 bg-black text-white rounded-md mx-auto w-full"
+              {allStores.map((details, index) => {
+                const name = details.agentOwner ?  `${details.agentOwner.user.first_name} ${details.agentOwner.user.middle_name ?? ""} ${details.agentOwner.user.last_name}` : `${details.owner.user.first_name} ${details.owner.user.middle_name ?? ""} ${details.owner.user.last_name}`
+                return (
+                  <CommandItem
+                    key={index}
+                    value={details.name}
+                    onSelect={(currentValue) => {
+                      setStoreName(details.name)
+                      setPopoverOpen(false)
+                    }}
+                    className={`border-2 rounded-xl flex flex-col gap-5 p-2`}
                   >
-                    Select
-                  </Link>
-                </CommandItem>
-              ))}
+                    {details.image ? (
+                      <Image
+                        src={details.image}
+                        alt="tractor_image"
+                        className="w-full h-32 object-cover rounded-xl"
+                        width={300}
+                        height={400}
+                        unoptimized={true}
+                      />
+                    ) : (
+                      <Image
+                        src={"https://wallpapercave.com/wp/wp13088808.jpg"}
+                        alt="tractor_image"
+                        className="w-full h-32 object-cover rounded-xl"
+                        width={300}
+                        height={400}
+                        unoptimized={true}
+                      />
+                    )}
+  
+                    <div>
+                      <strong>{details.name}</strong>
+                      <p>
+                        <strong>Description:</strong>
+                        <span>{details.description}</span>
+                      </p>
+                      <p>
+                        <strong>Owner:</strong>
+                        <span>{`${name}`}</span>
+                      </p>
+                    </div>
+  
+                    <Link
+                      href={`/Store/${details.id}/booking`}
+                      className="px-4 py-2 bg-black text-white rounded-md mx-auto w-full"
+                    >
+                      Select
+                    </Link>
+                  </CommandItem>
+                )
+              })}
             </CommandGroup>
           </CommandList>
         </Command>

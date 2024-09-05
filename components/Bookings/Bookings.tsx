@@ -97,7 +97,7 @@ const Bookings = () => {
             setActiveHover("");
           }}
         >
-          <p>{activeHover === "Duration" ? "Dura..." : "Duration"}</p>
+          <p>{activeHover === "Duration" ? "End..." : "End date"}</p>
           <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
             <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
               <ArrowUpwardIcon />
@@ -110,26 +110,6 @@ const Bookings = () => {
 
         <div className="w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
           Value
-          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              <ArrowUpwardIcon />
-            </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              <MoreVertIcon />
-            </div>
-          </div>
-        </div>
-
-        <div
-          className="w-[200px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
-          onMouseEnter={() => {
-            setActiveHover("Agent's name");
-          }}
-          onMouseLeave={() => {
-            setActiveHover("");
-          }}
-        >
-          <p>{activeHover === "Agent's name" ? "Agen..." : "Agent's name"}</p>
           <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
             <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
               <ArrowUpwardIcon />
