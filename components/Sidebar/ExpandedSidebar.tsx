@@ -339,7 +339,7 @@ const ExpandedSidebar = () => {
         qu: "Masi",
         gn: "Ipotĩ",
       }),
-      route: "#",
+      route: "/Lease",
     },
     {
       icon: (

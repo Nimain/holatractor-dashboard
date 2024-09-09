@@ -1,0 +1,156 @@
+"use client"
+
+import { renderInstance } from '@/utils/Axios/RenderInstance';
+import { errorMessage } from '@/utils/Toastify/Messages';
+import { Lease } from '@/utils/Types/types';
+import { Backdrop, CircularProgress } from '@mui/material';
+import { useState, useEffect } from 'react'
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import NewLease from './NewLease';
+
+const LeaseSection = () => {
+  const [activeHover, setActiveHover] = useState("");
+  const [allLease, setAllLease] = useState<Lease[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  function fetchLease() {
+    setLoading(true);
+    renderInstance
+      .get("/lease")
+      .then((res) => {
+        setAllLease(res.data);
+      })
+      .catch((err) => {
+        errorMessage("Error fetching booking list");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }
+
+  useEffect(() => {
+    fetchLease();
+  }, []);
+
+  return (
+    <div className="w-full py-10">
+
+      <Backdrop
+        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        open={loading}
+      >
+        {loading && <CircularProgress />}
+      </Backdrop>
+
+      <div className="w-full flex items-center justify-between gap-[20px] mb-[40px]">
+        <p className="text-[20px] font-bold">
+          Total Lease: {allLease.length}
+        </p>
+
+        <NewLease />
+      </div>
+
+      <div className="text-[20px] font-[600] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer">
+        <p className="w-[50px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400">
+          Sn
+        </p>
+
+        <div
+          className="w-[200px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
+          onMouseEnter={() => {
+            setActiveHover("Booking ID");
+          }}
+          onMouseLeave={() => {
+            setActiveHover("");
+          }}
+        >
+          <p>{activeHover === "Booking ID" ? "Book..." : "Booking ID"}</p>
+          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
+            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+              <ArrowUpwardIcon />
+            </div>
+            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+              <MoreVertIcon />
+            </div>
+          </div>
+        </div>
+
+        <div className="w-[120px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
+          Date
+          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
+            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+              <ArrowUpwardIcon />
+            </div>
+            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+              <MoreVertIcon />
+            </div>
+          </div>
+        </div>
+
+        <div
+          className="w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
+          onMouseEnter={() => {
+            setActiveHover("Duration");
+          }}
+          onMouseLeave={() => {
+            setActiveHover("");
+          }}
+        >
+          <p>{activeHover === "Duration" ? "End..." : "End date"}</p>
+          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
+            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+              <ArrowUpwardIcon />
+            </div>
+            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+              <MoreVertIcon />
+            </div>
+          </div>
+        </div>
+
+        <div className="w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
+          Value
+          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
+            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+              <ArrowUpwardIcon />
+            </div>
+            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+              <MoreVertIcon />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-[5px] mt-[20px]">
+        {
+            allLease.length === 0 ? <p>No bookings have been done</p>
+            :
+            allLease.map((details, index)=>{
+                return(
+                    <div
+                    // href={`/ParticularBooking/${details.BookingID}`}
+                    className={`text-[18px] flex items-center justify-between gap-[10px] px-[20px] py-[20px] rounded cursor-pointer bg-[#ededed] hover:bg-white transition-all duration-500`}
+                    key={index}
+                  >
+                    <p className="w-[50px]">{index + 1}</p>
+      
+                    <p className="w-[200px]">{details.id}</p>
+      
+                    <div className="w-[120px]">{`${details.start_date}`}</div>
+      
+                    <p className="w-[140px]">{`${details.end_date}`}</p>
+      
+                    <p className="w-[140px]">${details.total_cost}</p>
+      
+                    {/* <p className="w-[200px]">{details.AgentName}</p> */}
+                  </div>
+                )
+            })
+        }
+      </div>
+
+    </div>
+  )
+}
+
+export default LeaseSection

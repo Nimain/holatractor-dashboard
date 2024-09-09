@@ -334,7 +334,7 @@ const Sidebar = () => {
         qu: "Masi",
         gn: "Ipotĩ",
       }),
-      route: "#",
+      route: "/Lease",
     },
     {
       icon: (

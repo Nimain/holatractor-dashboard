@@ -1,6 +1,23 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Card, CardContent } from '@/components/ui/card';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { renderInstance } from '@/utils/Axios/RenderInstance';
+import { errorMessage, successMessage } from '@/utils/Toastify/Messages';
+import { AttachmentInStore, City, Country, TractorInStore } from '@/utils/Types/types';
+import { Backdrop, CircularProgress } from '@mui/material'
+import { format } from 'date-fns';
+import { CalendarIcon, Check, ChevronsUpDown } from 'lucide-react';
+import { useCookie } from 'next-cookie';
+import { useParams } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react'
 import { Pagination, Autoplay } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
@@ -8,52 +25,38 @@ import "swiper/css/autoplay";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 import "swiper/css/scrollbar";
-import Image from "next/image";
-import { useCookie } from "next-cookie";
-import { Backdrop, CircularProgress } from "@mui/material";
-import { renderInstance } from "@/utils/Axios/RenderInstance";
-import { useParams } from "next/navigation";
-import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
-import { AttachmentInStore, Booking, Country, Farmer, TractorInStore } from "@/utils/Types/types";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Check, ChevronsUpDown } from "lucide-react";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { Calendar } from "@/components/ui/calendar";
+import Image from 'next/image';
+import SignatureCanvas from 'react-signature-canvas';
+import { uploadFileToS3 } from '@/utils/AWS/FileUpload';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const StoreBooking = () => {
-  const [zipCode, setZipCode] = useState("");
-  const [countryName, setCountryName] = useState("");
-  const [allCountry, setAllCountry] = useState<Country[]>([]);
-  const [address, setAddress] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
-  const [startDate, setstartDate] = useState<Date>();
-  const [endDate, setEndDate] = useState<Date>();
-  const [BookingHours, setBookingHours] = useState("");
-  const [roadName, setRoadName] = useState("");
+const StoreBookingLease = () => {
   const [loading, setLoading] = useState(false);
+  const [bookingConfirm, setBookingConfirm] = useState(false)
+  const [startDate, setstartDate] = useState<Date>();
+  const [working_hgour_per_day, set_working_hgour_per_day] = useState("")
+  const [endDate, setEndDate] = useState<Date>();
   const [loadingTractors, setLoadingTractors] = useState(false);
-  const [fetchingContry, setFetchingCountry] = useState(false);
-  const [popoverOpen, setPopoverOpen] = useState(false)
 
   const [allTractors, setAllTractors] = useState<TractorInStore[]>([]);
   const [allAttachments, setAllAttachments] = useState<AttachmentInStore[]>([]);
+  const [fetchingContry, setFetchingCountry] = useState(false);
+  const [allCountry, setAllCountry] = useState<Country[]>([]);
+  const [fetchingCity, setFetchingCity] = useState(false);
+  const [city, setCity] = useState<City[]>([]);
+
+  const [location_name, set_location_name] = useState("")
+  const [location_address, set_location_address] = useState("")
+  const [location_city, set_location_city] = useState("")
+  const [location_state, set_location_state] = useState("")
+  const [location_zip_code, set_location_zip_code] = useState("")
+  const [location_zip_country, set_location_zip_country] = useState("")
+
+  const [popoverOpenCountry, setPopoverOpenCountry] = useState(false)
+  const [popoverOpenCity, setPopoverOpenCity] = useState(false)
 
   const [selectedTractorIds, setSelectedTractorIds] = useState<string[]>([]);
   const [selectedAttachmentIds, setSelectedAttachmentIds] = useState<string[]>([])
-
-  const [fetchingFarmers, setFetchingFarmers] = useState(false)
-  const [allFarmers, setAllFarmers] = useState<Farmer[]>([])
-  const [farmerId, setFarmerId] = useState("")
-  const [farmerName, setFarmerName] = useState("")
 
   // Step state variables
   const [stepOne, setStepOne] = useState(true)
@@ -61,9 +64,11 @@ const StoreBooking = () => {
   const [stepThree, setStepThree] = useState(false)
   const [stepFour, setStepFour] = useState(false)
   const [stepFive, setStepFive] = useState(false)
+  const [stepSix, setStepSix] = useState(false)
 
-  const [booking, setBooking] = useState<Booking | null>(null)
-  const [bookingConfirm, setBookingConfirm] = useState(false)
+  
+  const [signature, setSignature] = useState<string | null>(null);
+  const sigCanvas = useRef<SignatureCanvas>(null);
 
   const { slug } = useParams();
 
@@ -93,98 +98,109 @@ const StoreBooking = () => {
     });
   }
 
-  useEffect(() => {
-    if (slug) {
-      fetchAllCountry()
-      if(!user.isAdmin.includes("farmer")) fetchFarmer()
+  // Helper function to convert base64 to binary buffer
+  const base64ToBuffer = (base64: string) => {
+    const binaryString = atob(base64.split(',')[1]);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
     }
-  }, [slug]);
+    return Buffer.from(bytes.buffer);
+  };
 
-  function handleBooking() {
-    if (!roadName || !address || !city || !state || !zipCode || !countryName) {
+  const handleClear = () => {
+    if (sigCanvas.current) {
+      sigCanvas.current.clear();
+    }
+  };
+
+  const handleSave = async () => {
+
+    if (!location_name || !location_address || !location_city || !location_state || !location_zip_code || !location_zip_country) {
       errorMessage("Add proper location details")
       return
     }
 
-    if (!BookingHours) {
-      errorMessage("Select booking hours")
+    if(!startDate || !endDate) {
+      errorMessage("Please selecet both startd date and end date")
       return
     }
 
-    if (!startDate) {
-      errorMessage("Select the start date")
+    if(!working_hgour_per_day){
+      errorMessage("Please select working hour of the day")
       return
     }
 
-    if (BookingHours === "more" && !endDate) {
-      errorMessage("Select the end date")
+    if(selectedTractorIds.length === 0 && selectedAttachmentIds.length === 0) {
+      errorMessage("Please select atleast one product")
       return
     }
 
-    if (selectedAttachmentIds.length === 0 && selectedTractorIds.length === 0) {
-      errorMessage("You need to select at least one item from store")
-      return
-    }
+    if (sigCanvas.current && !sigCanvas.current.isEmpty()) {
+      const dataURL = sigCanvas.current.toDataURL('image/png'); // Get base64 data URL
+      const buffer = base64ToBuffer(dataURL); // Convert base64 to buffer
+      const fileName = 'signature.png';
 
-    if(!user.isAdmin.includes("farmer") && !farmerId) {
-      errorMessage("You must select a farmer to book a plot");
-      return
-    }
-
-    setLoading(true);
-    const booking = {
-      location_name: roadName,
-      location_address: address,
-      location_city: city,
-      location_state: state,
-      location_zip_code: zipCode,
-      location_country: countryName,
-      user_id: user.isAdmin.includes("farmer") ? user.userId : farmerId,
-      store_id: slug,
-      start_date: new Date(startDate),
-      end_date: BookingHours === "more" ? endDate : new Date(),
-      booking_hours: BookingHours === "more" ? "" : BookingHours,
-      tractor_ids: selectedTractorIds,
-      attachment_ids: selectedAttachmentIds,
-    };
-
-    renderInstance
-      .post("/booking", booking, {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      })
-      .then((res) => {
-        if(res.status === 201){
-          setStepFour(false)
-          setStepFive(true)
-          setBooking(res.data)
+      try {
+        setLoading(true);
+        const imageUrl = await uploadFileToS3(buffer, fileName); // Upload to S3
+        if(!imageUrl) {
+          errorMessage("Error uploading the form please try again in some times")
+          return
         }
-      })
-      .catch((err) => {
-        errorMessage("Some error occurred");
-        console.log(err)
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }
+
+        const lease = {
+          location_name,
+          location_address,
+          location_city,
+          location_state,
+          location_zip_code,
+          location_country: location_zip_country,
+          attachment: imageUrl,
+          store_id: slug,
+          start_date: startDate,
+          end_date: endDate,
+          working_hgour_per_day,
+          user_id: user.id,
+          tractor_ids: selectedTractorIds,
+          attachment_ids: selectedAttachmentIds
+        }
+
+        renderInstance.post(`/lease`, lease, {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+          },
+        }).then((res)=>{
+          successMessage("Confirm your booking")
+        }).catch((err)=>{
+          console.log(err)
+          errorMessage("Some error occurred")
+        })
+
+      } catch (error) {
+        console.error('Error uploading to S3:', error);
+      } finally { setLoading(false) }
+    } else {
+      errorMessage("Please sign the contract to continue")
+      return
+    }
+  };
 
   function handleFetchAvailableItems() {
+    if(!startDate || !endDate) {
+      errorMessage("Please selecet both startd date and end date")
+      return
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Resetting the time to midnight
 
     const selectedStartDate = startDate ? new Date(startDate) : new Date()
     selectedStartDate.setHours(0, 0, 0, 0); // Resetting the time to midnight
 
-    let selectedEndDate = endDate ? new Date(endDate) : null;
-    if (selectedEndDate) {
-      selectedEndDate.setHours(0, 0, 0, 0); // Resetting the time to midnight
-    } else {
-      // If end date is not available, set it to one day after the start date
-      selectedEndDate = new Date(selectedStartDate);
-      selectedEndDate.setDate(selectedStartDate.getDate() + 1);
-    }
+    let selectedEndDate = endDate ? new Date(endDate) : new Date()
+    selectedEndDate.setHours(0, 0, 0, 0); // Resetting the time to midnight
 
     // Check if start date is in the past
     if (selectedStartDate < today) {
@@ -200,29 +216,14 @@ const StoreBooking = () => {
       }
       const timeDifference = selectedEndDate.getTime() - selectedStartDate.getTime();
       const dayDifference = timeDifference / (1000 * 3600 * 24);
-      if (dayDifference > 7) {
-        errorMessage("The gap between start date and end date can't be more than 7 days");
+      if (dayDifference < 7 && dayDifference > 365) {
+        errorMessage("Lease duration must be between one week and a year");
         return;
       }
     }
 
-    if(!user.isAdmin.includes("farmer") && !farmerId) {
-      errorMessage("You must select a farmer to book a plot");
-      return
-    }
-
-    if (!BookingHours) {
-      errorMessage("Select booking hours")
-      return
-    }
-
     if (!startDate) {
       errorMessage("Select the start date")
-      return
-    }
-
-    if (BookingHours === "more" && !endDate) {
-      errorMessage("Select the end date")
       return
     }
 
@@ -278,61 +279,45 @@ const StoreBooking = () => {
       });
   }
 
+  function fetchAllCity() {
+    setFetchingCity(true);
+    renderInstance
+      .get("/city")
+      .then((res) => {
+        setCity(res.data);
+      })
+      .catch((err) => {
+        errorMessage("Error fetching cities");
+      })
+      .finally(() => {
+        setFetchingCity(false);
+      });
+  }
+
   function handlevalidateAddress() {
-    if (!roadName || !address || !city || !state || !zipCode || !countryName) {
+    if (!location_name || !location_address || !location_city || !location_state || !location_zip_code || !location_zip_country) {
       errorMessage("Add proper location details")
       return
     }
     setStepTwo(false)
     setStepThree(true)
+
+    handleFetchAvailableItems()
   }
 
-  function fetchFarmer() {
-    setFetchingFarmers(true)
-    renderInstance.get('/farmer')
-    .then((res)=>{setAllFarmers(res.data)})
-    .catch(()=>{errorMessage("Error fetching farmers")})
-    .finally(()=>{setFetchingFarmers(false)})
-  }
-
-  const formatDateToDDMMYYYY = (date: string | Date): string => {
-    const options: Intl.DateTimeFormatOptions = {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    };
-
-    const dateObj = typeof date === "string" ? new Date(date) : date;
-
-    return dateObj.toLocaleDateString(undefined, options);
-};
-
-  function userBookingConfirm() {
-    if(booking && booking.id){
-      setBookingConfirm(true)
-      renderInstance.patch(`/booking/${booking.id}/owner_confirm`, {}, {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      }).then((res)=>{
-        successMessage("Successfully booked")
-        setTimeout(() => {
-          setStepFive(false)
-        }, 1000);
-      }).catch((err)=>{
-        console.log(err)
-        errorMessage("Some error occurred. Please try again...")
-      }).finally(()=>{setBookingConfirm(false)})
-    } else {
-      errorMessage("Booking is not available")
+  useEffect(() => {
+    if (slug) {
+      fetchAllCountry()
     }
-  }
-  
+  }, [slug]);
+
+  useEffect(() => {
+    if (location_zip_country) fetchAllCity()
+  }, [location_zip_country])
 
   return (
     <div className="w-full h-full flex flex-col gap-5 py-10">
+
       <Backdrop
         sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
         open={loading || bookingConfirm}
@@ -340,6 +325,7 @@ const StoreBooking = () => {
         <CircularProgress />
       </Backdrop>
 
+      {/* Start date and end date */}
       <Dialog
         open={stepOne} onOpenChange={setStepOne}>
 
@@ -348,15 +334,61 @@ const StoreBooking = () => {
           style={{ scrollbarWidth: "none" }}
         >
 
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-[280px] justify-start text-left font-normal",
+                  !startDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {startDate ? format(startDate, "PPP") : <span>Pick a start date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={startDate}
+                onSelect={setstartDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-[280px] justify-start text-left font-normal",
+                  !endDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {endDate ? format(endDate, "PPP") : <span>Pick an end date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={endDate}
+                onSelect={setEndDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+
           <Label className="mb-3">
-            Booking hours
+            Booking hours per day
           </Label>
 
           <Select
-            onValueChange={(value) => { setBookingHours(value) }}
+            onValueChange={(value) => { set_working_hgour_per_day(value) }}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select booking hours" />
+              <SelectValue placeholder="Select booking hours per day" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="One_Hour">1 hour</SelectItem>
@@ -367,123 +399,16 @@ const StoreBooking = () => {
               <SelectItem value="Six_Hours">6 hour</SelectItem>
               <SelectItem value="Seven_Hours">7 hour</SelectItem>
               <SelectItem value="Eight_Hours">8 hour</SelectItem>
-              <SelectItem value="more">More than 8 hours</SelectItem>
+              <SelectItem value="Nine_Hours">9 hour</SelectItem>
+              <SelectItem value="Ten_Hours">10 hour</SelectItem>
+              <SelectItem value="Eleven_Hours">11 hour</SelectItem>
+              <SelectItem value="Twelve_Hours">12 hour</SelectItem>
+              <SelectItem value="Thirteen_Hours">13 hour</SelectItem>
+              <SelectItem value="Fourteen_Hours">14 hour</SelectItem>
+              <SelectItem value="Fifteen_Hours">15 hour</SelectItem>
+              <SelectItem value="Sixteen_Hours">16 hour</SelectItem>
             </SelectContent>
           </Select>
-
-          {
-            BookingHours && <>
-              <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant={"outline"}
-          className={cn(
-            "w-[280px] justify-start text-left font-normal",
-            !startDate && "text-muted-foreground"
-          )}
-        >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {startDate ? format(startDate, "PPP") : <span>Pick a start date</span>}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0">
-        <Calendar
-          mode="single"
-          selected={startDate}
-          onSelect={setstartDate}
-          initialFocus
-        />
-      </PopoverContent>
-    </Popover>
-            </>
-          }
-
-          {
-            BookingHours === "more" && <>
-              <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant={"outline"}
-          className={cn(
-            "w-[280px] justify-start text-left font-normal",
-            !endDate && "text-muted-foreground"
-          )}
-        >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {endDate ? format(endDate, "PPP") : <span>Pick an end date</span>}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0">
-        <Calendar
-          mode="single"
-          selected={endDate}
-          onSelect={setEndDate}
-          initialFocus
-        />
-      </PopoverContent>
-    </Popover>
-            </>
-          }
-
-          {
-          !user.isAdmin.includes("farmer") && fetchingFarmers ?
-                  <p>Getting all farmers list</p>
-                  :
-                  allFarmers.length === 0 ?
-                    <p>No farmers are available</p>
-                    :
-                    <div className="space-y-1">
-                      <Label htmlFor="phonrnumber">Farmer name</Label>
-                      <div className="w-full space-y-2">
-                        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              // aria-expanded={popoverOpen}
-                              className="w-full justify-between"
-                            >
-                              {farmerName
-                                ? allFarmers.find((country) => `${country.user.first_name} ${country.user.middle_name ? country.user.middle_name : ''} ${country.user.last_name}` === farmerName) && farmerName
-                                : "Select farmer..."}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-full p-0">
-                            <Command>
-                              <CommandInput placeholder="Search country..." />
-                              <CommandList>
-                                <CommandEmpty>No farmer found.</CommandEmpty>
-                                <CommandGroup className='w-full'>
-                                  {allFarmers.map((country) => {
-                                    const name = `${country.user.first_name} ${country.user.middle_name ? country.user.middle_name : ''} ${country.user.last_name}` 
-                                    return (
-                                    <CommandItem
-                                      key={country.id}
-                                      value={country.id}
-                                      onSelect={(currentValue) => {
-                                        setFarmerName(name)
-                                        setFarmerId(country.id)
-                                        setPopoverOpen(false)
-                                      }}
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-2 h-4 w-4",
-                                          countryName === name ? "opacity-100" : "opacity-0"
-                                        )}
-                                      />
-                                      {name}
-                                    </CommandItem>
-                                  )})}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </div>
-          }
 
           <Button
             name="Date continue button"
@@ -495,6 +420,7 @@ const StoreBooking = () => {
 
       </Dialog>
 
+{/* Address */}
       <Dialog
         open={stepTwo} onOpenChange={setStepTwo}>
 
@@ -506,46 +432,6 @@ const StoreBooking = () => {
           <Card>
 
             <CardContent className="space-y-2 py-2">
-              <div className="space-y-1">
-                <Label htmlFor="location_name">Address line 1</Label>
-                <Input
-                  id="location_name"
-                  placeholder='e.g - st mary hiighway'
-                  value={roadName}
-                  onChange={e => { setRoadName(e.target.value) }} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="location_address">Address line 2</Label>
-                <Input
-                  id="location_address"
-                  placeholder='e.g - st mary hiighway'
-                  value={address}
-                  onChange={e => { setAddress(e.target.value) }} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="location_city">City</Label>
-                <Input
-                  id="location_city"
-                  placeholder='e.g - New york'
-                  value={city}
-                  onChange={e => { setCity(e.target.value) }} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="location_state">State</Label>
-                <Input
-                  id="location_state"
-                  placeholder='e.g - Odisha'
-                  value={state}
-                  onChange={e => { setState(e.target.value) }} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="location_zip_code">Zip code</Label>
-                <Input
-                  id="location_zip_code"
-                  placeholder='e.g - 757020'
-                  value={zipCode}
-                  onChange={e => { setZipCode(e.target.value) }} />
-              </div>
               {
                 fetchingContry ?
                   <CircularProgress />
@@ -553,10 +439,10 @@ const StoreBooking = () => {
                   allCountry.length === 0 ?
                     <p>No countries are available</p>
                     :
-                    <div className="space-y-1">
+                    <div className="space-y-1 w-[90%]">
                       <Label htmlFor="phonrnumber">Country name</Label>
                       <div className="w-full space-y-2">
-                        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                        <Popover open={popoverOpenCountry} onOpenChange={setPopoverOpenCountry}>
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
@@ -564,8 +450,8 @@ const StoreBooking = () => {
                               // aria-expanded={popoverOpen}
                               className="w-full justify-between"
                             >
-                              {countryName
-                                ? allCountry.find((country) => country.name === countryName) && countryName
+                              {location_zip_country
+                                ? allCountry.find((country) => country.name === location_zip_country) && location_zip_country
                                 : "Select country..."}
                               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
@@ -581,14 +467,14 @@ const StoreBooking = () => {
                                       key={country.name}
                                       value={country.name}
                                       onSelect={(currentValue) => {
-                                        setCountryName(country.name)
-                                        setPopoverOpen(false)
+                                        set_location_zip_country(country.name)
+                                        setPopoverOpenCountry(false)
                                       }}
                                     >
                                       <Check
                                         className={cn(
                                           "mr-2 h-4 w-4",
-                                          countryName === country.name ? "opacity-100" : "opacity-0"
+                                          location_zip_country === country.name ? "opacity-100" : "opacity-0"
                                         )}
                                       />
                                       {country.name}
@@ -601,6 +487,95 @@ const StoreBooking = () => {
                         </Popover>
                       </div>
                     </div>
+              }
+              {
+                location_zip_country &&
+                <div className='space-y-2 w-[90%]'>
+                  <Label>City</Label>
+                  {
+                    fetchingCity ?
+                      <p>Fetching cities</p>
+                      :
+                      city.length === 0 ?
+                        <p>No cities are available for this country</p>
+                        :
+                        <div className="w-full space-y-2">
+                          <Popover open={popoverOpenCity} onOpenChange={setPopoverOpenCity}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                // aria-expanded={popoverOpen}
+                                className="w-full justify-between"
+                              >
+                                {location_city
+                                  ? city.find((cityDetails) => cityDetails.name === location_city) && location_city
+                                  : "Select city..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Search country..." />
+                                <CommandList>
+                                  <CommandEmpty>No city found.</CommandEmpty>
+                                  <CommandGroup className='w-full'>
+                                    {city.map((cityDetails) => (
+                                      <CommandItem
+                                        key={cityDetails.name}
+                                        value={cityDetails.name}
+                                        onSelect={(currentValue) => {
+                                          set_location_city(cityDetails.name)
+                                          setPopoverOpenCity(false)
+                                        }}
+                                        className={`${location_zip_country !== cityDetails.country.name && "hidden"}`}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            location_city === cityDetails.name ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        {cityDetails.name}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                  }
+                </div>
+              }
+              {
+                location_city &&
+                <div className='space-y-2 w-[90%]'>
+                  <Label>Location name</Label>
+                  <Input type="text" placeholder='Store location name' className='outline-none bg-transparent border-none w-full' value={location_name} onChange={e => { set_location_name(e.target.value) }} />
+
+                </div>
+              }
+              {
+                location_city &&
+                <div className='space-y-2 w-[90%]'>
+                  <Label>Store address</Label>
+                  <Input type="text" placeholder='Store address' className='outline-none bg-transparent border-none w-full' value={location_address} onChange={e => { set_location_address(e.target.value) }} />
+                </div>
+              }
+              {
+                location_city &&
+                <div className='space-y-2 w-[90%]'>
+                  <Label>State</Label>
+                  <Input type="text" placeholder='State' className='outline-none bg-transparent border-none w-full' value={location_state} onChange={e => { set_location_state(e.target.value) }} />
+                </div>
+              }
+              {
+                location_city &&
+                <div className='space-y-2 w-[90%]'>
+                  <Label>Location zip code</Label>
+                  <Input type="text" placeholder='Zipcode' className='outline-none bg-transparent border-none w-full' value={location_zip_code} onChange={e => { set_location_zip_code(e.target.value) }} />
+                </div>
               }
             </CardContent>
 
@@ -796,7 +771,9 @@ const StoreBooking = () => {
           <Button
             name="Date continue button"
             onClick={() => {
-              handleBooking()
+              // handleBooking()
+              setStepFour(false)
+              setStepFive(true)
             }}>
             Book now
           </Button>
@@ -806,81 +783,58 @@ const StoreBooking = () => {
       </Dialog>
 
       <Dialog
-      open={stepFive} onOpenChange={setStepFive}>
+        open={stepFive} onOpenChange={setStepFive}>
 
-<DialogContent
+        <DialogContent
           className="bg-white max-h-[90vh] overflow-auto"
           style={{ scrollbarWidth: "none" }}
         >
 
           <div
-            className="bg-white rounded-xl text-black flex gap-[16px] flex-col relative w-[950px] h-[500px] max-h-[90vh] overflow-auto"
+            className="bg-white rounded-xl text-black flex gap-[16px] flex-col relative w-[950px] h-fit max-h-[90vh] overflow-auto"
             style={{ scrollbarWidth: "none" }}
           >
 
-            <p className="text-2xl font-medium text-center mb-3">
-              Confirm your booking
-            </p>
+<div className="flex flex-col items-center space-y-4">
+      <h2 className="text-xl font-bold">Please sign below</h2>
+      <div className="border border-gray-300 rounded">
+        <SignatureCanvas
+          ref={sigCanvas}
+          canvasProps={{
+            width: 500,
+            height: 200,
+            className: 'signature-canvas'
+          }}
+        />
+      </div>
+      <div className="flex space-x-4">
+        <Button onClick={handleClear}>Clear</Button>
+        <Button onClick={handleSave}>Save Signature</Button>
+      </div>
+      {signature && (
+        <div>
+          <p>Signature Preview:</p>
+          <img src={signature} alt="Signature" className="border border-gray-300 mt-2" />
+        </div>
+      )}
+    </div>
 
-            {
-              booking && <div className="w-full">
+          </div>
 
-<p className="text-base font-medium text-center">
-              Booking Id: {booking.id}
-            </p>
+          <Button
+            name="Date continue button"
+            onClick={() => {
+              // handleBooking()
+            }}>
+            Book now
+          </Button>
 
-            <p>
-              From {formatDateToDDMMYYYY(booking.start_date)}
-            </p>
-
-            <p>
-              {
-                booking.booking_hours && booking.booking_hours === BookingHours ?
-                <p>
-                  {booking.end_date && `To ${formatDateToDDMMYYYY(booking.end_date)}`}
-                </p>
-                :
-                `Total duration: ${booking.booking_hours}`
-              }
-            </p>
-
-            <p>
-              Attachment cost: {booking.total_attachment_cost}
-              Tractor cost: {booking.total_tractor_cost}
-              Service charge: {booking.total_service_charge}
-              Total tax: {booking.total_tax}
-              Total distance cost: {booking.total_distance_cost}
-              Total cost: {booking.total_cost}
-            </p>
-
-            <p>
-              Total distance: {booking.distance}
-            </p>
-
-            <div
-            className="w-full flex items-center justify-center gap-4 flex-wrap">
-              <Button
-              className="bg-green-400"
-              onClick={userBookingConfirm}>
-                Confirm
-              </Button>
-              <Button
-              className="bg-red-400"
-              onClick={()=>{setStepFive(false)}}>
-                Cancel
-              </Button>
-            </div>
-
-              </div>
-            }
-
-            </div>
-
-            </DialogContent>
+        </DialogContent>
 
       </Dialog>
-    </div>
-  );
-};
 
-export default StoreBooking;
+    </div>
+  )
+}
+
+export default StoreBookingLease

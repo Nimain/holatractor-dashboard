@@ -36,6 +36,9 @@ export interface User {
   AgentCreator: Agent[];
   Farmer: Farmer[];
   FarmerCreator: Farmer[];
+  Lease: Lease[];
+  LeaseCreator: Lease[];
+  LeaseDocument: LeaseDocument[];
 }
 
 export interface Role {
@@ -83,7 +86,9 @@ export interface Base {
   Owner: Owner[];
   Agent: Agent[];
   Farmer: Farmer[];
-  City: City[]
+  City: City[];
+  Lease: Lease[];
+  LeaseDocument: LeaseDocument[];
 }
 
 export interface Module {
@@ -142,14 +147,14 @@ export interface Tractor {
   id: string;
   name: string;
   description: string;
-  es_name?        :String;
-  es_description? : string;
-  ay_name?        : string;
-  ay_description? : string;
-  qu_name?        : string;
-  qu_description? : string;
-  gn_name?        : string;
-  gn_description? : string;
+  es_name?: String;
+  es_description?: string;
+  ay_name?: string;
+  ay_description?: string;
+  qu_name?: string;
+  qu_description?: string;
+  gn_name?: string;
+  gn_description?: string;
   images: string[];
   model?: string | null;
   type: TractorType;
@@ -167,14 +172,14 @@ export interface Attachment {
   id: string;
   name: string;
   description: string;
-  es_name?        :String;
-  es_description? : string;
-  ay_name?        : string;
-  ay_description? : string;
-  qu_name?        : string;
-  qu_description? : string;
-  gn_name?        : string;
-  gn_description? : string;
+  es_name?: String;
+  es_description?: string;
+  ay_name?: string;
+  ay_description?: string;
+  qu_name?: string;
+  qu_description?: string;
+  gn_name?: string;
+  gn_description?: string;
   images: string[];
   tractorId: string[];
   base_id: string;
@@ -195,6 +200,21 @@ export interface BookingAttachment {
   attachmentId: string;
   booking: Booking;
   attachment: AttachmentInStore;
+}
+
+export interface LeaseTractor {
+  leaseId: String
+  tractorId: String
+  lease: Lease
+  tractor: TractorInStore
+}
+
+// Join table for Booking and Attachment
+export interface LeaseAttachment {
+  leaseId: String
+  attachmentId: String
+  lease: Lease
+  attachment: AttachmentInStore
 }
 
 export interface Location {
@@ -306,6 +326,7 @@ export interface TractorInStore {
   store: Store;
   BookingTractor: BookingTractor[];
   TractorInStoreRating: TractorInStoreRating[];
+  LeaseTractor: LeaseTractor[]
 }
 
 export interface AttachmentInStore {
@@ -321,6 +342,7 @@ export interface AttachmentInStore {
   store: Store;
   BookingAttachment: BookingAttachment[];
   AttachmentInStoreRating: AttachmentInStoreRating[];
+  LeaseAttachment: LeaseAttachment[]
 }
 
 export interface StoreStock {
@@ -381,7 +403,7 @@ export interface Farmer {
   role_id: string;
   created_by?: string;
   Status: number;
-  base_id: string;  
+  base_id: string;
   createdAt: Date;
   updatedAt: Date;
   role: Role;
@@ -537,6 +559,50 @@ export enum OperatorBookingJobStatus {
   Inactive = 'Inactive',
   Assigned = 'Assigned',
   Rejected = 'Rejected'
+}
+
+export interface Lease {
+  id: string
+  user_id: string
+  start_date: Date
+  end_date: Date
+  hours_operation_per_day: string
+  store_id: string
+  location_id: string
+  distance: string
+  booking_location_lat: string
+  booking_location_lng: string
+  total_tractor_cost: number
+  total_attachment_cost: number
+  total_distance_cost: number
+  total_service_charge: number
+  total_tax: number
+  total_cost: number
+  lease_attachment_id: string
+  created_by: string
+  status: string
+  base_id: string
+  createdAt: Date
+  updatedAt: Date
+  LeaseTractor: LeaseTractor[]
+  LeaseAttachment: LeaseAttachment[]
+  user: User
+  location: Location
+  document: LeaseDocument
+  creator: User
+  base: Base
+}
+
+export interface LeaseDocument {
+  id: string
+  attachment: string
+  created_by?: string
+  base_id: string
+  createdAt: Date
+  updatedAT: Date
+  creator?: User
+  base: Base
+  Lease: Lease[]
 }
 
 export enum AuthType {
