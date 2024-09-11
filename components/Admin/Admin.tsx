@@ -1,32 +1,27 @@
 "use client"
 
-import { Dealer } from '@/utils/Types/types'
+import Image from 'next/image'
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { Button } from '../ui/button'
+import { UserProfile } from '@/utils/Types/types'
+import { renderInstance } from '@/utils/Axios/RenderInstance'
+import { errorMessage } from '@/utils/Toastify/Messages'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import { renderInstance } from '@/utils/Axios/RenderInstance';
-import { errorMessage } from '@/utils/Toastify/Messages';
-import Image from 'next/image';
 import NullImage from "@/assets/AnimateIcons/Operator.svg"
-import { Dialog, DialogClose, DialogContent, DialogFooter, DialogTrigger } from '../ui/dialog';
-import { Button } from '../ui/button';
-import { Label } from '../ui/label';
-import { Input } from '../ui/input';
-import DealerRegister from '../Authentication/DealerRegister';
 
-const DealerSection = () => {
+const AdminSection = () => {
     const [activeHover, setActiveHover] = useState('')
     const [mailHover, setMailHover] = useState(-1)
     const [loading, setLoading] = useState(false)
 
-    const [users, setUsers] = useState<Dealer[]>([])
+    const [users, setUsers] = useState<UserProfile[]>([])
     const [open, setOpen] = useState(false)
-    const [newDealerName, setNewDealerName] = useState("")
-    const [isSignUpCard, setIsSignUpCard] = useState(false)
 
     function fetchAllUsers() {
         setLoading(true)
-        renderInstance.get("/dealer")
+        renderInstance.get("/user/admins/all")
             .then((res) => {
                 setUsers(res.data)
             }).catch((err) => {
@@ -34,24 +29,6 @@ const DealerSection = () => {
             }).finally(() => {
                 setLoading(false)
             })
-    }
-
-    const splitFullName = (fullName: string) => {
-        const nameParts = fullName.trim().split(/\s+/); // Split by spaces
-        const firstName = nameParts.shift(); // Take the first element as the first name
-        const lastName = nameParts.pop(); // Take the last element as the last name
-        const middleName = nameParts.join(" "); // Join the rest as middle name
-
-        return { firstName, middleName, lastName };
-    };
-
-    function handleNameChage(name: string) {
-        setNewDealerName(name)
-
-        const { lastName } = splitFullName(name)
-
-        if (lastName) setIsSignUpCard(true)
-        else setIsSignUpCard(false)
     }
 
     useEffect(() => {
@@ -72,8 +49,8 @@ const DealerSection = () => {
         return dateObj.toLocaleDateString(undefined, options);
     };
 
-    return (
-        <div className='mt-[40px] text-[18px]'>
+  return (
+    <div className='mt-[40px] text-[18px]'>
 
             <div className='mb-[20px] w-full flex items-center justify-between'>
 
@@ -81,57 +58,16 @@ const DealerSection = () => {
                     Total dealers: {users.length}
                 </p>
 
-                <Dialog open={open} onOpenChange={setOpen}>
-                    <DialogTrigger asChild>
+<Link href={"/create_admin"}>
                         <Button
                             name="Name_next_button"
                             onClick={() => {
                                 setOpen(true)
                             }}
                         >
-                            New dealer
+                            New Admin
                         </Button>
-                    </DialogTrigger>
-
-                    <DialogContent
-                        className="bg-white h-fit min-w-[400px] max-w-[400px] overflow-auto"
-                        style={{ scrollbarWidth: "none" }}
-                    >
-
-                        <Label className='mb-2 text-lg font-medium'>
-                            Name
-                        </Label>
-
-                        <Input
-                            value={newDealerName}
-                            onChange={e => { handleNameChage(e.target.value) }}
-                            className='w-full' />
-
-                        <DialogFooter>
-                            <DialogClose asChild>
-                                <Button onClick={() => { setOpen(false) }}>
-                                    Cancel
-                                </Button>
-                            </DialogClose>
-
-                            {
-                                isSignUpCard ?
-                                    <DealerRegister inPage={true} name={newDealerName} />
-                                    :
-                                    <Button
-                                        name="Name_next_button"
-                                        onClick={() => {
-                                            errorMessage("Please give your name")
-                                        }}
-                                    >
-                                        Next
-                                    </Button>
-                            }
-                        </DialogFooter>
-
-                    </DialogContent>
-
-                </Dialog>
+                        </Link>
 
             </div>
 
@@ -263,7 +199,7 @@ const DealerSection = () => {
             <div className='flex flex-col gap-[5px] mt-[20px]'>
 
                 {
-                    loading ? <p>Fetching dealers</p>
+                    loading ? <p>Fetching admins</p>
                         :
                         users.length === 0 ? <div className="w-full h-full min-h-[80vh] flex items-center justify-center">
                             <Image
@@ -331,7 +267,7 @@ const DealerSection = () => {
 
 
         </div>
-    )
+  )
 }
 
-export default DealerSection
+export default AdminSection

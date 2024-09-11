@@ -557,6 +557,25 @@ const ExpandedSidebar = () => {
       }),
       route: "/Operator",
     },
+    {
+      icon: (
+        <Image
+          src={OperatorsIcon}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Admins"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Admins",
+        es: "",
+        ay: "",
+        qu: "",
+        gn: "",
+      }),
+      route: "/Admin",
+    },
   ];
 
   // Define translations for "Inventory", "Billing", and "Settings"
