@@ -10,6 +10,7 @@ import {
 import OperatorRegister from './OperatorRegister'
 import AgentRegister from './AgentRegister'
 import OwnerRegister from './OwnerRegister'
+import DealerRegister from './DealerRegister'
 
 const SignupCard = ({ name }: { name: string }) => {
     const [open, setOpen] = useState(false)
@@ -45,12 +46,12 @@ const SignupCard = ({ name }: { name: string }) => {
                         <OperatorRegister name={name} inPage={false} />
                     </div>
 
-                    {/* <div className='flex items-center gap-2'>
+                    <div className='flex items-center gap-2'>
                         <p className='text-lg font-medium whitespace-nowrap'>
-                            Do you want to be an agent?
+                            Do you want to be a dealer?
                         </p>
-                        <AgentRegister name={name} inPage={false} />
-                    </div> */}
+                        <DealerRegister name={name} inPage={false} />
+                    </div>
 
                     <div className='flex items-center gap-2'>
                         <p className='text-lg font-medium whitespace-nowrap'>

@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   first_name: string;
@@ -39,6 +40,8 @@ export interface User {
   Lease: Lease[];
   LeaseCreator: Lease[];
   LeaseDocument: LeaseDocument[];
+  Dealer: Dealer[]
+  DealerCreator: Dealer[]
 }
 
 export interface Role {
@@ -55,6 +58,7 @@ export interface Role {
   owner: Owner[];
   agent: Agent[];
   Farmer: Farmer[];
+  Dealer: Dealer[];
 }
 
 export interface UserProfile {
@@ -89,6 +93,7 @@ export interface Base {
   City: City[];
   Lease: Lease[];
   LeaseDocument: LeaseDocument[];
+  Dealer: Dealer[]
 }
 
 export interface Module {
@@ -235,6 +240,9 @@ export interface Location {
   User: User[];
   Owner: Owner[];
   Agent: Agent[];
+  Lease: Lease[];
+  FarmerHome: Farmer[];
+  FarmerFarm: Farmer[];
 }
 
 export interface Booking {
@@ -401,15 +409,23 @@ export interface Farmer {
   id: string;
   user_id: string;
   role_id: string;
-  created_by?: string;
+  created_by?: string | null
   Status: number;
   base_id: string;
+  device_type?: string | null
+  device_id?: string | null
+  home_location_id?: string | null
+  farm_location_id?: string | null
+  currency?: string | null
+  currency_code?: string | null
   createdAt: Date;
   updatedAt: Date;
   role: Role;
   user: User;
   createor?: User;
   base: Base;
+  home?: Location
+  farm?: Location
 }
 
 export interface Country {
@@ -470,6 +486,7 @@ export interface Document {
   TractorInStore: TractorInStore[]; // Relation to TractorInStore as "Document of tractors"
   Owner: Owner[]; // Relation to Owner as "document of owner"
   Agent: Agent[]; // Relation to Agent as "document of Agent"
+  Dealer: Dealer[]
 }
 
 export interface OperatorStoreCon {
@@ -552,6 +569,24 @@ export interface Agent {
   creator?: User | null; // Relation to the User model as "Agent creator"
   base: Base; // Relation to the Base model as "base of Agent"
   Store: Store[]; // Relation to the Store model as "StoreAgent"
+}
+
+export interface Dealer {
+  id: string;
+  user_id: string;
+  role_id: string;
+  document_attachment_id?: string | null;
+  created_by ?: string | null;
+  Status: number;
+  base_id: string;
+  createdAt:              Date;
+  updatedAt:              Date;
+
+  user:     User;
+  role:     Role;
+  creator?:  User;
+  base:     Base;
+  document?: Document;
 }
 
 export enum OperatorBookingJobStatus {

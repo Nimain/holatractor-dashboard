@@ -536,7 +536,7 @@ const ExpandedSidebar = () => {
         qu: "Haqllaqkuna",
         gn: "Mba’apoha",
       }),
-      route: "#",
+      route: "/Dealer",
     },
     {
       icon: (

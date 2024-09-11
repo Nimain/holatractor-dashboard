@@ -1,32 +1,32 @@
 "use client"
 
+import { Dealer } from '@/utils/Types/types'
 import { useEffect, useState } from 'react'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import { Operator, Owner } from '@/utils/Types/types';
 import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
+import Image from 'next/image';
+import NullImage from "@/assets/AnimateIcons/Operator.svg"
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogTrigger } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
-import OperatorRegister from '../Authentication/OperatorRegister';
-import Image from 'next/image';
-import NullImage from "@/assets/AnimateIcons/Operator.svg"
+import DealerRegister from '../Authentication/DealerRegister';
 
-const OperatorSection = () => {
+const DealerSection = () => {
     const [activeHover, setActiveHover] = useState('')
     const [mailHover, setMailHover] = useState(-1)
     const [loading, setLoading] = useState(false)
 
-    const [users, setUsers] = useState<Operator[]>([])
+    const [users, setUsers] = useState<Dealer[]>([])
     const [open, setOpen] = useState(false)
-    const [newOperatorName, setNewOperatorName] = useState("")
+    const [newDealerName, setNewDealerName] = useState("")
     const [isSignUpCard, setIsSignUpCard] = useState(false)
 
     function fetchAllUsers() {
         setLoading(true)
-        renderInstance.get("/operator")
+        renderInstance.get("/dealer")
             .then((res) => {
                 setUsers(res.data)
             }).catch((err) => {
@@ -46,7 +46,7 @@ const OperatorSection = () => {
     };
 
     function handleNameChage(name: string) {
-        setNewOperatorName(name)
+        setNewDealerName(name)
 
         const { lastName } = splitFullName(name)
 
@@ -73,68 +73,67 @@ const OperatorSection = () => {
     };
 
     return (
-        <div
-            className='mt-[40px] text-[18px]'>
+        <div className='mt-[40px] text-[18px]'>
 
-            <div className='mb-[20px] w-full flex items-center justify-between'>
+<div className='mb-[20px] w-full flex items-center justify-between'>
 
-                <p className='text-[22px] font-[600]'>
-                    Total operators: {users.length}
-                </p>
+<p className='text-[22px] font-[600]'>
+    Total dealers: {users.length}
+</p>
 
-                <Dialog open={open} onOpenChange={setOpen}>
-                    <DialogTrigger asChild>
-                        <Button
-                            name="Name_next_button"
-                            onClick={() => {
-                                setOpen(true)
-                            }}
-                        >
-                            New operator
-                        </Button>
-                    </DialogTrigger>
+<Dialog open={open} onOpenChange={setOpen}>
+    <DialogTrigger asChild>
+        <Button
+            name="Name_next_button"
+            onClick={() => {
+                setOpen(true)
+            }}
+        >
+            New dealer
+        </Button>
+    </DialogTrigger>
 
-                    <DialogContent
-                        className="bg-white h-fit min-w-[400px] max-w-[400px] overflow-auto"
-                        style={{ scrollbarWidth: "none" }}
+    <DialogContent
+        className="bg-white h-fit min-w-[400px] max-w-[400px] overflow-auto"
+        style={{ scrollbarWidth: "none" }}
+    >
+
+        <Label className='mb-2 text-lg font-medium'>
+            Name
+        </Label>
+
+        <Input
+            value={newDealerName}
+            onChange={e => { handleNameChage(e.target.value) }}
+            className='w-full' />
+
+        <DialogFooter>
+            <DialogClose asChild>
+                <Button onClick={() => { setOpen(false) }}>
+                    Cancel
+                </Button>
+            </DialogClose>
+
+            {
+                isSignUpCard ?
+                    <DealerRegister inPage={true} name={newDealerName} />
+                    :
+                    <Button
+                        name="Name_next_button"
+                        onClick={() => {
+                            errorMessage("Please give your name")
+                        }}
                     >
+                        Next
+                    </Button>
+            }
+        </DialogFooter>
 
-                        <Label className='mb-2 text-lg font-medium'>
-                            Name
-                        </Label>
+    </DialogContent>
 
-                        <Input
-                            value={newOperatorName}
-                            onChange={e => { handleNameChage(e.target.value) }}
-                            className='w-full' />
+</Dialog>
 
-                        <DialogFooter>
-                            <DialogClose asChild>
-                                <Button onClick={() => { setOpen(false) }}>
-                                    Cancel
-                                </Button>
-                            </DialogClose>
-
-                            {
-                                isSignUpCard ?
-                                    <OperatorRegister inPage={true} name={newOperatorName} />
-                                    :
-                                    <Button
-                                        name="Name_next_button"
-                                        onClick={() => {
-                                            errorMessage("Please give your name")
-                                        }}
-                                    >
-                                        Next
-                                    </Button>
-                            }
-                        </DialogFooter>
-
-                    </DialogContent>
-
-                </Dialog>
-
-            </div>
+</div>
 
             <div
                 className='text-[20px] font-[600] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer'>
@@ -264,7 +263,7 @@ const OperatorSection = () => {
             <div className='flex flex-col gap-[5px] mt-[20px]'>
 
                 {
-                    loading ? <p>Fetching operators</p>
+                    loading ? <p>Fetching dealers</p>
                         :
                         users.length === 0 ? <div className="w-full h-full min-h-[80vh] flex items-center justify-center">
                             <Image
@@ -330,8 +329,9 @@ const OperatorSection = () => {
 
             </div>
 
+
         </div>
     )
 }
 
-export default OperatorSection
+export default DealerSection

@@ -9,6 +9,8 @@ import { errorMessage } from "@/utils/Toastify/Messages";
 import { Booking } from "@/utils/Types/types";
 import { Backdrop, CircularProgress } from "@mui/material";
 import NewBooking from "./NewBooking";
+import Image from "next/image";
+import NullImage from "@/assets/AnimateIcons/Tractor.svg"
 
 const Bookings = () => {
   const [activeHover, setActiveHover] = useState("");
@@ -89,7 +91,7 @@ const Bookings = () => {
         </div>
 
         <div
-          className="w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
+          className="w-[160px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group whitespace-nowrap"
           onMouseEnter={() => {
             setActiveHover("Duration");
           }}
@@ -123,7 +125,15 @@ const Bookings = () => {
 
       <div className="flex flex-col gap-[5px] mt-[20px]">
         {
-            allBookings.length === 0 ? <p>No bookings have been done</p>
+            allBookings.length === 0 ? <div className="w-full h-full min-h-[80vh] flex items-center justify-center">
+            <Image
+            src={NullImage}
+            alt="No image found"
+            className="w-[400px] lg:w-[700px] h-auto object-cover"
+            width={400}
+            height={400}
+            unoptimized={true} />
+        </div>
             :
             allBookings.map((details, index)=>{
                 return(

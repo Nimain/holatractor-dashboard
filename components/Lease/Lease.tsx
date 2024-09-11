@@ -8,6 +8,8 @@ import { useState, useEffect } from 'react'
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import NewLease from './NewLease';
+import Image from 'next/image';
+import NullImage from "@/assets/AnimateIcons/Tractor.svg"
 
 const LeaseSection = () => {
   const [activeHover, setActiveHover] = useState("");
@@ -123,7 +125,15 @@ const LeaseSection = () => {
 
       <div className="flex flex-col gap-[5px] mt-[20px]">
         {
-            allLease.length === 0 ? <p>No bookings have been done</p>
+            allLease.length === 0 ? <div className="w-full h-full min-h-[80vh] flex items-center justify-center">
+            <Image
+            src={NullImage}
+            alt="No image found"
+            className="w-[400px] lg:w-[700px] h-auto object-cover"
+            width={400}
+            height={400}
+            unoptimized={true} />
+        </div>
             :
             allLease.map((details, index)=>{
                 return(

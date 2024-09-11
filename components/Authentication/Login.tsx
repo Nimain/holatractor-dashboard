@@ -54,7 +54,7 @@ const LogInPage = () => {
                 setEmail("")
                 setPassword("")
                 setTimeout(() => {
-                    router.redirect("/")
+                    router.push("/")
                 }, 1000);
             }
         }).catch((err) => {
