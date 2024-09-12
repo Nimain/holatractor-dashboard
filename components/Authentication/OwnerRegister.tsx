@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from '../ui/label'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
-import { Country, Role } from '@/utils/Types/types'
+import { City, Country, Role } from '@/utils/Types/types'
 import { renderInstance } from '@/utils/Axios/RenderInstance'
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
 import { Backdrop, CircularProgress } from '@mui/material'
@@ -74,6 +74,10 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
     const [expiry_date_false, set_expiry_date_false] = useState(false)
     const [expiry_date_year, set_expiry_date_year] = useState<number>(new Date().getFullYear())
     const [attachment, setattachment] = useState<File | null>(null);
+
+    const [fetchingCity, setFetchingCity] = useState(false);
+    const [city, setCity] = useState<City[]>([]);
+    const [popoverOpenCity, setPopoverOpenCity] = useState(false)
 
     const { cookie } = useCookie()
     const access_token = cookie.get("access_token");
@@ -341,9 +345,28 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                 })
     }
 
+    function fetchAllCity() {
+        setFetchingCity(true);
+        renderInstance
+            .get("/city")
+            .then((res) => {
+                setCity(res.data);
+            })
+            .catch((err) => {
+                errorMessage("Error fetching cities");
+            })
+            .finally(() => {
+                setFetchingCity(false);
+            });
+    }
+
     useEffect(() => {
         fetchAllCountry()
     }, [])
+
+    useEffect(() => {
+        if (location_country) fetchAllCity()
+    }, [location_country])
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -772,47 +795,7 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                         <TabsContent value="stepthree">
 
                             <Card>
-                                <CardContent className="space-y-2 py-2">
-                                    <div className="space-y-1">
-                                        <Label htmlFor="location_name">Address line 1</Label>
-                                        <Input
-                                            id="location_name"
-                                            placeholder='e.g - st mary hiighway'
-                                            value={location_name}
-                                            onChange={e => { set_location_name(e.target.value) }} />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <Label htmlFor="location_address">Address line 2</Label>
-                                        <Input
-                                            id="location_address"
-                                            placeholder='e.g - st mary hiighway'
-                                            value={location_address}
-                                            onChange={e => { set_location_address(e.target.value) }} />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <Label htmlFor="location_city">City</Label>
-                                        <Input
-                                            id="location_city"
-                                            placeholder='e.g - New york'
-                                            value={location_city}
-                                            onChange={e => { set_location_city(e.target.value) }} />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <Label htmlFor="location_state">State</Label>
-                                        <Input
-                                            id="location_state"
-                                            placeholder='e.g - Odisha'
-                                            value={location_state}
-                                            onChange={e => { set_location_state(e.target.value) }} />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <Label htmlFor="location_zip_code">Zip code</Label>
-                                        <Input
-                                            id="location_zip_code"
-                                            placeholder='e.g - 757020'
-                                            value={location_zip_code}
-                                            onChange={e => { set_location_zip_code(e.target.value) }} />
-                                    </div>
+                            <CardContent className="space-y-2 py-2">
                                     {
                                         fetchingContry ?
                                             <CircularProgress />
@@ -869,6 +852,110 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                                                     </div>
                                                 </div>
                                     }
+                                    {
+                                        location_city && <div className="space-y-1">
+                                            <Label htmlFor="location_city">City</Label>
+                                            {
+                                                fetchingCity ?
+                                                    <p>Fetching cities</p>
+                                                    :
+                                                    city.length === 0 ?
+                                                        <p>No cities are available for this country</p>
+                                                        :
+                                                        <div className="w-full space-y-2">
+                                                            <Popover open={popoverOpenCity} onOpenChange={setPopoverOpenCity}>
+                                                                <PopoverTrigger asChild>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        role="combobox"
+                                                                        // aria-expanded={popoverOpen}
+                                                                        className="w-full justify-between"
+                                                                    >
+                                                                        {location_city
+                                                                            ? city.find((cityDetails) => cityDetails.name === location_city) && location_city
+                                                                            : "Select city..."}
+                                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                                    </Button>
+                                                                </PopoverTrigger>
+                                                                <PopoverContent className="w-full p-0">
+                                                                    <Command>
+                                                                        <CommandInput placeholder="Search country..." />
+                                                                        <CommandList>
+                                                                            <CommandEmpty>No city found.</CommandEmpty>
+                                                                            <CommandGroup className='w-full'>
+                                                                                {city.map((cityDetails) => (
+                                                                                    <CommandItem
+                                                                                        key={cityDetails.name}
+                                                                                        value={cityDetails.name}
+                                                                                        onSelect={(currentValue) => {
+                                                                                            set_location_city(cityDetails.name)
+                                                                                            setPopoverOpenCity(false)
+                                                                                        }}
+                                                                                        className={`${location_country !== cityDetails.country.name && "hidden"}`}
+                                                                                    >
+                                                                                        <Check
+                                                                                            className={cn(
+                                                                                                "mr-2 h-4 w-4",
+                                                                                                location_city === cityDetails.name ? "opacity-100" : "opacity-0"
+                                                                                            )}
+                                                                                        />
+                                                                                        {cityDetails.name}
+                                                                                    </CommandItem>
+                                                                                ))}
+                                                                            </CommandGroup>
+                                                                        </CommandList>
+                                                                    </Command>
+                                                                </PopoverContent>
+                                                            </Popover>
+                                                        </div>
+                                            }
+                                        </div>
+                                    }
+                                    {
+                                        location_city && <div className="space-y-1">
+                                            <Label htmlFor="location_zip_code">Zip code</Label>
+                                            <Input
+                                                id="location_zip_code"
+                                                placeholder='e.g - 757020'
+                                                value={location_zip_code}
+                                                onChange={e => { set_location_zip_code(e.target.value) }} />
+                                        </div>
+                                    }
+                                    {
+                                        location_city && <div className="space-y-1">
+                                            <Label htmlFor="location_name">Address line 1</Label>
+                                            <Input
+                                                id="location_name"
+                                                placeholder='e.g - st mary hiighway'
+                                                value={location_name}
+                                                onChange={e => { set_location_name(e.target.value) }} />
+                                        </div>
+                                    }
+                                    {
+                                        location_city && <div className="space-y-1">
+                                            <Label htmlFor="location_address">Address line 2</Label>
+                                            <Input
+                                                id="location_address"
+                                                placeholder='e.g - st mary hiighway'
+                                                value={location_address}
+                                                onChange={e => { set_location_address(e.target.value) }} />
+                                        </div>
+                                    }
+
+
+
+                                    {
+                                        location_city && <div className="space-y-1">
+                                            <Label htmlFor="location_state">State</Label>
+                                            <Input
+                                                id="location_state"
+                                                placeholder='e.g - Odisha'
+                                                value={location_state}
+                                                onChange={e => { set_location_state(e.target.value) }} />
+                                        </div>
+                                    }
+
+
                                 </CardContent>
 
                                 <CardFooter>
