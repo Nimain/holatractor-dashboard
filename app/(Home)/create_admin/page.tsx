@@ -23,7 +23,7 @@ const AdminCreate = () => {
 
     const [loading, setLoading] = useState(false)
 
-    const { refresh } = useRouter()
+    const router = useRouter()
 
     const splitFullName = (fullName: string) => {
         const nameParts = fullName.trim().split(/\s+/); // Split by spaces
@@ -80,7 +80,7 @@ const AdminCreate = () => {
                 setPassword("")
                 setConPassword("")
                 setTimeout(() => {
-                    refresh()
+                    router.push("/Admin")
                 }, 2000);
             }).catch(() => {
                 errorMessage("Some error occurred")

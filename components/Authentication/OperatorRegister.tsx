@@ -834,7 +834,7 @@ const OperatorRegister = ({ name, inPage }: { name: string; inPage: boolean; }) 
                                                 </div>
                                     }
                                     {
-                                        location_city && <div className="space-y-1">
+                                        location_country && <div className="space-y-1">
                                             <Label htmlFor="location_city">City</Label>
                                             {
                                                 fetchingCity ?
