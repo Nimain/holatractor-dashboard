@@ -1,38 +1,86 @@
 "use client"
 
-import React from 'react'
-import { ChartConfig, ChartContainer } from '../ui/chart'
-import { Bar, BarChart } from 'recharts'
+import { TrendingUp } from "lucide-react"
+import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
 
-const BookingChart = () => {
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"
 
-    const chartData = [
-        { month: "January", desktop: 186, mobile: 80 },
-        { month: "February", desktop: 305, mobile: 200 },
-        { month: "March", desktop: 237, mobile: 120 },
-        { month: "April", desktop: 73, mobile: 190 },
-        { month: "May", desktop: 209, mobile: 130 },
-        { month: "June", desktop: 214, mobile: 140 },
-      ]
+export const description = "A multiple bar chart"
 
-      const chartConfig = {
-        desktop: {
-          label: "Desktop",
-          color: "#2563eb",
-        },
-        mobile: {
-          label: "Mobile",
-          color: "#60a5fa",
-        },
-      } satisfies ChartConfig
+const chartData = [
+  { month: "January", male: 186, female: 80 },
+  { month: "February", male: 305, female: 200 },
+  { month: "March", male: 237, female: 120 },
+  { month: "April", male: 73, female: 190 },
+  { month: "May", male: 209, female: 130 },
+  { month: "June", male: 214, female: 140 },
+  { month: "July", male: 207, female: 110 },
+  { month: "August", male: 114, female: 149 },
+  { month: "September", male: 214, female: 140 },
+  { month: "October", male: 289, female: 190 },
+  { month: "November", male: 200, female: 100 },
+  { month: "December", male: 214, female: 140 },
+]
 
+const chartConfig = {
+  male: {
+    label: "Male",
+    color: "hsl(var(--chart-1))",
+  },
+  female: {
+    label: "Female",
+    color: "hsl(var(--chart-2))",
+  },
+} satisfies ChartConfig
+function BookingChart() {
   return (
-    <ChartContainer config={chartConfig} className="min-h-[200px] max-h-[60vh] w-full max-w-[1200px] mx-auto">
-      <BarChart accessibilityLayer data={chartData}>
-        <Bar dataKey="desktop" fill="var(--color-desktop)" radius={4} />
-        <Bar dataKey="mobile" fill="var(--color-mobile)" radius={4} />
-      </BarChart>
-    </ChartContainer>
+    <Card>
+      <CardHeader>
+        <CardTitle>Farmers joied</CardTitle>
+        <CardDescription>2024</CardDescription>
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-3 rounded bg-[hsl(var(--chart-1))]" />
+          <p>Male</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-3 rounded bg-[hsl(var(--chart-2))]" />
+          <p>Female</p>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <ChartContainer config={chartConfig}>
+          <BarChart accessibilityLayer data={chartData}>
+            <CartesianGrid vertical={false} />
+            <XAxis
+              dataKey="month"
+              tickLine={false}
+              tickMargin={10}
+              axisLine={false}
+              tickFormatter={(value) => value.slice(0, 3)}
+            />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent indicator="dashed" />}
+            />
+            <Bar dataKey="male" fill="var(--color-male)" radius={4} />
+            <Bar dataKey="female" fill="var(--color-female)" radius={4} />
+          </BarChart>
+        </ChartContainer>
+      </CardContent>
+    </Card>
   )
 }
 

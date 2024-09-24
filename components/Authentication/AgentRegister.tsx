@@ -81,7 +81,7 @@ const AgentRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
     const [popoverOpenCity, setPopoverOpenCity] = useState(false)
 
     const { cookie } = useCookie();
-  const access_token = cookie.get("access_token");
+    const access_token = cookie.get("access_token");
 
     const router = useRouter()
 
@@ -134,7 +134,7 @@ const AgentRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
     }
 
     async function operatorRegister() {
-        if(!access_token){
+        if (!access_token) {
             errorMessage("You are not allowed to create an agent account")
             return
         }
@@ -269,9 +269,9 @@ const AgentRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
         renderInstance
             .post("/agent", user, {
                 headers: {
-                  Authorization: `Bearer ${access_token}`,
+                    Authorization: `Bearer ${access_token}`,
                 },
-              })
+            })
             .then((res) => {
                 if (res.status === 201 && res.data.access_token) {
                     const expiryDate = new Date();
@@ -281,9 +281,11 @@ const AgentRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                     cookie.remove("access_token", { path: "/" });
 
                     successMessage("User sign up successfully");
-                    setTimeout(() => {
-                        router.push("/login");
-                    }, 3000);
+                    if (inPage) {
+                        setTimeout(() => {
+                            router.push("/login");
+                        }, 3000);
+                    }
                 }
             })
             .catch((err) => {
@@ -747,7 +749,7 @@ const AgentRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                         <TabsContent value="stepthree">
 
                             <Card>
-                            <CardContent className="space-y-2 py-2">
+                                <CardContent className="space-y-2 py-2">
                                     {
                                         fetchingContry ?
                                             <CircularProgress />
@@ -1042,7 +1044,7 @@ const AgentRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                                     </Popover>
                                 </CardContent>
                                 <CardFooter className='w-full flex items-center justify-between'>
-                                <TabsList className='w-full flex items-center justify-start bg-transparent'>
+                                    <TabsList className='w-full flex items-center justify-start bg-transparent'>
                                         <TabsTrigger
                                             value="stepthree"
                                             className='bg-transparent flex items-center px-0'>
