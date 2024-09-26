@@ -1,10 +1,17 @@
+import { ReactNode } from "react";
 import { Card, CardTitle } from "../ui/card";
 
-function DetailBox({count, heading}: {count: string; heading: string}) {
-    return(
-        <Card className="bg-white w-fit p-5 flex flex-col gap-2">
+function DetailBox({ count, heading, icon, bgcolorCode, textcolorCode }: { count: string; heading: string; icon: ReactNode; bgcolorCode: string; textcolorCode: string; }) {
+    return (
+        <Card className="bg-white w-full p-5 flex items-center gap-5">
 
-            <CardTitle className="text-[#3CD856]">
+            <div className={`p-2 aspect-square rounded-full ${bgcolorCode} ${textcolorCode}`}>
+                {icon}
+            </div>
+
+            <div className="flex flex-col gap-2">
+
+            <CardTitle>
                 {count}
             </CardTitle>
 
@@ -12,7 +19,9 @@ function DetailBox({count, heading}: {count: string; heading: string}) {
                 {heading}
             </p>
 
-        </Card>
+        </div>
+
+        </Card >
     )
 }
 

@@ -47,7 +47,7 @@ const chartConfig = {
 } satisfies ChartConfig
 function BookingChart() {
   return (
-    <Card>
+    <Card className="w-[70%]">
       <CardHeader>
         <CardTitle>Farmers joied</CardTitle>
         <CardDescription>2024</CardDescription>
@@ -61,7 +61,7 @@ function BookingChart() {
         </div>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig}>
+        <ChartContainer config={chartConfig} className="w-full h-[300px] object-cover">
           <BarChart accessibilityLayer data={chartData}>
             <CartesianGrid vertical={false} />
             <XAxis

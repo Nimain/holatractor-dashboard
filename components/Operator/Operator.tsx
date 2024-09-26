@@ -13,6 +13,7 @@ import { Input } from '../ui/input';
 import OperatorRegister from '../Authentication/OperatorRegister';
 import Image from 'next/image';
 import NullImage from "@/assets/AnimateIcons/Operator.svg"
+import Link from 'next/link';
 
 const OperatorSection = () => {
     const [activeHover, setActiveHover] = useState('')
@@ -278,7 +279,8 @@ const OperatorSection = () => {
                             users.map((details, index) => {
                                 const name = `${details.user.first_name} ${details.user.middle_name ? details.user.middle_name + ' ' : ''}${details.user.last_name}`
                                 return (
-                                    <div
+                                    <Link
+                                    href={`/Operator/${details.id}`}
                                         className='text-[18px] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer hover:bg-white transition-all duration-500'
                                         key={index}
                                         onMouseEnter={() => { setMailHover(index) }}
@@ -323,7 +325,7 @@ const OperatorSection = () => {
                                             {mailHover === index ? formatDate(details.updatedAt) : `${formatDate(details.updatedAt).slice(0, 12)}...`}
                                         </p>
 
-                                    </div>
+                                    </Link>
                                 )
                             })
                 }

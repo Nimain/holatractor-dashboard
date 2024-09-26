@@ -312,7 +312,7 @@ const StoreBooking = () => {
   function userBookingConfirm() {
     if(booking && booking.id){
       setBookingConfirm(true)
-      renderInstance.patch(`/booking/${booking.id}/owner_confirm`, {}, {
+      renderInstance.patch(`/booking/${booking.id}/user_confirm`, {}, {
         headers: {
           Authorization: `Bearer ${access_token}`,
         },

@@ -93,7 +93,8 @@ export interface Base {
   City: City[];
   Lease: Lease[];
   LeaseDocument: LeaseDocument[];
-  Dealer: Dealer[]
+  Dealer: Dealer[];
+  booking: Booking[];
 }
 
 export interface Module {
@@ -274,6 +275,7 @@ export interface Booking {
   tractors: BookingTractor[];
   attachments: BookingAttachment[];
   OperatorBookingJob: OperatorBookingJob[];
+  user: User;
 }
 
 export interface Inventory {
@@ -640,6 +642,26 @@ export interface LeaseDocument {
   Lease: Lease[]
 }
 
+export interface ownerOperatorRequest {
+  id:                string      
+  booking_id:        string
+  operator_id:       string
+  base_id:           string
+  operator_response: ownerOperatorResponse 
+  createdAt:         Date              
+  updatedAt:         Date            
+
+  booking:  Booking 
+  operator: Operator
+  base:     Base    
+}
+
+export enum ownerOperatorResponse {
+  NotSeen = "NotSeen",
+  Accept = "Accept",
+  Reject = "Reject"
+}
+
 export enum AuthType {
   GOOGLE = "GOOGLE",
   EMAIL = "EMAIL",
@@ -663,11 +685,16 @@ export enum BookingHours {
 }
 
 export enum BookingStatus {
-  OPEN = "Open",
-  CONFIRM = "Confirm",
-  CANCELLED = "Cancelled",
-  REJECTED = "Rejected",
-  COMPLETED = "Completed",
+  Open = "Open",
+  Accepted = "Accepted",
+  Rejected = "Rejected",
+  Confirmed = "Confirmed",
+  Cancelled = "Cancelled",
+  Arriving = "Arriving",
+  Arrived = "Arrived",
+  Started = "Started",
+  Stopped = "Stopped",
+  Finished = "Finished"
 }
 
 export enum StoreOperatorStatus {
