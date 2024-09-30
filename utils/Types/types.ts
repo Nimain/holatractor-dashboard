@@ -578,16 +578,16 @@ export interface Dealer {
   user_id: string;
   role_id: string;
   document_attachment_id?: string | null;
-  created_by ?: string | null;
+  created_by?: string | null;
   Status: number;
   base_id: string;
-  createdAt:              Date;
-  updatedAt:              Date;
+  createdAt: Date;
+  updatedAt: Date;
 
-  user:     User;
-  role:     Role;
-  creator?:  User;
-  base:     Base;
+  user: User;
+  role: Role;
+  creator?: User;
+  base: Base;
   document?: Document;
 }
 
@@ -643,17 +643,27 @@ export interface LeaseDocument {
 }
 
 export interface ownerOperatorRequest {
-  id:                string      
-  booking_id:        string
-  operator_id:       string
-  base_id:           string
-  operator_response: ownerOperatorResponse 
-  createdAt:         Date              
-  updatedAt:         Date            
-
-  booking:  Booking 
+  id: string
+  booking_id: string
+  operator_id: string
+  base_id: string
+  operator_response: ownerOperatorResponse
+  createdAt: Date
+  updatedAt: Date
+  booking: Booking
   operator: Operator
-  base:     Base    
+  base: Base
+}
+
+export interface Logs {
+  id: string;
+  action: string;
+  email: string;
+  userId: string;
+  user: User;
+  details: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export enum ownerOperatorResponse {

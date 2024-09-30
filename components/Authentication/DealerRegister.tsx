@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Calendar } from '../ui/calendar';
+import countryData from './CountryCodeRoles';
 
 const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => {
     const [open, setOpen] = useState(false)
@@ -254,6 +255,9 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
                 .then((res) => {
                     if (res.status === 201 && res.data.access_token) {
                         successMessage("Created successfully")
+                        setTimeout(() => {
+                            router.back()
+                        }, 3000);
                     }
                 })
                 .catch((err) => {
@@ -532,7 +536,8 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
                                                             placeholder='e.g - 12345678'
                                                             type='tel'
                                                             value={agnumber}
-                                                            onChange={e => { setagNumber(e.target.value) }} />
+                                                            onChange={e => { setagNumber(e.target.value) }}
+                                                            maxLength={countryData.find(c=>c.code === agnewCountry)?.phoneLength} />
                                                     </div>
                                                 </div>
                                     }

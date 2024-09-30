@@ -279,8 +279,7 @@ const OperatorSection = () => {
                             users.map((details, index) => {
                                 const name = `${details.user.first_name} ${details.user.middle_name ? details.user.middle_name + ' ' : ''}${details.user.last_name}`
                                 return (
-                                    <Link
-                                    href={`/Operator/${details.id}`}
+                                    <div
                                         className='text-[18px] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer hover:bg-white transition-all duration-500'
                                         key={index}
                                         onMouseEnter={() => { setMailHover(index) }}
@@ -325,7 +324,7 @@ const OperatorSection = () => {
                                             {mailHover === index ? formatDate(details.updatedAt) : `${formatDate(details.updatedAt).slice(0, 12)}...`}
                                         </p>
 
-                                    </Link>
+                                    </div>
                                 )
                             })
                 }

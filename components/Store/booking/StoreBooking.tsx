@@ -14,7 +14,7 @@ import { Backdrop, CircularProgress } from "@mui/material";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { useParams } from "next/navigation";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
-import { AttachmentInStore, Booking, Country, Farmer, TractorInStore } from "@/utils/Types/types";
+import { AttachmentInStore, Booking, City, Country, Farmer, TractorInStore } from "@/utils/Types/types";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -64,6 +64,9 @@ const StoreBooking = () => {
 
   const [booking, setBooking] = useState<Booking | null>(null)
   const [bookingConfirm, setBookingConfirm] = useState(false)
+  const [fetchingCity, setFetchingCity] = useState(false);
+  const [allcity, setAllCity] = useState<City[]>([]);
+  const [popoverOpenCity, setPopoverOpenCity] = useState(false)
 
   const { slug } = useParams();
 
@@ -96,7 +99,7 @@ const StoreBooking = () => {
   useEffect(() => {
     if (slug) {
       fetchAllCountry()
-      if(!user.isAdmin.includes("farmer")) fetchFarmer()
+      if (!user.isAdmin.includes("farmer")) fetchFarmer()
     }
   }, [slug]);
 
@@ -126,7 +129,7 @@ const StoreBooking = () => {
       return
     }
 
-    if(!user.isAdmin.includes("farmer") && !farmerId) {
+    if (!user.isAdmin.includes("farmer") && !farmerId) {
       errorMessage("You must select a farmer to book a plot");
       return
     }
@@ -155,7 +158,7 @@ const StoreBooking = () => {
         },
       })
       .then((res) => {
-        if(res.status === 201){
+        if (res.status === 201) {
           setStepFour(false)
           setStepFive(true)
           setBooking(res.data)
@@ -206,7 +209,7 @@ const StoreBooking = () => {
       }
     }
 
-    if(!user.isAdmin.includes("farmer") && !farmerId) {
+    if (!user.isAdmin.includes("farmer") && !farmerId) {
       errorMessage("You must select a farmer to book a plot");
       return
     }
@@ -290,46 +293,66 @@ const StoreBooking = () => {
   function fetchFarmer() {
     setFetchingFarmers(true)
     renderInstance.get('/farmer')
-    .then((res)=>{setAllFarmers(res.data)})
-    .catch(()=>{errorMessage("Error fetching farmers")})
-    .finally(()=>{setFetchingFarmers(false)})
+      .then((res) => { setAllFarmers(res.data) })
+      .catch(() => { errorMessage("Error fetching farmers") })
+      .finally(() => { setFetchingFarmers(false) })
   }
 
   const formatDateToDDMMYYYY = (date: string | Date): string => {
     const options: Intl.DateTimeFormatOptions = {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     };
 
     const dateObj = typeof date === "string" ? new Date(date) : date;
 
     return dateObj.toLocaleDateString(undefined, options);
-};
+  };
 
   function userBookingConfirm() {
-    if(booking && booking.id){
+    if (booking && booking.id) {
       setBookingConfirm(true)
       renderInstance.patch(`/booking/${booking.id}/user_confirm`, {}, {
         headers: {
           Authorization: `Bearer ${access_token}`,
         },
-      }).then((res)=>{
+      }).then((res) => {
         successMessage("Successfully booked")
         setTimeout(() => {
           setStepFive(false)
         }, 1000);
-      }).catch((err)=>{
+      }).catch((err) => {
         console.log(err)
         errorMessage("Some error occurred. Please try again...")
-      }).finally(()=>{setBookingConfirm(false)})
+      }).finally(() => { setBookingConfirm(false) })
     } else {
       errorMessage("Booking is not available")
     }
   }
-  
+
+  function fetchAllCity() {
+    setFetchingCity(true);
+    renderInstance
+      .get("/city")
+      .then((res) => {
+        setAllCity(res.data);
+      })
+      .catch((err) => {
+        errorMessage("Error fetching cities");
+      })
+      .finally(() => {
+        setFetchingCity(false);
+      });
+  }
+
+  useEffect(() => {
+    if (countryName) {
+      fetchAllCity()
+    }
+  }, [countryName])
 
   return (
     <div className="w-full h-full flex flex-col gap-5 py-10">
@@ -374,115 +397,116 @@ const StoreBooking = () => {
           {
             BookingHours && <>
               <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant={"outline"}
-          className={cn(
-            "w-[280px] justify-start text-left font-normal",
-            !startDate && "text-muted-foreground"
-          )}
-        >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {startDate ? format(startDate, "PPP") : <span>Pick a start date</span>}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0">
-        <Calendar
-          mode="single"
-          selected={startDate}
-          onSelect={setstartDate}
-          initialFocus
-        />
-      </PopoverContent>
-    </Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-[280px] justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "PPP") : <span>Pick a start date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setstartDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </>
           }
 
           {
             BookingHours === "more" && <>
               <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant={"outline"}
-          className={cn(
-            "w-[280px] justify-start text-left font-normal",
-            !endDate && "text-muted-foreground"
-          )}
-        >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {endDate ? format(endDate, "PPP") : <span>Pick an end date</span>}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0">
-        <Calendar
-          mode="single"
-          selected={endDate}
-          onSelect={setEndDate}
-          initialFocus
-        />
-      </PopoverContent>
-    </Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-[280px] justify-start text-left font-normal",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "PPP") : <span>Pick an end date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </>
           }
 
           {
-          !user.isAdmin.includes("farmer") && fetchingFarmers ?
-                  <p>Getting all farmers list</p>
-                  :
-                  allFarmers.length === 0 ?
-                    <p>No farmers are available</p>
-                    :
-                    <div className="space-y-1">
-                      <Label htmlFor="phonrnumber">Farmer name</Label>
-                      <div className="w-full space-y-2">
-                        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              // aria-expanded={popoverOpen}
-                              className="w-full justify-between"
-                            >
-                              {farmerName
-                                ? allFarmers.find((country) => `${country.user.first_name} ${country.user.middle_name ? country.user.middle_name : ''} ${country.user.last_name}` === farmerName) && farmerName
-                                : "Select farmer..."}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-full p-0">
-                            <Command>
-                              <CommandInput placeholder="Search country..." />
-                              <CommandList>
-                                <CommandEmpty>No farmer found.</CommandEmpty>
-                                <CommandGroup className='w-full'>
-                                  {allFarmers.map((country) => {
-                                    const name = `${country.user.first_name} ${country.user.middle_name ? country.user.middle_name : ''} ${country.user.last_name}` 
-                                    return (
-                                    <CommandItem
-                                      key={country.id}
-                                      value={country.id}
-                                      onSelect={(currentValue) => {
-                                        setFarmerName(name)
-                                        setFarmerId(country.id)
-                                        setPopoverOpen(false)
-                                      }}
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-2 h-4 w-4",
-                                          countryName === name ? "opacity-100" : "opacity-0"
-                                        )}
-                                      />
-                                      {name}
-                                    </CommandItem>
-                                  )})}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </div>
+            !user.isAdmin.includes("farmer") && fetchingFarmers ?
+              <p>Getting all farmers list</p>
+              :
+              allFarmers.length === 0 ?
+                <p>No farmers are available</p>
+                :
+                <div className="space-y-1">
+                  <Label htmlFor="phonrnumber">Farmer name</Label>
+                  <div className="w-full space-y-2">
+                    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          // aria-expanded={popoverOpen}
+                          className="w-full justify-between"
+                        >
+                          {farmerName
+                            ? allFarmers.find((country) => `${country.user.first_name} ${country.user.middle_name ? country.user.middle_name : ''} ${country.user.last_name}` === farmerName) && farmerName
+                            : "Select farmer..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput placeholder="Search country..." />
+                          <CommandList>
+                            <CommandEmpty>No farmer found.</CommandEmpty>
+                            <CommandGroup className='w-full'>
+                              {allFarmers.map((country) => {
+                                const name = `${country.user.first_name} ${country.user.middle_name ? country.user.middle_name : ''} ${country.user.last_name}`
+                                return (
+                                  <CommandItem
+                                    key={country.id}
+                                    value={country.id}
+                                    onSelect={(currentValue) => {
+                                      setFarmerName(name)
+                                      setFarmerId(country.id)
+                                      setPopoverOpen(false)
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        countryName === name ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    {name}
+                                  </CommandItem>
+                                )
+                              })}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
           }
 
           <Button
@@ -506,46 +530,6 @@ const StoreBooking = () => {
           <Card>
 
             <CardContent className="space-y-2 py-2">
-              <div className="space-y-1">
-                <Label htmlFor="location_name">Address line 1</Label>
-                <Input
-                  id="location_name"
-                  placeholder='e.g - st mary hiighway'
-                  value={roadName}
-                  onChange={e => { setRoadName(e.target.value) }} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="location_address">Address line 2</Label>
-                <Input
-                  id="location_address"
-                  placeholder='e.g - st mary hiighway'
-                  value={address}
-                  onChange={e => { setAddress(e.target.value) }} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="location_city">City</Label>
-                <Input
-                  id="location_city"
-                  placeholder='e.g - New york'
-                  value={city}
-                  onChange={e => { setCity(e.target.value) }} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="location_state">State</Label>
-                <Input
-                  id="location_state"
-                  placeholder='e.g - Odisha'
-                  value={state}
-                  onChange={e => { setState(e.target.value) }} />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="location_zip_code">Zip code</Label>
-                <Input
-                  id="location_zip_code"
-                  placeholder='e.g - 757020'
-                  value={zipCode}
-                  onChange={e => { setZipCode(e.target.value) }} />
-              </div>
               {
                 fetchingContry ?
                   <CircularProgress />
@@ -601,6 +585,110 @@ const StoreBooking = () => {
                         </Popover>
                       </div>
                     </div>
+              }
+              {
+                countryName &&
+                <div className="space-y-1">
+                  <Label htmlFor="location_city">City</Label>
+                  {
+                    fetchingCity ?
+                      <p>Fetching cities</p>
+                      :
+                      city.length === 0 ?
+                        <p>No cities are available for this country</p>
+                        :
+                        <div className="w-full space-y-2">
+                          <Popover open={popoverOpenCity} onOpenChange={setPopoverOpenCity}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                // aria-expanded={popoverOpen}
+                                className="w-full justify-between"
+                              >
+                                {city
+                                  ? allcity.find((cityDetails) => cityDetails.name === city) && city
+                                  : "Select city..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Search country..." />
+                                <CommandList>
+                                  <CommandEmpty>No city found.</CommandEmpty>
+                                  <CommandGroup className='w-full'>
+                                    {allcity.map((cityDetails) => (
+                                      <CommandItem
+                                        key={cityDetails.name}
+                                        value={cityDetails.name}
+                                        onSelect={(currentValue) => {
+                                          setCity(cityDetails.name)
+                                          setPopoverOpenCity(false)
+                                        }}
+                                        className={`${countryName !== cityDetails.country.name && "hidden"}`}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            city === cityDetails.name ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        {cityDetails.name}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                  }
+                </div>
+              }
+              {
+                city &&
+                <div className="space-y-1">
+                  <Label htmlFor="location_zip_code">Zip code</Label>
+                  <Input
+                    id="location_zip_code"
+                    placeholder='e.g - 757020'
+                    value={zipCode}
+                    onChange={e => { setZipCode(e.target.value) }} />
+                </div>
+              }
+              {
+                city &&
+                <div className="space-y-1">
+                  <Label htmlFor="location_name">Address line 1</Label>
+                  <Input
+                    id="location_name"
+                    placeholder='e.g - st mary hiighway'
+                    value={roadName}
+                    onChange={e => { setRoadName(e.target.value) }} />
+                </div>
+              }
+              {
+                city &&
+                <div className="space-y-1">
+                  <Label htmlFor="location_address">Address line 2</Label>
+                  <Input
+                    id="location_address"
+                    placeholder='e.g - st mary hiighway'
+                    value={address}
+                    onChange={e => { setAddress(e.target.value) }} />
+                </div>
+              }
+              {
+                city &&
+                <div className="space-y-1">
+                  <Label htmlFor="location_state">State</Label>
+                  <Input
+                    id="location_state"
+                    placeholder='e.g - Odisha'
+                    value={state}
+                    onChange={e => { setState(e.target.value) }} />
+                </div>
               }
             </CardContent>
 
@@ -806,9 +894,9 @@ const StoreBooking = () => {
       </Dialog>
 
       <Dialog
-      open={stepFive} onOpenChange={setStepFive}>
+        open={stepFive} onOpenChange={setStepFive}>
 
-<DialogContent
+        <DialogContent
           className="bg-white max-h-[90vh] overflow-auto"
           style={{ scrollbarWidth: "none" }}
         >
@@ -825,58 +913,58 @@ const StoreBooking = () => {
             {
               booking && <div className="w-full">
 
-<p className="text-base font-medium text-center">
-              Booking Id: {booking.id}
-            </p>
-
-            <p>
-              From {formatDateToDDMMYYYY(booking.start_date)}
-            </p>
-
-            <p>
-              {
-                booking.booking_hours && booking.booking_hours === BookingHours ?
-                <p>
-                  {booking.end_date && `To ${formatDateToDDMMYYYY(booking.end_date)}`}
+                <p className="text-base font-medium text-center">
+                  Booking Id: {booking.id}
                 </p>
-                :
-                `Total duration: ${booking.booking_hours}`
-              }
-            </p>
 
-            <p>
-              Attachment cost: {booking.total_attachment_cost}
-              Tractor cost: {booking.total_tractor_cost}
-              Service charge: {booking.total_service_charge}
-              Total tax: {booking.total_tax}
-              Total distance cost: {booking.total_distance_cost}
-              Total cost: {booking.total_cost}
-            </p>
+                <p>
+                  From {formatDateToDDMMYYYY(booking.start_date)}
+                </p>
 
-            <p>
-              Total distance: {booking.distance}
-            </p>
+                <p>
+                  {
+                    booking.booking_hours && booking.booking_hours === BookingHours ?
+                      <p>
+                        {booking.end_date && `To ${formatDateToDDMMYYYY(booking.end_date)}`}
+                      </p>
+                      :
+                      `Total duration: ${booking.booking_hours}`
+                  }
+                </p>
 
-            <div
-            className="w-full flex items-center justify-center gap-4 flex-wrap">
-              <Button
-              className="bg-green-400"
-              onClick={userBookingConfirm}>
-                Confirm
-              </Button>
-              <Button
-              className="bg-red-400"
-              onClick={()=>{setStepFive(false)}}>
-                Cancel
-              </Button>
-            </div>
+                <p>
+                  Attachment cost: {booking.total_attachment_cost}
+                  Tractor cost: {booking.total_tractor_cost}
+                  Service charge: {booking.total_service_charge}
+                  Total tax: {booking.total_tax}
+                  Total distance cost: {booking.total_distance_cost}
+                  Total cost: {booking.total_cost}
+                </p>
+
+                <p>
+                  Total distance: {booking.distance}
+                </p>
+
+                <div
+                  className="w-full flex items-center justify-center gap-4 flex-wrap">
+                  <Button
+                    className="bg-green-400"
+                    onClick={userBookingConfirm}>
+                    Confirm
+                  </Button>
+                  <Button
+                    className="bg-red-400"
+                    onClick={() => { setStepFive(false) }}>
+                    Cancel
+                  </Button>
+                </div>
 
               </div>
             }
 
-            </div>
+          </div>
 
-            </DialogContent>
+        </DialogContent>
 
       </Dialog>
     </div>

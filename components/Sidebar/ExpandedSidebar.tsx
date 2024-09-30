@@ -469,13 +469,13 @@ const ExpandedSidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        en: "Notifications",
-        es: "Notificaciones",
-        ay: "Yatiyaña",
-        qu: "Rimaykunap",
-        gn: "Aviso",
+        en: "Logs",
+        es: "",
+        ay: "",
+        qu: "",
+        gn: "",
       }),
-      route: "#",
+      route: "/Logs",
     },
   ];
 

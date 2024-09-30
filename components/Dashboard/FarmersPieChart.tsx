@@ -24,9 +24,9 @@ export const description = "A donut chart with text"
 function FarmersPieChart({maleCount, femaleCount, otherCount}:{maleCount: number; femaleCount: number; otherCount: number}) {
 
   const chartData = [
-    { browser: "chrome", visitors: maleCount, fill: "var(--color-chrome)" },
-    { browser: "safari", visitors: femaleCount, fill: "var(--color-safari)" },
-    { browser: "other", visitors: otherCount, fill: "var(--color-other)" },
+    { browser: "chrome", visitors: maleCount ?? 0, fill: "var(--color-chrome)" },
+    { browser: "safari", visitors: femaleCount ?? 0, fill: "var(--color-safari)" },
+    { browser: "other", visitors: otherCount ?? 0, fill: "var(--color-other)" },
   ]
   
   const chartConfig = {
@@ -107,14 +107,6 @@ function FarmersPieChart({maleCount, femaleCount, otherCount}:{maleCount: number
           </PieChart>
         </ChartContainer>
       </CardContent>
-      <CardFooter className="flex-col gap-2 text-sm">
-        <div className="flex items-center gap-2 font-medium leading-none">
-          Trending up by 5.2% this month <TrendingUp className="h-4 w-4" />
-        </div>
-        <div className="leading-none text-muted-foreground">
-          Showing total visitors for the last 6 months
-        </div>
-      </CardFooter>
     </Card>
   )
 }

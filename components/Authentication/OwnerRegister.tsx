@@ -41,6 +41,7 @@ import { uploadFileToS3 } from '@/utils/AWS/FileUpload'
 import { useCookie } from 'next-cookie'
 import { useRouter } from 'next/navigation'
 import { Separator } from '../ui/separator'
+import countryData from './CountryCodeRoles'
 
 const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => {
     const [open, setOpen] = useState(false)
@@ -272,6 +273,9 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                 .then((res) => {
                     if (res.status === 201 && res.data.access_token) {
                         successMessage("Created successfully")
+                        setTimeout(() => {
+                            router.back()
+                        }, 3000);
                     }
                 })
                 .catch((err) => {
@@ -569,7 +573,8 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                                                             placeholder='e.g - 12345678'
                                                             type='tel'
                                                             value={agnumber}
-                                                            onChange={e => { setagNumber(e.target.value) }} />
+                                                            onChange={e => { setagNumber(e.target.value) }}
+                                                            maxLength={countryData.find(c=>c.code === agnewCountry)?.phoneLength} />
                                                     </div>
                                                 </div>
                                     }

@@ -42,6 +42,7 @@ import { useCookie } from 'next-cookie'
 import { useRouter } from 'next/navigation'
 import { Separator } from '../ui/separator'
 import AddIcon from '@mui/icons-material/Add';
+import countryData from './CountryCodeRoles'
 
 const AgentRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => {
     const [open, setOpen] = useState(false)
@@ -283,6 +284,10 @@ const AgentRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                     successMessage("User sign up successfully");
                     if (inPage) {
                         setTimeout(() => {
+                            router.back()
+                        }, 3000);
+                    } else {
+                        setTimeout(() => {
                             router.push("/login");
                         }, 3000);
                     }
@@ -523,7 +528,8 @@ const AgentRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                                                             placeholder='e.g - 12345678'
                                                             type='tel'
                                                             value={agnumber}
-                                                            onChange={e => { setagNumber(e.target.value) }} />
+                                                            onChange={e => { setagNumber(e.target.value) }}
+                                                            maxLength={countryData.find(c=>c.code === agnewCountry)?.phoneLength} />
                                                     </div>
                                                 </div>
                                     }

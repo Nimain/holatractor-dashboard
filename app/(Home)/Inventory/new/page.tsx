@@ -1,19 +1,25 @@
 "use client";
 
 import Menubar from "@/components/Menubar/Menubar";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { uploadFileToS3 } from "@/utils/AWS/FileUpload";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
+import { City } from "@/utils/Types/types";
 import { Backdrop, Slider, SliderProps } from "@mui/material";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { useCookie } from "next-cookie";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 
 function valuetext(value: any) {
@@ -34,6 +40,10 @@ const NewInventory = () => {
   const [tractorType, setTractorType] = useState<string>("");
   const [dobDate, setDobDate] = useState<string | undefined>(undefined);
   const [value, setValue] = useState([20, 100000]);
+
+  const [fetchingCity, setFetchingCity] = useState(false);
+  const [allcity, setAllCity] = useState<City[]>([]);
+  const [popoverOpenCity, setPopoverOpenCity] = useState(false)
 
   // Location state variables
   const [city, setCity] = useState<string>("");
@@ -151,6 +161,25 @@ const NewInventory = () => {
     { name: "Quechua", locale: "qu" },
     { name: "Guarani", locale: "gn" },
   ];
+
+  function fetchAllCity() {
+    setFetchingCity(true);
+    renderInstance
+      .get("/city")
+      .then((res) => {
+        setAllCity(res.data);
+      })
+      .catch((err) => {
+        errorMessage("Error fetching cities");
+      })
+      .finally(() => {
+        setFetchingCity(false);
+      });
+  }
+
+  useEffect(()=>{
+    fetchAllCity()
+  },[])
 
   return (
     <div className="w-full py-10 px-4 flex flex-col gap-5 items-center">
@@ -286,14 +315,59 @@ const NewInventory = () => {
 
             <div className="space-y-2">
               <Label htmlFor="location_city">City</Label>
-              <Input
-                id="location_city"
-                className="w-full"
-                placeholder='e.g - Berlin'
-                value={city}
-                onChange={(e) => {
-                  setCity(e.target.value);
-                }} />
+                {
+                    fetchingCity ?
+                      <p>Fetching cities</p>
+                      :
+                      city.length === 0 ?
+                        <p>No cities are available for this country</p>
+                        :
+                        <div className="w-full space-y-2">
+                          <Popover open={popoverOpenCity} onOpenChange={setPopoverOpenCity}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                // aria-expanded={popoverOpen}
+                                className="w-full justify-between"
+                              >
+                                {city
+                                  ? allcity.find((cityDetails) => cityDetails.name === city) && city
+                                  : "Select city..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Search country..." />
+                                <CommandList>
+                                  <CommandEmpty>No city found.</CommandEmpty>
+                                  <CommandGroup className='w-full'>
+                                    {allcity.map((cityDetails) => (
+                                      <CommandItem
+                                        key={cityDetails.name}
+                                        value={cityDetails.name}
+                                        onSelect={(currentValue) => {
+                                          setCity(cityDetails.name)
+                                          setPopoverOpenCity(false)
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            city === cityDetails.name ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        {cityDetails.name}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+}
             </div>
 
             <div className="grid w-full gap-1.5">
