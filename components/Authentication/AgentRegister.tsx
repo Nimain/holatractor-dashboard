@@ -284,7 +284,7 @@ const AgentRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                     successMessage("User sign up successfully");
                     if (inPage) {
                         setTimeout(() => {
-                            router.back()
+                            router.push("/Dealer")
                         }, 3000);
                     } else {
                         setTimeout(() => {

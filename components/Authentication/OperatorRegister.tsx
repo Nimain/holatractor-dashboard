@@ -274,7 +274,7 @@ const OperatorRegister = ({ name, inPage }: { name: string; inPage: boolean; }) 
                     if (res.status === 201 && res.data.access_token) {
                         successMessage("Created successfully")
                         setTimeout(() => {
-                            router.back()
+                            router.push("/Operator")
                         }, 3000);
                     }
                 })
