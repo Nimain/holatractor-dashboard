@@ -118,7 +118,7 @@ const OperatorSection = () => {
 
                             {
                                 isSignUpCard ?
-                                    <OperatorRegister inPage={true} name={newOperatorName} />
+                                    <OperatorRegister inPage={true} nameOfOperator={newOperatorName} />
                                     :
                                     <Button
                                         name="Name_next_button"

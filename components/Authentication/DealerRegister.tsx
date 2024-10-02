@@ -257,6 +257,7 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
                         successMessage("Created successfully")
                         setTimeout(() => {
                             router.push("/Dealer")
+                            window.location.reload()
                         }, 3000);
                     }
                 })
@@ -476,6 +477,9 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
                                             id="email"
                                             placeholder='e.g - abc@example.com'
                                             value={agEmail}
+                                            autoComplete='new-email'
+                                            autoCorrect='off'
+                                            spellCheck='false'
                                             onChange={e => { setagEmail(e.target.value) }} />
                                     </div>
                                     {
@@ -536,6 +540,9 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
                                                             placeholder='e.g - 12345678'
                                                             type='tel'
                                                             value={agnumber}
+                                                            autoComplete='new-phone'
+                                                            autoCorrect='off'
+                                                            spellCheck='false'
                                                             onChange={e => { setagNumber(e.target.value) }}
                                                             maxLength={countryData.find(c=>c.code === agnewCountry)?.phoneLength} />
                                                     </div>
@@ -886,6 +893,9 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
                                                 id="location_zip_code"
                                                 placeholder='e.g - 757020'
                                                 value={location_zip_code}
+                                                autoComplete='new-zipcode'
+                                                autoCorrect='off'
+                                                spellCheck='false'
                                                 onChange={e => { set_location_zip_code(e.target.value) }} />
                                         </div>
                                     }
@@ -896,6 +906,9 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
                                                 id="location_name"
                                                 placeholder='e.g - st mary hiighway'
                                                 value={location_name}
+                                                autoComplete='new-address'
+                                                autoCorrect='off'
+                                                spellCheck='false'
                                                 onChange={e => { set_location_name(e.target.value) }} />
                                         </div>
                                     }
@@ -906,6 +919,9 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
                                                 id="location_address"
                                                 placeholder='e.g - st mary hiighway'
                                                 value={location_address}
+                                                autoComplete='new-address2'
+                                                autoCorrect='off'
+                                                spellCheck='false'
                                                 onChange={e => { set_location_address(e.target.value) }} />
                                         </div>
                                     }
@@ -919,6 +935,9 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
                                                 id="location_state"
                                                 placeholder='e.g - Odisha'
                                                 value={location_state}
+                                                autoComplete='new-state'
+                                                autoCorrect='off'
+                                                spellCheck='false'
                                                 onChange={e => { set_location_state(e.target.value) }} />
                                         </div>
                                     }
@@ -1013,6 +1032,9 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
                                             id="liscenceNumber"
                                             placeholder='e.g - es0012390'
                                             value={document_number}
+                                            autoComplete='new-liscence'
+                                            autoCorrect='off'
+                                            spellCheck='false'
                                             onChange={e => { set_document_number(e.target.value) }} />
                                     </div>
                                     <Popover open={expiry_date_false} onOpenChange={set_expiry_date_false}>

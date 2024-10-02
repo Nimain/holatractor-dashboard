@@ -4,11 +4,10 @@ import { useEffect, useState } from 'react'
 import {
     Dialog,
     DialogContent,
-    DialogHeader,
     DialogTrigger,
 } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card'
 import { Label } from '../ui/label'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -44,7 +43,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbSeparator } from 
 import AddIcon from '@mui/icons-material/Add';
 import countryData from './CountryCodeRoles'
 
-const OperatorRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => {
+const OperatorRegister = ({ nameOfOperator, inPage }: { nameOfOperator: string; inPage: boolean; }) => {
     const [open, setOpen] = useState(false)
     const [fetchingContry, setFetchingCountry] = useState(false);
     const [popoverOpen, setPopoverOpen] = useState(false)
@@ -200,7 +199,7 @@ const OperatorRegister = ({ name, inPage }: { name: string; inPage: boolean; }) 
             return
         }
 
-        const { firstName, middleName, lastName } = splitFullName(name);
+        const { firstName, middleName, lastName } = splitFullName(nameOfOperator);
         const encryptedPassword = CryptoJS.AES.encrypt(
             agPassword,
             "m4AfXfQ&1brl3LjQFYO"
@@ -272,10 +271,9 @@ const OperatorRegister = ({ name, inPage }: { name: string; inPage: boolean; }) 
                 })
                 .then((res) => {
                     if (res.status === 201 && res.data.access_token) {
-                        successMessage("Created successfully")
-                        setTimeout(() => {
-                            router.push("/Operator")
-                        }, 3000);
+                        successMessage("Operator created successfully")
+                        router.refresh()
+                        window.location.reload()
                     }
                 })
                 .catch((err) => {
@@ -417,7 +415,7 @@ const OperatorRegister = ({ name, inPage }: { name: string; inPage: boolean; }) 
                                             value="stepone"
                                             className='bg-transparent flex items-center px-0'>
                                             <Button
-                                                className={`bg-white hover:bg-transparent pl-1 pr-0 ${(name && agEmail && agPassword && agnewCountry && agnumber) ? "text-green-400" : "text-black"}`}>
+                                                className={`bg-white hover:bg-transparent pl-1 pr-0 ${(nameOfOperator && agEmail && agPassword && agnewCountry && agnumber) ? "text-green-400" : "text-black"}`}>
                                                 <AtSign />
                                             </Button>
                                         </TabsTrigger>
@@ -494,6 +492,9 @@ const OperatorRegister = ({ name, inPage }: { name: string; inPage: boolean; }) 
                                             id="email"
                                             placeholder='e.g - abc@example.com'
                                             value={agEmail}
+                                            autoComplete='new-email'
+                                            autoCorrect='off'
+                                            spellCheck="false"
                                             onChange={e => { setagEmail(e.target.value) }} />
                                     </div>
                                     {
@@ -550,12 +551,14 @@ const OperatorRegister = ({ name, inPage }: { name: string; inPage: boolean; }) 
                                                             </PopoverContent>
                                                         </Popover>
                                                         <Input
-                                                            id="phonrnumber"
                                                             placeholder='e.g - 12345678'
                                                             type='tel'
                                                             value={agnumber}
                                                             onChange={e => { setagNumber(e.target.value) }}
-                                                            maxLength={countryData.find(c=>c.code === agnewCountry)?.phoneLength} />
+                                                            autoComplete='new-phone'
+                                                            autoCorrect='off'
+                                                            spellCheck="false"
+                                                            maxLength={countryData.find(c => c.code === agnewCountry)?.phoneLength} />
                                                     </div>
                                                 </div>
                                     }
@@ -641,7 +644,7 @@ const OperatorRegister = ({ name, inPage }: { name: string; inPage: boolean; }) 
                                         {agImage ? (
                                             <Image
                                                 src={URL.createObjectURL(agImage)}
-                                                alt={name}
+                                                alt={nameOfOperator}
                                                 unoptimized={true}
                                                 className="w-52 aspect-square rounded-md object-cover"
                                                 width={200}
@@ -781,7 +784,7 @@ const OperatorRegister = ({ name, inPage }: { name: string; inPage: boolean; }) 
                         <TabsContent value="stepthree">
 
                             <Card>
-                            <CardContent className="space-y-2 py-2">
+                                <CardContent className="space-y-2 py-2">
                                     {
                                         fetchingContry ?
                                             <CircularProgress />
@@ -901,9 +904,11 @@ const OperatorRegister = ({ name, inPage }: { name: string; inPage: boolean; }) 
                                         location_city && <div className="space-y-1">
                                             <Label htmlFor="location_zip_code">Zip code</Label>
                                             <Input
-                                                id="location_zip_code"
                                                 placeholder='e.g - 757020'
                                                 value={location_zip_code}
+                                                autoComplete='new-zip_code'
+                                                autoCorrect='off'
+                                                spellCheck="false"
                                                 onChange={e => { set_location_zip_code(e.target.value) }} />
                                         </div>
                                     }
@@ -911,9 +916,11 @@ const OperatorRegister = ({ name, inPage }: { name: string; inPage: boolean; }) 
                                         location_city && <div className="space-y-1">
                                             <Label htmlFor="location_name">Address line 1</Label>
                                             <Input
-                                                id="location_name"
                                                 placeholder='e.g - st mary hiighway'
                                                 value={location_name}
+                                                autoComplete='new-address'
+                                                autoCorrect='off'
+                                                spellCheck="false"
                                                 onChange={e => { set_location_name(e.target.value) }} />
                                         </div>
                                     }
@@ -921,22 +928,23 @@ const OperatorRegister = ({ name, inPage }: { name: string; inPage: boolean; }) 
                                         location_city && <div className="space-y-1">
                                             <Label htmlFor="location_address">Address line 2</Label>
                                             <Input
-                                                id="location_address"
                                                 placeholder='e.g - st mary hiighway'
                                                 value={location_address}
+                                                autoComplete='new-address_2'
+                                                autoCorrect='off'
+                                                spellCheck="false"
                                                 onChange={e => { set_location_address(e.target.value) }} />
                                         </div>
                                     }
-
-
-
                                     {
                                         location_city && <div className="space-y-1">
                                             <Label htmlFor="location_state">State</Label>
                                             <Input
-                                                id="location_state"
                                                 placeholder='e.g - Odisha'
                                                 value={location_state}
+                                                autoComplete='new-state'
+                                                autoCorrect='off'
+                                                spellCheck="false"
                                                 onChange={e => { set_location_state(e.target.value) }} />
                                         </div>
                                     }
@@ -1030,6 +1038,9 @@ const OperatorRegister = ({ name, inPage }: { name: string; inPage: boolean; }) 
                                         <Input
                                             id="liscenceNumber"
                                             placeholder='e.g - es0012390'
+                                            autoComplete='new-liscence'
+                                            autoCorrect='off'
+                                            spellCheck="false"
                                             value={document_number}
                                             onChange={e => { set_document_number(e.target.value) }} />
                                     </div>
@@ -1076,7 +1087,7 @@ const OperatorRegister = ({ name, inPage }: { name: string; inPage: boolean; }) 
                                     </Popover>
                                 </CardContent>
                                 <CardFooter className='w-full flex items-center justify-between'>
-                                <TabsList className='w-full flex items-center justify-start bg-transparent'>
+                                    <TabsList className='w-full flex items-center justify-start bg-transparent'>
                                         <TabsTrigger
                                             value="stepthree"
                                             className='bg-transparent flex items-center px-0'>

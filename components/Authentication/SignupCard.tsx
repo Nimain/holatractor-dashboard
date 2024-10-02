@@ -43,7 +43,7 @@ const SignupCard = ({ name }: { name: string }) => {
                         <p className='text-lg font-medium whitespace-nowrap'>
                             Do you want to be an operator?
                         </p>
-                        <OperatorRegister name={name} inPage={false} />
+                        <OperatorRegister nameOfOperator={name} inPage={false} />
                     </div>
 
                     <div className='flex items-center gap-2'>
