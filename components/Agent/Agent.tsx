@@ -13,6 +13,7 @@ import { Input } from '../ui/input';
 import AgentRegister from '../Authentication/AgentRegister';
 import NullImage from "@/assets/AnimateIcons/Agent.svg"
 import Image from 'next/image';
+import AgentAction from './AgentAction';
 
 const AgentSection = () => {
     const [activeHover, setActiveHover] = useState('')
@@ -76,65 +77,65 @@ const AgentSection = () => {
         <div
             className='mt-[40px] text-[18px]'>
 
-<div className='mb-[20px] w-full flex items-center justify-between'>
+            <div className='mb-[20px] w-full flex items-center justify-between'>
 
-<p className='text-[22px] font-[600]'>
-    Total agents: {users.length}
-</p>
+                <p className='text-[22px] font-[600]'>
+                    Total agents: {users.length}
+                </p>
 
-<Dialog open={open} onOpenChange={setOpen}>
-    <DialogTrigger asChild>
-        <Button
-            name="Name_next_button"
-            onClick={() => {
-                setOpen(true)
-            }}
-        >
-            New agent
-        </Button>
-    </DialogTrigger>
+                <Dialog open={open} onOpenChange={setOpen}>
+                    <DialogTrigger asChild>
+                        <Button
+                            name="Name_next_button"
+                            onClick={() => {
+                                setOpen(true)
+                            }}
+                        >
+                            New agent
+                        </Button>
+                    </DialogTrigger>
 
-    <DialogContent
-        className="bg-white h-fit min-w-[400px] max-w-[400px] overflow-auto"
-        style={{ scrollbarWidth: "none" }}
-    >
-
-        <Label className='mb-2 text-lg font-medium'>
-            Name
-        </Label>
-
-        <Input
-            value={newAgentName}
-            onChange={e => { handleNameChage(e.target.value) }}
-            className='w-full' />
-
-        <DialogFooter>
-            <DialogClose asChild>
-                <Button onClick={() => { setOpen(false) }}>
-                    Cancel
-                </Button>
-            </DialogClose>
-
-            {
-                isSignUpCard ?
-                    <AgentRegister name={newAgentName} inPage={true} />
-                    :
-                    <Button
-                        name="Name_next_button"
-                        onClick={() => {
-                            errorMessage("Please give your name")
-                        }}
+                    <DialogContent
+                        className="bg-white h-fit min-w-[400px] max-w-[400px] overflow-auto"
+                        style={{ scrollbarWidth: "none" }}
                     >
-                        Next
-                    </Button>
-            }
-        </DialogFooter>
 
-    </DialogContent>
+                        <Label className='mb-2 text-lg font-medium'>
+                            Name
+                        </Label>
 
-</Dialog>
+                        <Input
+                            value={newAgentName}
+                            onChange={e => { handleNameChage(e.target.value) }}
+                            className='w-full' />
 
-</div>
+                        <DialogFooter>
+                            <DialogClose asChild>
+                                <Button onClick={() => { setOpen(false) }}>
+                                    Cancel
+                                </Button>
+                            </DialogClose>
+
+                            {
+                                isSignUpCard ?
+                                    <AgentRegister name={newAgentName} inPage={true} />
+                                    :
+                                    <Button
+                                        name="Name_next_button"
+                                        onClick={() => {
+                                            errorMessage("Please give your name")
+                                        }}
+                                    >
+                                        Next
+                                    </Button>
+                            }
+                        </DialogFooter>
+
+                    </DialogContent>
+
+                </Dialog>
+
+            </div>
 
             <div
                 className='text-[20px] font-[600] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer'>
@@ -268,61 +269,29 @@ const AgentSection = () => {
                         :
                         users.length === 0 ? <div className="w-full min-h-[80vh] h-full flex items-center justify-center">
                             <Image
-                            src={NullImage}
-                            alt="No image found"
-                            className="w-[400px] lg:w-[700px] h-auto object-cover"
-                            width={400}
-                            height={400}
-                            unoptimized={true} />
+                                src={NullImage}
+                                alt="No image found"
+                                className="w-[400px] lg:w-[700px] h-auto object-cover"
+                                width={400}
+                                height={400}
+                                unoptimized={true} />
                         </div> :
                             users.map((details, index) => {
                                 const name = `${details.user.first_name} ${details.user.middle_name ? details.user.middle_name + ' ' : ''}${details.user.last_name}`
                                 return (
                                     <div
-                                        className='text-[18px] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer hover:bg-white transition-all duration-500'
-                                        key={index}
                                         onMouseEnter={() => { setMailHover(index) }}
-                                        onMouseLeave={() => { setMailHover(-1) }}>
-
-                                        <p
-                                            className='w-[100px]'>
-                                            {index + 1}
-                                        </p>
-
-                                        <p className='w-[140px]'>
-                                            {name}
-                                        </p>
-
-                                        <p className={`transition ${index === mailHover ? 'w-fit' : 'w-[140px]'}`}>
-                                            {mailHover === index ? details.user.email : `${details.user.email.slice(0, 5)}...`}
-                                        </p>
-
-                                        <div className={`px-[10px] text-[14px] py-[6px] ${details.user.emailVerified ? 'text-[#3e875e]' : 'text-red-400'} bg-[#dfe4e2] text-center w-[140px] rounded-full`}>
-                                            {
-                                                details.user.emailVerified ?
-                                                    'Yes'
-                                                    :
-                                                    'No'
-                                            }
-                                        </div>
-
-                                        <p className={`px-[10px] text-[14px] py-[6px] ${details.user.emailVerified ? 'text-[#3e875e]' : 'text-red-400'} bg-[#dfe4e2] text-center w-[140px] rounded-full`}>
-                                            {
-                                                details.user.emailVerified ?
-                                                    'Active'
-                                                    :
-                                                    'Inactive'
-                                            }
-                                        </p>
-
-                                        <p className='w-[180px]'>
-                                            {mailHover === index ? formatDate(details.createdAt) : `${formatDate(details.createdAt).slice(0, 12)}...`}
-                                        </p>
-
-                                        <p className='w-[180px]'>
-                                            {mailHover === index ? formatDate(details.updatedAt) : `${formatDate(details.updatedAt).slice(0, 12)}...`}
-                                        </p>
-
+                                        onMouseLeave={() => { setMailHover(-1) }}
+                                        key={index}
+                                        className='w-full'>
+                                        <AgentAction
+                                            creatDate={formatDate(details.createdAt)}
+                                            email={details.user.email}
+                                            emailVerified={details.user.emailVerified}
+                                            index={index}
+                                            mailHover={mailHover}
+                                            name={name}
+                                            updateDate={formatDate(details.updatedAt)} />
                                     </div>
                                 )
                             })

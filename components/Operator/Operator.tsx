@@ -14,6 +14,7 @@ import OperatorRegister from '../Authentication/OperatorRegister';
 import Image from 'next/image';
 import NullImage from "@/assets/AnimateIcons/Operator.svg"
 import Link from 'next/link';
+import OperatorAction from './OperatorAction';
 
 const OperatorSection = () => {
     const [activeHover, setActiveHover] = useState('')
@@ -280,50 +281,20 @@ const OperatorSection = () => {
                                 const name = `${details.user.first_name} ${details.user.middle_name ? details.user.middle_name + ' ' : ''}${details.user.last_name}`
                                 return (
                                     <div
-                                        className='text-[18px] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer hover:bg-white transition-all duration-500'
                                         key={index}
                                         onMouseEnter={() => { setMailHover(index) }}
-                                        onMouseLeave={() => { setMailHover(-1) }}>
-
-                                        <p
-                                            className='w-[100px]'>
-                                            {index + 1}
-                                        </p>
-
-                                        <p className='w-[140px]'>
-                                            {name}
-                                        </p>
-
-                                        <p className={`transition ${index === mailHover ? 'w-fit' : 'w-[140px]'}`}>
-                                            {mailHover === index ? details.user.email : `${details.user.email.slice(0, 5)}...`}
-                                        </p>
-
-                                        <div className={`px-[10px] text-[14px] py-[6px] ${details.user.emailVerified ? 'text-[#3e875e]' : 'text-red-400'} bg-[#dfe4e2] text-center w-[140px] rounded-full`}>
-                                            {
-                                                details.user.emailVerified ?
-                                                    'Yes'
-                                                    :
-                                                    'No'
-                                            }
-                                        </div>
-
-                                        <p className={`px-[10px] text-[14px] py-[6px] ${details.user.emailVerified ? 'text-[#3e875e]' : 'text-red-400'} bg-[#dfe4e2] text-center w-[140px] rounded-full`}>
-                                            {
-                                                details.user.emailVerified ?
-                                                    'Active'
-                                                    :
-                                                    'Inactive'
-                                            }
-                                        </p>
-
-                                        <p className='w-[180px]'>
-                                            {mailHover === index ? formatDate(details.createdAt) : `${formatDate(details.createdAt).slice(0, 12)}...`}
-                                        </p>
-
-                                        <p className='w-[180px]'>
-                                            {mailHover === index ? formatDate(details.updatedAt) : `${formatDate(details.updatedAt).slice(0, 12)}...`}
-                                        </p>
-
+                                        onMouseLeave={() => { setMailHover(-1) }}
+                                        className='w-full'>
+                                        <OperatorAction
+                                            creatDate={formatDate(details.createdAt)}
+                                            email={details.user.email}
+                                            emailVerified={details.user.emailVerified}
+                                            index={index}
+                                            mailHover={mailHover}
+                                            name={name}
+                                            updateDate={formatDate(details.updatedAt)}
+                                            status={details.Status}
+                                            id={details.id} />
                                     </div>
                                 )
                             })

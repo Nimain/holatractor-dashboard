@@ -1,8 +1,10 @@
 import { ReactNode } from "react";
 import { Card, CardTitle } from "../ui/card";
+import Link from "next/link";
 
-function DetailBox({ count, heading, icon, bgcolorCode, textcolorCode }: { count: string; heading: string; icon: ReactNode; bgcolorCode: string; textcolorCode: string; }) {
+function DetailBox({ count, heading, icon, bgcolorCode, textcolorCode, href }: { count: string; heading: string; icon: ReactNode; bgcolorCode: string; textcolorCode: string; href: string; }) {
     return (
+        <Link href={href}>
         <Card className="bg-white w-full p-5 flex items-center gap-5">
 
             <div className={`p-2 aspect-square rounded-full ${bgcolorCode} ${textcolorCode}`}>
@@ -22,6 +24,7 @@ function DetailBox({ count, heading, icon, bgcolorCode, textcolorCode }: { count
         </div>
 
         </Card >
+        </Link>
     )
 }
 

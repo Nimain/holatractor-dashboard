@@ -286,9 +286,7 @@ const AgentRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                         router.refresh()
                         window.location.reload()
                     } else {
-                        setTimeout(() => {
-                            router.push("/login");
-                        }, 3000);
+                        router.push("/login")
                     }
                 }
             })
@@ -318,6 +316,93 @@ const AgentRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
             .finally(() => {
                 setLoading(false);
             });
+
+        inPage ?
+            renderInstance
+                .post("/agent", user, {
+                    headers: {
+                        Authorization: `Bearer ${access_token}`,
+                    },
+                })
+                .then((res) => {
+                    if (res.status === 201 && res.data.access_token) {
+
+                        successMessage("Agent created successfully");
+                        router.refresh()
+                        window.location.reload()
+                    }
+                })
+                .catch((err) => {
+                    if (
+                        err.response &&
+                        err.response.status === 409 &&
+                        err.response.data.message === "User already exists"
+                    ) {
+                        errorMessage("Email already taken");
+                    } else if (
+                        err.response &&
+                        err.response.status === 409 &&
+                        err.response.data.message === "Only admin users can create new users"
+                    ) {
+                        errorMessage("Only admin users can create new users");
+                    } else if (
+                        err.response &&
+                        err.response.status === 409 &&
+                        err.response.data.message === "Something went wrong"
+                    ) {
+                        errorMessage("Something went wrong");
+                    } else {
+                        errorMessage("Internal server error");
+                    }
+                })
+                .finally(() => {
+                    setLoading(false);
+                })
+            :
+            renderInstance
+                .post("/agent", user, {
+                    headers: {
+                        Authorization: `Bearer ${access_token}`,
+                    },
+                })
+                .then((res) => {
+                    if (res.status === 201 && res.data.access_token) {
+                        const expiryDate = new Date();
+                        expiryDate.setDate(expiryDate.getDate() + 1);
+
+                        // Set the cookie with the calculated expiry date
+                        cookie.remove("access_token", { path: "/" });
+
+                        successMessage("User sign up successfully");
+                        router.push("/login")
+                    }
+                })
+                .catch((err) => {
+                    if (
+                        err.response &&
+                        err.response.status === 409 &&
+                        err.response.data.message === "User already exists"
+                    ) {
+                        errorMessage("Email already taken");
+                    } else if (
+                        err.response &&
+                        err.response.status === 409 &&
+                        err.response.data.message === "Only admin users can create new users"
+                    ) {
+                        errorMessage("Only admin users can create new users");
+                    } else if (
+                        err.response &&
+                        err.response.status === 409 &&
+                        err.response.data.message === "Something went wrong"
+                    ) {
+                        errorMessage("Something went wrong");
+                    } else {
+                        errorMessage("Internal server error");
+                    }
+                })
+                .finally(() => {
+                    setLoading(false);
+                })
     }
 
     function fetchAllCity() {

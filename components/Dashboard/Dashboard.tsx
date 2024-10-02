@@ -53,25 +53,29 @@ const Dashboard = () => {
           heading={"Total Farmers"}
           icon={<Tractor />}
           bgcolorCode={"bg-green-200"}
-          textcolorCode={"text-green-800"} />
+          textcolorCode={"text-green-800"}
+          href={"#"} />
         <DetailBox
           count={loading ? "loading..." : `${userCounts?.agents}`}
           heading={"Total Agents"}
           icon={<Tractor />}
           bgcolorCode={"bg-purple-200"}
-          textcolorCode={"text-purple-800"} />
+          textcolorCode={"text-purple-800"}
+          href={"/Agent"} />
         <DetailBox
           count={loading ? "loading..." : `${userCounts?.operators}`}
           heading={"Total Operators"}
           icon={<Tractor />}
           bgcolorCode={"bg-red-200"}
-          textcolorCode={"text-red-800"} />
+          textcolorCode={"text-red-800"}
+          href={"/Operator"} />
         <DetailBox
           count={loading ? "loading..." : `${userCounts?.owners}`}
           heading={"Total Owners"}
           icon={<Tractor />}
           bgcolorCode={"bg-yellow-200"}
-          textcolorCode={"text-yellow-800"} />
+          textcolorCode={"text-yellow-800"}
+          href={"/Owner"} />
 
       </div>
 
