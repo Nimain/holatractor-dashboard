@@ -593,6 +593,13 @@ const AgentRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                                                 Password must be at least 8 characters long.
                                             </p>
                                         }
+                                        {
+                                            agConPassword && (agConPassword !== agPassword) &&
+                                            <p
+                                                className={`text-red-500`}>
+                                                Password and confirm password is not matching
+                                            </p>
+                                        }
                                     </div>
                                 </CardContent>
 

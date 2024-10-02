@@ -544,7 +544,7 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
                                                             autoCorrect='off'
                                                             spellCheck='false'
                                                             onChange={e => { setagNumber(e.target.value) }}
-                                                            maxLength={countryData.find(c=>c.code === agnewCountry)?.phoneLength} />
+                                                            maxLength={countryData.find(c => c.code === agnewCountry)?.phoneLength} />
                                                     </div>
                                                 </div>
                                     }
@@ -592,6 +592,13 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
                                                         <EyeOff />
                                                         :
                                                         <Eye />
+                                                }
+                                                {
+                                                    agConPassword && (agConPassword !== agPassword) &&
+                                                    <p
+                                                        className={`text-red-500`}>
+                                                        Password and confirm password is not matching
+                                                    </p>
                                                 }
                                             </div>
 
