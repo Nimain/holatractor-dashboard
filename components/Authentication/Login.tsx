@@ -49,13 +49,25 @@ const LogInPage = () => {
                 // Set the cookie with the calculated expiry date
                 cookie.set('access_token', res.data.access_token, { path: '/', expires: expiryDate });
                 cookie.set('user', user, { path: '/', expires: expiryDate });
+                cookie.set('isFarmer', res.data.isFarmer, { path: '/', expires: expiryDate });
+                cookie.set('isOperator', res.data.isOperator, { path: '/', expires: expiryDate });
+                cookie.set('isOwner', res.data.isOwner, { path: '/', expires: expiryDate });
 
                 successMessage("Log in successfull")
                 setEmail("")
                 setPassword("")
-                setTimeout(() => {
+                if (res.data.isFarmer) {
+                    router.push("/farmer")
+                }
+                else if (res.data.isOperator) {
+                    router.push("/operator")
+                }
+                else if (res.data.isOwner) {
+                    router.push("/owner")
+                }
+                else {
                     router.push("/")
-                }, 1000);
+                }
             }
         }).catch((err) => {
             if (err.response && err.response.status === 409 && err.response.data.message === "User not found") {

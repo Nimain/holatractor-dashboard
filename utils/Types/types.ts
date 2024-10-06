@@ -42,6 +42,13 @@ export interface User {
   LeaseDocument: LeaseDocument[];
   Dealer: Dealer[]
   DealerCreator: Dealer[]
+  Booking: Booking[]
+  Log: Logs[]
+  paymentSender: Payment[]
+  paymentReciever: Payment[]
+  BankAccount: BankAccount[]
+  PayPal: PayPal[]
+  UPI: UPI[]
 }
 
 export interface Role {
@@ -95,6 +102,10 @@ export interface Base {
   LeaseDocument: LeaseDocument[];
   Dealer: Dealer[];
   booking: Booking[];
+  Payment: Payment[]
+  BankAccount: BankAccount[]
+  PayPal: PayPal[]
+  UPI: UPI[]
 }
 
 export interface Module {
@@ -276,6 +287,7 @@ export interface Booking {
   attachments: BookingAttachment[];
   OperatorBookingJob: OperatorBookingJob[];
   user: User;
+  payment: Payment[]
 }
 
 export interface Inventory {
@@ -664,6 +676,122 @@ export interface Logs {
   details: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface OperatorAddStoreReuests {
+  id: string
+  operator_id: string
+  store_id: string
+  operator_response: ownerOperatorResponse
+  store_owner_response: ownerOperatorResponse
+  base_id: string
+  createdAt: Date
+  updatedAt: Date
+
+  store: Store
+  operator: Operator
+  base: Base
+}
+
+export interface Payment {
+  id: string;
+  booking_id: string
+  transactionType: TransactionType
+  transactionMethod: TransactionMethod
+  sender_id: string
+  recieptant_id: string
+  amount: number
+  status: PaymentStatus
+  screenshots: string[]
+  transaction_reference: string[]
+  base_id: string
+  bankAccount_id?: string
+  paypal_id?: string
+  upi_id?: string
+  rejecting_reasons: string[]
+  createdAt: Date;
+  updatedAt: Date;
+  sender: User
+  reciever: User
+  booking: Booking
+  BankAccount?: BankAccount
+  PayPal?: PayPal
+  UPI?: UPI
+  base: Base
+}
+
+export interface BankAccount {
+  id: string
+  ownerId: string
+  accountHolderName: string
+  bankName: string
+  accountNumber: string
+  swiftCode?: string
+  iban?: string
+  routingNumber?: string
+  branchCode?: string
+  currency: string
+  country: string
+  base_id: string
+
+  createdAt: Date
+  updatedAt: Date
+
+  owner: User
+  payments: Payment[]
+  base: Base
+}
+
+export interface PayPal {
+  id: string
+  email: string
+  ownerId: string
+  base_id: string
+
+  createdAt: Date
+  updatedAt: Date
+
+  owner: User
+  payments: Payment[]
+  base: Base
+}
+
+export interface UPI {
+  id: string
+  upi_id: string
+  ownerId: string
+  qr_code: string
+  base_id: string
+
+  createdAt: Date
+  updatedAt: Date
+
+  owner: User
+  payments: Payment[]
+  base: Base
+}
+
+export enum PaymentStatus {
+  NotGenerated,
+  FarmerPENDING,
+  FarmerCONFIRMED,
+  OwnerPending,
+  OwnerREJECTED,
+  COMPLETED,
+}
+
+export enum TransactionType {
+  Booking,
+  Maintainance,
+  Comission,
+  Dealer,
+}
+
+export enum TransactionMethod {
+  UPI,
+  PayPal,
+  Bank,
+  CoD,
 }
 
 export enum ownerOperatorResponse {

@@ -230,7 +230,7 @@ const CountrySection = () => {
                           <CommandItem
                             key={country}
                             value={country}
-                            onSelect={(currentValue) => {
+                            onSelect={(currentValue: string) => {
                               setNewCountry(country)
                               setPopoverOpen(false)
                             }}

@@ -594,7 +594,7 @@ const StoreBooking = () => {
                     fetchingCity ?
                       <p>Fetching cities</p>
                       :
-                      city.length === 0 ?
+                      allcity.length === 0 ?
                         <p>No cities are available for this country</p>
                         :
                         <div className="w-full space-y-2">
