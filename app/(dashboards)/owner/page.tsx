@@ -1,11 +1,12 @@
 "use client"
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { renderInstance } from '@/utils/Axios/RenderInstance'
 import { errorMessage } from '@/utils/Toastify/Messages'
-import { Owner } from '@/utils/Types/types'
+import { Booking, Owner } from '@/utils/Types/types'
 import { BarChartIcon, CalendarIcon, ClipboardListIcon, MapPinIcon, TractorIcon, UserIcon } from 'lucide-react'
 import { useCookie } from 'next-cookie'
 import Link from 'next/link'
@@ -17,32 +18,34 @@ const OwnerDashboardPage = () => {
   const [totalRejectedBookings, setTotalRejectedBookings] = useState(0)
   const [totalStores, setTotalStores] = useState(0)
   const [totalRatings, setTotalRatings] = useState(4.5)
+  const [bookings, setBookings] = useState<Booking[]>([])
 
   const { cookie } = useCookie()
   const user = cookie.get("user")
 
-  function fetchOwner(){
+  function fetchOwner() {
     setFetchingOwnerDetails(true)
 
     renderInstance.get(`/owner/${user.userId}`)
-    .then((res)=>{
-      setTotalCompletedBookings(res.data.totalCompletedBookings)
-      setTotalRejectedBookings(res.data.totalRejectedBookings)
-      setTotalStores(res.data.totalStores)
-    }).catch((err)=>{
-      errorMessage("Error fetching user detaild")
-    }).finally(()=>{
-      setFetchingOwnerDetails(false)
-    })
+      .then((res) => {
+        setTotalCompletedBookings(res.data.totalCompletedBookings)
+        setTotalRejectedBookings(res.data.totalRejectedBookings)
+        setTotalStores(res.data.totalStores)
+        setBookings(res.data.bookings)
+      }).catch((err) => {
+        errorMessage("Error fetching user detaild")
+      }).finally(() => {
+        setFetchingOwnerDetails(false)
+      })
   }
 
-  useEffect(()=>{
-    if(user){
+  useEffect(() => {
+    if (user) {
       fetchOwner()
     }
-  },[])
+  }, [])
 
-  if(fetchingOwnerDetails) return <p>Loading owner details</p>
+  if (fetchingOwnerDetails) return <p>Loading owner details</p>
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
@@ -50,7 +53,7 @@ const OwnerDashboardPage = () => {
           <Avatar className="h-20 w-20 mr-4">
             {
               user.image &&
-            <AvatarImage src={user.image} alt={`${user.name}`} />
+              <AvatarImage src={user.image} alt={`${user.name}`} />
             }
             <AvatarFallback>{user.name[0]}{user.name[1]}</AvatarFallback>
           </Avatar>
@@ -59,9 +62,9 @@ const OwnerDashboardPage = () => {
           </div>
         </div>
         <div className="flex items-center gap-6">
-        <Button asChild>
-          <Link href="/owner/stores">Stores</Link>
-        </Button>
+          <Button asChild>
+            <Link href="/owner/stores">Stores</Link>
+          </Button>
         </div>
       </div>
 
@@ -111,18 +114,30 @@ const OwnerDashboardPage = () => {
           </CardHeader>
           <CardContent>
             <ul className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <li key={i} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <TractorIcon className="h-6 w-6 mr-2 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Booking #{1000 + i}</p>
-                      <p className="text-sm text-muted-foreground">Tractor Model XYZ</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm">View</Button>
-                </li>
-              ))}
+              {
+                bookings.length === 0 ? <p>No bookings available</p>
+                :
+                bookings.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).map((booking, index) => {
+                  return (
+                    <li key={index} className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <TractorIcon className="h-6 w-6 mr-2 text-muted-foreground" />
+                        <div className='w-full'>
+                          <div className='w-full flex items-center justify-between'>
+                          <p className="font-medium">Booking #{`Hola_booking_${booking.id.slice(-4)}`}</p>
+                          <Badge className='bg-yellow-200 text-yellow-800'>
+                            <p className="text-sm">{booking.bookingStatus}</p>
+                          </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">Total tractors: ${booking.tractors.length}</p>
+                          <p className="text-sm text-muted-foreground">Total attachments: ${booking.attachments.length}</p>
+                        </div>
+                      </div>
+                      <Button variant="outline" size="sm">View</Button>
+                    </li>
+                  )
+                })
+              }
             </ul>
           </CardContent>
         </Card>

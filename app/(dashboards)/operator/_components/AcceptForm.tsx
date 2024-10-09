@@ -11,6 +11,7 @@ import { useParams } from 'next/navigation'
 import { renderInstance } from '@/utils/Axios/RenderInstance'
 import { CircularProgress } from '@mui/material'
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
+import { useCookie } from "next-cookie"
 
 export default function AcceptanceForm({ id, store_id }: { id: string, store_id: string }) {
   const [formData, setFormData] = useState({
@@ -22,6 +23,9 @@ export default function AcceptanceForm({ id, store_id }: { id: string, store_id:
   const [loading, setLoading] = useState(false)
 
   const { slug } = useParams()
+
+  const { cookie } = useCookie()
+  const access_token = cookie.get("access_token")
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -45,10 +49,14 @@ export default function AcceptanceForm({ id, store_id }: { id: string, store_id:
       note: formData.textArea,
       status: "Active",
       request_id: id
-    }).then(() => {
+    },{
+      headers: {
+          Authorization: `Bearer ${access_token}`,
+        }
+  }).then(() => {
       successMessage("Congratulations")
       window.location.reload()
-    }).catch(() => {
+    }).catch((error) => {
       errorMessage("Some error occurred")
     }).finally(() => {
       setLoading(false)

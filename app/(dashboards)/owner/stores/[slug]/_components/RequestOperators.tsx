@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { renderInstance } from '@/utils/Axios/RenderInstance'
-import { errorMessage } from '@/utils/Toastify/Messages'
+import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
 import { Operator } from '@/utils/Types/types'
 import { CircularProgress } from '@mui/material'
 import { useCookie } from 'next-cookie'
@@ -34,7 +34,8 @@ const RequestOperators = () => {
               }
         }).then(()=>{
             // Logic to fetch all request
-        }).catch(()=>{
+            successMessage("Requested")
+        }).catch((error)=>{
             errorMessage("Error in requesting")
         }).finally(()=>{
             setRequesting(false)

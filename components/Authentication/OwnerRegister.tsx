@@ -532,7 +532,6 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                                                                 <Button
                                                                     variant="outline"
                                                                     role="combobox"
-                                                                    // aria-expanded={popoverOpen}
                                                                     className="w-full justify-between"
                                                                 >
                                                                     {agnewCountry

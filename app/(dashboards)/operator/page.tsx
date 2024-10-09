@@ -1,11 +1,13 @@
 "use client"
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { renderInstance } from '@/utils/Axios/RenderInstance'
 import { errorMessage } from '@/utils/Toastify/Messages'
-import { Operator } from '@/utils/Types/types'
-import { MapPinIcon } from 'lucide-react'
+import { Booking, Operator } from '@/utils/Types/types'
+import { MapPinIcon, TractorIcon, UserIcon } from 'lucide-react'
 import { useCookie } from 'next-cookie'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
@@ -14,6 +16,7 @@ const OperatorDashboardPage = () => {
 
     const [operator, setOperator] = useState<Operator | null>(null)
     const [fetchingOperatorDetails, setFetchingOperatorDetails] = useState(false)
+    const [bookings, setBookings] = useState<Booking[]>([])
   
     const { cookie } = useCookie()
     const user = cookie.get("user")
@@ -24,6 +27,7 @@ const OperatorDashboardPage = () => {
       renderInstance.get(`/operator/getOperator/${user.userId}`)
       .then((res)=>{
         setOperator(res.data.details)
+        setBookings(res.data.bookings)
       }).catch((err)=>{
         errorMessage("Error fetching user detaild")
       }).finally(()=>{
@@ -60,6 +64,65 @@ const OperatorDashboardPage = () => {
           <Link href={`/operator/${operator.id}`}>Bookings</Link>
         </Button>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Bookings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-4">
+            {
+                bookings.length === 0 ? <p>No bookings available</p>
+                :
+                bookings.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).map((booking, index) => {
+                  return (
+                    <li key={index} className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <TractorIcon className="h-6 w-6 mr-2 text-muted-foreground" />
+                        <div className='w-full'>
+                          <div className='w-full flex items-center justify-between'>
+                          <p className="font-medium">Booking #{`Hola_booking_${booking.id.slice(-4)}`}</p>
+                          <Badge className='bg-yellow-200 text-yellow-800'>
+                            <p className="text-sm">{booking.bookingStatus}</p>
+                          </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">Total tractors: ${booking.tractors.length}</p>
+                          <p className="text-sm text-muted-foreground">Total attachments: ${booking.attachments.length}</p>
+                        </div>
+                      </div>
+                      <Button variant="outline" size="sm">View</Button>
+                    </li>
+                  )
+                })
+              }
+            </ul>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Your Profile</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              <li className="flex items-center">
+                <UserIcon className="h-5 w-5 mr-2 text-muted-foreground" />
+                <span className="text-sm">{user.name}</span>
+              </li>
+              <li className="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-muted-foreground" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                  <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                </svg>
+                <span className="text-sm">{user.email}</span>
+              </li>
+            </ul>
+            <Button className="w-full mt-4" variant="outline" asChild>
+              <Link href="/profile">Edit Profile</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

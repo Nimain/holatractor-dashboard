@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input"
 import { DialogClose } from "@radix-ui/react-dialog"
 import { CircularProgress } from "@mui/material"
 import { Switch } from "@/components/ui/switch"
+import OperatorRequests from "../_components/OperatorRequests"
 
 export default function Operator() {
 
@@ -206,6 +207,7 @@ export default function Operator() {
     return (
         <div className="container mx-auto p-4">
             <h1 className="text-2xl font-bold mb-6">Operator Dashboard</h1>
+            <OperatorRequests />
             <Tabs defaultValue="ongoing">
                 <TabsList className="mb-4">
                     <TabsTrigger value="ongoing">Ongoing</TabsTrigger>

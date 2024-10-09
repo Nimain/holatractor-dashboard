@@ -7,9 +7,10 @@ import { CalendarIcon, MapPinIcon, TractorIcon, ClipboardListIcon, UserIcon, Bar
 import Link from "next/link"
 import { useCookie } from "next-cookie"
 import { useEffect, useState } from "react"
-import { Farmer } from "@/utils/Types/types"
+import { Booking, Farmer } from "@/utils/Types/types"
 import { renderInstance } from "@/utils/Axios/RenderInstance"
 import { errorMessage } from "@/utils/Toastify/Messages"
+import { Badge } from "@/components/ui/badge"
 
 const FarmerDashboard = () => {
 
@@ -19,6 +20,7 @@ const FarmerDashboard = () => {
   const [totalUnpaid, settotalUnpaid] = useState<number>(0)
   const [completedBookings, setcompletedBookings] = useState<number>(0)
   const [totalBookings, settotalBookings] = useState<number>(0)
+  const [bookings, setBookings] = useState<Booking[]>([])
 
   const { cookie } = useCookie()
   const user = cookie.get("user")
@@ -33,6 +35,7 @@ const FarmerDashboard = () => {
       settotalUnpaid(res.data.totalUnpaid)
       setcompletedBookings(res.data.completedBookings)
       settotalBookings(res.data.totalBookings)
+      setBookings(res.data.bookings)
     }).catch((err)=>{
       errorMessage("Error fetching user detaild")
     }).finally(()=>{
@@ -123,18 +126,30 @@ const FarmerDashboard = () => {
           </CardHeader>
           <CardContent>
             <ul className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <li key={i} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <TractorIcon className="h-6 w-6 mr-2 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Booking #{1000 + i}</p>
-                      <p className="text-sm text-muted-foreground">Tractor Model XYZ</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm">View</Button>
-                </li>
-              ))}
+            {
+                bookings.length === 0 ? <p>No bookings available</p>
+                :
+                bookings.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).map((booking, index) => {
+                  return (
+                    <li key={index} className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <TractorIcon className="h-6 w-6 mr-2 text-muted-foreground" />
+                        <div className='w-full'>
+                          <div className='w-full flex items-center justify-between'>
+                          <p className="font-medium">Booking #{`Hola_booking_${booking.id.slice(-4)}`}</p>
+                          <Badge className='bg-yellow-200 text-yellow-800'>
+                            <p className="text-sm">{booking.bookingStatus}</p>
+                          </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">Total tractors: ${booking.tractors.length}</p>
+                          <p className="text-sm text-muted-foreground">Total attachments: ${booking.attachments.length}</p>
+                        </div>
+                      </div>
+                      <Button variant="outline" size="sm">View</Button>
+                    </li>
+                  )
+                })
+              }
             </ul>
           </CardContent>
         </Card>

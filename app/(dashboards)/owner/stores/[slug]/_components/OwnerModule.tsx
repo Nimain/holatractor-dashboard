@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useCookie } from 'next-cookie'
-import { Booking, BookingStatus, OperatorInStore, Store } from '@/utils/Types/types'
+import { Booking, BookingStatus, OperatorInStore, PaymentStatus, Store } from '@/utils/Types/types'
 import { renderInstance } from '@/utils/Axios/RenderInstance'
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import Image from 'next/image'
 import RequestOperators from './RequestOperators'
 import PaymentMethods from './BankAccountSelect'
+import PaymentReview from './PaymentProofAction'
 
 const OwnerModule = () => {
 
@@ -23,6 +24,7 @@ const OwnerModule = () => {
   const [fetchingStoreDetails, setFetchingStoreDetails] = useState(false)
 
   const [getBookingsOfAStore, setGetBookingsOfAStore] = useState<Booking[]>([])
+  const [filteredPaymentBookings, setfilteredPaymentBookings] = useState<Booking[]>([])
   const [allOperators, setAllOperators] = useState<OperatorInStore[]>([])
   const [fetchingBookings, setFetchingBookings] = useState(false)
   const [fetchingOperators, setFetchingOperators] = useState(false)
@@ -55,6 +57,7 @@ const OwnerModule = () => {
     renderInstance.get(`/booking/${slug}/bookings`)
       .then((res) => {
         setGetBookingsOfAStore(res.data)
+        setfilteredPaymentBookings(res.data.filter((request: Booking)=>(request.payment.length >=1)))
       }).catch((err) => {
         errorMessage("Some error occurred in fetching bookings")
       }).finally(() => {
@@ -87,7 +90,6 @@ const OwnerModule = () => {
       },
     }).then((res) => {
       successMessage("Operator assigned")
-      console.log(res)
       setIsAssignOpen(false)
     }).catch((error) => {
       errorMessage("Some error occurred while assigning")
@@ -124,6 +126,8 @@ const OwnerModule = () => {
 
   if (fetchingStoreDetails) return <p>Getting store details</p>
 
+  console.log(filteredPaymentBookings)
+  
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
@@ -139,6 +143,7 @@ const OwnerModule = () => {
               <TabsTrigger value="not_seen">Not Seen</TabsTrigger>
               <TabsTrigger value="rejected">Rejected</TabsTrigger>
               <TabsTrigger value="accepted">Accepted</TabsTrigger>
+              <TabsTrigger value="review">Review Payments</TabsTrigger>
             </TabsList>
             <TabsContent value={"not_seen"}>
               {
@@ -211,7 +216,7 @@ const OwnerModule = () => {
                       <p>No open requests available</p>
                       :
                       getBookingsOfAStore
-                        .filter((request) => (request.owner_confirm && request.confirm && request.bookingStatus === BookingStatus.Open))
+                        .filter((request) => (request.owner_confirm && request.confirm))
                         .map((request) => (
                           <Card key={request.id} className="drop-shadow-md">
                             <CardHeader>
@@ -223,6 +228,8 @@ const OwnerModule = () => {
                               {/* <p>Location: {request.location}</p> */}
                             </CardContent>
                             <CardFooter className="flex justify-end space-x-2">
+                            {
+                            request.bookingStatus === BookingStatus.Open &&
                               <Button
                                 onClick={() => {
                                   setSelectedRequest(request.id)
@@ -231,6 +238,40 @@ const OwnerModule = () => {
                               >
                                 Assign Operator
                               </Button>
+                            }
+                            </CardFooter>
+                          </Card>
+                        ))}
+                  </div>
+              }
+            </TabsContent>
+            <TabsContent value={"review"}>
+              {
+                fetchingBookings ? <p>Getting all the bookings</p>
+                  :
+                  
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {filteredPaymentBookings
+                      .filter((request) => (`${request.payment[0].status}` === "FarmerCONFIRMED")).length === 0 ?
+                      <p>There is nothing to review</p>
+                      :
+                      filteredPaymentBookings
+                        .filter((request) => (request.owner_confirm && request.confirm && `${request.payment[0].status}` === "FarmerCONFIRMED"))
+                        .map((request) => (
+                          <Card key={request.id} className="drop-shadow-md">
+                            <CardHeader>
+                              <CardTitle>{`${request.user.first_name} ${request.user.middle_name ?? ""} ${request.user.last_name}`}</CardTitle>
+                              <Badge className="w-fit">{`${request.payment[0].status}`}</Badge>
+                            </CardHeader>
+                            <CardContent>
+                              <p>Total Cost: ${request.total_cost}</p>
+                              {/* <p>Location: {request.location}</p> */}
+                            </CardContent>
+                            <CardFooter className="flex justify-end space-x-2">
+                              <PaymentReview
+                              referenceNumber={request.payment[0].transaction_reference[request.payment[0].transaction_reference.length - 1]}
+                              screenshotUrl={request.payment[0].screenshots[request.payment[0].screenshots.length - 1]}
+                              paymentId={request.payment[0].id} />
                             </CardFooter>
                           </Card>
                         ))}

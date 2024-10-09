@@ -50,7 +50,7 @@ export default function PaymentMethods({ bookingId }: { bookingId: string }) {
 
     function fetchBankAccounts() {
         setFetchingBankAccounts(true)
-        renderInstance.get(`/bank_account`, {
+        renderInstance.get(`/bank-account`, {
             headers: {
                 Authorization: `Bearer ${access_token}`,
             },
@@ -104,13 +104,23 @@ export default function PaymentMethods({ bookingId }: { bookingId: string }) {
             errorMessage("Pleasen select a payment method")
             return
         }
+        let isPaypal = allPaypalIds.includes(selectedMethod) ? selectedMethod : ""
+        let isBank = allBankIds.includes(selectedMethod) ? selectedMethod : ""
+        let isUpi = allUPIIds.includes(selectedMethod) ? selectedMethod : ""
+        if(!isPaypal && !isBank && !isUpi){
+            errorMessage("Please select an account")
+            return
+        }
         setConfirming(true)
         // Implement accept logic here
+        const ownerConfirmBodyData = {
+            TransactionMethod: isBank ? "Bank" : isPaypal ? "PayPal" : isUpi && "UPI",
+            bank_account_id: isBank,
+            paypal_id: isPaypal,
+            upi_id: isUpi,
+        }
         renderInstance.patch(`/booking/${id}/owner_confirm`, {
-            TransactionMethod: allBankIds.includes(selectedMethod) ? TransactionMethod.Bank : allPaypalIds.includes(selectedMethod) ? TransactionMethod.PayPal : TransactionMethod.UPI,
-            bank_account_id: allBankIds.includes(selectedMethod) ? selectedMethod : "",
-            paypal_id: allPaypalIds.includes(selectedMethod) ? selectedMethod : "",
-            upi_id: allUPIIds.includes(selectedMethod) ? selectedMethod : "",
+            ...ownerConfirmBodyData
         }, {
             headers: {
                 Authorization: `Bearer ${access_token}`,

@@ -12,6 +12,10 @@ import { renderInstance } from '@/utils/Axios/RenderInstance'
 import { useCookie } from 'next-cookie'
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
 import { CircularProgress } from '@mui/material'
+import { Input } from '@/components/ui/input'
+import Image from 'next/image'
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
+import PaymentUpload from '../_components/UploadPaymentProof'
 
 const FarmerBookingHistory = () => {
   const [bookings, setBookings] = useState<Booking[]>([])
@@ -43,11 +47,11 @@ const FarmerBookingHistory = () => {
 
   const startedBookings = bookings.filter((booking)=> (booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped))
 
-  const unpaidBookings = bookings.filter((booking)=> ((booking.bookingStatus === BookingStatus.Finished) && (booking.payment[0].status === PaymentStatus.FarmerPENDING) || (booking.bookingStatus === BookingStatus.Finished) && (booking.payment[0].status === PaymentStatus.OwnerREJECTED)))
+  const unpaidBookings = bookings.filter((booking)=> (((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED"))))
 
-  const reviewBookings = bookings.filter((booking)=> (booking.bookingStatus === BookingStatus.Finished) && (booking.payment[0].status === PaymentStatus.FarmerCONFIRMED))
+  const reviewBookings = bookings.filter((booking)=> (booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerCONFIRMED"))
 
-  const completedBookings = bookings.filter((booking)=> (booking.bookingStatus === BookingStatus.Finished) && (booking.payment[0].status === PaymentStatus.COMPLETED))
+  const completedBookings = bookings.filter((booking)=> (booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
 
   function userBookingConfirm(booking_id: string) {
     setBookingConfirm(true)
@@ -331,6 +335,7 @@ const FarmerBookingHistory = () => {
         <TabsContent value={"unpaid"} className="w-full">
           {
             unpaidBookings.map((booking, i) => {
+              const status = `${booking.payment[0].status}`
               return (
                 <Card className="w-full max-w-sm" key={i}>
                   <CardHeader>
@@ -338,7 +343,7 @@ const FarmerBookingHistory = () => {
                       <CardTitle className="text-lg font-semibold">id: {`Hola-${i + 1}-${booking.id.slice(-6)}`}</CardTitle>
                       <Badge className={'bg-yellow-100 text-yellow-800'}>
                         {
-                          booking.payment[0].status === PaymentStatus.FarmerPENDING ?
+                          status === "FarmerPENDING" ?
                           "payment required"
                           :
                           "owner rejected"
@@ -400,7 +405,36 @@ const FarmerBookingHistory = () => {
                     </div>
                   </CardContent>
                   <CardFooter className="flex justify-between">
+                  <Dialog>
+                  <DialogTrigger asChild>
                     <Button variant="outline" size="sm">View Details</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        {
+                          booking.payment[0].BankAccount && <BankAccountForm
+                          username={booking.payment[0].BankAccount.accountHolderName}
+                          bankname={booking.payment[0].BankAccount.bankName}
+                          accnum={booking.payment[0].BankAccount.accountNumber}
+                          branchCode={booking.payment[0].BankAccount.branchCode ??    ""}
+                          country={booking.payment[0].BankAccount.country}
+                          currency={booking.payment[0].BankAccount.currency}
+                          iban={booking.payment[0].BankAccount.iban ??    ""}
+                          routingnum={booking.payment[0].BankAccount.routingNumber ??    ""}
+                          swiftcode={booking.payment[0].BankAccount.swiftCode ??    ""} />
+                        }
+                        {
+                          booking.payment[0].PayPal && <PayPalForm
+                          email={booking.payment[0].PayPal.email} />
+                        }
+                        {
+                          booking.payment[0].UPI && <UPIForm
+                          upiId={booking.payment[0].UPI.upi_id ?? ""}
+                          upi={booking.payment[0].UPI.qr_code}
+                           />
+                        }
+                    </DialogContent>
+                    </Dialog>
+                    <PaymentUpload paymentId={booking.payment[0].id} />
                   </CardFooter>
                 </Card>
               )
@@ -635,3 +669,41 @@ const FarmerBookingHistory = () => {
 }
 
 export default FarmerBookingHistory
+
+function BankAccountForm({username, bankname, accnum, swiftcode, iban, routingnum, branchCode, currency, country}:{username: string, bankname: string, accnum: string, swiftcode: string, iban: string, routingnum: string, branchCode: string, currency: string, country: string}) {
+
+  return (
+      <div className="space-y-4">
+          <Input name="accountHolderName" placeholder="Account Holder Name" value={username} readOnly={true} />
+          <Input name="bankName" placeholder="Bank Name" value={bankname} readOnly={true} />
+          <Input name="accountNumber" placeholder="Account Number" value={accnum} readOnly={true} />
+          <Input name="swiftCode" placeholder="SWIFT Code" value={swiftcode} readOnly={true} />
+          <Input name="iban" placeholder="IBAN" value={iban} readOnly={true} />
+          <Input name="routingNumber" placeholder="Routing Number" value={routingnum} readOnly={true} />
+          <Input name="branchCode" placeholder="Branch Code" value={branchCode} readOnly={true} />
+          <Input name="currency" placeholder="currency" value={currency} readOnly={true} />
+          <Input name="country" placeholder="Country" value={country} readOnly={true} />
+      </div>
+  )
+}
+
+function PayPalForm({email}:{email: string}) {
+
+  return (
+      <div className="space-y-4">
+          <Input type="email" placeholder="PayPal Email" value={email} readOnly={true} />
+      </div>
+  )
+}
+
+function UPIForm({upiId, upi}: {upiId: string, upi: string}) {
+
+  return (
+      <div className="space-y-4">
+          <Input placeholder="UPI ID" value={upiId} readOnly={true} />
+          <div className="flex items-center space-x-2">
+              <Image src={upi} alt={upiId} width={400} height={400} unoptimized={true} className='rounded' />
+          </div>
+      </div>
+  )
+}

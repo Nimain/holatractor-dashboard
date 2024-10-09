@@ -34,7 +34,7 @@ const OperatorRequests = () => {
   return (
     <Dialog>
         <DialogTrigger asChild>
-            <Button asChild>
+            <Button>
                 Store requests
             </Button>
         </DialogTrigger>
