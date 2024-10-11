@@ -131,13 +131,13 @@ const FarmerDashboard = () => {
                 :
                 bookings.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).map((booking, index) => {
                   return (
-                    <li key={index} className="flex items-center justify-between">
+                    <li key={index} className={`${index > 1 ? "hidden" : "flex"} items-center justify-between`}>
                       <div className="flex items-center">
                         <TractorIcon className="h-6 w-6 mr-2 text-muted-foreground" />
                         <div className='w-full'>
-                          <div className='w-full flex items-center justify-between'>
+                          <div className='w-full flex items-center justify-betweenn flex-wrap gap-1'>
                           <p className="font-medium">Booking #{`Hola_booking_${booking.id.slice(-4)}`}</p>
-                          <Badge className='bg-yellow-200 text-yellow-800'>
+                          <Badge className='bg-yellow-200 text-yellow-800 hover:text-yellow-900 hover:bg-yellow-300'>
                             <p className="text-sm">{booking.bookingStatus}</p>
                           </Badge>
                           </div>
