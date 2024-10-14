@@ -157,7 +157,7 @@ const OwnerModule = () => {
                       getBookingsOfAStore
                         .filter((request) => (!request.owner_confirm && request.confirm && request.bookingStatus === BookingStatus.Open))
                         .map((request) => {
-                          if (confirming) return <CircularProgress />
+                          if (confirming) return <CircularProgress key={request.id} />
                           return (
                             <Card key={request.id} className="drop-shadow-md">
                               <CardHeader>
@@ -298,7 +298,7 @@ const OwnerModule = () => {
                   :
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {allOperators.map((operator: OperatorInStore) => {
-                      if (assigning) return <CircularProgress />
+                      if (assigning) return <CircularProgress key={operator.id} />
                       return (
                         <Card key={operator.id}>
                           <CardHeader>

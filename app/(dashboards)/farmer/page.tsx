@@ -12,6 +12,13 @@ import { renderInstance } from "@/utils/Axios/RenderInstance"
 import { errorMessage } from "@/utils/Toastify/Messages"
 import { Badge } from "@/components/ui/badge"
 
+interface user {
+  userId: string;
+  image: string;
+  name: string;
+  email: string;
+}
+
 const FarmerDashboard = () => {
 
   const [farmer, setFarmer] = useState<Farmer | null>(null)
@@ -23,7 +30,7 @@ const FarmerDashboard = () => {
   const [bookings, setBookings] = useState<Booking[]>([])
 
   const { cookie } = useCookie()
-  const user = cookie.get("user")
+  const user: user = cookie.get("user")
 
   function fetchFarmer(){
     setFetchingFarmerDetails(true)
@@ -50,6 +57,8 @@ const FarmerDashboard = () => {
   },[])
 
   if(fetchingFarmerDetails) return <p>Loading farmer details</p>
+
+  if(!user) return <p>user not found</p>
 
   return (
     <div className="container mx-auto px-4 py-8">

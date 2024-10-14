@@ -12,6 +12,13 @@ import { useCookie } from 'next-cookie'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 
+interface user {
+  userId: string;
+  image: string;
+  name: string;
+  email: string;
+}
+
 const OwnerDashboardPage = () => {
   const [fetchingOwnerDetails, setFetchingOwnerDetails] = useState(false)
   const [totalCompletedBookings, setTotalCompletedBookings] = useState(0)
@@ -21,7 +28,7 @@ const OwnerDashboardPage = () => {
   const [bookings, setBookings] = useState<Booking[]>([])
 
   const { cookie } = useCookie()
-  const user = cookie.get("user")
+  const user: user = cookie.get("user")
 
   function fetchOwner() {
     setFetchingOwnerDetails(true)
@@ -46,6 +53,9 @@ const OwnerDashboardPage = () => {
   }, [])
 
   if (fetchingOwnerDetails) return <p>Loading owner details</p>
+
+  if(!user) return <p>user not found</p>
+  
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">

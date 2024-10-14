@@ -40,5 +40,5 @@ export function middleware(req: NextRequest) {
 
 // Define which paths should use this middleware
 export const config = {
-  matcher: ['/((?!login|register|_next|static|favicon.ico).*)'], // Exclude login, register, and static paths
+  matcher: ['/((?!login|register|create_admin|_next|static|favicon.ico).*)'], // Exclude login, register, and static paths
 };

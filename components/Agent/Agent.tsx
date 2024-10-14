@@ -291,7 +291,9 @@ const AgentSection = () => {
                                             index={index}
                                             mailHover={mailHover}
                                             name={name}
-                                            updateDate={formatDate(details.updatedAt)} />
+                                            updateDate={formatDate(details.updatedAt)}
+                                            status={details.status}
+                                            id={details.id} />
                                     </div>
                                 )
                             })

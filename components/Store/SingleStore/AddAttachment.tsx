@@ -196,7 +196,7 @@ if(tractor_id) fetchAllAttachments(tractor_id)
           tractor_id ? (
             allAttachmentsSelected.map((details, index) => {
               if(fetchingAttachments) return (
-                <p>
+                <p key={index}>
                   Fetching all attachments of this inventory
                 </p>
               )

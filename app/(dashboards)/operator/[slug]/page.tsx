@@ -230,7 +230,7 @@ export default function Operator() {
                                             .map((details, i) => {
                                                 const name = `${details.booking.user.first_name} ${details.booking.user.middle_name ?? ""} ${details.booking.user.last_name}`
                                                 const location = `${details.booking.location.address ?? ""}, ${details.booking.location.city}, ${details.booking.location.name ?? ""}, ${details.booking.location.state ?? ""} , ${details.booking.location.country}, ${details.booking.location.zip_code}`
-                                                if (updateStatusBookingCode === details.booking_id) return <CircularProgress />
+                                                if (updateStatusBookingCode === details.booking_id) return <CircularProgress key={i} />
                                                 return (
                                                     <Card key={i} className="mb-4">
                                                         <CardHeader>
@@ -336,7 +336,7 @@ export default function Operator() {
                                             .map((details, i) => {
                                                 const name = `${details.booking.user.first_name} ${details.booking.user.middle_name ?? ""} ${details.booking.user.last_name}`
                                                 const location = `${details.booking.location.address ?? ""}, ${details.booking.location.city}, ${details.booking.location.name ?? ""}, ${details.booking.location.state ?? ""} , ${details.booking.location.country}, ${details.booking.location.zip_code}`
-                                                if (rejectingRequests) return <CircularProgress />
+                                                if (rejectingRequests) return <CircularProgress key={i} />
                                                 return (
                                                     <Card key={i} className="mb-4">
                                                         <CardHeader>
@@ -401,7 +401,7 @@ export default function Operator() {
                                             .map((details, i) => {
                                                 const name = `${details.booking.user.first_name} ${details.booking.user.middle_name ?? ""} ${details.booking.user.last_name}`
                                                 const location = `${details.booking.location.address ?? ""}, ${details.booking.location.city}, ${details.booking.location.name ?? ""}, ${details.booking.location.state ?? ""} , ${details.booking.location.country}, ${details.booking.location.zip_code}`
-                                                if (rejectingRequests) return <CircularProgress />
+                                                if (rejectingRequests) return <CircularProgress key={i} />
                                                 return (
                                                     <Card key={i} className="mb-4">
                                                         <CardHeader>
