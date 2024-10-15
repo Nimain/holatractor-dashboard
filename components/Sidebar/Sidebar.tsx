@@ -2,7 +2,7 @@
 
 import { RootState } from "@/redux/store";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import ExpandedSidebar from "./ExpandedSidebar";
 
@@ -52,6 +52,8 @@ type Translations = {
 const Sidebar = () => {
   const [activeLeftSIdeTag, setActiveLeftSideTag] = useState("Dashboard");
 
+  const sectionRef = useRef<HTMLDivElement>(null)
+
   const pathname = usePathname();
 
   const { sidebarShow, activeMenu: LeftSideSctiveItem } = useSelector(
@@ -97,6 +99,26 @@ const Sidebar = () => {
       setActiveLeftSideTag(pathMap[activeTag]);
     }
   }, [pathname]);
+
+  
+
+  useEffect(() => {
+    const handleScroll = (e: WheelEvent) => {
+      const target = e.currentTarget as HTMLDivElement
+      target.scrollTop += e.deltaY
+    }
+
+    const section = sectionRef.current
+    if (section) {
+      section.addEventListener('wheel', handleScroll)
+    }
+
+    return () => {
+      if (section) {
+        section.removeEventListener('wheel', handleScroll)
+      }
+    }
+  }, [])
 
   const topLeftSideList = [
     {
@@ -614,9 +636,13 @@ const Sidebar = () => {
 
   return (
     <div
-      className={`w-[36px] p-[10px] transition-all duration-500 box-content bg-[#ededed]`}
+      className={`w-[36px] p-[10px] h-screen overflow-auto transition-all duration-500 box-content bg-[#ededed]`}
+      ref={sectionRef}
+      style={{
+        scrollbarWidth: "none"
+      }}
     >
-      <div className={`w-full transition-all duration-500 box-content bg-[#ededed] h-fit min-h-screen ${sidebarShow ? "hidden" : "flex flex-col gap-[20px]"}`}>
+      <div className={`w-full transition-all duration-500 box-content bg-[#ededed] ${sidebarShow ? "hidden" : "flex flex-col gap-[20px]"}`}>
       <Image
         alt="Logo"
         src={LOGO}

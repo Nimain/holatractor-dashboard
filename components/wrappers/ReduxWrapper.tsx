@@ -11,7 +11,7 @@ const ReduxWrapper = ({ children }: { children: ReactNode }) => {
 
   return (
     <Provider store={store}>
-        <ToastContainer />
+      <ToastContainer />
       <SidebarWrapper>
         {children}
       </SidebarWrapper>

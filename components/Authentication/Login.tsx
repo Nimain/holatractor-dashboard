@@ -90,7 +90,7 @@ const LogInPage = () => {
         <div className='w-full min-h-[100vh] max-h-fit flex items-center justify-center text-[18px]'>
 
             <Image
-                src={"https://wallpapercave.com/wp/wp10547889.jpg"}
+                src={"https://holadashboard.s3.us-west-2.amazonaws.com/tract.webp"}
                 alt='Sign_In_page_right_image'
                 className='w-1/2 min-h-[100vh] object-cover hidden 900px:block'
                 width={400}

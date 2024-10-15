@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import LOGO from "@/assets/traclog.png";
 import Image from "next/image";
@@ -54,6 +54,8 @@ const ExpandedSidebar = () => {
   const [settingShow, setSettingShow] = useState(false)
   const [userShow, setUserShow] = useState(false)
 
+  const sectionRef = useRef<HTMLDivElement>(null)
+
   const pathname = usePathname();
 
   const dispatch = useDispatch();
@@ -102,6 +104,24 @@ const ExpandedSidebar = () => {
       dispatch(updateActiveMenu(pathMap[activeTag])); // Dispatch action to update the store
     }
   }, [pathname, activeLeftSIdeTag, dispatch]);
+
+  useEffect(() => {
+    const handleScroll = (e: WheelEvent) => {
+      const target = e.currentTarget as HTMLDivElement
+      target.scrollTop += e.deltaY
+    }
+
+    const section = sectionRef.current
+    if (section) {
+      section.addEventListener('wheel', handleScroll)
+    }
+
+    return () => {
+      if (section) {
+        section.removeEventListener('wheel', handleScroll)
+      }
+    }
+  }, [])
 
   const topLeftSideList = [
     {
@@ -619,7 +639,11 @@ const ExpandedSidebar = () => {
 
   return (
     <motion.div
-      className={`w-[200px] p-5 flex flex-col gap-[20px] box-content bg-[#ededed] h-fit min-h-screen transition-all duration-500 absolute ${sidebarShow ? "translate-x-0" : "-translate-x-full"} top-0 z-10`}
+      className={`w-[200px] p-5 flex flex-col gap-[20px] box-content bg-[#ededed] h-screen transition-all duration-500 absolute ${sidebarShow ? "translate-x-0" : "-translate-x-full"} top-0 z-10 overflow-auto`}
+      ref={sectionRef}
+      style={{
+        scrollbarWidth: "none"
+      }}
     >
       {/* <p className='text-primaryColor hidden text-[20px] font-[600] w-full 1200px:flex items-center justify-center'>
                 Holatractor
@@ -642,15 +666,15 @@ const ExpandedSidebar = () => {
               href={`${listItem.route}`}
               key={index}
               className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${LeftSideSctiveItem === listItem.name
-                  ? "bg-[#d5ebd6]"
-                  : "hover:bg-gray-200"
+                ? "bg-[#d5ebd6]"
+                : "hover:bg-gray-200"
                 } drop-shadow-md rounded transition-all duration-500 relative`}
             >
               {listItem.icon}
               <span
                 className={`${LeftSideSctiveItem === listItem.name
-                    ? "text-black"
-                    : "text-gray-600"
+                  ? "text-black"
+                  : "text-gray-600"
                   }`}
               >
                 {listItem.name}
@@ -671,10 +695,10 @@ const ExpandedSidebar = () => {
 
           <div onClick={() => { setUserShow(pre => !pre) }}>
             {
-              userShow ? 
-              <ChevronDown className="rotate-180 transition-all duration-500" /> 
-              : 
-              <ChevronDown className="rotate-0 transition-all duration-500" />
+              userShow ?
+                <ChevronDown className="rotate-180 transition-all duration-500" />
+                :
+                <ChevronDown className="rotate-0 transition-all duration-500" />
             }
           </div>
 
@@ -687,15 +711,15 @@ const ExpandedSidebar = () => {
                 href={`${listItem.route}`}
                 key={index}
                 className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${LeftSideSctiveItem === listItem.name
-                    ? "bg-[#d5ebd6]"
-                    : "hover:bg-gray-200"
+                  ? "bg-[#d5ebd6]"
+                  : "hover:bg-gray-200"
                   } drop-shadow-md rounded transition-all duration-500 relative`}
               >
                 {listItem.icon}
                 <span
                   className={`${LeftSideSctiveItem === listItem.name
-                      ? "text-black"
-                      : "text-gray-600"
+                    ? "text-black"
+                    : "text-gray-600"
                     }`}
                 >
                   {listItem.name}
@@ -709,19 +733,19 @@ const ExpandedSidebar = () => {
       <div className="w-full h-[2px] bg-gray-300 rounded-full" />
 
       <div>
-        
+
         <div className="flex items-center justify-between">
 
-        <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
-          {translations[locale]?.bookings || translations.en.bookings}
-        </p>
+          <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
+            {translations[locale]?.bookings || translations.en.bookings}
+          </p>
 
           <div onClick={() => { setBookingShow(pre => !pre) }}>
             {
-              bookingShow ? 
-              <ChevronDown className="rotate-180 transition-all duration-500" /> 
-              : 
-              <ChevronDown className="rotate-0 transition-all duration-500" />
+              bookingShow ?
+                <ChevronDown className="rotate-180 transition-all duration-500" />
+                :
+                <ChevronDown className="rotate-0 transition-all duration-500" />
             }
           </div>
 
@@ -734,15 +758,15 @@ const ExpandedSidebar = () => {
                 href={`${listItem.route}`}
                 key={index}
                 className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${LeftSideSctiveItem === listItem.name
-                    ? "bg-[#d5ebd6]"
-                    : "hover:bg-gray-200"
+                  ? "bg-[#d5ebd6]"
+                  : "hover:bg-gray-200"
                   } drop-shadow-md rounded transition-all duration-500 relative`}
               >
                 {listItem.icon}
                 <span
                   className={`${LeftSideSctiveItem === listItem.name
-                      ? "text-black"
-                      : "text-gray-600"
+                    ? "text-black"
+                    : "text-gray-600"
                     }`}
                 >
                   {listItem.name}
@@ -756,19 +780,19 @@ const ExpandedSidebar = () => {
       <div className="w-full h-[2px] bg-gray-300 rounded-full" />
 
       <div>
-        
+
         <div className="flex items-center justify-between">
 
-        <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
-          {translations[locale]?.inventory || translations.en.inventory}
-        </p>
+          <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
+            {translations[locale]?.inventory || translations.en.inventory}
+          </p>
 
           <div onClick={() => { setInventoryShow(pre => !pre) }}>
             {
-              inventoryShow ? 
-              <ChevronDown className="rotate-180 transition-all duration-500" /> 
-              : 
-              <ChevronDown className="rotate-0 transition-all duration-500" />
+              inventoryShow ?
+                <ChevronDown className="rotate-180 transition-all duration-500" />
+                :
+                <ChevronDown className="rotate-0 transition-all duration-500" />
             }
           </div>
 
@@ -781,15 +805,15 @@ const ExpandedSidebar = () => {
                 href={`${listItem.route}`}
                 key={index}
                 className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${LeftSideSctiveItem === listItem.name
-                    ? "bg-[#d5ebd6]"
-                    : "hover:bg-gray-200"
+                  ? "bg-[#d5ebd6]"
+                  : "hover:bg-gray-200"
                   } drop-shadow-md rounded transition-all duration-500 relative`}
               >
                 {listItem.icon}
                 <span
                   className={`${LeftSideSctiveItem === listItem.name
-                      ? "text-black"
-                      : "text-gray-600"
+                    ? "text-black"
+                    : "text-gray-600"
                     }`}
                 >
                   {listItem.name}
@@ -803,19 +827,19 @@ const ExpandedSidebar = () => {
       <div className="w-full h-[2px] bg-gray-300 rounded-full" />
 
       <div>
-        
+
         <div className="flex items-center justify-between">
 
-        <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
-          {translations[locale]?.billing || translations.en.billing}
-        </p>
+          <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
+            {translations[locale]?.billing || translations.en.billing}
+          </p>
 
           <div onClick={() => { setBillingShow(pre => !pre) }}>
             {
               billingShow ?
-              <ChevronDown className="rotate-180 transition-all duration-500" /> 
-              : 
-              <ChevronDown className="rotate-0 transition-all duration-500" />
+                <ChevronDown className="rotate-180 transition-all duration-500" />
+                :
+                <ChevronDown className="rotate-0 transition-all duration-500" />
             }
           </div>
 
@@ -828,15 +852,15 @@ const ExpandedSidebar = () => {
                 href={`${listItem.route}`}
                 key={index}
                 className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${LeftSideSctiveItem === listItem.name
-                    ? "bg-[#d5ebd6]"
-                    : "hover:bg-gray-200"
+                  ? "bg-[#d5ebd6]"
+                  : "hover:bg-gray-200"
                   } drop-shadow-md rounded transition-all duration-500 relative`}
               >
                 {listItem.icon}
                 <span
                   className={`${LeftSideSctiveItem === listItem.name
-                      ? "text-black"
-                      : "text-gray-600"
+                    ? "text-black"
+                    : "text-gray-600"
                     }`}
                 >
                   {listItem.name}
@@ -850,19 +874,19 @@ const ExpandedSidebar = () => {
       <div className="w-full h-[2px] bg-gray-300 rounded-full" />
 
       <div>
-        
+
         <div className="flex items-center justify-between">
 
-        <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
-          {translations[locale]?.settings || translations.en.settings}
-        </p>
+          <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
+            {translations[locale]?.settings || translations.en.settings}
+          </p>
 
           <div onClick={() => { setSettingShow(pre => !pre) }}>
             {
-              settingShow ? 
-              <ChevronDown className="rotate-180 transition-all duration-500" /> 
-              : 
-              <ChevronDown className="rotate-0 transition-all duration-500" />
+              settingShow ?
+                <ChevronDown className="rotate-180 transition-all duration-500" />
+                :
+                <ChevronDown className="rotate-0 transition-all duration-500" />
             }
           </div>
 
@@ -875,15 +899,15 @@ const ExpandedSidebar = () => {
                 href={`${listItem.route}`}
                 key={index}
                 className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${LeftSideSctiveItem === listItem.name
-                    ? "bg-[#d5ebd6]"
-                    : "hover:bg-gray-200"
+                  ? "bg-[#d5ebd6]"
+                  : "hover:bg-gray-200"
                   } drop-shadow-md rounded transition-all duration-500 relative`}
               >
                 {listItem.icon}
                 <span
                   className={`${LeftSideSctiveItem === listItem.name
-                      ? "text-black"
-                      : "text-gray-600"
+                    ? "text-black"
+                    : "text-gray-600"
                     }`}
                 >
                   {listItem.name}

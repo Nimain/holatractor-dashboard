@@ -127,6 +127,8 @@ const CitySection = () => {
     }).catch((err) => {
       errorMessage("Some error occurred")
     }).finally(() => {
+      fetchAllCountry();
+      setDeleteCountry(false);
       setBacOpen(false)
       refresh()
     })
