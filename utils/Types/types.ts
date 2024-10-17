@@ -49,6 +49,7 @@ export interface User {
   BankAccount: BankAccount[]
   PayPal: PayPal[]
   UPI: UPI[]
+  Subscriptions: Subscriptions[]
 }
 
 export interface Role {
@@ -778,6 +779,34 @@ export enum PaymentStatus {
   OwnerPending,
   OwnerREJECTED,
   COMPLETED,
+}
+
+export interface Subscriptions {
+  id: string
+  name: string
+  created_by: string
+  type: SubscriptionType
+  actual_cost: number
+  discount_cost: number
+  features: string[]
+  focused_features: string[]
+  total_days: number
+  base_id: string
+  for_owner: boolean
+  for_dealer: boolean
+  createdAt: string
+  updatedAt: string
+  // OwnerSubscribed: OwnerSubscribed[]
+  creator:         User     
+  base:            Base        
+  // DealerSubscribed: DealerSubscribed[] 
+}
+
+export enum SubscriptionType {
+  Basic = "Basic",
+  Business = "Business",
+  Premium = "Premium",
+  Custom = "Custom"
 }
 
 export enum TransactionType {

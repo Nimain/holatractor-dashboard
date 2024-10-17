@@ -3,7 +3,7 @@
 import { uploadFileToS3 } from '@/utils/AWS/FileUpload';
 import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages';
-import { City, Country } from '@/utils/Types/types';
+import { City, Country, Subscriptions } from '@/utils/Types/types';
 import { format, setYear } from 'date-fns';
 import { useCookie } from 'next-cookie';
 import { useRouter } from 'next/navigation';
@@ -63,10 +63,29 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
     const [city, setCity] = useState<City[]>([]);
     const [popoverOpenCity, setPopoverOpenCity] = useState(false)
 
+    const [subscriptions, setSubscriptions] = useState<Subscriptions[]>([])
+    const [fetchSubscriptions, setFetchSubscriptions] = useState(false)
+    const [selectedPlan, setSelectedPlan] = useState<Subscriptions | null>(null)
+    const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
+
     const { cookie } = useCookie()
     const access_token = cookie.get("access_token");
 
     const router = useRouter()
+
+    const fetchAllSubscriptions = () => {
+        setFetchSubscriptions(true)
+        renderInstance.get("/subscription")
+            .then((res) => {
+                setSubscriptions(res.data)
+            }).finally(() => {
+                setFetchSubscriptions(false)
+            })
+    }
+
+    useEffect(() => {
+        fetchAllSubscriptions()
+    }, [])
 
     // Handle date selection with the chosen year
     const handleDateChange = (newDate: Date | undefined) => {
@@ -345,6 +364,18 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
             .finally(() => {
                 setFetchingCity(false);
             });
+    }
+
+    const handleSelectPlan = (subscription: Subscriptions) => {
+        setSelectedPlan(subscription)
+        setIsPaymentDialogOpen(true)
+    }
+
+    const handlePayment = (e: React.FormEvent) => {
+        e.preventDefault()
+        // Here you would typically handle the payment processing
+        console.log(`Processing payment for ${selectedPlan?.name}`)
+        setIsPaymentDialogOpen(false)
     }
 
     useEffect(() => {
