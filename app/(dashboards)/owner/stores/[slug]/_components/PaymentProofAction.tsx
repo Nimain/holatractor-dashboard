@@ -38,8 +38,18 @@ export default function PaymentReview({ screenshotUrl, referenceNumber, paymentI
     })
       .then((res) => {
         successMessage("Accepted")
-      }).catch(() => {
-        errorMessage("Error in accepting")
+      }).catch((err) => {
+        if (err.response && err.response.status === 404 && err.response.data.message === "Log in user not found") {
+          errorMessage("Log in user not found")
+        } else if (err.response && err.response.status === 404 && err.response.data.message === "Payment not found") {
+          errorMessage("Payment not found")
+        } else if (err.response && err.response.status === 409 && err.response.data.message === "You are not the correct reciever") {
+          errorMessage("You are not the correct reciever")
+        } else if (err.response && err.response.status === 400 && err.response.data.message === "Farmer has not confirmed this payment") {
+          errorMessage("Farmer has not confirmed this payment")
+        } else {
+          errorMessage("Error in accepting")
+        }
       }).finally(() => {
         setLoading(false)
       })

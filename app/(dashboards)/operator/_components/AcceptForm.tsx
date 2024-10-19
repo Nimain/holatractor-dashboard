@@ -56,8 +56,20 @@ export default function AcceptanceForm({ id, store_id }: { id: string, store_id:
   }).then(() => {
       successMessage("Congratulations")
       window.location.reload()
-    }).catch((error) => {
-      errorMessage("Some error occurred")
+    }).catch((err) => {
+      if (err.response && err.response.status === 404 && err.response.data.message === "User is not found") {
+        errorMessage("User not found")
+      } else if (err.response && err.response.status === 404 && err.response.data.message === "Request not found") {
+        errorMessage("Request not found")
+      } else if (err.response && err.response.status === 404 && err.response.data.message === "Operator not found") {
+        errorMessage("Operator not found")
+      } else if (err.response && err.response.status === 404 && err.response.data.message === "Store not found") {
+        errorMessage("Store not found")
+      } else if (err.response && err.response.status === 400 && err.response.data.message === "The operator and store hasn't make any request") {
+        errorMessage("The operator and store hasn't make any request")
+      } else {
+        errorMessage("Some error occurred")
+      }
     }).finally(() => {
       setLoading(false)
     })

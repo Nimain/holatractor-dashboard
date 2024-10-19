@@ -107,7 +107,7 @@ export default function PaymentMethods({ bookingId }: { bookingId: string }) {
         let isPaypal = allPaypalIds.includes(selectedMethod) ? selectedMethod : ""
         let isBank = allBankIds.includes(selectedMethod) ? selectedMethod : ""
         let isUpi = allUPIIds.includes(selectedMethod) ? selectedMethod : ""
-        if(!isPaypal && !isBank && !isUpi){
+        if (!isPaypal && !isBank && !isUpi) {
             errorMessage("Please select an account")
             return
         }
@@ -129,7 +129,25 @@ export default function PaymentMethods({ bookingId }: { bookingId: string }) {
             successMessage("Thank you for confirming. Now assign an operator")
             window.location.reload()
         }).catch((err) => {
-            errorMessage("Some error occurred")
+            if (err.response && err.response.status === 404) {
+                if(err.response.data.message === "Booking is not valid"){
+                    errorMessage("Booking is not valid")
+                } else if(err.response.data.message === "Bank account not found"){
+                    errorMessage("Bank account not found")
+                } else if(err.response.data.message === "Paypal details not found"){
+                    errorMessage("Paypal details not found")
+                } else if(err.response.data.message === "UPI details not found"){
+                    errorMessage("UPI details not found")
+                }
+            } else if (err.response && err.response.status === 400) {
+                if(err.response.data.message === "User has not confirmed the booking. Wait till user booked"){
+                    errorMessage("User has not confirmed the booking. Wait till user booked")
+                } else if(err.response.data.message === "You are not allowed to perform this task"){
+                    errorMessage("You are not allowed to perform this task")
+                }
+            } else {
+                errorMessage("Some error occurred")
+            }
         }).finally(() => {
             setConfirming(false)
         })

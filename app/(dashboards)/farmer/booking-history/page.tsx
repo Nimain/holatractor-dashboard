@@ -33,7 +33,11 @@ const FarmerBookingHistory = () => {
       .then((res) => {
         setBookings(res.data.bookings)
       }).catch((err) => {
-        errorMessage("Error fetching user detaild")
+        if (err.response && err.response.status === 404 && err.response.data.message === "Farmer not found") {
+          errorMessage("Farmer not found")
+        } else {
+          errorMessage("Error fetching user detaild")
+        }
       }).finally(() => {
         setFetchingFarmerDetails(false)
       })
@@ -63,7 +67,15 @@ const FarmerBookingHistory = () => {
       successMessage("Successfully booked")
       fetchFarmer()
     }).catch((err) => {
-      errorMessage("Some error occurred. Please try again...")
+      if (err.response && err.response.status === 404 && err.response.data.message === "Booking is not valid") {
+        errorMessage("Booking is not valid")
+    } else if (err.response && err.response.status === 400 && err.response.data.message === "Booking already confirm") {
+        successMessage("Successfully booked")
+    } else if (err.response && err.response.status === 400 && err.response.data.message === "You are not allowed to perform this task") {
+        successMessage("You are not allowed to perform this task")
+    } else {
+        errorMessage("Some error occurred. Please try again...")
+    }
     }).finally(() => { setBookingConfirm(false) })
   }
 

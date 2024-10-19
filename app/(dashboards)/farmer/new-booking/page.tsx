@@ -227,8 +227,15 @@ const NewBooking = () => {
                     router.push("/farmer")
                 }, 1000);
             }).catch((err) => {
-                console.log(err)
-                errorMessage("Some error occurred. Please try again...")
+                if (err.response && err.response.status === 404 && err.response.data.message === "Booking is not valid") {
+                    errorMessage("Booking is not valid")
+                } else if (err.response && err.response.status === 400 && err.response.data.message === "Booking already confirm") {
+                    successMessage("Successfully booked")
+                } else if (err.response && err.response.status === 400 && err.response.data.message === "You are not allowed to perform this task") {
+                    successMessage("You are not allowed to perform this task")
+                } else {
+                    errorMessage("Some error occurred. Please try again...")
+                }
             }).finally(() => { setBookingConfirm(false) })
         } else {
             errorMessage("Booking is not available")
@@ -290,8 +297,19 @@ const NewBooking = () => {
                 }
             })
             .catch((err) => {
-                errorMessage("Some error occurred");
-                console.log(err)
+                if (err.response && err.response.status === 400 && err.response.data.message === "Farmer not found") {
+                    errorMessage("Farmer not found")
+                } else if (err.response && err.response.status === 404 && err.response.data.message === "Log in user not found") {
+                    errorMessage("Log in user not found")
+                } else if (err.response && err.response.status === 404 && err.response.data.message === "Store not found") {
+                    errorMessage("Store not found")
+                } else if (err.response && err.response.status === 404 && err.response.data.message === "Attachment not present") {
+                    errorMessage("Attachment not available")
+                } else if (err.response && err.response.status === 404 && err.response.data.message === "Tractor not present") {
+                    errorMessage("Tractor not available")
+                } else {
+                    errorMessage("Some error occurred");
+                }
             })
             .finally(() => {
                 setLoading(false);
@@ -360,47 +378,47 @@ const NewBooking = () => {
                 }
                 return (
                     <Command className="w-full">
-      <CommandInput placeholder="Search store..." />
-      <CommandList className="bg-white rounded-xl p-6 relative overflow-auto h-[80vh] w-full">
-        <CommandEmpty>No store found.</CommandEmpty>
-        <CommandGroup className="w-full">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {allStores.map((details, index) => {
-              const name = details.agentOwner
-                ? `${details.agentOwner.user.first_name} ${details.agentOwner.user.middle_name ?? ""} ${details.agentOwner.user.last_name}`
-                : `${details.owner.user.first_name} ${details.owner.user.middle_name ?? ""} ${details.owner.user.last_name}`
-              return (
-                <CommandItem
-                  key={index}
-                  value={details.name}
-                  onSelect={() => set_store_id(details.id)}
-                  className="border-2 rounded-xl p-2 flex flex-col h-full"
-                >
-                  <div className="aspect-video w-full relative mb-2">
-                    <Image
-                      src={details.image || "https://wallpapercave.com/wp/wp13088808.jpg"}
-                      alt={`${details.name} image`}
-                      layout="fill"
-                      objectFit="cover"
-                      className="rounded-xl"
-                    />
-                  </div>
-                  <div className="flex flex-col flex-grow">
-                    <strong className="text-lg mb-1">{details.name}</strong>
-                    <p className="text-sm text-gray-600 mb-2 flex-grow">
-                      <strong>Description:</strong> {details.description}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      <strong>Owner:</strong> {name}
-                    </p>
-                  </div>
-                </CommandItem>
-              )
-            })}
-          </div>
-        </CommandGroup>
-      </CommandList>
-    </Command>
+                        <CommandInput placeholder="Search store..." />
+                        <CommandList className="bg-white rounded-xl p-6 relative overflow-auto h-[80vh] w-full">
+                            <CommandEmpty>No store found.</CommandEmpty>
+                            <CommandGroup className="w-full">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                    {allStores.map((details, index) => {
+                                        const name = details.agentOwner
+                                            ? `${details.agentOwner.user.first_name} ${details.agentOwner.user.middle_name ?? ""} ${details.agentOwner.user.last_name}`
+                                            : `${details.owner.user.first_name} ${details.owner.user.middle_name ?? ""} ${details.owner.user.last_name}`
+                                        return (
+                                            <CommandItem
+                                                key={index}
+                                                value={details.name}
+                                                onSelect={() => set_store_id(details.id)}
+                                                className="border-2 rounded-xl p-2 flex flex-col h-full"
+                                            >
+                                                <div className="aspect-video w-full relative mb-2">
+                                                    <Image
+                                                        src={details.image || "https://wallpapercave.com/wp/wp13088808.jpg"}
+                                                        alt={`${details.name} image`}
+                                                        layout="fill"
+                                                        objectFit="cover"
+                                                        className="rounded-xl"
+                                                    />
+                                                </div>
+                                                <div className="flex flex-col flex-grow">
+                                                    <strong className="text-lg mb-1">{details.name}</strong>
+                                                    <p className="text-sm text-gray-600 mb-2 flex-grow">
+                                                        <strong>Description:</strong> {details.description}
+                                                    </p>
+                                                    <p className="text-sm text-gray-600">
+                                                        <strong>Owner:</strong> {name}
+                                                    </p>
+                                                </div>
+                                            </CommandItem>
+                                        )
+                                    })}
+                                </div>
+                            </CommandGroup>
+                        </CommandList>
+                    </Command>
                 )
             case 1:
                 return (

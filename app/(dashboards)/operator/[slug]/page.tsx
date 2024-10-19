@@ -49,7 +49,11 @@ export default function Operator() {
             .then((res) => {
                 setRequests(res.data)
             }).catch((err) => {
-                errorMessage("Some error occurred while fetching requests")
+                if (err.response && err.response.status === 404 && err.response.data.message === "User not found") {
+                    errorMessage("User not found")
+                } else {
+                    errorMessage("Some error occurred while fetching requests")
+                }
             }).finally(() => {
                 setFetchingRequests(false)
             })
@@ -64,7 +68,11 @@ export default function Operator() {
         }).then((res) => {
             setCompletedJobs(res.data)
         }).catch((err) => {
-            errorMessage("Some error occurred while fetching requests")
+            if (err.response && err.response.status === 404 && err.response.data.message === "Operator not found") {
+                errorMessage("Operator not found")
+            } else {
+                errorMessage("Some error occurred while fetching requests")
+            }
         }).finally(() => {
             setFetchingCompletedJobs(false)
         })
@@ -79,8 +87,12 @@ export default function Operator() {
         }).then(() => {
             successMessage("Job rejected")
             handleFetchAllRequests()
-        }).catch(() => {
-            errorMessage("Error in rejecting request")
+        }).catch((err) => {
+            if (err.response && err.response.status === 404 && err.response.data.message === "Request is not valid") {
+                errorMessage("Request is not valid")
+            } else {
+                errorMessage("Error in rejecting request")
+            }
         }).finally(() => {
             setRejectingRequests(false)
         })
@@ -105,11 +117,25 @@ export default function Operator() {
                 Authorization: `Bearer ${access_token}`,
             },
         }).then(() => {
-            successMessage("Job rejected")
+            successMessage("Job accepted")
             handleFetchAllRequests()
             setCostDialogOpen(false)
-        }).catch(() => {
-            errorMessage("Error in rejecting request")
+        }).catch((err) => {
+            if (err.response && err.response.status === 404 && err.response.data.message === "Booking not found") {
+                errorMessage("Booking not valid")
+            } else if (err.response && err.response.status === 404 && err.response.data.message === "Operator not found") {
+                errorMessage("Operator not valid")
+            } else if (err.response && err.response.status === 404 && err.response.data.message === "User not found") {
+                errorMessage("User not valid")
+            } else if (err.response && err.response.status === 404 && err.response.data.message === "This booking id has nor request") {
+                errorMessage("Booking is not valid")
+            } else if (err.response && err.response.status === 400 && err.response.data.message === "This operator is not present in this store") {
+                errorMessage("This operator is not present in this store")
+            } else if (err.response && err.response.status === 409 && err.response.data.message === "You are not allowed for this task") {
+                errorMessage("You are not allowed for this task")
+            } else {
+                errorMessage("Error in rejecting request")
+            }
         }).finally(() => {
             setRejectingRequests(false)
         })
@@ -121,11 +147,21 @@ export default function Operator() {
             headers: {
                 Authorization: `Bearer ${access_token}`,
             },
-        }).then((res)=>{
+        }).then((res) => {
             successMessage("Status changed to arriving")
-        }).catch((err)=>{
-            errorMessage("Error updating the status")
-        }).finally(()=>{
+        }).catch((err) => {
+            if (err.response && err.response.status === 404 && err.response.data.message === "Booking not found") {
+                errorMessage("Booking not valid")
+            } else if (err.response && err.response.status === 404 && err.response.data.message === "Operator not found") {
+                errorMessage("Operator not valid")
+            } else if (err.response && err.response.status === 400 && err.response.data.message === "Operator has not assigned to this booking") {
+                errorMessage("Operator has not assigned to this booking")
+            } else if (err.response && err.response.status === 400 && err.response.data.message === "The job has not accepted") {
+                errorMessage("The job has not accepted yet")
+            } else {
+                errorMessage("Error updating the status")
+            }
+        }).finally(() => {
             setUpdateStatusBookingCode("")
         })
     }
@@ -136,11 +172,21 @@ export default function Operator() {
             headers: {
                 Authorization: `Bearer ${access_token}`,
             },
-        }).then((res)=>{
+        }).then((res) => {
             successMessage("Status changed to arrived")
-        }).catch((err)=>{
-            errorMessage("Error updating the status")
-        }).finally(()=>{
+        }).catch((err) => {
+            if (err.response && err.response.status === 404 && err.response.data.message === "Booking not found") {
+                errorMessage("Booking not valid")
+            } else if (err.response && err.response.status === 404 && err.response.data.message === "Operator not found") {
+                errorMessage("Operator not valid")
+            } else if (err.response && err.response.status === 400 && err.response.data.message === "Operator has not assigned to this booking") {
+                errorMessage("Operator has not assigned to this booking")
+            } else if (err.response && err.response.status === 400 && err.response.data.message === "Operator's journey has not started") {
+                errorMessage("Operator's journey has not started")
+            } else {
+                errorMessage("Error updating the status")
+            }
+        }).finally(() => {
             setUpdateStatusBookingCode("")
         })
     }
@@ -151,11 +197,19 @@ export default function Operator() {
             headers: {
                 Authorization: `Bearer ${access_token}`,
             },
-        }).then((res)=>{
+        }).then((res) => {
             successMessage("Status changed to started")
-        }).catch((err)=>{
-            errorMessage("Error updating the status")
-        }).finally(()=>{
+        }).catch((err) => {
+            if (err.response && err.response.status === 404 && err.response.data.message === "Booking not found") {
+                errorMessage("Booking not valid")
+            } else if (err.response && err.response.status === 404 && err.response.data.message === "Operator not found") {
+                errorMessage("Operator not valid")
+            } else if (err.response && err.response.status === 400 && err.response.data.message === "Operator has not assigned to this booking") {
+                errorMessage("Operator has not assigned to this booking")
+            } else {
+                errorMessage("Error updating the status")
+            }
+        }).finally(() => {
             setUpdateStatusBookingCode("")
         })
     }
@@ -163,10 +217,10 @@ export default function Operator() {
     function handleStatusChange(id: string, value: string) {
         setUpdateStatusBookingCode(id)
         let url = ""
-        if(value === BookingStatus.Stopped) url = `/operatorbooking/${id}/pausing`
-        else if(value === BookingStatus.Finished) url = `/operatorbooking/${id}/complete`
-        else if(value === BookingStatus.Started) url = `/operatorbooking/${id}/starting`
-        if(!url) {
+        if (value === BookingStatus.Stopped) url = `/operatorbooking/${id}/pausing`
+        else if (value === BookingStatus.Finished) url = `/operatorbooking/${id}/complete`
+        else if (value === BookingStatus.Started) url = `/operatorbooking/${id}/starting`
+        if (!url) {
             errorMessage("Invalid select")
             ReceiptPoundSterling
         }
@@ -174,11 +228,23 @@ export default function Operator() {
             headers: {
                 Authorization: `Bearer ${access_token}`,
             },
-        }).then((res)=>{
+        }).then((res) => {
             successMessage("Status changed")
-        }).catch((err)=>{
-            errorMessage("Error updating the status")
-        }).finally(()=>{
+        }).catch((err) => {
+            if (err.response && err.response.status === 404 && err.response.data.message === "Booking not found") {
+                errorMessage("Booking not valid")
+            } else if (err.response && err.response.status === 404 && err.response.data.message === "Operator not found") {
+                errorMessage("Operator not valid")
+            } else if (err.response && err.response.status === 400 && err.response.data.message === "Operator has not assigned to this booking") {
+                errorMessage("Operator has not assigned to this booking")
+            } else if (err.response && err.response.status === 400 && err.response.data.message === "Job has not started yet") {
+                errorMessage("Job has not started yet")
+            } else if (err.response && err.response.status === 409 && err.response.data.message === "This bakking has no payment details") {
+                errorMessage("This bakking has no payment details added")
+            } else {
+                errorMessage("Error updating the status")
+            }
+        }).finally(() => {
             setUpdateStatusBookingCode("")
         })
     }
@@ -226,7 +292,7 @@ export default function Operator() {
                                         <p>No requests available</p>
                                         :
                                         completedJobs
-                                        .filter((operatorReq) => (operatorReq.booking.bookingStatus !== BookingStatus.Finished))
+                                            .filter((operatorReq) => (operatorReq.booking.bookingStatus !== BookingStatus.Finished))
                                             .map((details, i) => {
                                                 const name = `${details.booking.user.first_name} ${details.booking.user.middle_name ?? ""} ${details.booking.user.last_name}`
                                                 const location = `${details.booking.location.address ?? ""}, ${details.booking.location.city}, ${details.booking.location.name ?? ""}, ${details.booking.location.state ?? ""} , ${details.booking.location.country}, ${details.booking.location.zip_code}`
@@ -267,25 +333,25 @@ export default function Operator() {
                                                         <CardFooter className="flex justify-between">
                                                             {
                                                                 details.booking.bookingStatus === BookingStatus.Accepted && <div className="flex items-center space-x-2">
-                                                                    <Switch 
-                                                                    id="airplane-mode"
-                                                                    onCheckedChange={()=>{handleArriving(details.booking_id)}} />
+                                                                    <Switch
+                                                                        id="airplane-mode"
+                                                                        onCheckedChange={() => { handleArriving(details.booking_id) }} />
                                                                     <Label htmlFor="airplane-mode">Arriving</Label>
                                                                 </div>
                                                             }
                                                             {
                                                                 details.booking.bookingStatus === BookingStatus.Arriving && <div className="flex items-center space-x-2">
-                                                                    <Switch 
-                                                                    id="airplane-mode"
-                                                                    onCheckedChange={()=>{handleArrived(details.booking_id)}} />
+                                                                    <Switch
+                                                                        id="airplane-mode"
+                                                                        onCheckedChange={() => { handleArrived(details.booking_id) }} />
                                                                     <Label htmlFor="airplane-mode">Arrived</Label>
                                                                 </div>
                                                             }
                                                             {
                                                                 details.booking.bookingStatus === BookingStatus.Arrived && <div className="flex items-center space-x-2">
-                                                                    <Switch 
-                                                                    id="airplane-mode"
-                                                                    onCheckedChange={()=>{handleStarted(details.booking_id)}} />
+                                                                    <Switch
+                                                                        id="airplane-mode"
+                                                                        onCheckedChange={() => { handleStarted(details.booking_id) }} />
                                                                     <Label htmlFor="airplane-mode">Started</Label>
                                                                 </div>
                                                             }

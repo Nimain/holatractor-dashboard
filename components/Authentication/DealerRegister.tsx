@@ -8,14 +8,14 @@ import { format, setYear } from 'date-fns';
 import { useCookie } from 'next-cookie';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react'
-import { Dialog, DialogContent, DialogTrigger } from '../ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Backdrop, CircularProgress } from '@mui/material';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbSeparator } from '../ui/breadcrumb';
-import { AtSign, CalendarIcon, Check, ChevronsUpDown, DatabaseZap, Eye, EyeOff, MapPinned, VenetianMask } from 'lucide-react';
+import { AtSign, BadgeDollarSign, CalendarIcon, Check, ChevronsUpDown, CircleCheck, DatabaseZap, Eye, EyeOff, MapPinned, VenetianMask } from 'lucide-react';
 import { Separator } from '../ui/separator';
-import { Card, CardContent, CardFooter } from '../ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
@@ -25,6 +25,7 @@ import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Calendar } from '../ui/calendar';
 import countryData from './CountryCodeRoles';
+import { Badge } from '../ui/badge';
 
 const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => {
     const [open, setOpen] = useState(false)
@@ -135,7 +136,7 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
         return Math.abs(ageDate.getUTCFullYear() - 1970);
     }
 
-    async function operatorRegister() {
+    async function dealerRegister() {
         if (!agEmail) {
             errorMessage("Please add the email")
             return
@@ -431,7 +432,7 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
                                             value="stepone"
                                             className='bg-transparent flex items-center px-0'>
                                             <Button
-                                                className={`bg-white hover:bg-transparent pl-1 pr-0 ${(name && agEmail && agPassword && agnewCountry && agnumber) ? "text-green-400" : "text-black"}`}>
+                                                className={`bg-white hover:bg-transparent px-5 ${(name && agEmail && agPassword && agnewCountry && agnumber) ? "text-green-400" : "text-black"}`}>
                                                 <AtSign />
                                             </Button>
                                         </TabsTrigger>
@@ -440,7 +441,7 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
 
                                     <BreadcrumbSeparator>
                                         <Separator
-                                            className={`w-44 h-1 rounded-full ${(date && gender) ? "bg-green-400" : "bg-gray-400"}`} />
+                                            className={`w-24 h-1 rounded-full ${(date && gender) ? "bg-green-400" : "bg-gray-400"}`} />
                                     </BreadcrumbSeparator>
 
                                     <BreadcrumbItem className='w-fit'>
@@ -449,7 +450,7 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
                                             value="steptwo"
                                             className='bg-transparent flex items-center px-0'>
                                             <Button
-                                                className={`bg-white hover:bg-transparent pl-1 pr-0 ${(date && gender) ? "text-green-400" : "text-black"}`}>
+                                                className={`bg-white hover:bg-transparent px-5 ${(date && gender) ? "text-green-400" : "text-black"}`}>
                                                 <VenetianMask />
                                             </Button>
                                         </TabsTrigger>
@@ -458,7 +459,7 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
 
                                     <BreadcrumbSeparator>
                                         <Separator
-                                            className={`w-44 h-1 rounded-full ${(location_name && location_address && location_city && location_state && location_zip_code && location_country) ? "bg-green-400" : "bg-gray-400"}`} />
+                                            className={`w-24 h-1 rounded-full ${(location_name && location_address && location_city && location_state && location_zip_code && location_country) ? "bg-green-400" : "bg-gray-400"}`} />
                                     </BreadcrumbSeparator>
 
                                     <BreadcrumbItem className='w-fit'>
@@ -467,7 +468,7 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
                                             value="stepthree"
                                             className='bg-transparent flex items-center px-0'>
                                             <Button
-                                                className={`bg-white hover:bg-transparent pl-1 pr-0 ${(location_name && location_address && location_city && location_state && location_zip_code && location_country) ? "text-green-400" : "text-black"}`}>
+                                                className={`bg-white hover:bg-transparent px-5 ${(location_name && location_address && location_city && location_state && location_zip_code && location_country) ? "text-green-400" : "text-black"}`}>
                                                 <MapPinned />
                                             </Button>
                                         </TabsTrigger>
@@ -476,7 +477,7 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
 
                                     <BreadcrumbSeparator>
                                         <Separator
-                                            className={`w-44 h-1 rounded-full ${(attachment && document_number) ? "bg-green-400" : "bg-gray-400"}`} />
+                                            className={`w-24 h-1 rounded-full ${(attachment && document_number) ? "bg-green-400" : "bg-gray-400"}`} />
                                     </BreadcrumbSeparator>
 
                                     <BreadcrumbItem className="w-fit">
@@ -487,6 +488,24 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
                                             <Button
                                                 className={`bg-white hover:bg-transparent pl-1 pr-0 ${(attachment && document_number) ? "text-green-400" : "text-black"}`}>
                                                 <DatabaseZap />
+                                            </Button>
+                                        </TabsTrigger>
+
+                                    </BreadcrumbItem>
+
+                                    <BreadcrumbSeparator>
+                                        <Separator
+                                            className={`w-24 h-1 rounded-full ${(false) ? "bg-green-400" : "bg-gray-400"}`} />
+                                    </BreadcrumbSeparator>
+
+                                    <BreadcrumbItem className="w-fit">
+
+                                        <TabsTrigger
+                                            value="stepfive"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className={`bg-white hover:bg-transparent px-5 ${(false) ? "text-green-400" : "text-black"}`}>
+                                                <BadgeDollarSign />
                                             </Button>
                                         </TabsTrigger>
 
@@ -1118,7 +1137,7 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
                                     </Popover>
                                 </CardContent>
                                 <CardFooter className='w-full flex items-center justify-between'>
-                                    <TabsList className='w-full flex items-center justify-start bg-transparent'>
+                                <TabsList className='w-full flex items-center justify-between bg-transparent'>
                                         <TabsTrigger
                                             value="stepthree"
                                             className='bg-transparent flex items-center px-0'>
@@ -1127,12 +1146,124 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
                                                 Back
                                             </Button>
                                         </TabsTrigger>
+                                        <TabsTrigger
+                                            value="stepfive"
+                                            className='bg-transparent flex items-center px-0'>
+                                            <Button
+                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
+                                                Next
+                                            </Button>
+                                        </TabsTrigger>
                                     </TabsList>
-                                    <Button onClick={() => { operatorRegister() }}>
-                                        Create account
-                                    </Button>
                                 </CardFooter>
                             </Card>
+
+                        </TabsContent>
+
+                        <TabsContent value="stepfive">
+
+                            {
+                                fetchSubscriptions ?
+                                    <p>Loading all plans</p>
+                                    :
+                                    <div className="container mx-auto p-4">
+                                        <h1 className="text-3xl font-bold mb-6 text-center">Choose Your Subscription Plan</h1>
+                                        <div className='w-full flex justify-end items-center my-4'>
+                                            <Button
+                                                onClick={() => { dealerRegister() }}>
+                                                Skip subscription
+                                            </Button>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            {subscriptions.filter(subs => subs.for_owner === true).length === 0 ?
+                                                <p>No subscriptions present for owners</p>
+                                                :
+                                                subscriptions.filter(subs => subs.for_owner === true).map((sub) => (
+                                                    <Card key={sub.id} className={`flex flex-col ${selectedPlan?.id === sub.id ? 'border-primary' : ''}`}>
+                                                        <CardHeader>
+                                                            <CardTitle>{sub.name}</CardTitle>
+                                                            <CardDescription>{sub.type} Plan</CardDescription>
+                                                        </CardHeader>
+                                                        <CardContent className="flex-grow">
+                                                            <div className="mb-4">
+                                                                <span className="text-3xl font-bold">${sub.actual_cost}</span>
+                                                                {sub.discount_cost < sub.actual_cost && (
+                                                                    <span className="text-muted-foreground line-through ml-2">${sub.actual_cost}</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                {sub.focused_features.map((feature, index) => (
+                                                                    <li key={index} className="text-sm font-medium flex gap-2 items-center text-green-500">
+                                                                        <CircleCheck /> <p className="text-green-500">{feature}</p>
+                                                                    </li>
+                                                                ))}
+                                                                {sub.features.map((feature, index) => (
+                                                                    <li key={index} className="text-sm flex gap-2 items-center">
+                                                                        <CircleCheck />{feature}
+                                                                    </li>
+                                                                ))}
+                                                            </div>
+                                                            <div className="mt-4">
+                                                                <Badge variant="outline">{sub.total_days} days</Badge>
+                                                            </div>
+                                                        </CardContent>
+                                                        <CardFooter>
+                                                            <Button
+                                                                className="w-full"
+                                                                onClick={() => handleSelectPlan(sub)}
+                                                                variant={selectedPlan?.id === sub.id ? "secondary" : "default"}
+                                                            >
+                                                                {selectedPlan?.id === sub.id ? 'Selected' : 'Select Plan'}
+                                                            </Button>
+                                                        </CardFooter>
+                                                    </Card>
+                                                ))}
+                                        </div>
+
+                                        <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+                                            <DialogContent>
+                                                <DialogHeader>
+                                                    <DialogTitle>Complete Your Purchase</DialogTitle>
+                                                    <DialogDescription>
+                                                        You're about to subscribe to the {selectedPlan?.name} for ${selectedPlan?.discount_cost}.
+                                                    </DialogDescription>
+                                                </DialogHeader>
+                                                <form onSubmit={handlePayment}>
+                                                    <div className="grid gap-4 py-4">
+                                                        <div className="grid grid-cols-4 items-center gap-4">
+                                                            <Label htmlFor="name" className="text-right">
+                                                                Name
+                                                            </Label>
+                                                            <Input id="name" className="col-span-3" />
+                                                        </div>
+                                                        <div className="grid grid-cols-4 items-center gap-4">
+                                                            <Label htmlFor="card-number" className="text-right">
+                                                                Card Number
+                                                            </Label>
+                                                            <Input id="card-number" className="col-span-3" />
+                                                        </div>
+                                                        <div className="grid grid-cols-4 items-center gap-4">
+                                                            <Label htmlFor="expiry" className="text-right">
+                                                                Expiry Date
+                                                            </Label>
+                                                            <Input id="expiry" className="col-span-3" placeholder="MM/YY" />
+                                                        </div>
+                                                        <div className="grid grid-cols-4 items-center gap-4">
+                                                            <Label htmlFor="cvv" className="text-right">
+                                                                CVV
+                                                            </Label>
+                                                            <Input id="cvv" className="col-span-3" />
+                                                        </div>
+                                                    </div>
+                                                    <DialogFooter>
+                                                        <Button type="submit">Pay Now</Button>
+                                                    </DialogFooter>
+                                                </form>
+                                            </DialogContent>
+                                        </Dialog>
+                                    </div>
+
+                            }
 
                         </TabsContent>
 

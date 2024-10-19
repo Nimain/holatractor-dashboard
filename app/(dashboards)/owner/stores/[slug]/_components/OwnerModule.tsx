@@ -57,7 +57,7 @@ const OwnerModule = () => {
     renderInstance.get(`/booking/${slug}/bookings`)
       .then((res) => {
         setGetBookingsOfAStore(res.data)
-        setfilteredPaymentBookings(res.data.filter((request: Booking)=>(request.payment.length >=1)))
+        setfilteredPaymentBookings(res.data.filter((request: Booking) => (request.payment.length >= 1)))
       }).catch((err) => {
         errorMessage("Some error occurred in fetching bookings")
       }).finally(() => {
@@ -76,7 +76,15 @@ const OwnerModule = () => {
       successMessage("You have rejected this request")
       handleFetchAllBookings()
     }).catch((err) => {
-      errorMessage("Some error occurred")
+      if (err.response && err.response.status === 404 && err.response.data.message === "Booking is not valid") {
+        errorMessage("Log in user not found")
+      } else if (err.response && err.response.status === 400 && err.response.data.message === "User has not confirmed the booking. Wait till user booked") {
+        errorMessage("User has not confirmed the booking. Wait till user booked")
+      } else if (err.response && err.response.status === 400 && err.response.data.message === "You are not allowed to perform this task") {
+        errorMessage("You are not allowed to perform this task")
+      } else {
+        errorMessage("Some error occurred")
+      }
     }).finally(() => {
       setConfirming(false)
     })
@@ -91,9 +99,30 @@ const OwnerModule = () => {
     }).then((res) => {
       successMessage("Operator assigned")
       setIsAssignOpen(false)
-    }).catch((error) => {
-      errorMessage("Some error occurred while assigning")
-      console.log(error)
+    }).catch((err) => {
+      if (err.response && err.response.status === 404 && err.response.data.message === "Booking is not valid") {
+        errorMessage("Log in user not found")
+      } else if (err.response && err.response.status === 400) {
+        if (err.response.data.message === "This booking is not Open now") {
+          errorMessage("This booking is not Open now")
+        } else if (err.response.data.message === "You are not allowed to perform this task") {
+          errorMessage("You are not allowed to perform this task")
+        } else if (err.response.data.message === "Operator not found") {
+          errorMessage("Operator not found")
+        } else if (err.response.data.message === "This operator is not present in this store") {
+          errorMessage("This operator is not present in this store")
+        } else if (err.response.data.message === "You already request to this user") {
+          errorMessage("You have already request to this user")
+        } else if (err.response.data.message === "User has not confirmed the booking") {
+          errorMessage("User has not confirmed the booking")
+        } else if (err.response.data.message === "Owner has not confirmed the booking") {
+          errorMessage("Owner has not confirmed the booking")
+        } else if (err.response.data.message === "Booking status has changed") {
+          errorMessage("Booking status has changed")
+        }
+      } else {
+        errorMessage("Some error occurred while assigning")
+      }
     }).finally(() => {
       setAssigning(false)
     })
@@ -126,8 +155,6 @@ const OwnerModule = () => {
 
   if (fetchingStoreDetails) return <p>Getting store details</p>
 
-  console.log(filteredPaymentBookings)
-  
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
@@ -228,17 +255,17 @@ const OwnerModule = () => {
                               {/* <p>Location: {request.location}</p> */}
                             </CardContent>
                             <CardFooter className="flex justify-end space-x-2">
-                            {
-                            request.bookingStatus === BookingStatus.Open &&
-                              <Button
-                                onClick={() => {
-                                  setSelectedRequest(request.id)
-                                  setIsAssignOpen(true)
-                                }}
-                              >
-                                Assign Operator
-                              </Button>
-                            }
+                              {
+                                request.bookingStatus === BookingStatus.Open &&
+                                <Button
+                                  onClick={() => {
+                                    setSelectedRequest(request.id)
+                                    setIsAssignOpen(true)
+                                  }}
+                                >
+                                  Assign Operator
+                                </Button>
+                              }
                             </CardFooter>
                           </Card>
                         ))}
@@ -249,7 +276,7 @@ const OwnerModule = () => {
               {
                 fetchingBookings ? <p>Getting all the bookings</p>
                   :
-                  
+
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {filteredPaymentBookings
                       .filter((request) => (`${request.payment[0].status}` === "FarmerCONFIRMED")).length === 0 ?
@@ -269,9 +296,9 @@ const OwnerModule = () => {
                             </CardContent>
                             <CardFooter className="flex justify-end space-x-2">
                               <PaymentReview
-                              referenceNumber={request.payment[0].transaction_reference[request.payment[0].transaction_reference.length - 1]}
-                              screenshotUrl={request.payment[0].screenshots[request.payment[0].screenshots.length - 1]}
-                              paymentId={request.payment[0].id} />
+                                referenceNumber={request.payment[0].transaction_reference[request.payment[0].transaction_reference.length - 1]}
+                                screenshotUrl={request.payment[0].screenshots[request.payment[0].screenshots.length - 1]}
+                                paymentId={request.payment[0].id} />
                             </CardFooter>
                           </Card>
                         ))}
@@ -290,44 +317,44 @@ const OwnerModule = () => {
                   <p>Fetching all Operators</p>
                   :
                   allOperators.length === 0 ?
-                  <div
-                  className="w-fill h-[50vh] flex items-center justify-center flex-col gap-5">
-                    <p>No operators available</p>
-                    <RequestOperators />
-                  </div>
-                  :
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {allOperators.map((operator: OperatorInStore) => {
-                      if (assigning) return <CircularProgress key={operator.id} />
-                      return (
-                        <Card key={operator.id}>
-                          <CardHeader>
-                            <CardTitle>{`${operator.operator.user.first_name} ${operator.operator.user.middle_name ?? ""} ${operator.operator.user.last_name}`}</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            {
-                              operator.operator.user.image &&
-                              <Image
-                                src={operator.operator.user.image}
-                                alt={`${operator.operator.user.first_name} ${operator.operator.user.middle_name ?? ""} ${operator.operator.user.last_name}`}
-                                className="w-24 h-24 rounded-full mx-auto"
-                                width={200}
-                                height={200}
-                              />
-                            }
-                          </CardContent>
-                          <CardFooter>
-                            <Button
-                              className="w-full"
-                              onClick={() => handleAssign(operator.operator_id)}
-                            >
-                              Assign
-                            </Button>
-                          </CardFooter>
-                        </Card>
-                      )
-                    })}
-                  </div>
+                    <div
+                      className="w-fill h-[50vh] flex items-center justify-center flex-col gap-5">
+                      <p>No operators available</p>
+                      <RequestOperators />
+                    </div>
+                    :
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {allOperators.map((operator: OperatorInStore) => {
+                        if (assigning) return <CircularProgress key={operator.id} />
+                        return (
+                          <Card key={operator.id}>
+                            <CardHeader>
+                              <CardTitle>{`${operator.operator.user.first_name} ${operator.operator.user.middle_name ?? ""} ${operator.operator.user.last_name}`}</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              {
+                                operator.operator.user.image &&
+                                <Image
+                                  src={operator.operator.user.image}
+                                  alt={`${operator.operator.user.first_name} ${operator.operator.user.middle_name ?? ""} ${operator.operator.user.last_name}`}
+                                  className="w-24 h-24 rounded-full mx-auto"
+                                  width={200}
+                                  height={200}
+                                />
+                              }
+                            </CardContent>
+                            <CardFooter>
+                              <Button
+                                className="w-full"
+                                onClick={() => handleAssign(operator.operator_id)}
+                              >
+                                Assign
+                              </Button>
+                            </CardFooter>
+                          </Card>
+                        )
+                      })}
+                    </div>
               }
             </DialogContent>
           </Dialog>

@@ -35,8 +35,18 @@ const RequestOperators = () => {
         }).then(()=>{
             // Logic to fetch all request
             successMessage("Requested")
-        }).catch((error)=>{
-            errorMessage("Error in requesting")
+        }).catch((err)=>{
+            if (err.response && err.response.status === 404 && err.response.data.message === "Store not found") {
+                errorMessage("Store not found")
+            } else if (err.response && err.response.status === 404 && err.response.data.message === "Operator not found") {
+                errorMessage("Operator not found")
+            } else if (err.response && err.response.status === 409 && err.response.data.message === "You are not allowed for this task") {
+                errorMessage("You are not allowed for this task")
+            } else if (err.response && err.response.status === 409 && err.response.data.message === "You are already in this store") {
+                errorMessage("You are already in this store")
+            } else {
+                errorMessage("Error in requesting")
+            }
         }).finally(()=>{
             setRequesting(false)
         })

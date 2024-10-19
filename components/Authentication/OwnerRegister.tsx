@@ -156,7 +156,7 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
         return Math.abs(ageDate.getUTCFullYear() - 1970);
     }
 
-    async function operatorRegister() {
+    async function ownerRegister() {
         if (!agEmail) {
             errorMessage("Please add the email")
             return
@@ -1188,6 +1188,12 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                                     :
                                     <div className="container mx-auto p-4">
                                         <h1 className="text-3xl font-bold mb-6 text-center">Choose Your Subscription Plan</h1>
+                                        <div className='w-full flex justify-end items-center my-4'>
+                                            <Button
+                                            onClick={()=>{ ownerRegister() }}>
+                                                Skip subscription
+                                            </Button>
+                                        </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                             {subscriptions.filter(subs => subs.for_owner === true).length === 0 ?
                                                 <p>No subscriptions present for owners</p>

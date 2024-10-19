@@ -52,6 +52,7 @@ const LogInPage = () => {
                 cookie.set('isFarmer', res.data.isFarmer, { path: '/', expires: expiryDate });
                 cookie.set('isOperator', res.data.isOperator, { path: '/', expires: expiryDate });
                 cookie.set('isOwner', res.data.isOwner, { path: '/', expires: expiryDate });
+                cookie.set('isDealer', res.data.isDealer, { path: '/', expires: expiryDate });
 
                 successMessage("Log in successfull")
                 setEmail("")
@@ -64,6 +65,9 @@ const LogInPage = () => {
                 }
                 else if (res.data.isOwner) {
                     router.push("/owner")
+                }
+                else if (res.data.isDealer) {
+                    router.push("/dealer")
                 }
                 else {
                     router.push("/")
@@ -102,7 +106,7 @@ const LogInPage = () => {
                 <div className='flex flex-col gap-[20px] items-center justify-center w-[360px]'>
 
                     <p
-                        className='text-[26px] w-fit font-[600] relative before:absolute before:left-0 before:bottom-[-4px] before:w-[75%] before:h-[3px] before:rounded-full before:bg-purple-400'>
+                        className='text-[26px] w-fit font-[600] relative before:absolute before:left-0 before:bottom-[-4px] before:w-[75%] before:h-[3px] before:rounded-full before:bg-[#AB0F0C]'>
                         Welcome back
                     </p>
 

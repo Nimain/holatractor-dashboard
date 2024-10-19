@@ -32,33 +32,37 @@ const FarmerDashboard = () => {
   const { cookie } = useCookie()
   const user: user = cookie.get("user")
 
-  function fetchFarmer(){
+  function fetchFarmer() {
     setFetchingFarmerDetails(true)
 
     renderInstance.get(`/farmer/${user.userId}`)
-    .then((res)=>{
-      setFarmer(res.data.details)
-      settotalPaid(res.data.totalPaid)
-      settotalUnpaid(res.data.totalUnpaid)
-      setcompletedBookings(res.data.completedBookings)
-      settotalBookings(res.data.totalBookings)
-      setBookings(res.data.bookings)
-    }).catch((err)=>{
-      errorMessage("Error fetching user detaild")
-    }).finally(()=>{
-      setFetchingFarmerDetails(false)
-    })
+      .then((res) => {
+        setFarmer(res.data.details)
+        settotalPaid(res.data.totalPaid)
+        settotalUnpaid(res.data.totalUnpaid)
+        setcompletedBookings(res.data.completedBookings)
+        settotalBookings(res.data.totalBookings)
+        setBookings(res.data.bookings)
+      }).catch((err) => {
+        if (err.response && err.response.status === 404 && err.response.data.message === "Farmer not found") {
+          errorMessage("Farmer not found")
+        } else {
+          errorMessage("Error fetching user detaild")
+        }
+      }).finally(() => {
+        setFetchingFarmerDetails(false)
+      })
   }
 
-  useEffect(()=>{
-    if(user){
+  useEffect(() => {
+    if (user) {
       fetchFarmer()
     }
-  },[])
+  }, [])
 
-  if(fetchingFarmerDetails) return <p>Loading farmer details</p>
+  if (fetchingFarmerDetails) return <p>Loading farmer details</p>
 
-  if(!user) return <p>user not found</p>
+  if (!user) return <p>user not found</p>
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -67,7 +71,7 @@ const FarmerDashboard = () => {
           <Avatar className="h-20 w-20 mr-4">
             {
               user.image &&
-            <AvatarImage src={user.image} alt={`${user.name}`} />
+              <AvatarImage src={user.image} alt={`${user.name}`} />
             }
             <AvatarFallback>{user.name[0]}{user.name[1]}</AvatarFallback>
           </Avatar>
@@ -80,12 +84,12 @@ const FarmerDashboard = () => {
           </div>
         </div>
         <div className="flex items-center gap-6">
-        <Button asChild>
-          <Link href="/farmer/new-booking">New Booking</Link>
-        </Button>
-        <Button asChild>
-          <Link href="/farmer/booking-history">Booking history</Link>
-        </Button>
+          <Button asChild>
+            <Link href="/farmer/new-booking">New Booking</Link>
+          </Button>
+          <Button asChild>
+            <Link href="/farmer/booking-history">Booking history</Link>
+          </Button>
         </div>
       </div>
 
@@ -135,29 +139,29 @@ const FarmerDashboard = () => {
           </CardHeader>
           <CardContent>
             <ul className="space-y-4">
-            {
+              {
                 bookings.length === 0 ? <p>No bookings available</p>
-                :
-                bookings.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).map((booking, index) => {
-                  return (
-                    <li key={index} className={`${index > 1 ? "hidden" : "flex"} items-center justify-between`}>
-                      <div className="flex items-center">
-                        <TractorIcon className="h-6 w-6 mr-2 text-muted-foreground" />
-                        <div className='w-full'>
-                          <div className='w-full flex items-center justify-betweenn flex-wrap gap-1'>
-                          <p className="font-medium">Booking #{`Hola_booking_${booking.id.slice(-4)}`}</p>
-                          <Badge className='bg-yellow-200 text-yellow-800 hover:text-yellow-900 hover:bg-yellow-300'>
-                            <p className="text-sm">{booking.bookingStatus}</p>
-                          </Badge>
+                  :
+                  bookings.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).map((booking, index) => {
+                    return (
+                      <li key={index} className={`${index > 1 ? "hidden" : "flex"} items-center justify-between`}>
+                        <div className="flex items-center">
+                          <TractorIcon className="h-6 w-6 mr-2 text-muted-foreground" />
+                          <div className='w-full'>
+                            <div className='w-full flex items-center justify-betweenn flex-wrap gap-1'>
+                              <p className="font-medium">Booking #{`Hola_booking_${booking.id.slice(-4)}`}</p>
+                              <Badge className='bg-yellow-200 text-yellow-800 hover:text-yellow-900 hover:bg-yellow-300'>
+                                <p className="text-sm">{booking.bookingStatus}</p>
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">Total tractors: ${booking.tractors.length}</p>
+                            <p className="text-sm text-muted-foreground">Total attachments: ${booking.attachments.length}</p>
                           </div>
-                          <p className="text-sm text-muted-foreground">Total tractors: ${booking.tractors.length}</p>
-                          <p className="text-sm text-muted-foreground">Total attachments: ${booking.attachments.length}</p>
                         </div>
-                      </div>
-                      <Button variant="outline" size="sm">View</Button>
-                    </li>
-                  )
-                })
+                        <Button variant="outline" size="sm">View</Button>
+                      </li>
+                    )
+                  })
               }
             </ul>
           </CardContent>
