@@ -50,6 +50,8 @@ export interface User {
   PayPal: PayPal[]
   UPI: UPI[]
   Subscriptions: Subscriptions[]
+  DealerStore: DealerStore[]
+  DealerStoreCreator: DealerStore[]
 }
 
 export interface Role {
@@ -184,6 +186,7 @@ export interface Tractor {
   inventory: Inventory[];
   user: User;
   TractorInStore: TractorInStore[];
+  TractorInDealerStore: TractorInDealerStore[]
 }
 
 export interface Attachment {
@@ -204,6 +207,7 @@ export interface Attachment {
   createdAt: Date;
   updatedAt: Date;
   AttachmentInStore: AttachmentInStore[];
+  AttachmentInDealerStore: AttachmentInDealerStore[]
 }
 
 export interface BookingTractor {
@@ -256,6 +260,7 @@ export interface Location {
   Lease: Lease[];
   FarmerHome: Farmer[];
   FarmerFarm: Farmer[];
+  DealerStore: DealerStore[]
 }
 
 export interface Booking {
@@ -394,6 +399,7 @@ export interface Rating {
   store: Store;
   user: User;
   base: Base;
+  DealerStore: DealerStore[]
 }
 
 export interface TractorInStoreRating {
@@ -406,6 +412,7 @@ export interface TractorInStoreRating {
   updatedAt: Date;
   tractor: TractorInStore;
   user: User;
+  TractorInDealerStore: TractorInDealerStore[]
 }
 
 export interface AttachmentInStoreRating {
@@ -418,6 +425,7 @@ export interface AttachmentInStoreRating {
   updatedAt: Date;
   attachment: AttachmentInStore;
   user: User;
+  AttachmentInDealerStore: AttachmentInDealerStore[]
 }
 
 export interface Farmer {
@@ -502,6 +510,7 @@ export interface Document {
   Owner: Owner[]; // Relation to Owner as "document of owner"
   Agent: Agent[]; // Relation to Agent as "document of Agent"
   Dealer: Dealer[]
+  TractorInDealerStore: TractorInDealerStore[]
 }
 
 export interface OperatorStoreCon {
@@ -794,12 +803,97 @@ export interface Subscriptions {
   base_id: string
   for_owner: boolean
   for_dealer: boolean
-  createdAt: string
-  updatedAt: string
-  // OwnerSubscribed: OwnerSubscribed[]
-  creator:         User     
-  base:            Base        
-  // DealerSubscribed: DealerSubscribed[] 
+  createdAt: Date
+  updatedAt: Date
+  OwnerSubscribed: OwnerSubscribed[]
+  creator: User
+  base: Base
+  DealerSubscribed: DealerSubscribed[]
+}
+
+export interface OwnerSubscribed {
+  id: string
+  user_id: string
+  subscription_id: string
+  end_date: Date
+  base_id: string
+  status: boolean
+  createdAt: Date
+  updatedAt: Date
+  user: User
+  subscription: Subscriptions
+  base: Base
+}
+
+export interface DealerSubscribed {
+  id: string
+  user_id: string
+  subscription_id: string
+  end_date: Date
+  base_id: string
+  status: boolean
+  createdAt: Date
+  updatedAt: Date
+  user: User
+  subscription: Subscriptions
+  base: Base
+}
+
+export interface DealerStore {
+  id: string
+  owner_id: string
+  name: string
+  description: string
+  banner?: string
+  logo?: string
+  opening_time: Date
+  closing_time: Date
+  closing_days: string[]
+  created_by: string
+  base_id: string
+  rating_id: string[]
+  location_id: string
+  createdAt: Date
+  updatedAt: Date
+  owner: User
+  location: Location
+  creator: User
+  base: Base
+  rating: Rating[]
+  TractorInDealerStore: TractorInDealerStore[]
+  AttachmentInDealerStore: AttachmentInDealerStore[]
+}
+
+export interface TractorInDealerStore {
+  id: string
+  baseTractorId: string
+  base_id: string
+  price: number
+  store_id: string
+  document_id: string
+  lat?: string
+  lan?: string
+  createdAt: Date
+  updatedAt: Date
+  baseTractor: Tractor
+  base: Base
+  store: DealerStore
+  document: Document
+  TractorInStoreRating: TractorInStoreRating[]
+}
+
+export interface AttachmentInDealerStore {
+  id: string
+  baseAttachmentId: string
+  base_id: string
+  price: number
+  store_id: string
+  createdAt: Date
+  updatedAt: Date
+  baseAttachment: Attachment
+  base: Base
+  store: DealerStore
+  AttachmentInStoreRating: AttachmentInStoreRating[]
 }
 
 export enum SubscriptionType {

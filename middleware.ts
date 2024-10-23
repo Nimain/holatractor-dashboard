@@ -7,6 +7,7 @@ export function middleware(req: NextRequest) {
   const isFarmer = req.cookies.get('isFarmer')?.value === 'true';
   const isOwner = req.cookies.get('isOwner')?.value === 'true'
   const isOperator = req.cookies.get('isOperator')?.value === 'true'
+  const isDealer = req.cookies.get('isDealer')?.value === 'true'
 
   // If there is no access_token, redirect to the login page
   if (!token) {
@@ -29,8 +30,12 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL(`/operator`, req.url));
   }
 
+  if (isDealer && !pathname.startsWith('/dealer')) {
+    return NextResponse.redirect(new URL(`/dealer`, req.url));
+  }
+
   // If none of the roles are true, allow access to all routes
-  if (!isFarmer && !isOwner && !isOperator) {
+  if (!isFarmer && !isOwner && !isOperator && !isDealer) {
     return NextResponse.next();
   }
 

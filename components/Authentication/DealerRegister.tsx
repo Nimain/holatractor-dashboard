@@ -26,6 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Calendar } from '../ui/calendar';
 import countryData from './CountryCodeRoles';
 import { Badge } from '../ui/badge';
+import CryptoJS from "crypto-js";
 
 const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => {
     const [open, setOpen] = useState(false)
