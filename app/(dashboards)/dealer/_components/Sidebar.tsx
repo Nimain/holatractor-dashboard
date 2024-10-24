@@ -614,14 +614,14 @@ const Sidebar = () => {
                                   height={200}
                                 />
                                 <label
-                                  htmlFor="dropzone-file"
+                                  htmlFor="bannerImage"
                                   className=""
                                 >
                                   <p className="w-fit bg-black text-white px-5 py-2 rounded text-base">
                                     Change banner
                                   </p>
                                   <input
-                                    id="dropzone-file"
+                                    id="bannerImage"
                                     type="file"
                                     className="hidden"
                                     onChange={(e) => {
@@ -635,7 +635,7 @@ const Sidebar = () => {
                               </>
                             ) : (
                               <label
-                                htmlFor="dropzone-file-two"
+                                htmlFor="bannerImage"
                                 className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50"
                               >
                                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
@@ -663,7 +663,7 @@ const Sidebar = () => {
                                   </p>
                                 </div>
                                 <input
-                                  id="dropzone-file-two"
+                                  id="bannerImage"
                                   type="file"
                                   className="hidden"
                                   onChange={(e) => {
