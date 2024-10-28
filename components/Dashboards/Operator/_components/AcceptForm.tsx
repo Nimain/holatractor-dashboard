@@ -92,7 +92,7 @@ export default function AcceptanceForm({ id, store_id }: { id: string, store_id:
             :
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="field1">Number Field 1</Label>
+                <Label htmlFor="field1">Cost per job</Label>
                 <Input
                   id="field1"
                   name="field1"
@@ -104,7 +104,7 @@ export default function AcceptanceForm({ id, store_id }: { id: string, store_id:
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="field2">Number Field 2</Label>
+                <Label htmlFor="field2">Cost per hour</Label>
                 <Input
                   id="field2"
                   name="field2"
@@ -116,7 +116,7 @@ export default function AcceptanceForm({ id, store_id }: { id: string, store_id:
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="field3">Number Field 3</Label>
+                <Label htmlFor="field3">Cost per month</Label>
                 <Input
                   id="field3"
                   name="field3"
@@ -128,7 +128,7 @@ export default function AcceptanceForm({ id, store_id }: { id: string, store_id:
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="textArea">Text Area</Label>
+                <Label htmlFor="textArea">Message</Label>
                 <Textarea
                   id="textArea"
                   name="textArea"

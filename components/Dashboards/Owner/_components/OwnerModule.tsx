@@ -170,7 +170,10 @@ const OwnerModule = () => {
               <TabsTrigger value="not_seen">Not Seen</TabsTrigger>
               <TabsTrigger value="rejected">Rejected</TabsTrigger>
               <TabsTrigger value="accepted">Accepted</TabsTrigger>
+              <TabsTrigger value="ongoing">Ongoing</TabsTrigger>
+              <TabsTrigger value="unpaid">Unpaid Payments</TabsTrigger>
               <TabsTrigger value="review">Review Payments</TabsTrigger>
+              <TabsTrigger value="completed">Completed</TabsTrigger>
             </TabsList>
             <TabsContent value={"not_seen"}>
               {
@@ -192,7 +195,7 @@ const OwnerModule = () => {
                                 <Badge className="w-fit">{request.bookingStatus}</Badge>
                               </CardHeader>
                               <CardContent>
-                                <p>Total Cost: ${request.total_cost}</p>
+                                <p>Total Cost: ${request.total_cost.toFixed(2)}</p>
                                 {/* <p>Location: {request.location}</p> */}
                               </CardContent>
                               <CardFooter className="flex justify-end space-x-2">
@@ -225,7 +228,7 @@ const OwnerModule = () => {
                               <Badge className="w-fit">{request.bookingStatus}</Badge>
                             </CardHeader>
                             <CardContent>
-                              <p>Total Cost: ${request.total_cost}</p>
+                              <p>Total Cost: ${request.total_cost.toFixed(2)}</p>
                               {/* <p>Location: {request.location}</p> */}
                             </CardContent>
                           </Card>
@@ -251,7 +254,7 @@ const OwnerModule = () => {
                               <Badge className="w-fit">{request.bookingStatus}</Badge>
                             </CardHeader>
                             <CardContent>
-                              <p>Total Cost: ${request.total_cost}</p>
+                              <p>Total Cost: ${request.total_cost.toFixed(2)}</p>
                               {/* <p>Location: {request.location}</p> */}
                             </CardContent>
                             <CardFooter className="flex justify-end space-x-2">
@@ -266,6 +269,65 @@ const OwnerModule = () => {
                                   Assign Operator
                                 </Button>
                               }
+                            </CardFooter>
+                          </Card>
+                        ))}
+                  </div>
+              }
+            </TabsContent>
+            <TabsContent value={"ongoing"}>
+              {
+                fetchingBookings ? <p>Getting all the bookings</p>
+                  :
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {getBookingsOfAStore
+                      .filter((booking) => ((booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || (booking.bookingStatus === BookingStatus.Arrived))).length === 0 ?
+                      <p>0 ongoing bookings</p>
+                      :
+                      getBookingsOfAStore
+                        .filter((booking) => ((booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || (booking.bookingStatus === BookingStatus.Arrived)))
+                        .map((request) => (
+                          <Card key={request.id} className="drop-shadow-md">
+                            <CardHeader>
+                              <CardTitle>{`${request.user.first_name} ${request.user.middle_name ?? ""} ${request.user.last_name}`}</CardTitle>
+                              <Badge className="w-fit">{request.bookingStatus}</Badge>
+                            </CardHeader>
+                            <CardContent>
+                              <p>Total Cost: ${request.total_cost.toFixed(2)}</p>
+                              {/* <p>Location: {request.location}</p> */}
+                            </CardContent>
+                          </Card>
+                        ))}
+                  </div>
+              }
+            </TabsContent>
+            <TabsContent value={"unpaid"}>
+              {
+                fetchingBookings ? <p>Getting all the bookings</p>
+                  :
+
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {filteredPaymentBookings
+                      .filter((booking)=> (((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED")))).length === 0 ?
+                      <p>0 unpaid bookings</p>
+                      :
+                      filteredPaymentBookings
+                        .filter((booking)=> (((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED"))))
+                        .map((request) => (
+                          <Card key={request.id} className="drop-shadow-md">
+                            <CardHeader>
+                              <CardTitle>{`${request.user.first_name} ${request.user.middle_name ?? ""} ${request.user.last_name}`}</CardTitle>
+                              <Badge className="w-fit">{`${request.payment[0].status}`}</Badge>
+                            </CardHeader>
+                            <CardContent>
+                              <p>Total Cost: ${request.total_cost.toFixed(2)}</p>
+                              {/* <p>Location: {request.location}</p> */}
+                            </CardContent>
+                            <CardFooter className="flex justify-end space-x-2">
+                              <PaymentReview
+                                referenceNumber={request.payment[0].transaction_reference[request.payment[0].transaction_reference.length - 1]}
+                                screenshotUrl={request.payment[0].screenshots[request.payment[0].screenshots.length - 1]}
+                                paymentId={request.payment[0].id} />
                             </CardFooter>
                           </Card>
                         ))}
@@ -291,7 +353,7 @@ const OwnerModule = () => {
                               <Badge className="w-fit">{`${request.payment[0].status}`}</Badge>
                             </CardHeader>
                             <CardContent>
-                              <p>Total Cost: ${request.total_cost}</p>
+                              <p>Total Cost: ${request.total_cost.toFixed(2)}</p>
                               {/* <p>Location: {request.location}</p> */}
                             </CardContent>
                             <CardFooter className="flex justify-end space-x-2">
@@ -300,6 +362,33 @@ const OwnerModule = () => {
                                 screenshotUrl={request.payment[0].screenshots[request.payment[0].screenshots.length - 1]}
                                 paymentId={request.payment[0].id} />
                             </CardFooter>
+                          </Card>
+                        ))}
+                  </div>
+              }
+            </TabsContent>
+            <TabsContent value={"completed"}>
+              {
+                fetchingBookings ? <p>Getting all the bookings</p>
+                  :
+
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {filteredPaymentBookings
+                      .filter((booking)=> (booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED")).length === 0 ?
+                      <p>0 bookings completed</p>
+                      :
+                      filteredPaymentBookings
+                        .filter((booking)=> (booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
+                        .map((request) => (
+                          <Card key={request.id} className="drop-shadow-md">
+                            <CardHeader>
+                              <CardTitle>{`${request.user.first_name} ${request.user.middle_name ?? ""} ${request.user.last_name}`}</CardTitle>
+                              <Badge className="w-fit">{`${request.payment[0].status}`}</Badge>
+                            </CardHeader>
+                            <CardContent>
+                              <p>Total Cost: ${request.total_cost.toFixed(2)}</p>
+                              {/* <p>Location: {request.location}</p> */}
+                            </CardContent>
                           </Card>
                         ))}
                   </div>
