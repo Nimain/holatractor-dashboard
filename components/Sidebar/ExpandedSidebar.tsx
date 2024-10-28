@@ -399,6 +399,25 @@ const ExpandedSidebar = () => {
       }),
       route: "#",
     },
+    {
+      icon: (
+        <Image
+          src={SubcriptionsIcon}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Subscriptions"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Booking inquiry",
+        es: "",
+        ay: "",
+        qu: "",
+        gn: "",
+      }),
+      route: "/booking-inquiry",
+    },
   ];
 
   const SettingsOptions = [

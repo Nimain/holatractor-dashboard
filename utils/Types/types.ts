@@ -790,6 +790,20 @@ export enum PaymentStatus {
   COMPLETED,
 }
 
+export interface Inquiry {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+  phone: string
+  tractor_type: TractorType
+  budget: string
+  message: string
+  base_id: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Subscriptions {
   id: string
   name: string
