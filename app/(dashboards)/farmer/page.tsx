@@ -154,8 +154,8 @@ const FarmerDashboard = () => {
                                 <p className="text-sm">{booking.bookingStatus}</p>
                               </Badge>
                             </div>
-                            <p className="text-sm text-muted-foreground">Total tractors: ${booking.tractors.length}</p>
-                            <p className="text-sm text-muted-foreground">Total attachments: ${booking.attachments.length}</p>
+                            <p className="text-sm text-muted-foreground">Total tractors: {booking.tractors.length}</p>
+                            <p className="text-sm text-muted-foreground">Total attachments: {booking.attachments.length}</p>
                           </div>
                         </div>
                         <Button variant="outline" size="sm">View</Button>

@@ -32,6 +32,7 @@ export default function StoresPage() {
     }})
     .then((res)=>{
       setStores(res.data)
+      console.log(res.data)
     }).catch((err)=>{
       errorMessage("Error fetching user detaild")
     }).finally(()=>{
@@ -58,13 +59,13 @@ export default function StoresPage() {
         className="mb-6"
       />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {stores.filter(store=>store.owner_user_id === user.userId).length === 0 ? 
+        {stores.filter(store=>store.owner.user_id === user.userId).length === 0 ? 
         <p>
           No stores found for this owner
         </p>
         :
-        stores.filter(store=>store.owner_user_id === user.userId).map((store) => (
-          <Card key={store.id} className={`${store.owner_user_id === user.userId ? "flex" : "none"} flex-col`}>
+        stores.filter(store=>store.owner.user_id === user.userId).map((store) => (
+          <Card key={store.id} className={`${store.owner.user_id === user.userId ? "flex" : "none"} flex-col`}>
             <CardHeader>
               <CardTitle>{store.name}</CardTitle>
             </CardHeader>
