@@ -47,7 +47,7 @@ const FarmerBookingHistory = () => {
 
   const rejectBookings = bookings.filter((booking) => booking.bookingStatus === BookingStatus.Rejected)
 
-  const arrivingBookings = bookings.filter((booking) => booking.bookingStatus === BookingStatus.Arrived)
+  const arrivingBookings = bookings.filter((booking) => booking.bookingStatus === BookingStatus.Arrived || booking.bookingStatus === BookingStatus.Arriving)
 
   const startedBookings = bookings.filter((booking)=> (booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped))
 
@@ -90,7 +90,7 @@ const FarmerBookingHistory = () => {
   if (bookings.length === 0) return <p>No bookings found</p>
 
   return (
-    <div>
+    <div className="my-10">
       <h1 className="text-3xl font-bold mb-6">Booking History</h1>
       <Tabs defaultValue="booked">
         <TabsList>

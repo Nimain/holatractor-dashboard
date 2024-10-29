@@ -282,11 +282,11 @@ const OwnerModule = () => {
                   :
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {getBookingsOfAStore
-                      .filter((booking) => ((booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || (booking.bookingStatus === BookingStatus.Arrived))).length === 0 ?
+                      .filter((booking) => ((booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || (booking.bookingStatus === BookingStatus.Arrived) || (booking.bookingStatus === BookingStatus.Accepted) || (booking.bookingStatus === BookingStatus.Arriving))).length === 0 ?
                       <p>0 ongoing bookings</p>
                       :
                       getBookingsOfAStore
-                        .filter((booking) => ((booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || (booking.bookingStatus === BookingStatus.Arrived)))
+                        .filter((booking) => ((booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || (booking.bookingStatus === BookingStatus.Arrived) || (booking.bookingStatus === BookingStatus.Accepted) || (booking.bookingStatus === BookingStatus.Arriving)))
                         .map((request) => (
                           <Card key={request.id} className="drop-shadow-md">
                             <CardHeader>

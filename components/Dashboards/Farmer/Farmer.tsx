@@ -13,6 +13,7 @@ import { errorMessage } from "@/utils/Toastify/Messages"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
+import FarmerBookingHistory from "./BookingHistory"
 
 interface user {
   userId: string;
@@ -89,9 +90,6 @@ const FarmerDashboard = () => {
           <Button asChild>
             <Link href="/farmer/new-booking">New Booking</Link>
           </Button>
-          <Button asChild>
-            <Link href="/farmer/booking-history">Booking history</Link>
-          </Button>
         </div>
       </div>
 
@@ -133,6 +131,8 @@ const FarmerDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      <FarmerBookingHistory />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
