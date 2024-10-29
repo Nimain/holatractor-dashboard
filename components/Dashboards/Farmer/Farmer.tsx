@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { CalendarIcon, MapPinIcon, TractorIcon, ClipboardListIcon, UserIcon, BarChartIcon } from "lucide-react"
+import { CalendarIcon, MapPinIcon, TractorIcon, ClipboardListIcon, UserIcon, BarChartIcon, ClockIcon, Truck, DollarSignIcon } from "lucide-react"
 import Link from "next/link"
 import { useCookie } from "next-cookie"
 import { useEffect, useState } from "react"
@@ -11,6 +11,8 @@ import { Booking, Farmer } from "@/utils/Types/types"
 import { renderInstance } from "@/utils/Axios/RenderInstance"
 import { errorMessage } from "@/utils/Toastify/Messages"
 import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
+import { Separator } from "@/components/ui/separator"
 
 interface user {
   userId: string;
@@ -127,7 +129,7 @@ const FarmerDashboard = () => {
             <BarChartIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalUnpaid}</div>
+            <div className="text-2xl font-bold">{totalUnpaid.toFixed(2)}</div>
           </CardContent>
         </Card>
       </div>
@@ -158,7 +160,7 @@ const FarmerDashboard = () => {
                             <p className="text-sm text-muted-foreground">Total attachments: {booking.attachments.length}</p>
                           </div>
                         </div>
-                        <Button variant="outline" size="sm">View</Button>
+                        <BookingCard booking={booking} id={`#Hola_booking_${booking.id.slice(-4)}`} />
                       </li>
                     )
                   })
@@ -199,3 +201,86 @@ const FarmerDashboard = () => {
 }
 
 export default FarmerDashboard
+
+const BookingCard = ({ booking, id }: { booking: Booking; id: string }) => {
+  const [open, setOpen] = useState(false)
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">View</Button>
+      </DialogTrigger>
+
+      <DialogContent className="w-fit h-fit">
+
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-lg font-semibold">id: {id}</CardTitle>
+              <Badge className={'bg-blue-100 text-blue-800'}>
+                {
+                  booking.bookingStatus
+                }
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <CalendarIcon className="w-4 h-4 text-gray-500" />
+              <span className="text-sm">
+                {new Date(booking.start_date).toLocaleDateString()} -
+                {booking.end_date ? new Date(booking.end_date).toLocaleDateString() : booking.booking_hours}
+              </span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <ClockIcon className="w-4 h-4 text-gray-500" />
+              <span className="text-sm">
+                {new Date(booking.start_date).toLocaleTimeString()} -
+                {booking.booking_hours && booking.booking_hours}
+              </span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <MapPinIcon className="w-4 h-4 text-gray-500" />
+              <span className="text-sm">
+                Lat: {booking.booking_location_lat}, Lon: {booking.booking_location_lan}
+              </span>
+            </div>
+            <Separator />
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <TractorIcon className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-medium">Tractors:</span>
+              </div>
+              <ul className="list-disc list-inside text-sm pl-6">
+                {booking.tractors.map((tractor, index) => (
+                  <li key={index}>{tractor.tractor.baseTractor.name}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Truck className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-medium">Attachments:</span>
+              </div>
+              <ul className="list-disc list-inside text-sm pl-6">
+                {booking.attachments.map((attachment, index) => (
+                  <li key={index}>{attachment.attachment.baseAttachment.name}</li>
+                ))}
+              </ul>
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <DollarSignIcon className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-medium">Total Cost:</span>
+              </div>
+              <span className="text-lg font-bold">${booking.total_cost.toFixed(2)}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+      </DialogContent>
+
+    </Dialog>
+  )
+}

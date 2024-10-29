@@ -48,6 +48,7 @@ export default function PaymentUpload({ paymentId }: { paymentId: string }) {
             },
         }).then((res) => {
             successMessage("Payment details submitted")
+            window.location.reload()
         }).catch((err) => {
             if (err.response && err.response.status === 404 && err.response.data.message === "Log in user not found") {
                 errorMessage("Log in user not found")

@@ -88,7 +88,8 @@ const CitySection = () => {
       .then((res) => {
         if (res.status === 200)
           successMessage(res.data);
-        refresh();
+        fetchAllCountry();
+        fetchAllCity();
       })
       .catch((err) => {
         errorMessage("Some error occured while deleting the role");
@@ -123,14 +124,14 @@ const CitySection = () => {
       setNewCountry("")
       setCountryCode("")
       setAddNewCountry(false)
-      fetchAllCountry()
+      fetchAllCountry();
+      fetchAllCity();
     }).catch((err) => {
       errorMessage("Some error occurred")
     }).finally(() => {
       fetchAllCountry();
       setDeleteCountry(false);
       setBacOpen(false)
-      refresh()
     })
   }
 

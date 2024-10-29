@@ -38,6 +38,7 @@ export default function PaymentReview({ screenshotUrl, referenceNumber, paymentI
     })
       .then((res) => {
         successMessage("Accepted")
+        window.location.reload()
       }).catch((err) => {
         if (err.response && err.response.status === 404 && err.response.data.message === "Log in user not found") {
           errorMessage("Log in user not found")
@@ -71,6 +72,7 @@ export default function PaymentReview({ screenshotUrl, referenceNumber, paymentI
     })
       .then((res) => {
         successMessage("Accepted")
+        window.location.reload()
       }).catch(() => {
         errorMessage("Error in accepting")
       }).finally(() => {

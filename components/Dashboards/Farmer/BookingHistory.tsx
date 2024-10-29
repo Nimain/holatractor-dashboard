@@ -102,7 +102,7 @@ const FarmerBookingHistory = () => {
           <TabsTrigger value="completed">Completed</TabsTrigger>
           <TabsTrigger value="rejected">Rejected</TabsTrigger>
         </TabsList>
-        <TabsContent value={"booked"} className="w-full">
+        <TabsContent value={"booked"} className="w-full flex gap-3">
           {
             openBookings.length === 0 ?
             <p>
@@ -182,7 +182,6 @@ const FarmerBookingHistory = () => {
                     </div>
                   </CardContent>
                   <CardFooter className="flex justify-between">
-                    <Button variant="outline" size="sm">View Details</Button>
                     {!booking.confirm && (
                       <Button onClick={() => { userBookingConfirm(booking.id) }}>
                         {
@@ -199,7 +198,7 @@ const FarmerBookingHistory = () => {
             })
           }
         </TabsContent>
-        <TabsContent value={"arriving"} className="w-full">
+        <TabsContent value={"arriving"} className="w-full flex gap-3">
           {
             arrivingBookings.length === 0 ?
             <p>
@@ -270,15 +269,12 @@ const FarmerBookingHistory = () => {
                       <span className="text-lg font-bold">${booking.total_cost.toFixed(2)}</span>
                     </div>
                   </CardContent>
-                  <CardFooter className="flex justify-between">
-                    <Button variant="outline" size="sm">View Details</Button>
-                  </CardFooter>
                 </Card>
               )
             })
           }
         </TabsContent>
-        <TabsContent value={"started"} className="w-full">
+        <TabsContent value={"started"} className="w-full flex gap-3">
           {
             startedBookings.length === 0 ?
             <p>
@@ -351,15 +347,12 @@ const FarmerBookingHistory = () => {
                       <span className="text-lg font-bold">${booking.total_cost.toFixed(2)}</span>
                     </div>
                   </CardContent>
-                  <CardFooter className="flex justify-between">
-                    <Button variant="outline" size="sm">View Details</Button>
-                  </CardFooter>
                 </Card>
               )
             })
           }
         </TabsContent>
-        <TabsContent value={"unpaid"} className="w-full">
+        <TabsContent value={"unpaid"} className="w-full flex gap-3">
           {
             unpaidBookings.length === 0 ?
             <p>
@@ -473,7 +466,7 @@ const FarmerBookingHistory = () => {
             })
           }
         </TabsContent>
-        <TabsContent value={"review"} className="w-full">
+        <TabsContent value={"review"} className="w-full flex gap-3">
           {
             reviewBookings.length === 0 ?
             <p>
@@ -552,7 +545,7 @@ const FarmerBookingHistory = () => {
             })
           }
         </TabsContent>
-        <TabsContent value={"completed"} className="w-full">
+        <TabsContent value={"completed"} className="w-full flex gap-3">
           {
             completedBookings.length === 0 ?
             <p>
@@ -623,15 +616,12 @@ const FarmerBookingHistory = () => {
                       <span className="text-lg font-bold">${booking.total_cost.toFixed(2)}</span>
                     </div>
                   </CardContent>
-                  <CardFooter className="flex justify-between">
-                    <Button variant="outline" size="sm">View Details</Button>
-                  </CardFooter>
                 </Card>
               )
             })
           }
         </TabsContent>
-        <TabsContent value={"rejected"} className="w-full">
+        <TabsContent value={"rejected"} className="w-full flex gap-3">
           {
             rejectBookings.length === 0 ?
             <p>
@@ -702,9 +692,6 @@ const FarmerBookingHistory = () => {
                       <span className="text-lg font-bold">${booking.total_cost.toFixed(2)}</span>
                     </div>
                   </CardContent>
-                  <CardFooter className="flex justify-between">
-                    <Button variant="outline" size="sm">View Details</Button>
-                  </CardFooter>
                 </Card>
               )
             })

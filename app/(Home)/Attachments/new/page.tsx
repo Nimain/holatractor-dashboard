@@ -222,7 +222,7 @@ const NewAttachment = () => {
       .then((res) => {
         if (res.status === 201) {
           successMessage("Attachment added");
-          router.refresh();
+          router.push("/Attachments")
         }
       })
       .catch((err) => {

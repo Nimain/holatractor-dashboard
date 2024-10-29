@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CalendarDays, Clock, MapPin, DollarSign, ReceiptPoundSterling } from "lucide-react"
 import { BookingStatus, OperatorBookingJob, ownerOperatorRequest, ownerOperatorResponse } from "@/utils/Types/types"
 import { renderInstance } from "@/utils/Axios/RenderInstance"
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages"
 import { useCookie } from "next-cookie"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -38,6 +38,8 @@ export default function Operator() {
     const access_token = cookie.get("access_token");
 
     const { slug } = useParams()
+
+    const router = useRouter()
 
     function handleFetchAllRequests() {
         setFetchingRequests(true)
@@ -87,6 +89,8 @@ export default function Operator() {
         }).then(() => {
             successMessage("Job rejected")
             handleFetchAllRequests()
+            fetchAllCompletedBookings()
+            router.refresh()
         }).catch((err) => {
             if (err.response && err.response.status === 404 && err.response.data.message === "Request is not valid") {
                 errorMessage("Request is not valid")
@@ -119,7 +123,9 @@ export default function Operator() {
         }).then(() => {
             successMessage("Job accepted")
             handleFetchAllRequests()
+            fetchAllCompletedBookings()
             setCostDialogOpen(false)
+            router.refresh()
         }).catch((err) => {
             if (err.response && err.response.status === 404 && err.response.data.message === "Booking not found") {
                 errorMessage("Booking not valid")
@@ -150,6 +156,8 @@ export default function Operator() {
         }).then((res) => {
             successMessage("Status changed to arriving")
             fetchAllCompletedBookings()
+            handleFetchAllRequests()
+            router.refresh()
         }).catch((err) => {
             if (err.response && err.response.status === 404 && err.response.data.message === "Booking not found") {
                 errorMessage("Booking not valid")
@@ -176,6 +184,8 @@ export default function Operator() {
         }).then((res) => {
             successMessage("Status changed to arrived")
             fetchAllCompletedBookings()
+            handleFetchAllRequests()
+            router.refresh()
         }).catch((err) => {
             if (err.response && err.response.status === 404 && err.response.data.message === "Booking not found") {
                 errorMessage("Booking not valid")
@@ -202,6 +212,8 @@ export default function Operator() {
         }).then((res) => {
             successMessage("Status changed to started")
             fetchAllCompletedBookings()
+            handleFetchAllRequests()
+            router.refresh()
         }).catch((err) => {
             if (err.response && err.response.status === 404 && err.response.data.message === "Booking not found") {
                 errorMessage("Booking not valid")
@@ -234,6 +246,8 @@ export default function Operator() {
         }).then((res) => {
             successMessage("Status changed")
             fetchAllCompletedBookings()
+            handleFetchAllRequests()
+            router.refresh()
         }).catch((err) => {
             if (err.response && err.response.status === 404 && err.response.data.message === "Booking not found") {
                 errorMessage("Booking not valid")

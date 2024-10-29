@@ -2,7 +2,9 @@
 
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Clock, MapPin, Receipt } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -90,6 +92,20 @@ const NewBooking = () => {
             }
         });
     }
+
+    const formatCurrency = (amount: any) => {
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD'
+        }).format(amount);
+      };
+    
+      const CostItem = ({ label, value }:{ label: any; value: any }) => (
+        <div className="flex justify-between items-center py-1">
+          <span className="text-gray-600">{label}</span>
+          <span className="font-medium">{formatCurrency(value)}</span>
+        </div>
+      );
 
     function fetchAllStores() {
         if (access_token) {
@@ -187,7 +203,6 @@ const NewBooking = () => {
                 .then(response => {
                     // Handle the response data here
                     console.log(response.data)
-                    setAllAttachments(response.data);
                 })
                 .catch(error => {
                     // Handle any errors here
@@ -810,48 +825,80 @@ const NewBooking = () => {
                     </div>
                 )
             case 5:
+                if(!booking) return null
                 return (
-                    <div className="space-y-4">
-                        <h2 className="text-2xl font-bold mb-4">Confirm Booking</h2>
+                    <Card className="w-full max-w-2xl mx-auto shadow-lg">
+      <CardHeader className="text-center border-b">
+        <CardTitle className="text-2xl font-bold text-primary">Booking Confirmation</CardTitle>
+        <p className="text-gray-500">Booking ID: {booking.id}</p>
+      </CardHeader>
+      
+      <CardContent className="space-y-6 pt-6">
+        {/* Date and Duration Section */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5 text-primary" />
+            <h3 className="font-semibold">Booking Period</h3>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4 pl-7">
+            <div>
+              <p className="text-gray-600">From</p>
+              <p className="font-medium">{new Date(booking.start_date).toLocaleDateString()}</p>
+            </div>
+            {booking.end_date && (
+              <div>
+                <p className="text-gray-600">To</p>
+                <p className="font-medium">{new Date(booking.end_date).toLocaleDateString()}</p>
+              </div>
+            )}
+          </div>
+          
+          {!booking.end_date && (
+            <div className="flex items-center gap-2 pl-7">
+              <Clock className="h-4 w-4 text-gray-500" />
+              <p>Duration: {booking.booking_hours} hours</p>
+            </div>
+          )}
+        </div>
 
-                        {
-                            booking && <div className="w-full">
+        <Separator />
 
-                                <p className="text-base font-medium text-center">
-                                    Booking Id: {booking.id}
-                                </p>
+        {/* Distance Section */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-5 w-5 text-primary" />
+            <h3 className="font-semibold">Distance Details</h3>
+          </div>
+          <p className="pl-7">Total Distance: {parseFloat(booking.distance).toFixed(2)} km</p>
+        </div>
 
-                                <p>
-                                    From {formatDateToDDMMYYYY(booking.start_date)}
-                                </p>
+        <Separator />
 
-                                <p>
-                                    {
-                                        booking.booking_hours && booking.booking_hours === BookingHours ?
-                                            <p>
-                                                {booking.end_date && `To ${formatDateToDDMMYYYY(booking.end_date)}`}
-                                            </p>
-                                            :
-                                            `Total duration: ${booking.booking_hours}`
-                                    }
-                                </p>
-
-                                <p>
-                                    Attachment cost: {booking.total_attachment_cost}
-                                    Tractor cost: {booking.total_tractor_cost}
-                                    Service charge: {booking.total_service_charge}
-                                    Total tax: {booking.total_tax}
-                                    Total distance cost: {booking.total_distance_cost}
-                                    Total cost: {booking.total_cost}
-                                </p>
-
-                                <p>
-                                    Total distance: {booking.distance}
-                                </p>
-
-                            </div>
-                        }
-                    </div>
+        {/* Cost Breakdown Section */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Receipt className="h-5 w-5 text-primary" />
+            <h3 className="font-semibold">Cost Breakdown</h3>
+          </div>
+          
+          <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+            <CostItem label="Attachment Cost" value={booking.total_attachment_cost?.toFixed(2)} />
+            <CostItem label="Tractor Cost" value={booking.total_tractor_cost?.toFixed(2)} />
+            <CostItem label="Service Charge" value={booking.total_service_charge?.toFixed(2)} />
+            <CostItem label="Distance Cost" value={booking.total_distance_cost?.toFixed(2)} />
+            <CostItem label="Tax" value={booking.total_tax?.toFixed(2)} />
+            <Separator className="my-2" />
+            <div className="flex justify-between items-center pt-2 font-bold">
+              <span>Total Amount</span>
+              <span className="text-primary text-lg">
+                {formatCurrency(booking.total_cost.toFixed(2))}
+              </span>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
                 )
             default:
                 return null

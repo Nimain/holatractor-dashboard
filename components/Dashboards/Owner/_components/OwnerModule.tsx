@@ -99,6 +99,7 @@ const OwnerModule = () => {
     }).then((res) => {
       successMessage("Operator assigned")
       setIsAssignOpen(false)
+      handleFetchAllBookings()
     }).catch((err) => {
       if (err.response && err.response.status === 404 && err.response.data.message === "Booking is not valid") {
         errorMessage("Log in user not found")
@@ -246,7 +247,7 @@ const OwnerModule = () => {
                       <p>No open requests available</p>
                       :
                       getBookingsOfAStore
-                        .filter((request) => (request.owner_confirm && request.confirm))
+                        .filter((request) => (request.owner_confirm && request.confirm && request.bookingStatus === BookingStatus.Open))
                         .map((request) => (
                           <Card key={request.id} className="drop-shadow-md">
                             <CardHeader>
