@@ -15,7 +15,7 @@ const Booking = dynamic(
 const NewBooking = () => {
 
     return (
-        <NewBooking />
+        <Booking />
     )
 }
 

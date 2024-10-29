@@ -142,9 +142,7 @@ const NewInventory = () => {
 
       if (res.status === 201) {
         successMessage("Inventory created successfully");
-        setTimeout(() => {
-          router.refresh()
-        }, 2000);
+        router.push("/Inventory")
       }
     } catch (err) {
       errorMessage("Some error occurred");
@@ -396,7 +394,7 @@ const NewInventory = () => {
 
             <div className="w-full flex flex-col gap-4">
               <div className="flex flex-col gap-2 w-fit">
-                <Label>Min price</Label>
+                <Label>Min price (in dollar $)</Label>
                 <Input
                   type="number"
                   placeholder="Hourly price"
@@ -407,7 +405,7 @@ const NewInventory = () => {
                 />
               </div>
               <div className="flex flex-col gap-2 w-fit">
-                <Label>Max price</Label>
+                <Label>Max price (in dollar $)</Label>
                 <Input
                   type="number"
                   value={value[1]}
@@ -560,7 +558,7 @@ const NewInventory = () => {
 
           <div className="w-full">
             <div className="flex flex-col gap-[4px] w-fit">
-              <Label>Min price</Label>
+              <Label>Min price (in dollar $)</Label>
               <Input
                 type="number"
                 placeholder="Hourly price"
@@ -571,7 +569,7 @@ const NewInventory = () => {
               />
             </div>
             <div className="flex flex-col gap-[4px] w-fit">
-              <Label>Max price</Label>
+              <Label>Max price (in dollar $)</Label>
               <Input
                 type="number"
                 value={value[1]}
@@ -724,7 +722,7 @@ const NewInventory = () => {
 
           <div className="w-full">
             <div className="flex flex-col gap-[4px] w-fit">
-              <Label>Min price</Label>
+              <Label>Min price (in dollar $)</Label>
               <Input
                 type="number"
                 placeholder="Hourly price"
@@ -735,7 +733,7 @@ const NewInventory = () => {
               />
             </div>
             <div className="flex flex-col gap-[4px] w-fit">
-              <Label>Max price</Label>
+              <Label>Max price (in dollar $)</Label>
               <Input
                 type="number"
                 value={value[1]}
@@ -888,7 +886,7 @@ const NewInventory = () => {
 
           <div className="w-full">
             <div className="flex flex-col gap-[4px] w-fit">
-              <Label>Min price</Label>
+              <Label>Min price (in dollar $)</Label>
               <Input
                 type="number"
                 placeholder="Hourly price"
@@ -899,7 +897,7 @@ const NewInventory = () => {
               />
             </div>
             <div className="flex flex-col gap-[4px] w-fit">
-              <Label>Max price</Label>
+              <Label>Max price (in dollar $)</Label>
               <Input
                 type="number"
                 value={value[1]}
@@ -1052,7 +1050,7 @@ const NewInventory = () => {
 
           <div className="w-full">
             <div className="flex flex-col gap-[4px] w-fit">
-              <Label>Min price</Label>
+              <Label>Min price (in dollar $)</Label>
               <Input
                 type="number"
                 placeholder="Hourly price"
@@ -1063,7 +1061,7 @@ const NewInventory = () => {
               />
             </div>
             <div className="flex flex-col gap-[4px] w-fit">
-              <Label>Max price</Label>
+              <Label>Max price (in dollar $)</Label>
               <Input
                 type="number"
                 value={value[1]}
