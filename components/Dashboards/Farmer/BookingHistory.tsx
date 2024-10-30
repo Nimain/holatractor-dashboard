@@ -17,6 +17,7 @@ import Image from 'next/image'
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
 import PaymentUpload from './_components/UploadPaymentProof'
 import { motion } from "framer-motion"
+import BookingHistoryLoader from "./BookingHistoryLoader"
 
 const FarmerBookingHistory = () => {
   const [bookings, setBookings] = useState<Booking[]>([])
@@ -110,12 +111,12 @@ const FarmerBookingHistory = () => {
     }
   }, [])
 
-  if (fetchingFarmerDetails) return <p>Loading farmer details</p>
+  if (fetchingFarmerDetails) return <BookingHistoryLoader />
 
   if (bookings.length === 0) return <p>No bookings found</p>
 
   return (
-    <div className="my-10">
+    <div className="p-10 rounded-md border-2 my-10">
       <h1 className="text-3xl font-bold mb-6 text-center">Booking History</h1>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="space-x-2 bg-transparent">

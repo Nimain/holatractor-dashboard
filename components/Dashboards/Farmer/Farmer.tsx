@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
 import FarmerBookingHistory from "./BookingHistory"
+import FarmerShrimmer from "./_components/FarmerShrimmer"
 
 interface user {
   userId: string;
@@ -63,7 +64,7 @@ const FarmerDashboard = () => {
     }
   }, [])
 
-  if (fetchingFarmerDetails) return <p>Loading farmer details</p>
+  if (fetchingFarmerDetails) return <FarmerShrimmer />
 
   if (!user) return <p>user not found</p>
 
