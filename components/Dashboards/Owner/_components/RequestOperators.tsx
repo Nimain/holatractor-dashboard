@@ -5,20 +5,21 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { renderInstance } from '@/utils/Axios/RenderInstance'
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
-import { Operator } from '@/utils/Types/types'
+import { Operator, Store } from '@/utils/Types/types'
 import { CircularProgress } from '@mui/material'
 import { useCookie } from 'next-cookie'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
-const RequestOperators = () => {
+const RequestOperators = ({store}:{store:Store;}) => {
 
     const [open, setOpen] = useState(false)
     const [fetchingOperators, setFetchingOperators] = useState(false)
     const [allOperators, setAllOperators] = useState<Operator[]>([])
 
-    const[requesting, setRequesting] = useState(false)
+    const [requesting, setRequesting] = useState(false)
+    const [presentedOperators, setPresentedOperators] = useState<string[]>([])
 
     const { slug } = useParams()
 
@@ -43,7 +44,7 @@ const RequestOperators = () => {
             } else if (err.response && err.response.status === 409 && err.response.data.message === "You are not allowed for this task") {
                 errorMessage("You are not allowed for this task")
             } else if (err.response && err.response.status === 409 && err.response.data.message === "You are already in this store") {
-                errorMessage("You are already in this store")
+                errorMessage("Operator is already in this store")
             } else {
                 errorMessage("Error in requesting")
             }
@@ -64,9 +65,22 @@ const RequestOperators = () => {
         })
     }
 
+    function filterPresentStores(){
+        for(const tempOperator of store.OperatorInStore){
+            const temoOperator_id = tempOperator.operator_id
+            setPresentedOperators([...presentedOperators, temoOperator_id])
+        }
+    }
+
     useEffect(()=>{
         fetchOperators()
     },[])
+
+    useEffect(()=>{
+        if(store){
+            filterPresentStores()
+        }
+    },[store])
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -100,6 +114,12 @@ const RequestOperators = () => {
                                         }
                                     </CardContent>
                                     <CardFooter>
+                                        {
+                                            presentedOperators.includes(operator.id) ?
+                                            <Button variant={"outline"}>
+                                                Already in store
+                                            </Button>
+                                            :
                                         <Button
                                             className="w-full"
                                             onClick={() => handleRequest(operator.id)}
@@ -108,6 +128,7 @@ const RequestOperators = () => {
                                                 requesting ? <CircularProgress /> : "Request"
                                             }
                                         </Button>
+                                        }
                                     </CardFooter>
                                 </Card>
                             )

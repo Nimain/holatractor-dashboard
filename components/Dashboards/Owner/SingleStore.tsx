@@ -10,6 +10,7 @@ import OwnerModule from './_components/OwnerModule'
 import { renderInstance } from '@/utils/Axios/RenderInstance'
 import { errorMessage } from '@/utils/Toastify/Messages'
 import { Store } from '@/utils/Types/types'
+import RequestOperators from './_components/RequestOperators'
 
 export default function StorePage() {
   const [store, setStore] = useState<Store | null>(null)
@@ -17,27 +18,27 @@ export default function StorePage() {
 
   const { slug } = useParams()
 
-  function fetchStoreDetails(){
+  function fetchStoreDetails() {
     setFetchingStoreDetails(true)
     renderInstance.get(`/store/${slug}`)
-    .then((res)=>{
-      setStore(res.data)
-    }).catch((err)=>{
-      errorMessage("Error fetching store details")
-    }).finally(()=>{
-      setFetchingStoreDetails(false)
-    })
+      .then((res) => {
+        setStore(res.data)
+      }).catch((err) => {
+        errorMessage("Error fetching store details")
+      }).finally(() => {
+        setFetchingStoreDetails(false)
+      })
   }
 
-  useEffect(()=>{
-    if(slug) {
+  useEffect(() => {
+    if (slug) {
       fetchStoreDetails()
     }
-  },[])
+  }, [])
 
-  if(fetchingStoreDetails) return <p>Getting store details</p>
+  if (fetchingStoreDetails) return <p>Getting store details</p>
 
-  if(!store) return <p>Store details not available</p>
+  if (!store) return <p>Store details not available</p>
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -79,7 +80,10 @@ export default function StorePage() {
                   <Mail className="w-5 h-5 mr-2" />
                   <span>{store.owner ? store.owner.user.email : store.agentOwner.user.email}</span>
                 </div>
-                <OwnerModule />
+                <div className="flex items-center gap-2">
+                  <OwnerModule />
+                  <RequestOperators store={store}/>
+                </div>
               </div>
             </div>
           </div>
@@ -115,7 +119,7 @@ export default function StorePage() {
           </div>
         </TabsContent>
         <TabsContent value="attachments">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {store.AttachmentInStore.map((tractor) => (
               <Card key={tractor.id}>
                 <CardHeader>
