@@ -1,0 +1,109 @@
+"use client"
+
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useCookie } from 'next-cookie';
+import { decode } from 'jsonwebtoken';
+import { Loader2 } from 'lucide-react';
+
+const AuthHandler = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [isLoading, setIsLoading] = useState(true);
+
+  const { cookie } = useCookie()
+
+  useEffect(() => {
+    const handleAuth = async () => {
+      try {
+        // Get parameters from searchParams
+        const token = searchParams.get('token');
+        const isFarmer = searchParams.get('isFarmer');
+        const isOperator = searchParams.get('isOperator');
+        const isOwner = searchParams.get('isOwner');
+        const isDealer = searchParams.get('isDealer');
+
+        // Check if token exists
+        if (!token) {
+          handleNavigateBack();
+          return;
+        }
+
+        // Verify and decode token
+        try {
+          const user = decode(token);
+          if (!user) {
+            handleNavigateBack();
+            return;
+          }
+
+          // Set expiry date for cookies
+          const expiryDate = new Date();
+          expiryDate.setDate(expiryDate.getDate() + 1);
+
+          // Set cookies
+          const cookieOptions = { path: '/', expires: expiryDate };
+          cookie.set('access_token', token, cookieOptions);
+          cookie.set('user', JSON.stringify(user), cookieOptions);
+          cookie.set('isFarmer', isFarmer || 'false', cookieOptions);
+          cookie.set('isOperator', isOperator || 'false', cookieOptions);
+          cookie.set('isOwner', isOwner || 'false', cookieOptions);
+          cookie.set('isDealer', isDealer || 'false', cookieOptions);
+
+          // Redirect based on user role using the new router
+          if (isFarmer === 'true') {
+            router.push('/farmer');
+          } else if (isOperator === 'true') {
+            router.push('/operator');
+          } else if (isOwner === 'true') {
+            router.push('/owner');
+          } else if (isDealer === 'true') {
+            router.push('/dealer');
+          } else {
+            router.push('/');
+          }
+
+        } catch (err) {
+          handleNavigateBack();
+          return;
+        }
+      } catch (err) {
+        handleNavigateBack();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const handleNavigateBack = () => {
+      const referrer = document.referrer;
+      
+      if (referrer) {
+        // If there's a referrer, navigate to it
+        window.location.href = referrer;
+      } else {
+        // If no referrer is available, try window.history
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          // If no history is available, redirect to a default page
+          router.push('/');
+        }
+      }
+    };
+
+    handleAuth();
+  }, [searchParams, router]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-gray-600">Authenticating...</p>
+      </div>
+    );
+  }
+
+  return null;
+};
+
+export default AuthHandler;

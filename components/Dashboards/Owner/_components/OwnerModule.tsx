@@ -156,6 +156,8 @@ const OwnerModule = () => {
 
   if (fetchingStoreDetails) return <p>Getting store details</p>
 
+  if (!store) return <p>Store details not found</p>
+
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
@@ -410,7 +412,7 @@ const OwnerModule = () => {
                     <div
                       className="w-fill h-[50vh] flex items-center justify-center flex-col gap-5">
                       <p>No operators available</p>
-                      <RequestOperators />
+                      <RequestOperators store={store} />
                     </div>
                     :
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
