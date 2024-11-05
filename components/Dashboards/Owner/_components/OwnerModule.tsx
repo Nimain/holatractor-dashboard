@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { useCookie } from 'next-cookie'
 import { Booking, BookingStatus, OperatorInStore, PaymentStatus, Store } from '@/utils/Types/types'
-import { renderInstance } from '@/utils/Axios/RenderInstance'
+import { NestJsBaseURL, renderInstance } from '@/utils/Axios/RenderInstance'
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useParams } from 'next/navigation'
@@ -16,6 +16,9 @@ import Image from 'next/image'
 import RequestOperators from './RequestOperators'
 import PaymentMethods from './BankAccountSelect'
 import PaymentReview from './PaymentProofAction'
+import io from 'socket.io-client';
+
+const socket = io(NestJsBaseURL);
 
 const OwnerModule = () => {
 
@@ -140,6 +143,21 @@ const OwnerModule = () => {
         setFetchingOperators(false)
       })
   }
+
+  useEffect(()=>{
+    // Listen for booking updates
+    socket.on('bookingUpdate', (data:Booking) => {
+      renderInstance.get(`/booking/${slug}/bookings`)
+      .then((res) => {
+        setGetBookingsOfAStore(res.data)
+        setfilteredPaymentBookings(res.data.filter((request: Booking) => (request.payment.length >= 1)))
+      })
+    });
+
+    // return () => {
+    //   socket.off('bookingUpdate');
+    // };
+  },[])
 
   useEffect(() => {
     if (slug) {

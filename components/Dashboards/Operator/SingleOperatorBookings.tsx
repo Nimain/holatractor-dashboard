@@ -25,9 +25,6 @@ export default function Operator() {
     const [requests, setRequests] = useState<ownerOperatorRequest[]>([])
     const [completedJobs, setCompletedJobs] = useState<OperatorBookingJob[]>([])
     const [costForOperator, setCostForOperator] = useState(0)
-    const [booking_id, setBookingId] = useState("")
-    const [operator_id, setOperatorId] = useState("")
-    const [costDialogOpen, setCostDialogOpen] = useState(false)
     const [fetchingRequests, setFetchingRequests] = useState(false)
     const [fetchingCompletedJobs, setFetchingCompletedJobs] = useState(false)
     const [rejectingRequests, setRejectingRequests] = useState(false)
@@ -102,7 +99,7 @@ export default function Operator() {
         })
     }
 
-    const handleAccept = () => {
+    const handleAccept = (booking_id: string, operator_id: string) => {
         if (!booking_id) {
             errorMessage("Some error occurred")
             return
@@ -114,8 +111,7 @@ export default function Operator() {
         setRejectingRequests(true)
         renderInstance.post(`/operatorbooking`, {
             booking_id,
-            operator_id,
-            cost_for_operator: costForOperator
+            operator_id
         }, {
             headers: {
                 Authorization: `Bearer ${access_token}`,
@@ -124,7 +120,6 @@ export default function Operator() {
             successMessage("Job accepted")
             handleFetchAllRequests()
             fetchAllCompletedBookings()
-            setCostDialogOpen(false)
             router.refresh()
         }).catch((err) => {
             if (err.response && err.response.status === 404 && err.response.data.message === "Booking not found") {
@@ -456,9 +451,7 @@ export default function Operator() {
                                                         </CardContent>
                                                         <CardFooter className="flex justify-between">
                                                             <Button onClick={() => {
-                                                                setBookingId(details.booking_id)
-                                                                setOperatorId(details.operator_id)
-                                                                setCostDialogOpen(true)
+                                                                handleAccept(details.booking_id, details.operator_id)
                                                             }}>Accept</Button>
                                                             <Button variant="destructive" onClick={() => handleReject(details.operator_id)}>Reject</Button>
                                                         </CardFooter>
@@ -527,37 +520,6 @@ export default function Operator() {
                     }
                 </TabsContent>
             </Tabs>
-            <Dialog open={costDialogOpen} onOpenChange={setCostDialogOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Give the details</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-3">
-                        <Label>Cost</Label>
-                        <Input
-                            type="number"
-                            value={costForOperator}
-                            onChange={e => { setCostForOperator(parseInt(e.target.value)) }}
-                            placeholder="Cost for your job" />
-                        <DialogFooter>
-                            <Button
-                                onClick={() => { handleAccept() }}>
-                                Accept
-                            </Button>
-                            <DialogClose>
-                                <Button onClick={() => {
-                                    setBookingId("")
-                                    setOperatorId("")
-                                    setCostDialogOpen(false)
-                                }}>
-                                    Cancel
-                                </Button>
-                            </DialogClose>
-                        </DialogFooter>
-
-                    </div>
-                </DialogContent>
-            </Dialog>
         </div>
     )
 }
