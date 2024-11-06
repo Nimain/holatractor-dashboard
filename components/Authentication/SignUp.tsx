@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Logo from "@/assets/logo.png";
 import SignupCard from "./SignupCard";
+import GoogleLogin from "./GoogleLogin"
 
 const SignUp = () => {
   const [isSignUpCard, setIsSignUpCard] = useState(false)
@@ -138,7 +139,7 @@ const SignUp = () => {
           </div>
         </div>
 
-        <p className="flex items-center justify-center gap-[10px]">
+        {/* <p className="flex items-center justify-center gap-[10px]">
           Or continue with
           <Image
             src={
@@ -149,7 +150,8 @@ const SignUp = () => {
             width={40}
             height={40}
           />
-        </p>
+        </p> */}
+        <GoogleLogin />
       </div>
     </div>
   );

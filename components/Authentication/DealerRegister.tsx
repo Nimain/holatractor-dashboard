@@ -263,7 +263,7 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
             location_country,
             attachment: attachmentLink,
             document_number,
-            expiry_date
+            expiry_date,
         };
 
         inPage ?
@@ -320,9 +320,7 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
                         cookie.remove("access_token", { path: "/" });
 
                         successMessage("User sign up successfully");
-                        setTimeout(() => {
                             router.push("/login");
-                        }, 3000);
                     }
                 })
                 .catch((err) => {

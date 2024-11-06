@@ -1,6 +1,5 @@
 "use client"
 
-import { CircularProgress } from '@mui/material'
 import { useCookie } from 'next-cookie'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -13,6 +12,9 @@ import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
 import { Label } from '../ui/label'
 import { Input } from '../ui/input'
 import { Eye, EyeOff } from 'lucide-react'
+import { useGoogleLogin } from '@react-oauth/google'
+import axios from 'axios'
+import { Backdrop, CircularProgress } from '@mui/material';
 
 const LogInPage = () => {
 
@@ -169,6 +171,8 @@ const LogInPage = () => {
                         }
                     </button>
 
+                    <GoogleSignIn />
+
                     <p className='underline cursor-pointer'>
                         Forgot your password?
                     </p>
@@ -181,8 +185,110 @@ const LogInPage = () => {
 
             </div>
 
+            <Backdrop
+                        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+                        open={loading}
+                    >
+                        <CircularProgress />
+                    </Backdrop>
+
         </div>
     )
 }
 
 export default LogInPage
+
+const GoogleSignIn = () =>{
+
+    const [loading, setLoading] = useState(false)
+
+    const router = useRouter()
+
+    const { cookie } = useCookie();
+
+    const login = useGoogleLogin({
+        onSuccess: (codeResponse) => {
+            axios.get(`https://www.googleapis.com/oauth2/v1/userinfo?access_token=${codeResponse.access_token}`, {
+                headers: {
+                    Authorization: `Bearer ${codeResponse.access_token}`,
+                    Accept: 'application/json'
+                }
+            })
+                .then((res) => {
+                    setLoading(true)
+
+                    renderInstance.post("/user/login", {
+                        email: res.data.email,
+                        authType: "GOOGLE"
+                    }).then((res) => {
+                        if (res.status === 201 && res.data.access_token) {
+            
+                            const user = decode(res.data.access_token)
+            
+                            const expiryDate = new Date();
+                            expiryDate.setDate(expiryDate.getDate() + 1);
+            
+                            // Set the cookie with the calculated expiry date
+                            cookie.set('access_token', res.data.access_token, { path: '/', expires: expiryDate });
+                            cookie.set('user', user, { path: '/', expires: expiryDate });
+                            cookie.set('isFarmer', res.data.isFarmer, { path: '/', expires: expiryDate });
+                            cookie.set('isOperator', res.data.isOperator, { path: '/', expires: expiryDate });
+                            cookie.set('isOwner', res.data.isOwner, { path: '/', expires: expiryDate });
+                            cookie.set('isDealer', res.data.isDealer, { path: '/', expires: expiryDate });
+            
+                            successMessage("Log in successfull")
+                            if (res.data.isFarmer) {
+                                router.push("/farmer")
+                            }
+                            else if (res.data.isOperator) {
+                                router.push("/operator")
+                            }
+                            else if (res.data.isOwner) {
+                                router.push("/owner")
+                            }
+                            else if (res.data.isDealer) {
+                                router.push("/dealer")
+                            }
+                            else {
+                                router.push("/")
+                            }
+                        }
+                    }).catch((err) => {
+                        if (err.response && err.response.status === 409 && err.response.data.message === "User not found") {
+                            errorMessage("User not found")
+                        } else if (err.response && err.response.status === 409 && err.response.data.message === "Wrong password") {
+                            errorMessage("Wrong password")
+                        } else {
+                            errorMessage("Some error occured")
+                        }
+                    }).finally(() => {
+                        setLoading(false)
+                    })
+                })
+                .catch((err) => console.log(err));
+        },
+        onError: (error) => console.log('Login Failed:', error)
+    });
+
+    return(
+        <div className="flex items-center justify-center gap-[10px]" onClick={() => { login() }}>
+            Or continue with
+            <Image
+                src={
+                    "https://res.cloudinary.com/spiralyze/image/upload/v1694499636/expensify/1001/icon-googlesvg.svg"
+                }
+                className="w-[40px] h-auto object-cover cursor-pointer"
+                alt="Google image"
+                width={40}
+                height={40}
+            />
+
+<Backdrop
+                        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+                        open={loading}
+                    >
+                        <CircularProgress />
+                    </Backdrop>
+        </div>
+    )
+}
