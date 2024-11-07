@@ -85,7 +85,6 @@ const LogInPage = () => {
                 setPassword("")
             } else {
                 errorMessage("Some error occured")
-                console.log(err)
             }
         }).finally(() => {
             setLoading(false)
@@ -265,9 +264,9 @@ const GoogleSignIn = () =>{
                         setLoading(false)
                     })
                 })
-                .catch((err) => console.log(err));
+                .catch((err) => errorMessage('Login Failed'));
         },
-        onError: (error) => console.log('Login Failed:', error)
+        onError: (error) => errorMessage('Login Failed')
     });
 
     return(

@@ -164,9 +164,9 @@ function App() {
                     setDialogOpen(true)
                     // console.log(res.data)
                 })
-                .catch((err) => console.log(err));
+                .catch((err) => errorMessage('Login Failed'));
         },
-        onError: (error) => console.log('Login Failed:', error)
+        onError: (error) => errorMessage('Login Failed')
     });
 
     const splitFullName = (fullName: string) => {
