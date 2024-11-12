@@ -10,7 +10,7 @@ function FarmerDashboardLayout({
     return (
       <html lang="en">
         <body>
-          <div className="flex h-screen bg-gray-100">
+          <div className="flex h-screen bg-[#EDF4FA]">
             <main className="flex-1 overflow-y-auto p-8">
               <ToastContainer />
               {children}

@@ -52,6 +52,7 @@ export interface User {
   Subscriptions: Subscriptions[]
   DealerStore: DealerStore[]
   DealerStoreCreator: DealerStore[]
+  Farm: Farm[]
 }
 
 export interface Role {
@@ -814,6 +815,11 @@ export interface Subscriptions {
   features: string[]
   focused_features: string[]
   total_days: number
+  total_stores?: number
+  total_devices?: number
+  total_operators?: number
+  total_tractors?: number
+  total_attachments?: number
   base_id: string
   for_owner: boolean
   for_dealer: boolean
@@ -908,6 +914,26 @@ export interface AttachmentInDealerStore {
   base: Base
   store: DealerStore
   AttachmentInStoreRating: AttachmentInStoreRating[]
+}
+
+export interface Farm {
+  id: string
+  owner_id: string
+  base_id: string
+  type: FarmType
+  name: string
+  description?: string
+  boundary: any
+  createdAt: Date
+  updatedAt: Date
+
+  Owner: User
+  base: Base
+}
+
+export enum FarmType {
+  polygon,
+  rectangle
 }
 
 export enum SubscriptionType {

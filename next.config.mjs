@@ -16,10 +16,8 @@ const nextConfig = {
                 hostname: 'holadashboard.s3.amazonaws.com',
             },
             {
-
                 protocol: 'https',
                 hostname: 'holaimagesdata.s3.us-west-2.amazonaws.com',
-
             },
             {
                 protocol: 'https',
