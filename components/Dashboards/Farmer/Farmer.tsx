@@ -227,11 +227,11 @@ const FarmerDashboard = () => {
   if (!user) return <p>user not found</p>
 
   return (
-    <div className="container mx-auto my-2 flex gap-5 h-screen overflow-hidden">
+    <div className="w-full mx-auto my-2 flex gap-5 h-screen overflow-hidden">
 
       <Sidebar farms={farms} />
 
-      <div className="h-screen overflow-auto" style={{ scrollbarWidth: "none" }}>
+      <div className="h-screen overflow-auto w-full" style={{ scrollbarWidth: "none" }}>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div className="flex items-center mb-4 md:mb-0">
@@ -255,7 +255,7 @@ const FarmerDashboard = () => {
 
           <div className="w-full space-y-6">
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 1200px:grid-cols-4 gap-6 mb-8">
               <Card className="rounded-2xl space-y-2 bg-[#D0E1E9]">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Active Bookings</CardTitle>
@@ -322,7 +322,7 @@ const FarmerDashboard = () => {
                   <p>Error: {error}</p>
                 ) : (location.latitude && location.longitude) ? (
                   <MapContainer
-                    center={farms[0].boundary.coordinates[0]}
+                    center={farms.length === 0 ? [location.latitude, location.longitude] : farms[0].boundary.coordinates[0]}
                     zoom={20}
                     scrollWheelZoom={false}
                     style={{ width: "100%", height: "300px", borderRadius: "16px", zIndex: 1 }}>
