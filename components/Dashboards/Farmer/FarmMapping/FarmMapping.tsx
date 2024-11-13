@@ -16,6 +16,8 @@ import { errorMessage, successMessage } from '@/utils/Toastify/Messages';
 import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { Button } from '@/components/ui/button';
 import { useCookie } from 'next-cookie';
+import { area, polygon } from "@turf/turf";
+import { useRouter } from 'next/navigation';
 
 interface Location {
   latitude: number | null;
@@ -38,16 +40,31 @@ const FarmBooking = () => {
 
   const [farmName, setFarmName] = useState("")
   const [farmDescription, setFarmDescription] = useState("")
+  const [farea, setArea] = useState(0)
 
   const [adding, setAdding] = useState(false)
+
+  const router = useRouter()
 
   const { cookie } = useCookie()
   const user: user = cookie.get("user")
   const access_token = cookie.get("access_token")
 
   const _created = (e: any) => {
+    const leafletLatLngs = e.layer._latlngs[0]; // Use `[0]` if you have nested arrays, depending on Leaflet structure
+
+    // Convert Leaflet coordinates to Turf.js-compatible format (GeoJSON-like)
+    const coordinates = leafletLatLngs.map((latlng: { lng: any; lat: any; }) => [latlng.lng, latlng.lat]);
+    
+    // Close the polygon by repeating the first coordinate at the end
+    coordinates.push(coordinates[0]);
+    
+    // Create a Turf.js polygon
+    const polyArea = polygon([coordinates]);
+    const totalArea = area(polyArea);
+    setArea(totalArea)
     setLayerType(e.layerType)
-    setCoordinates(e.layer._latlngs)
+    setCoordinates(e.layer._latlngs[0])
     setOpen(true)
   }
 
@@ -66,26 +83,33 @@ const FarmBooking = () => {
       owner_id: user.userId,
       type: layerType,
       name: farmName,
+      description: farmDescription,
       boundary: {
-        coordinates: [coordinates]
-      }
+        coordinates: coordinates,
+        area: farea
+     }
     }, {
       headers: {
         Authorization: `Bearer ${access_token}`,
       }
-    }).then(()=>{
+    }).then(() => {
       successMessage("Farm added")
-    }).catch((err)=>{
-      if (err.response && err.response.status === 404 && err.response.data.message === "Booking is not valid") {
-        errorMessage("Booking is not valid")
-    } else if (err.response && err.response.status === 400 && err.response.data.message === "Booking already confirm") {
-        successMessage("Successfully booked")
-    } else if (err.response && err.response.status === 400 && err.response.data.message === "You are not allowed to perform this task") {
-        successMessage("You are not allowed to perform this task")
-    } else {
+      router.push("/farmer")
+    }).catch((err) => {
+      if (err.response) {
+        if(err.response.status === 404 && err.response.data.message === "Farmer details not found"){
+          errorMessage("Farmer details not found")
+        } else if(err.response.status === 404 && err.response.data.message === "Log in user not found"){
+          errorMessage("Log in user not found")
+        } else if(err.response.status === 409 && err.response.data.message === "Login user is not admin"){
+          errorMessage("Login user is not admin")
+        } else if(err.response.status === 409 && err.response.data.message === "You have already a farm with this name"){
+          errorMessage("You have already a farm with this name")
+        }
+      } else {
         errorMessage("Some error occurred. Please try again...")
-    }
-    }).finally(()=>{setAdding(false)})
+      }
+    }).finally(() => { setAdding(false) })
   }
 
   useEffect(() => {
@@ -111,11 +135,11 @@ const FarmBooking = () => {
       {error ? (
         <p>Error: {error}</p>
       ) : (location.latitude && location.longitude) ? (
-        <MapContainer 
-        center={[location.latitude, location.longitude]} 
-        zoom={13} 
-        scrollWheelZoom={false} 
-        style={{ width: "100%", height: "100vh", zIndex: 1 }}>
+        <MapContainer
+          center={[location.latitude, location.longitude]}
+          zoom={13}
+          scrollWheelZoom={false}
+          style={{ width: "100%", height: "100vh", zIndex: 1 }}>
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -143,7 +167,7 @@ const FarmBooking = () => {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="w-fit h-fit">
 
-          <Card className="w-full max-w-sm">
+          <Card className="w-sm">
             <CardHeader>
               Give ffarm details
             </CardHeader>

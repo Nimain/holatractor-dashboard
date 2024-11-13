@@ -54,7 +54,7 @@ const Sidebar = ({farms}:{farms: Farm[]}) => {
               <Home className="h-6 w-6" />
               {isExpanded && (
                 <>
-                  {"Farms"}
+                  {`Farms (${farms.length})`}
                   <ChevronDown className="h-4 w-4 ml-auto" />
                 </>
               )}

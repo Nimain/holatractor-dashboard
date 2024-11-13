@@ -16,12 +16,11 @@ import { Separator } from "@/components/ui/separator"
 import FarmerBookingHistory from "./BookingHistory"
 import FarmerShrimmer from "./_components/FarmerShrimmer"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { MapContainer, Marker, TileLayer } from "react-leaflet"
+import { MapContainer, Marker, Polygon, TileLayer } from "react-leaflet"
 import "leaflet/dist/leaflet.css";
 import WeatherWidget from "./_components/WeatherWidget"
 import axios from "axios"
 import UserProfileCard from "./_components/UserProfile"
-import L from 'leaflet';
 import { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import {
   Tooltip,
@@ -80,6 +79,8 @@ const FarmerDashboard = () => {
   const { cookie } = useCookie()
   const user: user = cookie.get("user")
 
+  const limeOptions = { color: 'lime' }
+
   function fetchFarmer() {
     setFetchingFarmerDetails(true)
 
@@ -92,21 +93,6 @@ const FarmerDashboard = () => {
         settotalBookings(res.data.totalBookings)
         setBookings(res.data.bookings)
         setFarms(res.data.farms)
-
-        let tempTotalArea = 0;
-
-        res.data.farms.forEach((farm: any) => {
-          const coordinates = farm.boundary.coordinates;
-
-          // Step 3: Calculate the area of each farm boundary
-          const farmPolygon = polygon([coordinates]);
-          const farmArea = area(farmPolygon); // Area in square meters
-
-          // Accumulate the farm area
-          tempTotalArea += farmArea;
-        });
-
-        setTotalArea(tempTotalArea)
 
       }).catch((err) => {
         if (err.response && err.response.status === 404 && err.response.data.message === "Farmer not found") {
@@ -220,6 +206,22 @@ const FarmerDashboard = () => {
     }
   }, [ip])
 
+  useEffect(()=>{
+    for(const farm of farms){
+    // Convert Leaflet coordinates to Turf.js-compatible format (GeoJSON-like)
+    const coordinates = farm.boundary.coordinates.map((latlng: { lng: any; lat: any; }) => [latlng.lng, latlng.lat]);
+    
+    // Close the polygon by repeating the first coordinate at the end
+    coordinates.push(coordinates[0]);
+    
+    // Create a Turf.js polygon
+    const polyArea = polygon([coordinates]);
+    const tempTotalArea = area(polyArea);
+
+    setTotalArea(tempTotalArea)
+    }
+  },[farms])
+
   if (fetchingFarmerDetails) return <FarmerShrimmer />
 
   if (!user) return <p>user not found</p>
@@ -310,7 +312,7 @@ const FarmerDashboard = () => {
                     <LandPlot className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{totalArea}</div>
+                    <div className="text-2xl font-bold">{totalArea.toFixed(2)}</div>
                   </CardContent>
                 </Card>
               </div>
@@ -320,23 +322,24 @@ const FarmerDashboard = () => {
                   <p>Error: {error}</p>
                 ) : (location.latitude && location.longitude) ? (
                   <MapContainer
-                    center={[location.latitude, location.longitude]}
-                    zoom={13}
+                    center={farms[0].boundary.coordinates[0]}
+                    zoom={20}
                     scrollWheelZoom={false}
-                    style={{ width: "100%", height: "300px", borderRadius: "16px" }}>
+                    style={{ width: "100%", height: "300px", borderRadius: "16px", zIndex: 1 }}>
                     <TileLayer
                       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
-                    <Marker
+                    {/* <Marker
                       position={[location.latitude, location.longitude]}
                       icon={L.divIcon({
                         iconSize: [32, 32],
                         iconAnchor: [32 / 2, 32 + 9],
                         className: "mymarker",
                         html: "😁",
-                      })}>
-                    </Marker>
+                      })}> */}
+                    {/* </Marker> */}
+                        <Polygon pathOptions={limeOptions} positions={farms[0].boundary.coordinates} />
                   </MapContainer>
                 ) : (
                   <p>Latitude and longitude not available</p>
