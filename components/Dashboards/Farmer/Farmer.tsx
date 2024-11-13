@@ -294,9 +294,9 @@ const FarmerDashboard = () => {
               </Card>
             </div>
 
-            <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="w-full grid grid-cols-1 md:grid-cols-2 1200px:grid-cols-4 gap-6">
 
-              <div className="flex flex-col gap-6">
+              <div className="flex flex-row 1200px:flex-col gap-6">
                 <Card className="rounded-2xl space-y-2 bg-[#D0E1E9]">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Farms</CardTitle>
@@ -317,7 +317,7 @@ const FarmerDashboard = () => {
                 </Card>
               </div>
 
-              <div className="col-span-3">
+              <div className="col-span-2 1200px:col-span-3">
                 {error ? (
                   <p>Error: {error}</p>
                 ) : (location.latitude && location.longitude) ? (
@@ -339,7 +339,10 @@ const FarmerDashboard = () => {
                         html: "😁",
                       })}> */}
                     {/* </Marker> */}
+                    {
+                      farms.length !!= 0 &&
                         <Polygon pathOptions={limeOptions} positions={farms[0].boundary.coordinates} />
+                    }
                   </MapContainer>
                 ) : (
                   <p>Latitude and longitude not available</p>
