@@ -78,7 +78,7 @@ const Languages = () => {
       </DialogTrigger>
 
       <DialogContent
-        className="bg-white max-h-[90vh] overflow-auto"
+        className="bg-white max-h-[90vh] overflow-auto w-fit"
         style={{ scrollbarWidth: "none" }}
       >
         <DialogHeader>

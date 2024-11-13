@@ -66,6 +66,7 @@ const config = {
         '1000px': '1000px',
         '900px': '900px',
         '768px': '768px',
+        "500px": "500px",
         '400px': '400px'
       },
       backgroundImage: {

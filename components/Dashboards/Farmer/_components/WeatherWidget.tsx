@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import Image from 'next/image'
 import axios from 'axios'
+import TranslatedText from '@/components/Menubar/TranslatedText'
+import { weatherWidgetTranslations } from '../FarmerTranslation'
 
 interface WeatherData {
     location: {
@@ -52,7 +54,7 @@ export default function WeatherWidget({ city }: { city: string }) {
 
     if (loading) {
         return (
-            <Card className="w-full max-w-md rounded-2xl">
+            <Card className="w-full 900px:max-w-md rounded-2xl">
                 <CardHeader>
                     <Skeleton className="h-8 w-3/4" />
                 </CardHeader>
@@ -65,7 +67,7 @@ export default function WeatherWidget({ city }: { city: string }) {
 
     if (error || !weather) {
         return (
-            <Card className="w-full max-w-md rounded-2xl">
+            <Card className="w-full 900px:max-w-md rounded-2xl">
                 <CardContent className="py-10 text-center text-muted-foreground">
                     {error || 'Unable to load weather data'}
                 </CardContent>
@@ -76,7 +78,7 @@ export default function WeatherWidget({ city }: { city: string }) {
     const { location, current } = weather
 
     return (
-        <Card className="w-full max-w-md rounded-2xl bg-primaryColor text-white">
+        <Card className="w-full 900px:max-w-md rounded-2xl bg-primaryColor text-white">
             <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                     <span>{location.name}, {location.region}</span>
@@ -94,7 +96,7 @@ export default function WeatherWidget({ city }: { city: string }) {
                     <div className="flex flex-col items-center">
                         <Thermometer className="h-6 w-6 text-red-500" />
                         <span className="text-2xl font-bold">{Math.round(current.temp_c)}°C</span>
-                        <span className="text-sm">Feels like {Math.round(current.feelslike_c)}°C</span>
+                        <span className="text-sm"><TranslatedText greetings={weatherWidgetTranslations.feelsLike} /> {Math.round(current.feelslike_c)}°C</span>
                     </div>
                     <div className="flex flex-col items-center">
                         <Cloud className="h-6 w-6 text-blue-500" />
@@ -103,16 +105,16 @@ export default function WeatherWidget({ city }: { city: string }) {
                     <div className="flex flex-col items-center">
                         <Wind className="h-6 w-6 text-green-500" />
                         <span>{Math.round(current.wind_kph)} km/h</span>
-                        <span className="text-sm">Wind</span>
+                        <span className="text-sm"><TranslatedText greetings={weatherWidgetTranslations.wind} /></span>
                     </div>
                     <div className="flex flex-col items-center">
                         <Droplets className="h-6 w-6 text-blue-500" />
                         <span>{current.humidity}%</span>
-                        <span className="text-sm">Humidity</span>
+                        <span className="text-sm"><TranslatedText greetings={weatherWidgetTranslations.humidity} /></span>
                     </div>
                 </div>
                 <div className="mt-4 text-sm">
-                    Last updated: {new Date(location.localtime).toLocaleTimeString()}
+                <TranslatedText greetings={weatherWidgetTranslations.lastUpdate} />: {new Date(location.localtime).toLocaleTimeString()}
                 </div>
             </CardContent>
         </Card>

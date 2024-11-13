@@ -30,6 +30,9 @@ import {
 } from "@/components/ui/tooltip"
 import Sidebar from "./_components/Sidebar"
 import { area, polygon } from "@turf/turf";
+import TranslatedText from "@/components/Menubar/TranslatedText"
+import { activeBookings, completedBookings, totalFarms, totalPaidTranslation, totalUnpaidTranslation, WelcomeTranslation, totalLandArea, recentBookingsTranslation, noBookingsAvailableTranslation, bookingTranslation, totalTractorsTranslation, totalAttachmentsTranslation, viewTranslation, latitudeTranslation, longitudeTranslation, tractorsTranslation, attachmentsTranslation, totalCostTranslation, logTranslations } from "./FarmerTranslation"
+import Languages from "@/components/Menubar/Languages"
 
 interface user {
   userId: string;
@@ -44,17 +47,6 @@ interface Location {
   longitude: number | null;
 }
 
-const tabsList = [
-  { label: "All", value: "all" },
-  { label: "Booked", value: "booked" },
-  { label: "Arriving", value: "arriving" },
-  { label: "Started", value: "started" },
-  { label: "Unpaid", value: "unpaid" },
-  { label: "Review", value: "review" },
-  { label: "Completed", value: "completed" },
-  { label: "Rejected", value: "rejected" },
-]
-
 const FarmerDashboard = () => {
 
   const [farmer, setFarmer] = useState<Farmer | null>(null)
@@ -67,7 +59,6 @@ const FarmerDashboard = () => {
   const [farms, setFarms] = useState<Farm[]>([])
   const [totalArea, setTotalArea] = useState(0)
 
-  const [bookingHistoryFilter, setBookingHistoryFilter] = useState("all")
   const [location, setLocation] = useState<Location>({ latitude: null, longitude: null });
   const [ip, setIp] = useState('');
   const [city, setCity] = useState('')
@@ -104,20 +95,6 @@ const FarmerDashboard = () => {
         setFetchingFarmerDetails(false)
       })
   }
-
-  const openBookings = bookings.filter((booking) => ((booking.bookingStatus === BookingStatus.Open) || (booking.bookingStatus === BookingStatus.Accepted)))
-
-  const rejectBookings = bookings.filter((booking) => booking.bookingStatus === BookingStatus.Rejected)
-
-  const arrivingBookings = bookings.filter((booking) => booking.bookingStatus === BookingStatus.Arrived || booking.bookingStatus === BookingStatus.Arriving)
-
-  const startedBookings = bookings.filter((booking) => (booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped))
-
-  const unpaidBookings = bookings.filter((booking) => (((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED"))))
-
-  const reviewBookings = bookings.filter((booking) => (booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerCONFIRMED"))
-
-  const completedBookings = bookings.filter((booking) => (booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
 
   function fetchLogs() {
     setFetchingLogs(true)
@@ -206,21 +183,21 @@ const FarmerDashboard = () => {
     }
   }, [ip])
 
-  useEffect(()=>{
-    for(const farm of farms){
-    // Convert Leaflet coordinates to Turf.js-compatible format (GeoJSON-like)
-    const coordinates = farm.boundary.coordinates.map((latlng: { lng: any; lat: any; }) => [latlng.lng, latlng.lat]);
-    
-    // Close the polygon by repeating the first coordinate at the end
-    coordinates.push(coordinates[0]);
-    
-    // Create a Turf.js polygon
-    const polyArea = polygon([coordinates]);
-    const tempTotalArea = area(polyArea);
+  useEffect(() => {
+    for (const farm of farms) {
+      // Convert Leaflet coordinates to Turf.js-compatible format (GeoJSON-like)
+      const coordinates = farm.boundary.coordinates.map((latlng: { lng: any; lat: any; }) => [latlng.lng, latlng.lat]);
 
-    setTotalArea(tempTotalArea)
+      // Close the polygon by repeating the first coordinate at the end
+      coordinates.push(coordinates[0]);
+
+      // Create a Turf.js polygon
+      const polyArea = polygon([coordinates]);
+      const tempTotalArea = area(polyArea);
+
+      setTotalArea(tempTotalArea)
     }
-  },[farms])
+  }, [farms])
 
   if (fetchingFarmerDetails) return <FarmerShrimmer />
 
@@ -235,12 +212,10 @@ const FarmerDashboard = () => {
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div className="flex items-center mb-4 md:mb-0">
-            <h1 className="text-3xl font-bold">Welcome, {user.name}!</h1>
+            <h1 className="text-xl md:text-3xl font-bold"><TranslatedText greetings={WelcomeTranslation} /> {user.name}!</h1>
           </div>
-          <div className="flex items-center gap-6">
-            <Button asChild className="text-xs">
-              <Link href="/farmer/new-booking">New Booking</Link>
-            </Button>
+          <div className="flex items-center gap-6 ml-auto">
+            <Languages />
             <Avatar>
               {
                 user.image &&
@@ -255,10 +230,23 @@ const FarmerDashboard = () => {
 
           <div className="w-full space-y-6">
 
+            <div className="w-full block 1200px:hidden">
+
+              <UserProfileCard
+                avatarUrl={user.image}
+                email={user.email}
+                isEmailVerified={user.email_varified}
+                isOnline={true}
+                name={user.name} />
+
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 1200px:grid-cols-4 gap-6 mb-8">
               <Card className="rounded-2xl space-y-2 bg-[#D0E1E9]">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Active Bookings</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    <TranslatedText greetings={activeBookings} />
+                  </CardTitle>
                   <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
@@ -267,7 +255,9 @@ const FarmerDashboard = () => {
               </Card>
               <Card className="rounded-2xl space-y-2 bg-[#D0E1E9]">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Completed bookings</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    <TranslatedText greetings={completedBookings} />
+                  </CardTitle>
                   <TractorIcon className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
@@ -276,7 +266,9 @@ const FarmerDashboard = () => {
               </Card>
               <Card className="rounded-2xl space-y-2 bg-[#D0E1E9]">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total paid</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    <TranslatedText greetings={totalPaidTranslation} />
+                  </CardTitle>
                   <ClipboardListIcon className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
@@ -285,7 +277,9 @@ const FarmerDashboard = () => {
               </Card>
               <Card className="rounded-2xl space-y-2 bg-[#D0E1E9]">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total unpaid</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    <TranslatedText greetings={totalUnpaidTranslation} />
+                  </CardTitle>
                   <BarChartIcon className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
@@ -296,10 +290,12 @@ const FarmerDashboard = () => {
 
             <div className="w-full grid grid-cols-1 md:grid-cols-2 1200px:grid-cols-4 gap-6">
 
-              <div className="flex flex-row 1200px:flex-col gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 1200px:flex 1200px:flex-col gap-6 col-span-2 1200px:col-span-1">
                 <Card className="rounded-2xl space-y-2 bg-[#D0E1E9]">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Farms</CardTitle>
+                    <CardTitle className="text-sm font-medium">
+                      <TranslatedText greetings={totalFarms} />
+                    </CardTitle>
                     <Pickaxe className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
@@ -308,7 +304,9 @@ const FarmerDashboard = () => {
                 </Card>
                 <Card className="rounded-2xl space-y-2 bg-[#D0E1E9]">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total land area</CardTitle>
+                    <CardTitle className="text-sm font-medium">
+                      <TranslatedText greetings={totalLandArea} />
+                    </CardTitle>
                     <LandPlot className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
@@ -340,8 +338,8 @@ const FarmerDashboard = () => {
                       })}> */}
                     {/* </Marker> */}
                     {
-                      farms.length !!= 0 &&
-                        <Polygon pathOptions={limeOptions} positions={farms[0].boundary.coordinates} />
+                      farms.length != 0 &&
+                      <Polygon pathOptions={limeOptions} positions={farms[0].boundary.coordinates} />
                     }
                   </MapContainer>
                 ) : (
@@ -351,23 +349,72 @@ const FarmerDashboard = () => {
 
             </div>
 
+            <div className="w-full 900px:w-fit flex 1200px:hidden flex-col gap-4">
+
+              <h1 className="text-2xl font-bold text-center">
+                <TranslatedText greetings={recentBookingsTranslation} />
+              </h1>
+
+              <div className="space-y-4">
+                {
+                  bookings.length === 0 ?
+                    <p>
+                      <TranslatedText greetings={noBookingsAvailableTranslation} />
+                    </p>
+                    :
+                    bookings.map((booking, i) => {
+                      if (i > 1) return null
+                      return (
+                        <Card className="w-full 900px:max-w-sm 900px:min-w-sm flex items-center justify-between flex-shrink-0 py-2 px-4 rounded-2xl bg-[#D0E1E9]" key={i}>
+                          <div className="flex items-center">
+                            <TractorIcon className="h-6 w-6 mr-2 text-muted-foreground" />
+                            <div className='w-full'>
+                              <div className='w-full flex items-center justify-betweenn flex-wrap gap-1'>
+                                <p className="font-bold text-sm"><TranslatedText greetings={bookingTranslation} /> #{`Holabooking${booking.id.slice(-4)}`}</p>
+                                <Badge className='text-xs bg-yellow-200 text-yellow-800 hover:text-yellow-900 hover:bg-yellow-300'>
+                                  <p>{booking.bookingStatus}</p>
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground"><TranslatedText greetings={totalTractorsTranslation} /> {booking.tractors.length}</p>
+                              <p className="text-sm text-muted-foreground"><TranslatedText greetings={totalAttachmentsTranslation} /> {booking.attachments.length}</p>
+                            </div>
+                          </div>
+                          <BookingCard booking={booking} id={`#Holabooking${booking.id.slice(-4)}`} />
+                        </Card>
+                      )
+                    })
+                }
+              </div>
+
+            </div>
+
             <div className="w-full bg-white p-2 rounded-2xl drop-shadow h-96 overflow-auto" style={{ scrollbarWidth: "none" }}>
               {
                 fetchingLogs ?
-                  <p>Logs loading...</p>
+                  <p><TranslatedText greetings={logTranslations.logsLoading} />...</p>
                   :
                   <Table>
-                    <TableCaption>A list of your recent invoices.</TableCaption>
+                    <TableCaption>
+                      <TranslatedText greetings={logTranslations.recentActivitiesList} />
+                    </TableCaption>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="font-bold">Sl no</TableHead>
-                        <TableHead className="font-bold">Action</TableHead>
-                        <TableHead className="font-bold">Details</TableHead>
-                        <TableHead className="font-bold">Time</TableHead>
+                        <TableHead className="font-bold">
+                          <TranslatedText greetings={logTranslations.slNo} />
+                        </TableHead>
+                        <TableHead className="font-bold">
+                          <TranslatedText greetings={logTranslations.action} />
+                        </TableHead>
+                        <TableHead className="font-bold">
+                        <TranslatedText greetings={logTranslations.details} />
+                        </TableHead>
+                        <TableHead className="font-bold">
+                        <TranslatedText greetings={logTranslations.time} />
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {allLogs.length === 0 ? <p>No logs present</p> : allLogs.filter((log) => (log.userId === user.userId)).map((log, index) => (
+                      {allLogs.length === 0 ? <p><TranslatedText greetings={logTranslations.noLogsPresent} /></p> : allLogs.filter((log) => (log.userId === user.userId)).map((log, index) => (
                         <TooltipProvider
                           key={index}>
                           <Tooltip>
@@ -390,9 +437,13 @@ const FarmerDashboard = () => {
               }
             </div>
 
+            <div className="w-full block 1200px:hidden">
+              <WeatherWidget city={city} />
+            </div>
+
           </div>
 
-          <div className="flex flex-col gap-6">
+          <div className="hidden 900px:flex flex-col gap-6">
 
             <UserProfileCard
               avatarUrl={user.image}
@@ -403,304 +454,40 @@ const FarmerDashboard = () => {
 
             <div className="w-fit flex flex-col gap-4">
 
-              <h1 className="text-2xl font-bold text-center">Booking History</h1>
+              <h1 className="text-2xl font-bold text-center">
+              <TranslatedText greetings={recentBookingsTranslation} />
+              </h1>
 
-              <Select
-                onValueChange={(value) => { setBookingHistoryFilter(value) }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All bookings" />
-                </SelectTrigger>
-                <SelectContent
-                  className="w-sm">
-                  {
-                    tabsList.map((details, index) => {
+              <div className="space-y-4">
+                {
+                  bookings.length === 0 ?
+                    <p>
+                      <TranslatedText greetings={noBookingsAvailableTranslation} />
+                    </p>
+                    :
+                    bookings.map((booking, i) => {
+                      if (i > 1) return null
                       return (
-                        <SelectItem value={details.value} key={index}>{details.label}</SelectItem>
+                        <Card className="w-full max-w-sm min-w-sm flex items-center justify-between flex-shrink-0 py-2 px-4 rounded-2xl bg-[#D0E1E9]" key={i}>
+                          <div className="flex items-center">
+                            <TractorIcon className="h-6 w-6 mr-2 text-muted-foreground" />
+                            <div className='w-full'>
+                              <div className='w-full flex items-center justify-betweenn flex-wrap gap-1'>
+                                <p className="font-bold text-sm"><TranslatedText greetings={bookingTranslation} /> #{`Holabooking${booking.id.slice(-4)}`}</p>
+                                <Badge className='text-xs bg-yellow-200 text-yellow-800 hover:text-yellow-900 hover:bg-yellow-300'>
+                                  <p>{booking.bookingStatus}</p>
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground"><TranslatedText greetings={totalTractorsTranslation} /> {booking.tractors.length}</p>
+                              <p className="text-sm text-muted-foreground"><TranslatedText greetings={totalAttachmentsTranslation} /> {booking.attachments.length}</p>
+                            </div>
+                          </div>
+                          <BookingCard booking={booking} id={`#Holabooking${booking.id.slice(-4)}`} />
+                        </Card>
                       )
                     })
-                  }
-                </SelectContent>
-              </Select>
-
-              {
-                bookingHistoryFilter === "all" && <div className="space-y-4">
-                  {
-                    bookings.length === 0 ?
-                      <p>
-                        No bookings available
-                      </p>
-                      :
-                      bookings.map((booking, i) => {
-                        if (i > 1) return null
-                        return (
-                          <Card className="w-full max-w-sm min-w-sm flex items-center justify-between flex-shrink-0 py-2 px-4 rounded-2xl bg-[#D0E1E9]" key={i}>
-                            <div className="flex items-center">
-                              <TractorIcon className="h-6 w-6 mr-2 text-muted-foreground" />
-                              <div className='w-full'>
-                                <div className='w-full flex items-center justify-betweenn flex-wrap gap-1'>
-                                  <p className="font-bold text-sm">Booking #{`Hola_booking_${booking.id.slice(-4)}`}</p>
-                                  <Badge className='text-xs bg-yellow-200 text-yellow-800 hover:text-yellow-900 hover:bg-yellow-300'>
-                                    <p>{booking.bookingStatus}</p>
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground">Total tractors: {booking.tractors.length}</p>
-                                <p className="text-sm text-muted-foreground">Total attachments: {booking.attachments.length}</p>
-                              </div>
-                            </div>
-                            <BookingCard booking={booking} id={`#Hola_booking_${booking.id.slice(-4)}`} />
-                          </Card>
-                        )
-                      })
-                  }
-                </div>
-              }
-
-              {
-                bookingHistoryFilter === "booked" && <div className="space-y-4">
-                  {
-                    openBookings.length === 0 ?
-                      <p>
-                        No bookings available
-                      </p>
-                      :
-                      openBookings.map((booking, i) => {
-                        if (i > 1) return null
-                        return (
-                          <Card className="w-full max-w-sm min-w-sm flex items-center justify-between flex-shrink-0 py-2 px-4 rounded-2xl" key={i}>
-                            <div className="flex items-center">
-                              <TractorIcon className="h-6 w-6 mr-2 text-muted-foreground" />
-                              <div className='w-full'>
-                                <div className='w-full flex items-center justify-betweenn flex-wrap gap-1'>
-                                  <p className="font-medium">Booking #{`Hola_booking_${booking.id.slice(-4)}`}</p>
-                                  <Badge className={'bg-blue-100 text-blue-800'}>
-                                    {
-                                      booking.confirm && booking.owner_confirm && "Booked"
-                                    }
-                                    {
-                                      booking.confirm && !booking.owner_confirm && "Pending"
-                                    }
-                                    {
-                                      !booking.confirm && "Please confirm it"
-                                    }
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground">Total tractors: {booking.tractors.length}</p>
-                                <p className="text-sm text-muted-foreground">Total attachments: {booking.attachments.length}</p>
-                              </div>
-                            </div>
-                            <BookingCard booking={booking} id={`#Hola_booking_${booking.id.slice(-4)}`} />
-                          </Card>
-                        )
-                      })
-                  }
-                </div>
-              }
-
-              {
-                bookingHistoryFilter === "arriving" && <div className="space-y-4">
-                  {
-                    arrivingBookings.length === 0 ?
-                      <p>
-                        No bookings available
-                      </p>
-                      :
-                      arrivingBookings.map((booking, i) => {
-                        if (i > 1) return null
-                        return (
-                          <Card className="w-full max-w-sm min-w-sm flex items-center justify-between flex-shrink-0 py-2 px-4 rounded-2xl" key={i}>
-                            <div className="flex items-center">
-                              <TractorIcon className="h-6 w-6 mr-2 text-muted-foreground" />
-                              <div className='w-full'>
-                                <div className='w-full flex items-center justify-betweenn flex-wrap gap-1'>
-                                  <p className="font-medium">Booking #{`Hola_booking_${booking.id.slice(-4)}`}</p>
-                                  <Badge className={'bg-blue-100 text-blue-800'}>
-                                    {booking.bookingStatus}
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground">Total tractors: {booking.tractors.length}</p>
-                                <p className="text-sm text-muted-foreground">Total attachments: {booking.attachments.length}</p>
-                              </div>
-                            </div>
-                            <BookingCard booking={booking} id={`#Hola_booking_${booking.id.slice(-4)}`} />
-                          </Card>
-                        )
-                      })
-                  }
-                </div>
-              }
-
-              {
-                bookingHistoryFilter === "started" && <div className="space-y-4">
-                  {
-                    startedBookings.length === 0 ?
-                      <p>
-                        No bookings available
-                      </p>
-                      :
-                      startedBookings.map((booking, i) => {
-                        if (i > 1) return null
-                        return (
-                          <Card className="w-full max-w-sm min-w-sm flex items-center justify-between flex-shrink-0 py-2 px-4 rounded-2xl" key={i}>
-                            <div className="flex items-center">
-                              <TractorIcon className="h-6 w-6 mr-2 text-muted-foreground" />
-                              <div className='w-full'>
-                                <div className='w-full flex items-center justify-betweenn flex-wrap gap-1'>
-                                  <p className="font-medium">Booking #{`Hola_booking_${booking.id.slice(-4)}`}</p>
-                                  <Badge className={'bg-yellow-100 text-yellow-800'}>
-                                    {
-                                      booking.bookingStatus
-                                    }
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground">Total tractors: {booking.tractors.length}</p>
-                                <p className="text-sm text-muted-foreground">Total attachments: {booking.attachments.length}</p>
-                              </div>
-                            </div>
-                            <BookingCard booking={booking} id={`#Hola_booking_${booking.id.slice(-4)}`} />
-                          </Card>
-                        )
-                      })
-                  }
-                </div>
-              }
-
-              {
-                bookingHistoryFilter === "unpaid" && <div className="space-y-4">
-                  {
-                    unpaidBookings.length === 0 ?
-                      <p>
-                        No bookings available
-                      </p>
-                      :
-                      unpaidBookings.map((booking, i) => {
-                        if (i > 1) return null
-                        return (
-                          <Card className="w-full max-w-sm min-w-sm flex items-center justify-between flex-shrink-0 py-2 px-4 rounded-2xl" key={i}>
-                            <div className="flex items-center">
-                              <TractorIcon className="h-6 w-6 mr-2 text-muted-foreground" />
-                              <div className='w-full'>
-                                <div className='w-full flex items-center justify-betweenn flex-wrap gap-1'>
-                                  <p className="font-medium">Booking #{`Hola_booking_${booking.id.slice(-4)}`}</p>
-                                  <Badge className={'bg-yellow-100 text-yellow-800'}>
-                                    {
-                                      status === "FarmerPENDING" ?
-                                        "payment required"
-                                        :
-                                        "owner rejected"
-                                    }
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground">Total tractors: {booking.tractors.length}</p>
-                                <p className="text-sm text-muted-foreground">Total attachments: {booking.attachments.length}</p>
-                              </div>
-                            </div>
-                            <BookingCard booking={booking} id={`#Hola_booking_${booking.id.slice(-4)}`} />
-                          </Card>
-                        )
-                      })
-                  }
-                </div>
-              }
-
-              {
-                bookingHistoryFilter === "review" && <div className="space-y-4">
-                  {
-                    reviewBookings.length === 0 ?
-                      <p>
-                        No bookings available
-                      </p>
-                      :
-                      reviewBookings.map((booking, i) => {
-                        if (i > 1) return null
-                        return (
-                          <Card className="w-full max-w-sm min-w-sm flex items-center justify-between flex-shrink-0 py-2 px-4  rounded-2xl" key={i}>
-                            <div className="flex items-center">
-                              <TractorIcon className="h-6 w-6 mr-2 text-muted-foreground" />
-                              <div className='w-full'>
-                                <div className='w-full flex items-center justify-betweenn flex-wrap gap-1'>
-                                  <p className="font-medium">Booking #{`Hola_booking_${booking.id.slice(-4)}`}</p>
-                                  <Badge className={'bg-gray-100 text-gray-800'}>
-                                    Owner review
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground">Total tractors: {booking.tractors.length}</p>
-                                <p className="text-sm text-muted-foreground">Total attachments: {booking.attachments.length}</p>
-                              </div>
-                            </div>
-                            <BookingCard booking={booking} id={`#Hola_booking_${booking.id.slice(-4)}`} />
-                          </Card>
-                        )
-                      })
-                  }
-                </div>
-              }
-
-              {
-                bookingHistoryFilter === "completed" && <div className="space-y-4">
-                  {
-                    completedBookings.length === 0 ?
-                      <p>
-                        No bookings available
-                      </p>
-                      :
-                      completedBookings.map((booking, i) => {
-                        if (i > 1) return null
-                        return (
-                          <Card className="w-full max-w-sm min-w-sm flex items-center justify-between flex-shrink-0 py-2 px-4 rounded-2xl" key={i}>
-                            <div className="flex items-center">
-                              <TractorIcon className="h-6 w-6 mr-2 text-muted-foreground" />
-                              <div className='w-full'>
-                                <div className='w-full flex items-center justify-betweenn flex-wrap gap-1'>
-                                  <p className="font-medium">Booking #{`Hola_booking_${booking.id.slice(-4)}`}</p>
-                                  <Badge className={'bg-green-100 text-green-800'}>
-                                    Completed
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground">Total tractors: {booking.tractors.length}</p>
-                                <p className="text-sm text-muted-foreground">Total attachments: {booking.attachments.length}</p>
-                              </div>
-                            </div>
-                            <BookingCard booking={booking} id={`#Hola_booking_${booking.id.slice(-4)}`} />
-                          </Card>
-                        )
-                      })
-                  }
-                </div>
-              }
-
-              {
-                bookingHistoryFilter === "rejected" && <div className="space-y-4">
-                  {
-                    rejectBookings.length === 0 ?
-                      <p>
-                        No bookings available
-                      </p>
-                      :
-                      rejectBookings.map((booking, i) => {
-                        if (i > 1) return null
-                        return (
-                          <Card className="w-full max-w-sm min-w-sm flex items-center justify-between flex-shrink-0 py-2 px-4 rounded-2xl" key={i}>
-                            <div className="flex items-center">
-                              <TractorIcon className="h-6 w-6 mr-2 text-muted-foreground" />
-                              <div className='w-full'>
-                                <div className='w-full flex items-center justify-betweenn flex-wrap gap-1'>
-                                  <p className="font-medium">Booking #{`Hola_booking_${booking.id.slice(-4)}`}</p>
-                                  <Badge className={'bg-red-100 text-red-800'}>
-                                    Rejected
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground">Total tractors: {booking.tractors.length}</p>
-                                <p className="text-sm text-muted-foreground">Total attachments: {booking.attachments.length}</p>
-                              </div>
-                            </div>
-                            <BookingCard booking={booking} id={`#Hola_booking_${booking.id.slice(-4)}`} />
-                          </Card>
-                        )
-                      })
-                  }
-                </div>
-              }
+                }
+              </div>
 
             </div>
 
@@ -725,7 +512,9 @@ const BookingCard = ({ booking, id }: { booking: Booking; id: string }) => {
     <Dialog open={open} onOpenChange={setOpen}>
 
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">View</Button>
+        <Button variant="outline" size="sm">
+          <TranslatedText greetings={viewTranslation} />
+        </Button>
       </DialogTrigger>
 
       <DialogContent className="w-fit h-fit">
@@ -759,14 +548,14 @@ const BookingCard = ({ booking, id }: { booking: Booking; id: string }) => {
             <div className="flex items-center space-x-2">
               <MapPinIcon className="w-4 h-4 text-gray-500" />
               <span className="text-sm">
-                Lat: {booking.booking_location_lat}, Lon: {booking.booking_location_lan}
+                <TranslatedText greetings={latitudeTranslation} />: {booking.booking_location_lat}, <TranslatedText greetings={longitudeTranslation} />: {booking.booking_location_lan}
               </span>
             </div>
             <Separator />
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
                 <TractorIcon className="w-4 h-4 text-gray-500" />
-                <span className="text-sm font-medium">Tractors:</span>
+                <span className="text-sm font-medium"><TranslatedText greetings={tractorsTranslation} />:</span>
               </div>
               <ul className="list-disc list-inside text-sm pl-6">
                 {booking.tractors.map((tractor, index) => (
@@ -777,7 +566,7 @@ const BookingCard = ({ booking, id }: { booking: Booking; id: string }) => {
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
                 <Truck className="w-4 h-4 text-gray-500" />
-                <span className="text-sm font-medium">Attachments:</span>
+                <span className="text-sm font-medium"><TranslatedText greetings={attachmentsTranslation} />:</span>
               </div>
               <ul className="list-disc list-inside text-sm pl-6">
                 {booking.attachments.map((attachment, index) => (
@@ -789,7 +578,7 @@ const BookingCard = ({ booking, id }: { booking: Booking; id: string }) => {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <DollarSignIcon className="w-4 h-4 text-gray-500" />
-                <span className="text-sm font-medium">Total Cost:</span>
+                <span className="text-sm font-medium"><TranslatedText greetings={totalCostTranslation} />:</span>
               </div>
               <span className="text-lg font-bold">${booking.total_cost.toFixed(2)}</span>
             </div>
