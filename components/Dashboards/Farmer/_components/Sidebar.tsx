@@ -1,11 +1,10 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { changeFarm } from "@/redux/ActiveFarm/ActiveFarm"
 import { Farm } from "@/utils/Types/types"
-import { Bell, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, Home, Megaphone, PhoneCall, Plus, PlusCircle, Settings, Store, Upload, Users, Wrench, X, Tractor } from "lucide-react"
+import { ChevronDown, ChevronLeft, ChevronRight, Home, Plus, Settings, Tractor } from "lucide-react"
 import { useCookie } from "next-cookie"
 import Image from "next/image"
 import Link from "next/link"
@@ -55,7 +54,7 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
       </div>
       <div className="px-4 flex justify-between items-center">
         {isExpanded && <h1 className="text-xl md:text-2xl font-medium md:font-bold">Dashboard</h1>}
-        <Button variant="ghost" size="icon" onClick={() => setIsExpanded(!isExpanded)}>
+        <Button size="icon" onClick={() => setIsExpanded(!isExpanded)} className="bg-transparent hover:bg-white/20">
           {isExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </Button>
       </div>
@@ -63,8 +62,7 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
         <Collapsible open={showFarmList} onOpenChange={setShowFarmList}>
           <CollapsibleTrigger asChild>
             <Button
-              variant="ghost"
-              className={`w-full flex gap-2 justify-start`}
+              className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
             >
               <Home className="h-6 w-6" />
               {isExpanded && (
@@ -78,8 +76,7 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
           <CollapsibleContent className="pl-6 mt-2 space-y-2">
             {isExpanded && farms.map((store) => (
                 <Button
-                  variant="ghost"
-                  className="w-full justify-start text-sm"
+                  className="w-full justify-start text-sm bg-transparent hover:bg-white/20"
                   key={store.id}
                   onClick={() => {
                     dispatch(changeFarm(store))
@@ -91,8 +88,7 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
             ))}
             {isExpanded && <Link href={"/farmer/farm/new"}>
               <Button
-                variant="ghost"
-                className={`w-full flex gap-2 justify-start`}
+                className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
               >
                 <Plus className="h-6 w-6" />
                 Add farm
@@ -103,8 +99,7 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
         <Collapsible open={showBookingList} onOpenChange={setShowBookingList}>
           <CollapsibleTrigger asChild>
             <Button
-              variant="ghost"
-              className={`w-full flex gap-2 justify-start`}
+              className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
             >
               <Tractor className="h-6 w-6" />
               {isExpanded && (
@@ -118,8 +113,7 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
           <CollapsibleContent className="pl-6 mt-2 space-y-2">
             {isExpanded && <Link href={"#"}>
               <Button
-                variant="ghost"
-                className={`w-full flex gap-2 justify-start`}
+                className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
               >
                 {/* <Plus className="h-6 w-6" /> */}
                 Booking History
@@ -127,8 +121,7 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
             </Link>}
             {isExpanded && <Link href={"/farmer/new-booking"}>
               <Button
-                variant="ghost"
-                className={`w-full flex gap-2 justify-start`}
+                className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
               >
                 {/* <Plus className="h-6 w-6" /> */}
                 New Booking
@@ -137,8 +130,7 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
           </CollapsibleContent>
         </Collapsible>
         <Button
-          variant="ghost"
-          className={`w-full flex gap-2 justify-start`}
+          className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
           onClick={() => { handleLogOut() }}
         >
           <Settings className="h-6 w-6" />
