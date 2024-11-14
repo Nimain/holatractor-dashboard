@@ -931,6 +931,35 @@ export interface Farm {
   base: Base
 }
 
+export interface FarmerNotification {
+  id        :string                 
+  title     :string
+  message   :string
+  type      :FarmerNotificationType
+  userId    :string
+  baseId    :string
+  createdAt :Date            
+  updatedAt :Date              
+
+  user :User 
+  base :Base
+}
+
+export enum FarmerNotificationType {
+  farmAdded,
+  bookingConfirmation,
+  bookingRejected,
+  bookingAssigned,
+  bookingArriving,
+  bookingArrived,
+  workStarted,
+  workPaused,
+  paymentRequired,
+  paymentSent,
+  paymentRejected,
+  paymentAccepted
+}
+
 export enum FarmType {
   polygon,
   rectangle

@@ -150,6 +150,13 @@ export const WelcomeTranslation = {
       qu: "Rikuchiy kawsaykuna",
       gn: "Oñembohasa kuatiañe’ẽ"
     },
+    systemActivity: {
+      en: "System Activity",
+      es: "Actividad del Sistema",
+      ay: "Sistemankir Lurawi",
+      qu: "Sistemapi Kawsakuy",
+      gn: "Temimbo’e Mba’apo"
+    },
     recentActivitiesList: {
       en: "A list of your recent activities",
       es: "Una lista de tus actividades recientes",

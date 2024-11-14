@@ -12,6 +12,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { changeLanguage } from "@/redux/Language/ActiveLanguage";
+import { Button } from "../ui/button";
 
 type Translations = {
   selectLanguage: string;
@@ -67,14 +68,14 @@ const Languages = () => {
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogTrigger asChild>
-        <div
-          className="font-bold text-[20px] bg-gradient-to-br from-[#fdfcfb] to-[#e2d1c3] px-[40px] py-[8px] rounded-md cursor-pointer"
+        <Button
+        className="bg-primaryColor"
           onClick={() => {
             setDialogOpen(true);
           }}
         >
           {currentLanguageName}
-        </div>
+        </Button>
       </DialogTrigger>
 
       <DialogContent

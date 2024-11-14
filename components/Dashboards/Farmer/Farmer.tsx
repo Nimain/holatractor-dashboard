@@ -3,25 +3,48 @@
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { CalendarIcon, MapPinIcon, TractorIcon, ClipboardListIcon, UserIcon, BarChartIcon, ClockIcon, Truck, DollarSignIcon, Pickaxe, LandPlot } from "lucide-react"
+import {
+  CalendarIcon,
+  MapPinIcon,
+  TractorIcon,
+  ClipboardListIcon,
+  UserIcon,
+  BarChartIcon,
+  ClockIcon,
+  Truck,
+  DollarSignIcon,
+  Pickaxe,
+  LandPlot,
+  CheckCircle,
+  AlertCircle,
+  Clock,
+  CreditCard,
+  LogIn,
+  Bell,
+  Trash2,
+  Tractor,
+  Calendar,
+  PlayCircle,
+  PauseCircle,
+  RefreshCcw
+} from "lucide-react"
 import Link from "next/link"
 import { useCookie } from "next-cookie"
 import { useEffect, useState } from "react"
-import { Booking, BookingStatus, Farm, Farmer, Logs } from "@/utils/Types/types"
-import { renderInstance } from "@/utils/Axios/RenderInstance"
-import { errorMessage, successMessage } from "@/utils/Toastify/Messages"
+import { Booking, BookingStatus, Farm, Farmer, FarmerNotification, FarmerNotificationType, Logs } from "@/utils/Types/types"
+import { renderInstance, NestJsBaseURL } from "@/utils/Axios/RenderInstance"
+import { errorMessage } from "@/utils/Toastify/Messages"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
 import FarmerBookingHistory from "./BookingHistory"
 import FarmerShrimmer from "./_components/FarmerShrimmer"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { MapContainer, Marker, Polygon, TileLayer } from "react-leaflet"
+import { MapContainer, Polygon, TileLayer } from "react-leaflet"
 import "leaflet/dist/leaflet.css";
 import WeatherWidget from "./_components/WeatherWidget"
 import axios from "axios"
 import UserProfileCard from "./_components/UserProfile"
-import { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import {
   Tooltip,
   TooltipContent,
@@ -29,13 +52,34 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import Sidebar from "./_components/Sidebar"
-import { area, polygon } from "@turf/turf";
 import TranslatedText from "@/components/Menubar/TranslatedText"
-import { activeBookings, completedBookings, totalFarms, totalPaidTranslation, totalUnpaidTranslation, WelcomeTranslation, totalLandArea, recentBookingsTranslation, noBookingsAvailableTranslation, bookingTranslation, totalTractorsTranslation, totalAttachmentsTranslation, viewTranslation, latitudeTranslation, longitudeTranslation, tractorsTranslation, attachmentsTranslation, totalCostTranslation, logTranslations } from "./FarmerTranslation"
+import {
+  activeBookings,
+  completedBookings,
+  totalFarms,
+  totalPaidTranslation,
+  totalUnpaidTranslation,
+  WelcomeTranslation, totalLandArea,
+  recentBookingsTranslation,
+  noBookingsAvailableTranslation,
+  bookingTranslation,
+  totalTractorsTranslation,
+  totalAttachmentsTranslation,
+  viewTranslation,
+  latitudeTranslation,
+  longitudeTranslation,
+  tractorsTranslation,
+  attachmentsTranslation,
+  totalCostTranslation,
+  logTranslations
+} from "./FarmerTranslation"
 import Languages from "@/components/Menubar/Languages"
 import { useDispatch, useSelector } from "react-redux"
 import { RootState } from "@/redux/store"
 import { changeFarm } from "@/redux/ActiveFarm/ActiveFarm"
+import { motion, AnimatePresence } from 'framer-motion'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Socket, io } from 'socket.io-client';
 
 interface user {
   userId: string;
@@ -50,6 +94,21 @@ interface Location {
   longitude: number | null;
 }
 
+const notificationIcons: Record<FarmerNotificationType, JSX.Element> = {
+  [FarmerNotificationType.farmAdded]: <Tractor className="h-5 w-5 text-green-500" />,
+  [FarmerNotificationType.bookingConfirmation]: <Calendar className="h-5 w-5 text-blue-500" />,
+  [FarmerNotificationType.bookingRejected]: <AlertCircle className="h-5 w-5 text-red-500" />,
+  [FarmerNotificationType.bookingAssigned]: <CheckCircle className="h-5 w-5 text-green-500" />,
+  [FarmerNotificationType.bookingArriving]: <Clock className="h-5 w-5 text-yellow-500" />,
+  [FarmerNotificationType.bookingArrived]: <CheckCircle className="h-5 w-5 text-green-500" />,
+  [FarmerNotificationType.workStarted]: <PlayCircle className="h-5 w-5 text-blue-500" />,
+  [FarmerNotificationType.workPaused]: <PauseCircle className="h-5 w-5 text-orange-500" />,
+  [FarmerNotificationType.paymentRequired]: <CreditCard className="h-5 w-5 text-purple-500" />,
+  [FarmerNotificationType.paymentSent]: <CreditCard className="h-5 w-5 text-blue-500" />,
+  [FarmerNotificationType.paymentRejected]: <AlertCircle className="h-5 w-5 text-red-500" />,
+  [FarmerNotificationType.paymentAccepted]: <CheckCircle className="h-5 w-5 text-green-500" />,
+};
+
 const FarmerDashboard = () => {
 
   const [farmer, setFarmer] = useState<Farmer | null>(null)
@@ -60,7 +119,6 @@ const FarmerDashboard = () => {
   const [totalBookings, settotalBookings] = useState<number>(0)
   const [bookings, setBookings] = useState<Booking[]>([])
   const [farms, setFarms] = useState<Farm[]>([])
-  const [totalArea, setTotalArea] = useState(0)
 
   const [location, setLocation] = useState<Location>({ latitude: null, longitude: null });
   const [ip, setIp] = useState('');
@@ -69,6 +127,11 @@ const FarmerDashboard = () => {
 
   const [allLogs, setAllLogs] = useState<Logs[]>([])
   const [fetchingLogs, setFetchingLogs] = useState(false)
+
+  const [notifications, setNotifications] = useState<FarmerNotification[]>([])
+  const [isOpen, setIsOpen] = useState(false)
+
+  const [socket, setSocket] = useState<Socket | null>(null);
 
   const { activeFarm } = useSelector(
     (root: RootState) => root.ActiveFarm
@@ -92,7 +155,7 @@ const FarmerDashboard = () => {
         settotalBookings(res.data.totalBookings)
         setBookings(res.data.bookings)
         setFarms(res.data.farms)
-          dispatch(changeFarm(res.data.farms[0]))
+        dispatch(changeFarm(res.data.farms[0]))
       }).catch((err) => {
         if (err.response && err.response.status === 404 && err.response.data.message === "Farmer not found") {
           errorMessage("Farmer not found")
@@ -133,6 +196,38 @@ const FarmerDashboard = () => {
   const truncateDetails = (details: string) => {
     return details.slice(0, 15) + (details.length > 15 ? '...' : '')
   }
+
+  const deleteNotification = (id: string) => {
+    setNotifications(prev => prev.filter(notification => notification.id !== id))
+  }
+
+  const fetchNotifications = async () => {
+    // Simulating API call
+    // const mockNotifications: FarmerNotification[] = [
+    //   { id: '1', type: 'farmAdded', title: 'Farm Added', description: 'Your farm has been successfully added.', icon: notificationIcons.farmAdded },
+    //   { id: '2', type: 'bookingConfirmation', title: 'Booking Confirmed', description: 'Your booking has been confirmed.', icon: notificationIcons.bookingConfirmation },
+    //   { id: '3', type: 'bookingRejected', title: 'Booking Rejected', description: 'Your booking has been rejected by the owner.', icon: notificationIcons.bookingRejected },
+    //   { id: '4', type: 'bookingAssigned', title: 'Booking Assigned', description: 'Your booking has been assigned to an operator.', icon: notificationIcons.bookingAssigned },
+    //   { id: '5', type: 'bookingArriving', title: 'Booking Arriving', description: 'Your booking is arriving today.', icon: notificationIcons.bookingArriving },
+    //   { id: '6', type: 'workStarted', title: 'Work Started', description: 'Your booking has started work.', icon: notificationIcons.workStarted },
+    //   { id: '7', type: 'paymentRequired', title: 'Payment Required', description: 'Your booking work is completed. Please make the payment.', icon: notificationIcons.paymentRequired },
+    // ]
+    // setNotifications(mockNotifications)
+    renderInstance.get(`/farmer/${user.userId}`)
+      .then((res) => {
+        setNotifications(res.data.notifications)
+      })
+  }
+
+  useEffect(() => {
+    fetchNotifications()
+  }, [])
+
+  useEffect(() => {
+    if (!isOpen) {
+      fetchNotifications()
+    }
+  }, [isOpen])
 
   useEffect(() => {
     fetchLogs()
@@ -191,6 +286,28 @@ const FarmerDashboard = () => {
     }
   }, [ip])
 
+  useEffect(() => {
+    const { userId } = user
+
+    if (!userId || socket) return
+
+    const newSocket = io(NestJsBaseURL, {
+      query: { userId },
+      transports: ['websocket'],
+    });
+
+    setSocket(newSocket);
+
+    // Listen for notifications
+    newSocket.on('newNotification', (notification: FarmerNotification) => {
+      setNotifications((prev) => [notification, ...prev]);
+    });
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [user]);
+
   if (fetchingFarmerDetails) return <FarmerShrimmer />
 
   if (!user) return <p>user not found</p>
@@ -207,7 +324,57 @@ const FarmerDashboard = () => {
             <h1 className="text-xl md:text-3xl font-bold"><TranslatedText greetings={WelcomeTranslation} /> {user.name}!</h1>
           </div>
           <div className="flex items-center gap-6 ml-auto">
+            <Link href={"/farmer/new-booking"}>
+              <Button>
+                New Booking
+              </Button>
+            </Link>
             <Languages />
+            <Popover open={isOpen} onOpenChange={setIsOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                  <Bell className="h-5 w-5" />
+                  {notifications.length > 0 && (
+                    <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full" />
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0 mr-6">
+                <Card className="w-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle>Notifications</CardTitle>
+                  </CardHeader>
+                  <CardContent className="max-h-[60vh] overflow-auto">
+                    <AnimatePresence initial={false}>
+                      {notifications.map(notification => (
+                        <motion.div
+                          key={notification.id}
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="w-full relative mb-4 p-4 bg-gray-100 rounded-lg group"
+                        >
+                          <div className="flex items-start">
+                            <div className="flex-shrink-0">{notificationIcons[notification.type as FarmerNotificationType]}</div>
+                            <div className="ml-3 flex-1">
+                              <p className="text-sm font-medium text-gray-900">{notification.title}</p>
+                              <p className="mt-1 text-sm text-gray-500">{notification.message}</p>
+                            </div>
+                            <Button
+                              onClick={() => deleteNotification(notification.id)}
+                              className="bg-transparent hover:bg-gray-200 -mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                            >
+                              <Trash2 className="h-4 w-4 text-black" />
+                            </Button>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </CardContent>
+                </Card>
+              </PopoverContent>
+            </Popover>
             <Avatar>
               {
                 user.image &&
@@ -302,7 +469,12 @@ const FarmerDashboard = () => {
                     <LandPlot className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{activeFarm && activeFarm.boundary.area.toFixed(2)}</div>
+                    <div className="text-2xl font-bold flex items-center gap-2 flex-wrap">
+                      <p>
+                        {activeFarm && activeFarm.boundary.area.toFixed(2)}
+                      </p>
+                      <Badge className="bg-red-200 text-red-700 hover:bg-red-300 hover:text-red-900">Sq.m</Badge>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
@@ -321,8 +493,8 @@ const FarmerDashboard = () => {
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
                     {
-                      farms.length != 0 && farms.map((details, index)=>{
-                        return(
+                      farms.length != 0 && farms.map((details, index) => {
+                        return (
                           <div key={index}>
                             <Polygon pathOptions={limeOptions} positions={details.boundary.coordinates} />
                           </div>
@@ -381,47 +553,52 @@ const FarmerDashboard = () => {
                 fetchingLogs ?
                   <p><TranslatedText greetings={logTranslations.logsLoading} />...</p>
                   :
-                  <Table>
-                    <TableCaption>
-                      <TranslatedText greetings={logTranslations.recentActivitiesList} />
-                    </TableCaption>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="font-bold">
-                          <TranslatedText greetings={logTranslations.slNo} />
-                        </TableHead>
-                        <TableHead className="font-bold">
-                          <TranslatedText greetings={logTranslations.action} />
-                        </TableHead>
-                        <TableHead className="font-bold">
-                        <TranslatedText greetings={logTranslations.details} />
-                        </TableHead>
-                        <TableHead className="font-bold">
-                        <TranslatedText greetings={logTranslations.time} />
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {allLogs.length === 0 ? <p><TranslatedText greetings={logTranslations.noLogsPresent} /></p> : allLogs.filter((log) => (log.userId === user.userId)).map((log, index) => (
-                        <TooltipProvider
-                          key={index}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <TableRow>
-                                <TableCell>{index + 1}</TableCell>
-                                <TableCell>{log.action}</TableCell>
-                                <TableCell>{truncateDetails(log.details)}</TableCell>
-                                <TableCell>{formatDate(log.createdAt)}</TableCell>
-                              </TableRow>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{log.details}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <>
+                    <h1 className="text-center mb-3 text-2xl font-bold">
+                      <TranslatedText greetings={logTranslations.systemActivity} />
+                    </h1>
+                    <Table>
+                      <TableCaption>
+                        <TranslatedText greetings={logTranslations.recentActivitiesList} />
+                      </TableCaption>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="font-bold">
+                            <TranslatedText greetings={logTranslations.slNo} />
+                          </TableHead>
+                          <TableHead className="font-bold">
+                            <TranslatedText greetings={logTranslations.action} />
+                          </TableHead>
+                          <TableHead className="font-bold">
+                            <TranslatedText greetings={logTranslations.details} />
+                          </TableHead>
+                          <TableHead className="font-bold">
+                            <TranslatedText greetings={logTranslations.time} />
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {allLogs.length === 0 ? <p><TranslatedText greetings={logTranslations.noLogsPresent} /></p> : allLogs.filter((log) => (log.userId === user.userId)).reverse().map((log, index) => (
+                          <TooltipProvider
+                            key={index}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <TableRow>
+                                  <TableCell>{index + 1}</TableCell>
+                                  <TableCell>{log.action}</TableCell>
+                                  <TableCell>{truncateDetails(log.details)}</TableCell>
+                                  <TableCell>{formatDate(log.createdAt)}</TableCell>
+                                </TableRow>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{log.details}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </>
               }
             </div>
 
@@ -443,7 +620,7 @@ const FarmerDashboard = () => {
             <div className="w-fit flex flex-col gap-4">
 
               <h1 className="text-2xl font-bold text-center">
-              <TranslatedText greetings={recentBookingsTranslation} />
+                <TranslatedText greetings={recentBookingsTranslation} />
               </h1>
 
               <div className="space-y-4">
