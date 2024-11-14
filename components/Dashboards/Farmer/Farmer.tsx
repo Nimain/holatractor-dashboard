@@ -79,7 +79,7 @@ import { RootState } from "@/redux/store"
 import { changeFarm } from "@/redux/ActiveFarm/ActiveFarm"
 import { motion, AnimatePresence } from 'framer-motion'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Socket, io } from 'socket.io-client';
+import io, { Socket } from 'socket.io-client';
 
 interface user {
   userId: string;
@@ -94,19 +94,19 @@ interface Location {
   longitude: number | null;
 }
 
-const notificationIcons: Record<FarmerNotificationType, JSX.Element> = {
-  [FarmerNotificationType.farmAdded]: <Tractor className="h-5 w-5 text-green-500" />,
-  [FarmerNotificationType.bookingConfirmation]: <Calendar className="h-5 w-5 text-blue-500" />,
-  [FarmerNotificationType.bookingRejected]: <AlertCircle className="h-5 w-5 text-red-500" />,
-  [FarmerNotificationType.bookingAssigned]: <CheckCircle className="h-5 w-5 text-green-500" />,
-  [FarmerNotificationType.bookingArriving]: <Clock className="h-5 w-5 text-yellow-500" />,
-  [FarmerNotificationType.bookingArrived]: <CheckCircle className="h-5 w-5 text-green-500" />,
-  [FarmerNotificationType.workStarted]: <PlayCircle className="h-5 w-5 text-blue-500" />,
-  [FarmerNotificationType.workPaused]: <PauseCircle className="h-5 w-5 text-orange-500" />,
-  [FarmerNotificationType.paymentRequired]: <CreditCard className="h-5 w-5 text-purple-500" />,
-  [FarmerNotificationType.paymentSent]: <CreditCard className="h-5 w-5 text-blue-500" />,
-  [FarmerNotificationType.paymentRejected]: <AlertCircle className="h-5 w-5 text-red-500" />,
-  [FarmerNotificationType.paymentAccepted]: <CheckCircle className="h-5 w-5 text-green-500" />,
+const notificationIcons = {
+  farmAdded: <Tractor className="h-5 w-5 text-green-500" />,
+  bookingConfirmation: <Calendar className="h-5 w-5 text-blue-500" />,
+  bookingRejected: <AlertCircle className="h-5 w-5 text-red-500" />,
+  bookingAssigned: <CheckCircle className="h-5 w-5 text-green-500" />,
+  bookingArriving: <Clock className="h-5 w-5 text-yellow-500" />,
+  bookingArrived: <CheckCircle className="h-5 w-5 text-green-500" />,
+  workStarted: <PlayCircle className="h-5 w-5 text-blue-500" />,
+  workPaused: <PauseCircle className="h-5 w-5 text-orange-500" />,
+  paymentRequired: <CreditCard className="h-5 w-5 text-purple-500" />,
+  paymentSent: <CreditCard className="h-5 w-5 text-blue-500" />,
+  paymentRejected: <AlertCircle className="h-5 w-5 text-red-500" />,
+  paymentAccepted: <CheckCircle className="h-5 w-5 text-green-500" />,
 };
 
 const FarmerDashboard = () => {
@@ -140,6 +140,7 @@ const FarmerDashboard = () => {
 
   const { cookie } = useCookie()
   const user: user = cookie.get("user")
+  const access_token = cookie.get("access_token")
 
   const limeOptions = { color: 'lime' }
 
@@ -199,20 +200,14 @@ const FarmerDashboard = () => {
 
   const deleteNotification = (id: string) => {
     setNotifications(prev => prev.filter(notification => notification.id !== id))
+    renderInstance.delete(`/farmer/deleteNotification/${id}`, {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+    })
   }
 
   const fetchNotifications = async () => {
-    // Simulating API call
-    // const mockNotifications: FarmerNotification[] = [
-    //   { id: '1', type: 'farmAdded', title: 'Farm Added', description: 'Your farm has been successfully added.', icon: notificationIcons.farmAdded },
-    //   { id: '2', type: 'bookingConfirmation', title: 'Booking Confirmed', description: 'Your booking has been confirmed.', icon: notificationIcons.bookingConfirmation },
-    //   { id: '3', type: 'bookingRejected', title: 'Booking Rejected', description: 'Your booking has been rejected by the owner.', icon: notificationIcons.bookingRejected },
-    //   { id: '4', type: 'bookingAssigned', title: 'Booking Assigned', description: 'Your booking has been assigned to an operator.', icon: notificationIcons.bookingAssigned },
-    //   { id: '5', type: 'bookingArriving', title: 'Booking Arriving', description: 'Your booking is arriving today.', icon: notificationIcons.bookingArriving },
-    //   { id: '6', type: 'workStarted', title: 'Work Started', description: 'Your booking has started work.', icon: notificationIcons.workStarted },
-    //   { id: '7', type: 'paymentRequired', title: 'Payment Required', description: 'Your booking work is completed. Please make the payment.', icon: notificationIcons.paymentRequired },
-    // ]
-    // setNotifications(mockNotifications)
     renderInstance.get(`/farmer/${user.userId}`)
       .then((res) => {
         setNotifications(res.data.notifications)
@@ -287,26 +282,24 @@ const FarmerDashboard = () => {
   }, [ip])
 
   useEffect(() => {
-    const { userId } = user
-
-    if (!userId || socket) return
-
-    const newSocket = io(NestJsBaseURL, {
-      query: { userId },
-      transports: ['websocket'],
+    // Connect to the socket server
+    const newSocket: Socket = io(NestJsBaseURL, {
+      query: {
+        userId: user.userId
+      }
     });
-
     setSocket(newSocket);
 
-    // Listen for notifications
-    newSocket.on('newNotification', (notification: FarmerNotification) => {
+    // Listen for the 'newFarmerNotification' event
+    newSocket.on('newFarmerNotification', (notification: FarmerNotification) => {
       setNotifications((prev) => [notification, ...prev]);
     });
 
+    // Clean up the event listener when the component unmounts
     return () => {
       newSocket.disconnect();
     };
-  }, [user]);
+  }, []);
 
   if (fetchingFarmerDetails) return <FarmerShrimmer />
 
@@ -335,7 +328,9 @@ const FarmerDashboard = () => {
                 <Button variant="ghost" size="icon" className="relative">
                   <Bell className="h-5 w-5" />
                   {notifications.length > 0 && (
-                    <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full" />
+                    <span className="absolute top-0 right-0 h-4 w-4 bg-primaryColor text-white rounded-full text-xs flex items-center justify-center">
+                      {notifications.length}
+                    </span>
                   )}
                 </Button>
               </PopoverTrigger>
@@ -356,7 +351,20 @@ const FarmerDashboard = () => {
                           className="w-full relative mb-4 p-4 bg-gray-100 rounded-lg group"
                         >
                           <div className="flex items-start">
-                            <div className="flex-shrink-0">{notificationIcons[notification.type as FarmerNotificationType]}</div>
+                            <div className="flex-shrink-0">
+                              {notification.type === FarmerNotificationType.bookingArrived && notificationIcons.bookingArrived}
+                              {notification.type === FarmerNotificationType.bookingArriving && notificationIcons.bookingArriving}
+                              {notification.type === FarmerNotificationType.bookingAssigned && notificationIcons.bookingAssigned}
+                              {notification.type === FarmerNotificationType.bookingConfirmation && notificationIcons.bookingConfirmation}
+                              {notification.type === FarmerNotificationType.bookingRejected && notificationIcons.bookingRejected}
+                              {notification.type === FarmerNotificationType.farmAdded && notificationIcons.farmAdded}
+                              {notification.type === FarmerNotificationType.paymentAccepted && notificationIcons.paymentAccepted}
+                              {notification.type === FarmerNotificationType.paymentRejected && notificationIcons.paymentRejected}
+                              {notification.type === FarmerNotificationType.paymentRequired && notificationIcons.paymentRequired}
+                              {notification.type === FarmerNotificationType.paymentSent && notificationIcons.paymentSent}
+                              {notification.type === FarmerNotificationType.workPaused && notificationIcons.workPaused}
+                              {notification.type === FarmerNotificationType.workStarted && notificationIcons.workStarted}
+                            </div>
                             <div className="ml-3 flex-1">
                               <p className="text-sm font-medium text-gray-900">{notification.title}</p>
                               <p className="mt-1 text-sm text-gray-500">{notification.message}</p>
