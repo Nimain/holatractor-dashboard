@@ -3,12 +3,14 @@
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { changeFarm } from "@/redux/ActiveFarm/ActiveFarm"
 import { Farm } from "@/utils/Types/types"
 import { Bell, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, Home, Megaphone, PhoneCall, Plus, PlusCircle, Settings, Store, Upload, Users, Wrench, X, Tractor } from "lucide-react"
 import { useCookie } from "next-cookie"
 import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
+import { useDispatch } from "react-redux"
 
 interface user {
   userId: string;
@@ -21,6 +23,8 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [showFarmList, setShowFarmList] = useState(false)
   const [showBookingList, setShowBookingList] = useState(false)
+
+  const dispatch = useDispatch();
 
   const { cookie } = useCookie()
   const user: user = cookie.get("user")
@@ -73,14 +77,17 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
           </CollapsibleTrigger>
           <CollapsibleContent className="pl-6 mt-2 space-y-2">
             {isExpanded && farms.map((store) => (
-              <Link key={store.id} href={`/farmer/farm/${store.id}`}>
                 <Button
                   variant="ghost"
                   className="w-full justify-start text-sm"
+                  key={store.id}
+                  onClick={() => {
+                    dispatch(changeFarm(store))
+                    setIsExpanded(false)
+                  }}
                 >
                   {store.name}
                 </Button>
-              </Link>
             ))}
             {isExpanded && <Link href={"/farmer/farm/new"}>
               <Button

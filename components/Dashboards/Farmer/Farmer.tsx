@@ -33,6 +33,9 @@ import { area, polygon } from "@turf/turf";
 import TranslatedText from "@/components/Menubar/TranslatedText"
 import { activeBookings, completedBookings, totalFarms, totalPaidTranslation, totalUnpaidTranslation, WelcomeTranslation, totalLandArea, recentBookingsTranslation, noBookingsAvailableTranslation, bookingTranslation, totalTractorsTranslation, totalAttachmentsTranslation, viewTranslation, latitudeTranslation, longitudeTranslation, tractorsTranslation, attachmentsTranslation, totalCostTranslation, logTranslations } from "./FarmerTranslation"
 import Languages from "@/components/Menubar/Languages"
+import { useDispatch, useSelector } from "react-redux"
+import { RootState } from "@/redux/store"
+import { changeFarm } from "@/redux/ActiveFarm/ActiveFarm"
 
 interface user {
   userId: string;
@@ -67,6 +70,11 @@ const FarmerDashboard = () => {
   const [allLogs, setAllLogs] = useState<Logs[]>([])
   const [fetchingLogs, setFetchingLogs] = useState(false)
 
+  const { activeFarm } = useSelector(
+    (root: RootState) => root.ActiveFarm
+  );
+  const dispatch = useDispatch()
+
   const { cookie } = useCookie()
   const user: user = cookie.get("user")
 
@@ -84,7 +92,7 @@ const FarmerDashboard = () => {
         settotalBookings(res.data.totalBookings)
         setBookings(res.data.bookings)
         setFarms(res.data.farms)
-
+          dispatch(changeFarm(res.data.farms[0]))
       }).catch((err) => {
         if (err.response && err.response.status === 404 && err.response.data.message === "Farmer not found") {
           errorMessage("Farmer not found")
@@ -182,22 +190,6 @@ const FarmerDashboard = () => {
         })
     }
   }, [ip])
-
-  useEffect(() => {
-    for (const farm of farms) {
-      // Convert Leaflet coordinates to Turf.js-compatible format (GeoJSON-like)
-      const coordinates = farm.boundary.coordinates.map((latlng: { lng: any; lat: any; }) => [latlng.lng, latlng.lat]);
-
-      // Close the polygon by repeating the first coordinate at the end
-      coordinates.push(coordinates[0]);
-
-      // Create a Turf.js polygon
-      const polyArea = polygon([coordinates]);
-      const tempTotalArea = area(polyArea);
-
-      setTotalArea(tempTotalArea)
-    }
-  }, [farms])
 
   if (fetchingFarmerDetails) return <FarmerShrimmer />
 
@@ -310,7 +302,7 @@ const FarmerDashboard = () => {
                     <LandPlot className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{totalArea.toFixed(2)}</div>
+                    <div className="text-2xl font-bold">{activeFarm && activeFarm.boundary.area.toFixed(2)}</div>
                   </CardContent>
                 </Card>
               </div>
@@ -320,7 +312,7 @@ const FarmerDashboard = () => {
                   <p>Error: {error}</p>
                 ) : (location.latitude && location.longitude) ? (
                   <MapContainer
-                    center={farms.length === 0 ? [location.latitude, location.longitude] : farms[0].boundary.coordinates[0]}
+                    center={!activeFarm ? [location.latitude, location.longitude] : activeFarm.boundary.coordinates[0]}
                     zoom={20}
                     scrollWheelZoom={false}
                     style={{ width: "100%", height: "300px", borderRadius: "16px", zIndex: 1 }}>
@@ -328,18 +320,14 @@ const FarmerDashboard = () => {
                       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
-                    {/* <Marker
-                      position={[location.latitude, location.longitude]}
-                      icon={L.divIcon({
-                        iconSize: [32, 32],
-                        iconAnchor: [32 / 2, 32 + 9],
-                        className: "mymarker",
-                        html: "😁",
-                      })}> */}
-                    {/* </Marker> */}
                     {
-                      farms.length != 0 &&
-                      <Polygon pathOptions={limeOptions} positions={farms[0].boundary.coordinates} />
+                      farms.length != 0 && farms.map((details, index)=>{
+                        return(
+                          <div key={index}>
+                            <Polygon pathOptions={limeOptions} positions={details.boundary.coordinates} />
+                          </div>
+                        )
+                      })
                     }
                   </MapContainer>
                 ) : (

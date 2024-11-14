@@ -1,11 +1,13 @@
 import { configureStore } from "@reduxjs/toolkit";
 import ActiveLanguage from "./Language/ActiveLanguage";
 import SidebarShow from "./Sidebar/SidebarShow";
+import ActiveFarm from "./ActiveFarm/ActiveFarm"
 
 export const store = configureStore({
     reducer: {
         ActiveLanguage: ActiveLanguage,
-        SidebarShow: SidebarShow
+        SidebarShow: SidebarShow,
+        ActiveFarm: ActiveFarm
     },
 });
 
