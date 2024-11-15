@@ -80,6 +80,7 @@ import { changeFarm } from "@/redux/ActiveFarm/ActiveFarm"
 import { motion, AnimatePresence } from 'framer-motion'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import io, { Socket } from 'socket.io-client';
+import WithoutStoreBooking from "./WithoutStoreBooking"
 
 interface user {
   userId: string;
@@ -214,6 +215,14 @@ const FarmerDashboard = () => {
       })
   }
 
+  const showBrowserNotification = (notification: any) => {
+    if (Notification.permission === 'granted') {
+      new Notification(notification.title, {
+        body: notification.message
+      });
+    }
+  };
+
   useEffect(() => {
     fetchNotifications()
   }, [])
@@ -292,6 +301,7 @@ const FarmerDashboard = () => {
 
     // Listen for the 'newFarmerNotification' event
     newSocket.on('newFarmerNotification', (notification: FarmerNotification) => {
+      showBrowserNotification(notification)
       setNotifications((prev) => [notification, ...prev]);
     });
 
@@ -299,6 +309,12 @@ const FarmerDashboard = () => {
     return () => {
       newSocket.disconnect();
     };
+  }, []);
+
+  useEffect(() => {
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
   }, []);
 
   if (fetchingFarmerDetails) return <FarmerShrimmer />
@@ -317,6 +333,7 @@ const FarmerDashboard = () => {
             <h1 className="text-xl md:text-3xl font-bold"><TranslatedText greetings={WelcomeTranslation} /> {user.name}!</h1>
           </div>
           <div className="flex items-center gap-6 ml-auto">
+            <WithoutStoreBooking />
             <Link href={"/farmer/new-booking"}>
               <Button>
                 New Booking

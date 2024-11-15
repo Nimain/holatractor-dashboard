@@ -10,6 +10,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
 import { useDispatch } from "react-redux"
+import { Tooltip } from "@mui/material"
 
 interface user {
   userId: string;
@@ -64,7 +65,9 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
             <Button
               className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
             >
+              <Tooltip title={"Farms"} placement="right">
               <Home className="h-6 w-6" />
+              </Tooltip>
               {isExpanded && (
                 <>
                   {`Farms (${farms.length})`}
@@ -101,7 +104,9 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
             <Button
               className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
             >
+              <Tooltip title={"Bookings"} placement="right">
               <Tractor className="h-6 w-6" />
+              </Tooltip>
               {isExpanded && (
                 <>
                   {`Bookings`}
@@ -133,7 +138,9 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
           className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
           onClick={() => { handleLogOut() }}
         >
+          <Tooltip title={"Log out"} placement="right">
           <Settings className="h-6 w-6" />
+              </Tooltip>
           {isExpanded && "Log out"}
         </Button>
       </nav>
