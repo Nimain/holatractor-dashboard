@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils'
 import { renderInstance } from '@/utils/Axios/RenderInstance'
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
-import { AttachmentInStore, Booking, City, Country, Store, TractorInStore } from '@/utils/Types/types'
+import { AttachmentInStore, Booking, City, Country, Farm, Store, TractorInStore } from '@/utils/Types/types'
 import { Backdrop, CircularProgress } from '@mui/material'
 import { format } from 'date-fns'
 import { CalendarIcon, Check, ChevronsUpDown } from 'lucide-react'
@@ -53,6 +53,9 @@ const NewBooking = () => {
     const [city, setCity] = useState("");
     const [state, setState] = useState("");
     const [popoverOpen, setPopoverOpen] = useState(false)
+    const [farms, setFarms] = useState<Farm[]>([])
+    const [fetchingFarms, setFetchingFarms] = useState(false)
+    const [selectedFarm, setSelectedFarm] = useState("")
 
     const [allTractors, setAllTractors] = useState<TractorInStore[]>([]);
     const [allAttachments, setAllAttachments] = useState<AttachmentInStore[]>([]);
@@ -210,8 +213,8 @@ const NewBooking = () => {
                 }).finally(() => { setLoadingTractors(false) })
         }
         if (step === 2) {
-            if (!roadName || !address || !city || !state || !zipCode || !countryName) {
-                errorMessage("Add proper location details")
+            if (!selectedFarm) {
+                errorMessage("Please select a farm")
                 return
             }
         }
@@ -258,8 +261,8 @@ const NewBooking = () => {
     }
 
     function handleBooking() {
-        if (!roadName || !address || !city || !state || !zipCode || !countryName) {
-            errorMessage("Add proper location details")
+        if (!selectedFarm) {
+            errorMessage("Please select a farm")
             return
         }
 
@@ -284,21 +287,30 @@ const NewBooking = () => {
         }
 
         setLoading(true);
-        const booking = {
-            location_name: roadName,
-            location_address: address,
-            location_city: city,
-            location_state: state,
-            location_zip_code: zipCode,
-            location_country: countryName,
-            user_id: user.userId,
-            store_id: store_id,
-            start_date: new Date(startDate),
-            end_date: BookingHours === "more" ? endDate : new Date(),
-            booking_hours: BookingHours === "more" ? "" : BookingHours,
-            tractor_ids: selectedTractorIds,
-            attachment_ids: selectedAttachmentIds,
-        };
+
+        let booking;
+        if(BookingHours === "more"){
+            booking = {
+                farm_id: selectedFarm,
+                user_id: user.userId,
+                store_id: store_id,
+                start_date: new Date(startDate),
+                end_date: BookingHours === "more" ? endDate : new Date(),
+                tractor_ids: selectedTractorIds,
+                attachment_ids: selectedAttachmentIds,
+            };
+        } else {
+            booking = {
+                farm_id: selectedFarm,
+                user_id: user.userId,
+                store_id: store_id,
+                start_date: new Date(startDate),
+                end_date: BookingHours === "more" ? endDate : new Date(),
+                booking_hours: BookingHours,
+                tractor_ids: selectedTractorIds,
+                attachment_ids: selectedAttachmentIds,
+            };
+        }
 
         renderInstance
             .post("/booking", booking, {
@@ -318,6 +330,8 @@ const NewBooking = () => {
                     errorMessage("Log in user not found")
                 } else if (err.response && err.response.status === 404 && err.response.data.message === "Store not found") {
                     errorMessage("Store not found")
+                } else if (err.response && err.response.status === 404 && err.response.data.message === "Farm with this user not found") {
+                    errorMessage("Farm with this user not found")
                 } else if (err.response && err.response.status === 404 && err.response.data.message === "Attachment not present") {
                     errorMessage("Attachment not available")
                 } else if (err.response && err.response.status === 404 && err.response.data.message === "Tractor not present") {
@@ -331,59 +345,23 @@ const NewBooking = () => {
             });
     }
 
-    function fetchAllCountry() {
-        setFetchingCountry(true);
-        renderInstance
-            .get("/country")
+    function fetchAllFarms() {
+        setFetchingFarms(true);
+        renderInstance.get(`/farm/get-with-user-id/${user.userId}`)
             .then((res) => {
-                setAllCountry(res.data);
+                setFarms(res.data);
             })
             .catch((err) => {
-                errorMessage("Error fetching country");
+                errorMessage("Error fetching farms");
             })
             .finally(() => {
-                setFetchingCountry(false);
+                setFetchingFarms(false);
             });
     }
-
-    function fetchAllCity() {
-        setFetchingCity(true);
-        renderInstance
-            .get("/city")
-            .then((res) => {
-                setAllCity(res.data);
-            })
-            .catch((err) => {
-                errorMessage("Error fetching cities");
-            })
-            .finally(() => {
-                setFetchingCity(false);
-            });
-    }
-
-    const formatDateToDDMMYYYY = (date: string | Date): string => {
-        const options: Intl.DateTimeFormatOptions = {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-        };
-
-        const dateObj = typeof date === "string" ? new Date(date) : date;
-
-        return dateObj.toLocaleDateString(undefined, options);
-    };
 
     useEffect(() => {
-        fetchAllCountry()
+        fetchAllFarms()
     }, [])
-
-    useEffect(() => {
-        if (countryName) {
-            fetchAllCity()
-        }
-    }, [countryName])
 
     const renderStepContent = () => {
         switch (step) {
@@ -520,166 +498,23 @@ const NewBooking = () => {
             case 2:
                 return (
                     <div className="space-y-4">
-                        {
-                            fetchingContry ?
-                                <CircularProgress />
-                                :
-                                allCountry.length === 0 ?
-                                    <p>No countries are available</p>
-                                    :
-                                    <div className="space-y-1">
-                                        <Label htmlFor="phonrnumber">Country name</Label>
-                                        <div className="w-full space-y-2">
-                                            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                                                <PopoverTrigger asChild>
-                                                    <Button
-                                                        variant="outline"
-                                                        role="combobox"
-                                                        // aria-expanded={popoverOpen}
-                                                        className="w-full justify-between"
-                                                    >
-                                                        {countryName
-                                                            ? allCountry.find((country) => country.name === countryName) && countryName
-                                                            : "Select country..."}
-                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                    </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-full p-0">
-                                                    <Command>
-                                                        <CommandInput placeholder="Search country..." />
-                                                        <CommandList>
-                                                            <CommandEmpty>No country found.</CommandEmpty>
-                                                            <CommandGroup className='w-full'>
-                                                                {allCountry.map((country) => (
-                                                                    <CommandItem
-                                                                        key={country.name}
-                                                                        value={country.name}
-                                                                        onSelect={(currentValue) => {
-                                                                            setCountryName(country.name)
-                                                                            setPopoverOpen(false)
-                                                                        }}
-                                                                    >
-                                                                        <Check
-                                                                            className={cn(
-                                                                                "mr-2 h-4 w-4",
-                                                                                countryName === country.name ? "opacity-100" : "opacity-0"
-                                                                            )}
-                                                                        />
-                                                                        {country.name}
-                                                                    </CommandItem>
-                                                                ))}
-                                                            </CommandGroup>
-                                                        </CommandList>
-                                                    </Command>
-                                                </PopoverContent>
-                                            </Popover>
-                                        </div>
-                                    </div>
-                        }
-                        {
-                            countryName &&
-                            <div className="space-y-1">
-                                <Label htmlFor="location_city">City</Label>
-                                {
-                                    fetchingCity ?
-                                        <p>Fetching cities</p>
-                                        :
-                                        allcity.length === 0 ?
-                                            <p>No cities are available for this country</p>
-                                            :
-                                            <div className="w-full space-y-2">
-                                                <Popover open={popoverOpenCity} onOpenChange={setPopoverOpenCity}>
-                                                    <PopoverTrigger asChild>
-                                                        <Button
-                                                            variant="outline"
-                                                            role="combobox"
-                                                            // aria-expanded={popoverOpen}
-                                                            className="w-full justify-between"
-                                                        >
-                                                            {city
-                                                                ? allcity.find((cityDetails) => cityDetails.name === city) && city
-                                                                : "Select city..."}
-                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                        </Button>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-full p-0">
-                                                        <Command>
-                                                            <CommandInput placeholder="Search country..." />
-                                                            <CommandList>
-                                                                <CommandEmpty>No city found.</CommandEmpty>
-                                                                <CommandGroup className='w-full'>
-                                                                    {allcity.map((cityDetails) => (
-                                                                        <CommandItem
-                                                                            key={cityDetails.name}
-                                                                            value={cityDetails.name}
-                                                                            onSelect={(currentValue) => {
-                                                                                setCity(cityDetails.name)
-                                                                                setPopoverOpenCity(false)
-                                                                            }}
-                                                                            className={`${countryName !== cityDetails.country.name && "hidden"}`}
-                                                                        >
-                                                                            <Check
-                                                                                className={cn(
-                                                                                    "mr-2 h-4 w-4",
-                                                                                    city === cityDetails.name ? "opacity-100" : "opacity-0"
-                                                                                )}
-                                                                            />
-                                                                            {cityDetails.name}
-                                                                        </CommandItem>
-                                                                    ))}
-                                                                </CommandGroup>
-                                                            </CommandList>
-                                                        </Command>
-                                                    </PopoverContent>
-                                                </Popover>
-                                            </div>
-                                }
-                            </div>
-                        }
-                        {
-                            city &&
-                            <div className="space-y-1">
-                                <Label htmlFor="location_zip_code">Zip code</Label>
-                                <Input
-                                    id="location_zip_code"
-                                    placeholder='e.g - 757020'
-                                    value={zipCode}
-                                    onChange={e => { setZipCode(e.target.value) }} />
-                            </div>
-                        }
-                        {
-                            city &&
-                            <div className="space-y-1">
-                                <Label htmlFor="location_name">Address line 1</Label>
-                                <Input
-                                    id="location_name"
-                                    placeholder='e.g - st mary hiighway'
-                                    value={roadName}
-                                    onChange={e => { setRoadName(e.target.value) }} />
-                            </div>
-                        }
-                        {
-                            city &&
-                            <div className="space-y-1">
-                                <Label htmlFor="location_address">Address line 2</Label>
-                                <Input
-                                    id="location_address"
-                                    placeholder='e.g - st mary hiighway'
-                                    value={address}
-                                    onChange={e => { setAddress(e.target.value) }} />
-                            </div>
-                        }
-                        {
-                            city &&
-                            <div className="space-y-1">
-                                <Label htmlFor="location_state">State</Label>
-                                <Input
-                                    id="location_state"
-                                    placeholder='e.g - Odisha'
-                                    value={state}
-                                    onChange={e => { setState(e.target.value) }} />
-                            </div>
-                        }
+                        <Label>Select Farm</Label>
+                                        {
+                                            fetchingFarms ? <p>Loading farm lists</p>
+                                                :
+                                                <Select onValueChange={(value) => { setSelectedFarm(value) }}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Choose a farm" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {farms.map(farm => (
+                                                            <SelectItem key={farm.id} value={farm.id}>
+                                                                {farm.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                        }
                     </div>
                 )
             case 3:
