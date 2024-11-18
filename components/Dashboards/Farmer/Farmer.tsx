@@ -262,7 +262,6 @@ const FarmerDashboard = () => {
     }
   }, []);
 
-
   useEffect(() => {
     axios.get("https://api64.ipify.org?format=json")
       .then((res) => {
@@ -368,20 +367,6 @@ const FarmerDashboard = () => {
                           className="w-full relative mb-4 p-4 bg-gray-100 rounded-lg group"
                         >
                           <div className="flex items-start">
-                            <div className="flex-shrink-0">
-                              {notification.type === FarmerNotificationType.bookingArrived && notificationIcons.bookingArrived}
-                              {notification.type === FarmerNotificationType.bookingArriving && notificationIcons.bookingArriving}
-                              {notification.type === FarmerNotificationType.bookingAssigned && notificationIcons.bookingAssigned}
-                              {notification.type === FarmerNotificationType.bookingConfirmation && notificationIcons.bookingConfirmation}
-                              {notification.type === FarmerNotificationType.bookingRejected && notificationIcons.bookingRejected}
-                              {notification.type === FarmerNotificationType.farmAdded && notificationIcons.farmAdded}
-                              {notification.type === FarmerNotificationType.paymentAccepted && notificationIcons.paymentAccepted}
-                              {notification.type === FarmerNotificationType.paymentRejected && notificationIcons.paymentRejected}
-                              {notification.type === FarmerNotificationType.paymentRequired && notificationIcons.paymentRequired}
-                              {notification.type === FarmerNotificationType.paymentSent && notificationIcons.paymentSent}
-                              {notification.type === FarmerNotificationType.workPaused && notificationIcons.workPaused}
-                              {notification.type === FarmerNotificationType.workStarted && notificationIcons.workStarted}
-                            </div>
                             <div className="ml-3 flex-1">
                               <p className="text-sm font-medium text-gray-900">{notification.title}</p>
                               <p className="mt-1 text-sm text-gray-500">{notification.message}</p>

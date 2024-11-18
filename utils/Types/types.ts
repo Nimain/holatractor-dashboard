@@ -317,7 +317,7 @@ export interface Store {
   agent_owner_user_id: string;
   name: string;
   description: string;
-  image?: string | null;
+  image: string;
   opening_time: Date;
   closing_time: Date;
   closing_days: string[];

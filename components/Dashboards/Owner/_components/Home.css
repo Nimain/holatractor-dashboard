@@ -1,0 +1,50 @@
+/* Position both prev and next buttons */
+.slick-prev, .slick-next {
+    top: 50%; /* Vertically center the buttons */
+    z-index: 10;
+    background-color: rgba(0, 0, 0, 0.5); /* Optional: adds background to make buttons visible */
+    border-radius: 50%;
+    height: 40px;
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgb(124, 226, 7);
+    font-size: 20px;
+    transform: translateY(-50%); /* Vertically center the buttons */
+  }
+  
+  /* Custom position for the "previous" button */
+  .slick-prev {
+    left: 0 !important; /* Align the previous button to the left */
+  }
+
+  
+  /* Custom position for the "next" button */
+  .slick-next {
+    left: 650px !important; /* Align the next button to 650px from the left */
+    right: auto; /* Remove any default right positioning */
+  }
+  
+  .swiper-button-next, .swiper-button-prev {
+    color: white; /* Button text color */
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black background */
+    border-radius: 50%; /* Circular buttons */
+    width: 30px;
+    height: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.swiper-button-next:after, .swiper-button-prev:after {
+    font-size: 18px; /* Adjust size of arrows */
+}
+ 
+  
+  /* Optional: Arrow icon styling */
+  .slick-prev:before, .slick-next:before {
+    font-size: 30px; /* Increase the size of the arrows */
+    color: rgb(197, 10, 10); /* Ensure the arrows are visible */
+  }
+  
