@@ -11,6 +11,7 @@ import Link from "next/link"
 import { useState } from "react"
 import { useDispatch } from "react-redux"
 import { Tooltip } from "@mui/material"
+import { Separator } from "@/components/ui/separator"
 
 interface user {
   userId: string;
@@ -63,7 +64,7 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
         <Collapsible open={showFarmList} onOpenChange={setShowFarmList}>
           <CollapsibleTrigger asChild>
             <Button
-              className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
+              className={`flex gap-2 items-center bg-transparent hover:bg-white/20 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
             >
               <Tooltip title={"Farms"} placement="right">
               <Home className="h-6 w-6" />
@@ -102,7 +103,7 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
         <Collapsible open={showBookingList} onOpenChange={setShowBookingList}>
           <CollapsibleTrigger asChild>
             <Button
-              className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
+              className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
             >
               <Tooltip title={"Bookings"} placement="right">
               <Tractor className="h-6 w-6" />
@@ -134,8 +135,9 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
             </Link>}
           </CollapsibleContent>
         </Collapsible>
+        <Separator className={`mt-4 ${isExpanded ? "w-[90%]" : "w-[75%]"} mx-auto`} />
         <Button
-          className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
+          className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
           onClick={() => { handleLogOut() }}
         >
           <Tooltip title={"Log out"} placement="right">

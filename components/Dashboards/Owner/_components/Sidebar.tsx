@@ -2,12 +2,15 @@
 
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { ChevronDown, ChevronLeft, ChevronRight, Home, Plus, Settings, Tractor } from "lucide-react"
+import { ChevronDown, ChevronLeft, ChevronRight, Home, Plus, Settings, Store, UserSearch, Wallet } from "lucide-react"
 import { useCookie } from "next-cookie"
 import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
 import { Tooltip } from "@mui/material"
+import SupportAgentIcon from '@mui/icons-material/SupportAgent';
+import StyleIcon from '@mui/icons-material/Style';
+import { Separator } from "@/components/ui/separator"
 
 interface user {
   userId: string;
@@ -54,14 +57,14 @@ const Sidebar = () => {
           {isExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </Button>
       </div>
-      <nav className="mt-6 px-1 space-y-4">
+      <nav className="mt-6 px-1">
         <Collapsible open={showStoreList} onOpenChange={setShowStoreList}>
           <CollapsibleTrigger asChild>
             <Button
-              className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
+              className={`flex gap-2 items-center bg-transparent hover:bg-white/20 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
             >
               <Tooltip title={"Store"} placement="right">
-                <Tractor className="h-6 w-6" />
+                <Store className="h-6 w-6" />
               </Tooltip>
               {isExpanded && (
                 <>
@@ -85,10 +88,10 @@ const Sidebar = () => {
         <Collapsible open={showPaymentList} onOpenChange={setShowPaymentList}>
           <CollapsibleTrigger asChild>
             <Button
-              className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
+              className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
             >
               <Tooltip title={"Payment"} placement="right">
-                <Tractor className="h-6 w-6" />
+                <Wallet className="h-6 w-6" />
               </Tooltip>
               {isExpanded && (
                 <>
@@ -119,36 +122,37 @@ const Sidebar = () => {
         </Collapsible>
         <Link href={"#"}>
           <Button
-            className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
+            className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
           >
             <Tooltip title={"Operator"} placement="right">
-              <Settings className="h-6 w-6" />
+              <UserSearch className="h-6 w-6" />
             </Tooltip>
             {isExpanded && "Operator"}
           </Button>
         </Link>
         <Link href={"#"}>
           <Button
-            className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
+            className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
           >
             <Tooltip title={"Customers"} placement="right">
-              <Settings className="h-6 w-6" />
+              <SupportAgentIcon className="h-6 w-6" />
             </Tooltip>
             {isExpanded && "Customers"}
           </Button>
         </Link>
         <Link href={"#"}>
           <Button
-            className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
+            className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
           >
             <Tooltip title={"Bookings"} placement="right">
-              <Settings className="h-6 w-6" />
+              <StyleIcon className="h-6 w-6" />
             </Tooltip>
             {isExpanded && "Bookings"}
           </Button>
         </Link>
+        <Separator className={`mt-4 ${isExpanded ? "w-[90%]" : "w-[75%]"} mx-auto`} />
         <Button
-          className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
+          className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
           onClick={() => { handleLogOut() }}
         >
           <Tooltip title={"Log out"} placement="right">
