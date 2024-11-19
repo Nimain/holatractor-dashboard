@@ -8,7 +8,7 @@ import 'slick-carousel/slick/slick-theme.css';
 import { MapContainer, TileLayer, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';  // Import leaflet styles
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
-import { Check, Tractor as TractorIcon, Smartphone, Wrench } from "lucide-react"
+import { Check, Tractor as TractorIcon, Smartphone, Wrench, Upload } from "lucide-react"
 import { Pie, PieChart, Cell, ResponsiveContainer } from "recharts"
 import 'keen-slider/keen-slider.min.css';
 import Link from 'next/link';
@@ -34,6 +34,7 @@ import {
 import { Avatar, AvatarImage } from "@/components/ui/avatar"
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
 
 // Register components with Chart.js
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -174,8 +175,8 @@ const HomeDashboard = (
                                                                         style={{ zIndex: 3 }}
                                                                     >
                                                                         <Image
-                                                                            src={book.user.image ? book.user.image : "https://github.com/shadcn.png"}
-                                                                            alt={book.user.first_name}
+                                                                            src={(book.user && book.user.image) ? book.user.image : "https://github.com/shadcn.png"}
+                                                                            alt={book.user ? book.user.first_name : "farmer"}
                                                                             className="w-full h-full object-cover"
                                                                             width={50}
                                                                             height={50}
@@ -228,7 +229,7 @@ const HomeDashboard = (
                                 zoom={6}
                                 scrollWheelZoom={false}
                                 className="h-full w-full rounded-[20px]"
-                                style={{ zIndex: 1 }}>
+                                style={{ zIndex: 0 }}>
                                 <TileLayer
                                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -362,61 +363,61 @@ const HomeDashboard = (
                 </Card>
 
                 <Card className="w-full shadow-lg rounded-2xl">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-lg font-semibold">
-          <div className="flex items-center gap-x-2">
-            <span className="flex justify-center items-center w-8 h-8 rounded-full bg-[#13b8a7] text-white">
-              <Smartphone className="h-4 w-4" />
-            </span>
-            Devices (coming soon)
-          </div>
-        </CardTitle>
-        <span className="text-sm text-muted-foreground">{activeDevices} Active</span>
-      </CardHeader>
-      <CardContent className="p-0">
-        <p className="text-sm text-muted-foreground px-6 pb-4">Monitoring all devices</p>
-        <ChartContainer config={chartConfig} className="w-full h-[250px]">
-            <PieChart>
-              <Pie
-                data={chartData}
-                dataKey="count"
-                nameKey="status"
-                cx="50%"
-                cy="50%"
-                innerRadius="40%"
-                outerRadius="60%"
-                label={({ index, x, y, value }) => (
-                  <text
-                    x={x}
-                    y={y}
-                    fill="#333"
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    className="text-xs font-medium"
-                  >
-                    {chartData[index].status}: {value}
-                  </text>
-                )}
-              >
-                {chartData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={entry.fill}
-                  />
-                ))}
-              </Pie>
-            </PieChart>
-        </ChartContainer>
-        <div className="flex justify-center mt-4 space-x-4 px-6 pb-6">
-          {Object.entries(chartConfig).map(([key, { color, label }]) => (
-            <div key={key} className="flex items-center space-x-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }}></div>
-              <span className="text-sm text-muted-foreground">{label}</span>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-lg font-semibold">
+                            <div className="flex items-center gap-x-2">
+                                <span className="flex justify-center items-center w-8 h-8 rounded-full bg-[#13b8a7] text-white">
+                                    <Smartphone className="h-4 w-4" />
+                                </span>
+                                Devices (coming soon)
+                            </div>
+                        </CardTitle>
+                        <span className="text-sm text-muted-foreground">{activeDevices} Active</span>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <p className="text-sm text-muted-foreground px-6 pb-4">Monitoring all devices</p>
+                        <ChartContainer config={chartConfig} className="w-full h-[250px]">
+                            <PieChart>
+                                <Pie
+                                    data={chartData}
+                                    dataKey="count"
+                                    nameKey="status"
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius="40%"
+                                    outerRadius="60%"
+                                    label={({ index, x, y, value }) => (
+                                        <text
+                                            x={x}
+                                            y={y}
+                                            fill="#333"
+                                            textAnchor="middle"
+                                            dominantBaseline="central"
+                                            className="text-xs font-medium"
+                                        >
+                                            {chartData[index].status}: {value}
+                                        </text>
+                                    )}
+                                >
+                                    {chartData.map((entry, index) => (
+                                        <Cell
+                                            key={`cell-${index}`}
+                                            fill={entry.fill}
+                                        />
+                                    ))}
+                                </Pie>
+                            </PieChart>
+                        </ChartContainer>
+                        <div className="flex justify-center mt-4 space-x-4 px-6 pb-6">
+                            {Object.entries(chartConfig).map(([key, { color, label }]) => (
+                                <div key={key} className="flex items-center space-x-2">
+                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }}></div>
+                                    <span className="text-sm text-muted-foreground">{label}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
 
         </div>

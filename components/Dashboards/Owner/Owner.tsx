@@ -18,6 +18,7 @@ import TranslatedText from '@/components/Menubar/TranslatedText'
 import { WelcomeTranslation } from '../Farmer/FarmerTranslation'
 import Languages from '@/components/Menubar/Languages'
 import { Input } from '@/components/ui/input'
+import OwnerShrimmer from './_components/OwnerShrimmer'
 
 interface user {
   userId: string;
@@ -60,7 +61,7 @@ const OwnerDashboardPage = () => {
     }
   }, [])
 
-  if (fetchingOwnerDetails) return <p>Loading owner details</p>
+  if (fetchingOwnerDetails) return <OwnerShrimmer />
 
   if (!user) return <p>user not found</p>
 

@@ -223,7 +223,7 @@ const CreateStore = () => {
                     New store
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
+            <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
 
                 <Backdrop
                     sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
@@ -361,14 +361,16 @@ const CreateStore = () => {
                                     <Button
                                         type="button"
                                         variant="outline"
-                                        onClick={() => fileInputRef.current?.click()}
+                                        onClick={() => {
+                                            document.getElementById('additional-image')?.click()
+                                        }}
                                     >
                                         <Upload className="w-4 h-4 mr-2" />
                                         Add Images
                                     </Button>
                                     <input
                                         type="file"
-                                        ref={fileInputRef}
+                                        id="additional-image"
                                         className="hidden"
                                         accept="image/*"
                                         multiple

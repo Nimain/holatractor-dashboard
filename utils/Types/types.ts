@@ -187,7 +187,8 @@ export interface Tractor {
   inventory: Inventory[];
   user: User;
   TractorInStore: TractorInStore[];
-  TractorInDealerStore: TractorInDealerStore[]
+  TractorLead: TractorLead[];            
+  BookingStandaloneTractor: BookingStandaloneTractor[];
 }
 
 export interface Attachment {
@@ -208,7 +209,8 @@ export interface Attachment {
   createdAt: Date;
   updatedAt: Date;
   AttachmentInStore: AttachmentInStore[];
-  AttachmentInDealerStore: AttachmentInDealerStore[]
+  AttachmentLead: AttachmentLead[];
+  BookingStandaloneAttachment: BookingStandaloneAttachment[];
 }
 
 export interface BookingTractor {
@@ -223,6 +225,23 @@ export interface BookingAttachment {
   attachmentId: string;
   booking: Booking;
   attachment: AttachmentInStore;
+}
+
+export interface BookingStandaloneTractor {
+  id        :string; 
+  bookingId :string;
+  tractorId :string;
+  count     :number; // Number of tractors booked
+  booking :Booking;
+  tractor :Tractor;
+}
+export interface BookingStandaloneAttachment {
+  id           :string;
+  bookingId    :string;
+  attachmentId :string;
+  count        :number; // Number of tractors booked
+  booking    :Booking;
+  attachment :Attachment;
 }
 
 export interface LeaseTractor {
@@ -267,7 +286,7 @@ export interface Location {
 export interface Booking {
   id: string;
   user_id: string;
-  store_id: string;
+  store_id?: string | null;
   start_date: Date;
   end_date?: Date | null;
   base_id: string;
@@ -278,22 +297,28 @@ export interface Booking {
   total_tax?: number | null;
   total_distance_cost?: number | null;
   booking_hours?: BookingHours | null;
-  booking_location_lan: string;
-  booking_location_lat: string;
+  booking_location_lan?: string | null;
+  booking_location_lat?: string | null;
+  farm_id?: string | null;
   confirm: boolean;
   owner_confirm: boolean;
-  distance: string;
-  location_id: string;
+  distance?: string | null;
+  location_id?: string | null;
   created_by: string;
+  bookingType?: BookingType | null;
   bookingStatus?: BookingStatus | null;
   createdAt: Date;
   updatedAt: Date;
-  store: Store;
-  location: Location;
+  store?: Store | null;
+  location?: Location | null;
   tractors: BookingTractor[];
   attachments: BookingAttachment[];
+  standaloneTractors    :BookingStandaloneTractor[]; // Standalone tractors
+  standaloneAttachments :BookingStandaloneAttachment[];
   OperatorBookingJob: OperatorBookingJob[];
-  user: User;
+  ownerOperatorRequest  :ownerOperatorRequest[];
+  farm ?:                 Farm | null;
+  user?: User | null;
   payment: Payment[]
 }
 
@@ -916,6 +941,36 @@ export interface AttachmentInDealerStore {
   AttachmentInStoreRating: AttachmentInStoreRating[]
 }
 
+export interface TractorLead {
+  id            :string   
+  user_id    :string
+  message?:       string | null
+  tractorId     :string
+  dealerStoreId :string
+  base_id       :string
+  createdAt     :Date
+  updatedAt     :Date
+  tractor     :Tractor     
+  dealerStore :DealerStore 
+  user        :User        
+  base        :Base        
+}
+
+export interface AttachmentLead {
+  id            :string
+  user_id       :string
+  message?       :string | null
+  attachmentId  :string
+  dealerStoreId :string
+  base_id       :string
+  createdAt:     Date 
+  updatedAt:     Date 
+  attachment:  Attachment 
+  dealerStore: DealerStore
+  user        :User      
+  base        :Base  
+}
+
 export interface Farm {
   id: string
   owner_id: string
@@ -929,6 +984,7 @@ export interface Farm {
 
   Owner: User
   base: Base
+  Booking: Booking[];
 }
 
 export interface FarmerNotification {
@@ -958,6 +1014,11 @@ export enum FarmerNotificationType {
   paymentSent,
   paymentRejected,
   paymentAccepted
+}
+
+export enum BookingType {
+  standalone,
+  store
 }
 
 export enum FarmType {

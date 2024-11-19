@@ -1,13 +1,12 @@
 import dynamic from 'next/dynamic'
+import OwnerShrimmer from '../../../components/Dashboards/Owner/_components/OwnerShrimmer'
 
 const OwnerPage = dynamic(
   ()=> import('@/components/Dashboards/Owner/Owner'),
   {
       ssr: false,
       loading: () => (
-        <div className="w-full h-screen flex items-center justify-center">
-          Loading...
-        </div>
+        <OwnerShrimmer />
       )
     }
 )

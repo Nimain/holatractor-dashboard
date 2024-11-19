@@ -1,5 +1,6 @@
 "use client"
 
+import OwnerShrimmer from '@/components/Dashboards/Owner/_components/OwnerShrimmer'
 import dynamic from 'next/dynamic'
 import { ReactNode } from 'react'
 
@@ -7,11 +8,6 @@ const Sidebar = dynamic(
   ()=> import('@/components/Dashboards/Owner/_components/Sidebar'),
   {
       ssr: false,
-      loading: () => (
-        <div className="w-full h-screen flex items-center justify-center">
-          Loading...
-        </div>
-      )
     }
 )
 
