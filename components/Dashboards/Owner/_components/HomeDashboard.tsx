@@ -227,7 +227,8 @@ const HomeDashboard = (
                                 center={[location.latitude, location.longitude]}
                                 zoom={6}
                                 scrollWheelZoom={false}
-                                className="h-full w-full rounded-[20px]">
+                                className="h-full w-full rounded-[20px]"
+                                style={{ zIndex: 1 }}>
                                 <TileLayer
                                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -375,7 +376,6 @@ const HomeDashboard = (
       <CardContent className="p-0">
         <p className="text-sm text-muted-foreground px-6 pb-4">Monitoring all devices</p>
         <ChartContainer config={chartConfig} className="w-full h-[250px]">
-          <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={chartData}
@@ -406,7 +406,6 @@ const HomeDashboard = (
                 ))}
               </Pie>
             </PieChart>
-          </ResponsiveContainer>
         </ChartContainer>
         <div className="flex justify-center mt-4 space-x-4 px-6 pb-6">
           {Object.entries(chartConfig).map(([key, { color, label }]) => (

@@ -2,15 +2,19 @@
 
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { ChevronDown, ChevronLeft, ChevronRight, Home, Plus, Settings, Store, UserSearch, Wallet } from "lucide-react"
+import { ChevronDown, ChevronLeft, ChevronRight, Home, Plus, Settings, Store as StoreIcon, UserSearch, Wallet } from "lucide-react"
 import { useCookie } from "next-cookie"
 import Image from "next/image"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Tooltip } from "@mui/material"
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import StyleIcon from '@mui/icons-material/Style';
 import { Separator } from "@/components/ui/separator"
+import { renderInstance } from "@/utils/Axios/RenderInstance"
+import { Store } from "@/utils/Types/types"
+import { errorMessage } from "@/utils/Toastify/Messages"
+import CreateStore from "./CreateStore"
 
 interface user {
   userId: string;
@@ -24,8 +28,19 @@ const Sidebar = () => {
   const [showStoreList, setShowStoreList] = useState(false)
   const [showPaymentList, setShowPaymentList] = useState(false)
 
+  const [stores, setStores] = useState<Store[]>([])
+
   const { cookie } = useCookie()
   const user: user = cookie.get("user")
+
+  function fetchOwner() {
+    renderInstance.get(`/owner/${user.userId}`)
+      .then((res) => {
+        setStores(res.data.stores)
+      }).catch((err) => {
+        errorMessage("Error fetching user detaild")
+      })
+  }
 
   function handleLogOut() {
     cookie.remove("access_token")
@@ -36,6 +51,12 @@ const Sidebar = () => {
     cookie.remove("isODealer")
     window.location.reload()
   }
+
+  useEffect(() => {
+    if (user) {
+      fetchOwner()
+    }
+  }, [])
 
   if (!user) return
 
@@ -64,11 +85,11 @@ const Sidebar = () => {
               className={`flex gap-2 items-center bg-transparent hover:bg-white/20 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
             >
               <Tooltip title={"Store"} placement="right">
-                <Store className="h-6 w-6" />
+                <StoreIcon className="h-6 w-6" />
               </Tooltip>
               {isExpanded && (
                 <>
-                  {`Store`}
+                  {`Store ${stores.length}`}
                   <ChevronDown className="h-4 w-4 ml-auto" />
                 </>
               )}
@@ -76,12 +97,7 @@ const Sidebar = () => {
           </CollapsibleTrigger>
           <CollapsibleContent className="pl-6 mt-2 space-y-2">
             {isExpanded && <Link href={"#"}>
-              <Button
-                className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
-              >
-                <Plus className="h-6 w-6" />
-                New store
-              </Button>
+              <CreateStore />
             </Link>}
           </CollapsibleContent>
         </Collapsible>
