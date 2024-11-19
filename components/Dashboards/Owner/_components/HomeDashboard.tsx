@@ -130,9 +130,9 @@ const HomeDashboard = (
     return (
         <div className="mt-6">
             {/* First Row with 2 cards having background images */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 1050px:grid-cols-2 gap-6">
                 {/* First Card with Swiper */}
-                <div className="relative rounded-[20px] h-80 overflow-hidden">
+                <div className="relative rounded-[20px] h-80 1600px:h-96 overflow-hidden">
                     {/* Slider with only changing images */}
                     <Swiper
                         modules={[Autoplay, Pagination]}
@@ -160,11 +160,11 @@ const HomeDashboard = (
                                             {/* Overlapping User Images */}
                                             {
                                                 bookings.length === 0 ?
-                                                    <span className="text-white text-lg font-bold ml-4 text-center mt-3">
+                                                    <span className="hidden 768px:block text-white text-lg font-bold ml-4 text-center mt-3">
                                                         No bookings have completed till now
                                                     </span>
                                                     :
-                                                    <div className="flex pointer-events-auto">
+                                                    <div className="hidden 768px:flex pointer-events-auto">
                                                         {
                                                             bookings.map((book, index) => {
                                                                 if (index >= 3) return null
@@ -185,14 +185,14 @@ const HomeDashboard = (
                                                                 )
                                                             })
                                                         }
-                                                        <span className="text-white text-lg font-bold ml-4 text-center mt-3">
-                                                            {bookings.length - 3} has booked
+                                                        <span className="text-white text-lg font-bold ml-8 text-center mt-3">
+                                                            + {bookings.length - 3} has booked
                                                         </span>
                                                     </div>
                                             }
 
                                             {/* Open Store Button */}
-                                            <Link href={`/owner/stores/${details.id}`}>
+                                            <Link href={`/owner/stores/${details.id}`} className="mx-auto 768px:mx-0">
                                                 <Button
                                                     className="inline-flex items-center px-6 py-3 text-white font-bold bg-black rounded-full shadow-lg border-2 border-transparent transition-all duration-300 transform hover:scale-105 group pointer-events-auto">
                                                     Open Store
@@ -219,7 +219,7 @@ const HomeDashboard = (
                 </div>
 
                 {/* Second Card */}
-                <div className="p-0 rounded-[20px] shadow-lg h-80 w-full">
+                <div className="p-0 rounded-[20px] shadow-lg h-80 1600px:h-96 w-full">
                     {/* OpenStreetMap Integration */}
                     {
                         (location.latitude && location.longitude) ?
@@ -237,14 +237,15 @@ const HomeDashboard = (
                             <p>Please enable location details</p>
                     }
                 </div>
+
             </div>
 
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6" style={{ backgroundColor: '#EAF6FA' }}>
+            <div className="grid grid-cols-1 1050px:grid-cols-2 1200px:grid-cols-3 gap-6 mt-6" style={{ backgroundColor: '#EAF6FA' }}>
 
                 {
                     operators.length !== 0 &&
-                    <Card className="w-full max-w-md shadow-lg rounded-2xl">
+                    <Card className="w-full shadow-lg rounded-2xl">
                         <CardHeader>
                             <div className="flex items-center mb-4">
                                 <div className="flex">
@@ -301,7 +302,7 @@ const HomeDashboard = (
                     </Card>
                 }
 
-                <Card className="w-full max-w-md shadow-lg rounded-2xl">
+                <Card className="w-full shadow-lg rounded-2xl">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-lg font-semibold">
                             <div className="flex items-center gap-x-2">
@@ -359,64 +360,64 @@ const HomeDashboard = (
                     </CardContent>
                 </Card>
 
-                <Card className="w-full max-w-md">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-lg font-semibold">
-                            <div className="flex items-center gap-x-2">
-                                <span className="flex justify-center items-center w-8 h-8 rounded-full bg-[#13b8a7] text-white">
-                                    <Smartphone className="h-4 w-4" />
-                                </span>
-                                Devices (coming soon)
-                            </div>
-                        </CardTitle>
-                        <span className="text-sm text-muted-foreground">{activeDevices} Active</span>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-sm text-muted-foreground">Monitoring all devices</p>
-                        <ChartContainer config={chartConfig} className="mt-4 h-[200px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={chartData}
-                                        dataKey="count"
-                                        nameKey="status"
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={50}
-                                        outerRadius={70}
-                                        label={({ index, x, y, value }) => (
-                                            <text
-                                                x={x}
-                                                y={y}
-                                                fill="#333"
-                                                textAnchor="middle"
-                                                dominantBaseline="central"
-                                                className="text-xs font-medium"
-                                            >
-                                                {chartData[index].status}: {value}
-                                            </text>
-                                        )}
-                                    >
-                                        {chartData.map((entry, index) => (
-                                            <Cell
-                                                key={`cell-${index}`}
-                                                fill={entry.fill}
-                                            />
-                                        ))}
-                                    </Pie>
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </ChartContainer>
-                        <div className="flex justify-center mt-4 space-x-4">
-                            {Object.entries(chartConfig).map(([key, { color, label }]) => (
-                                <div key={key} className="flex items-center space-x-2">
-                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }}></div>
-                                    <span className="text-sm text-muted-foreground">{label}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
+                <Card className="w-full shadow-lg rounded-2xl">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-lg font-semibold">
+          <div className="flex items-center gap-x-2">
+            <span className="flex justify-center items-center w-8 h-8 rounded-full bg-[#13b8a7] text-white">
+              <Smartphone className="h-4 w-4" />
+            </span>
+            Devices (coming soon)
+          </div>
+        </CardTitle>
+        <span className="text-sm text-muted-foreground">{activeDevices} Active</span>
+      </CardHeader>
+      <CardContent className="p-0">
+        <p className="text-sm text-muted-foreground px-6 pb-4">Monitoring all devices</p>
+        <ChartContainer config={chartConfig} className="w-full h-[250px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={chartData}
+                dataKey="count"
+                nameKey="status"
+                cx="50%"
+                cy="50%"
+                innerRadius="40%"
+                outerRadius="60%"
+                label={({ index, x, y, value }) => (
+                  <text
+                    x={x}
+                    y={y}
+                    fill="#333"
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    className="text-xs font-medium"
+                  >
+                    {chartData[index].status}: {value}
+                  </text>
+                )}
+              >
+                {chartData.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={entry.fill}
+                  />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartContainer>
+        <div className="flex justify-center mt-4 space-x-4 px-6 pb-6">
+          {Object.entries(chartConfig).map(([key, { color, label }]) => (
+            <div key={key} className="flex items-center space-x-2">
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }}></div>
+              <span className="text-sm text-muted-foreground">{label}</span>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
             </div>
 
         </div>

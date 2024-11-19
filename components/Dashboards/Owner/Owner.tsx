@@ -67,7 +67,7 @@ const OwnerDashboardPage = () => {
   return (
     <div className="flex flex-col w-full overflow-y-auto" >
 
-      <div className="bg-white text-white p-4 flex items-center justify-between shadow-md rounded-2xl">
+      <div className="bg-white text-white p-4 flex flex-col 1050px:flex-row items-start 1050px:items-center justify-start 1050px:justify-between gap-4 shadow-md rounded-2xl">
         <h1 className="text-xl md:text-3xl font-bold text-gray-700"><TranslatedText greetings={WelcomeTranslation} /> {user.name}</h1>
 
         <div className="flex items-center space-x-6">
@@ -76,7 +76,7 @@ const OwnerDashboardPage = () => {
             <Input
               type="text"
               placeholder="Search..."
-              className="p-2 pl-10 pr-4 rounded-full text-gray-800 shadow-md border-2 w-72"
+              className="p-2 pl-10 pr-4 rounded-full text-gray-800 shadow-md border-2 w-full 768px:w-72"
             />
             {/* Search Icon */}
             <svg
@@ -93,7 +93,8 @@ const OwnerDashboardPage = () => {
             </svg>
           </div>
 
-          <Button className="bg-green-600 hover:bg-green-900 text-white py-2 px-6 rounded-full text-sm">
+          <Button 
+          className="bg-green-600 hover:bg-green-900 text-white py-2 px-6 rounded-full text-sm hidden 1200px:inline-block">
             Upgrade Plan
           </Button>
 
