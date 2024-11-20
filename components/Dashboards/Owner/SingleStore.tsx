@@ -15,6 +15,7 @@ import { FaImage, FaStore } from 'react-icons/fa'; // Importing Image and Store 
 import { FaRegChartBar, FaHotel, FaRegCalendarAlt, FaPlane } from "react-icons/fa";
 import { Button } from '@/components/ui/button'
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet'
+import OwnerShrimmer from './_components/OwnerShrimmer'
 
 export default function StorePage ({
   location = 'Greece',
@@ -62,44 +63,48 @@ export default function StorePage ({
     }
   }, [])
 
-  if (fetchingStoreDetails) return <p>Getting store details</p>
+  if (fetchingStoreDetails) return <OwnerShrimmer />
 
   if (!store) return <p>Store details not available</p>
 
   return (
     <div className="bg-gray-50 min-h-screen p-6 flex-1 overflow-y-auto">
-        {/* Header Navigation */}
-        <div className="flex items-center justify-between mb-0">
-          <div className="flex items-center gap-2">
-            <div className="bg-yellow-400 w-8 h-8 rounded-full" />
-            <span className="text-gray-700">Travel planning</span>
-          </div>
-          <div className="flex gap-2">
-            <span>Store</span>
-          </div>
-        </div>
 
         {/* Hero Section */}
         <main>
           <div className="relative rounded-xl text-white p-3 mb-6">
+
+            <div className="w-full h-[65vh] relative fe">
             {/* Main Banner Image */}
-            <div className="absolute left-6 top-6 flex items-center gap-2">
-              <div className="flex items-center gap-2 rounded-[40px] bg-white/60 px-4 py-4 backdrop-blur-sm">
-                <MapPin className="h-4 w-4 text-black" />
-              </div>
-              <span className="text-sm font-medium">Greece</span>
-            </div>
-            <img
-              src={mainImage}
+            <Image
+              src={store.image}
               alt="Main Banner"
-              className="w-full h-[65vh] object-cover rounded-lg"
+              className="w-full h-[65vh] object-cover rounded-lg absolute top-0 left-0"
+              width={400}
+              height={400}
+              unoptimized={true}
             />
 
+            <div className="w-full h-[65vh] bg-black/30 rounded-lg absolute top-0 left-0" />
+
+            <div className="absolute right-6 bottom-20 flex items-center gap-4">
+              {/* Image Icon */}
+              <div className="flex items-center gap-2 rounded-[40px] bg-white/60 px-4 py-4 backdrop-blur-sm">
+                <FaImage className="h-4 w-4 text-black" /> {/* Replace with the appropriate image icon */}
+              </div>
+
+              {/* Store Icon */}
+              <div className="flex items-center gap-2 rounded-[40px] bg-white/60 px-4 py-4 backdrop-blur-sm">
+                <FaStore className="h-4 w-4 text-black" /> {/* Replace with the appropriate store icon */}
+              </div>
+            </div>
+            </div>
+
             {/* Centered Heading and Description */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center -mt-[50rem]  bg-white/20 rounded-lg p-6">
-              <h1 className="text-4xl font-bold text-white mb-2">Welcome to Tailwind CSS</h1>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center w-full h-[65vh] rounded-lg p-6">
+              <h1 className="text-4xl font-bold text-white mb-2">{store.name}</h1>
               <p className="text-lg text-white max-w-md ">
-                Tailwind CSS makes it easy to build responsive, modern, and consistent designs. Align and style elements effortlessly.
+                {store.description}
               </p>
             </div>
 
@@ -112,11 +117,11 @@ export default function StorePage ({
               </div>
             </div>
             {/* Thumbnail Gallery */}
-            <div className="absolute top-[50px] right-12 flex space-x-2">
+            {/* <div className="absolute top-[50px] right-12 flex space-x-2">
               {images.map((image, index) => (
                 <button
                   key={index}
-                  onClick={() => setMainImage(image)} // Update main image on click
+                  onClick={() => setMainImage(image)} 
                   className={`w-12 h-12 bg-white/20 rounded-lg ${mainImage === image ? "border-2 border-white" : ""}`}
                 >
                   <img
@@ -127,30 +132,18 @@ export default function StorePage ({
                 </button>
               ))}
 
-              {/* Fifth Box: Display remaining images */}
               <div className="w-12 h-12 bg-gray-700 text-white flex items-center justify-center rounded-lg">
-                {images.length - 1} {/* Display remaining images */}
+                {images.length - 1}
               </div>
-            </div>
-
+            </div> */}
 
             {/* Tabs */}
 
-            <div className="absolute right-6 top-[24.5rem] flex items-center gap-4">
-              {/* Image Icon */}
-              <div className="flex items-center gap-2 rounded-[40px] bg-white/60 px-4 py-4 backdrop-blur-sm">
-                <FaImage className="h-4 w-4 text-black" /> {/* Replace with the appropriate image icon */}
-              </div>
-
-              {/* Store Icon */}
-              <div className="flex items-center gap-2 rounded-[40px] bg-white/60 px-4 py-4 backdrop-blur-sm">
-                <FaStore className="h-4 w-4 text-black" /> {/* Replace with the appropriate store icon */}
-              </div>
-            </div>
             {/* Tab Content */}
+
             <div className="relative">
               {/* Tabs */}
-              <div className="absolute left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex gap-2 p-2 bg-white/10 backdrop-blur-lg rounded-xl shadow-lg -mt-[4rem]">
+              <div className="absolute left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex gap-2 p-2 bg-white/10 backdrop-blur-lg rounded-xl shadow-lg -mt-12">
                 {[
                   { name: "Overview", icon: <FaRegChartBar /> },
                   { name: "Tractor", icon: <FaHotel /> },
@@ -182,7 +175,7 @@ export default function StorePage ({
                     <div className="flex gap-6 h-[95vh]">
                       {/* Assistant Card */}
                       <div className="w-[47%]">
-                      <Card className="max-w-md bg-gradient-to-b from-[#FF7A82] to-[#FF4D4D] shadow-md rounded-lg flex flex-col h-full -mt-[8.7rem]">
+                      <Card className="max-w-md bg-gradient-to-b from-[#FF7A82] to-[#FF4D4D] shadow-md rounded-lg flex flex-col h-full -mt-32">
                       <CardHeader className="flex flex-row items-center justify-between py-4 px-4">
                             <div className="flex items-center gap-2">
                               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black">
@@ -318,7 +311,7 @@ export default function StorePage ({
                    <div className="flex gap-6 h-[95vh]">
                      {/* Assistant Card */}
                      <div className="w-[47%]">
-                     <Card className="max-w-md bg-gradient-to-b from-[#FF7A82] to-[#FF4D4D] shadow-md rounded-lg flex flex-col h-full -mt-[8.7rem]">
+                     <Card className="max-w-md bg-gradient-to-b from-[#FF7A82] to-[#FF4D4D] shadow-md rounded-lg flex flex-col h-full -mt-32">
                      <CardHeader className="flex flex-row items-center justify-between py-4 px-4">
                            <div className="flex items-center gap-2">
                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black">
@@ -454,7 +447,7 @@ export default function StorePage ({
                     <div className="flex gap-6 h-[95vh]">
                       {/* Assistant Card */}
                       <div className="w-[47%]">
-                      <Card className="max-w-md bg-gradient-to-b from-[#FF7A82] to-[#FF4D4D] shadow-md rounded-lg flex flex-col h-full -mt-[8.7rem]">
+                      <Card className="max-w-md bg-gradient-to-b from-[#FF7A82] to-[#FF4D4D] shadow-md rounded-lg flex flex-col h-full -mt-32">
                       <CardHeader className="flex flex-row items-center justify-between py-4 px-4">
                             <div className="flex items-center gap-2">
                               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black">
@@ -585,13 +578,8 @@ export default function StorePage ({
                   </div>
                 )}
 
-
               </div>
             </div>
-
-
-
-
 
             {/* Location Info */}
             <div className="flex items-center gap-2 mb-4">
