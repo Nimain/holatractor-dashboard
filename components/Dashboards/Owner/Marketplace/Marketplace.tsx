@@ -2,9 +2,7 @@
 
 import { useState } from 'react'
 
-const toggleDialog = () => {
-    setIsOpen(!isOpen);
-};
+
 interface Lead {
     id: number;
     name: string;
@@ -26,6 +24,10 @@ const marketplace = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [open, setOpen] = useState(false)
     const [currentLead, setCurrentLead] = useState(null);
+
+    const toggleDialog = () => {
+    setIsOpen(!isOpen);
+};
 
   return (
     <div>marketplace</div>
