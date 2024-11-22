@@ -582,7 +582,7 @@ const Sidebar = () => {
             {isExpanded && "Operator"}
           </Button>
         </Link>
-        <Link href={"#"}>
+        <Link href={"/owner/marketplace"}>
           <Button
             className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
           >
