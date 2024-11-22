@@ -11,11 +11,12 @@ import {
     Settings,
     HelpCircle,
     Plus,
-    Share, LayoutGrid,
+    LayoutGrid,
     Building2,
     Users,
     DollarSign
 } from 'lucide-react';
+import { RiArrowUpDownLine } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -153,7 +154,7 @@ const OwnerOperator = () => {
                 <Breadcrumb>
                     <BreadcrumbList>
                         <BreadcrumbItem>
-                            <BreadcrumbLink href="/owner">Dasboard</BreadcrumbLink>
+                            <BreadcrumbLink href="/owner">Dashboard</BreadcrumbLink>
                         </BreadcrumbItem>
                         <BreadcrumbSeparator />
                         <BreadcrumbItem>
@@ -341,12 +342,62 @@ const OwnerOperator = () => {
                             <TableHead className="w-8 p-4">
                                 <Input type="checkbox" className="rounded w-4 h-4 accent-primaryColor" />
                             </TableHead>
-                            <TableHead className="text-left p-4 font-bold text-lg">Profile</TableHead>
-                            <TableHead className="text-left p-4 font-bold text-lg">Contact</TableHead>
-                            <TableHead className="text-left p-4 font-bold text-lg">Store</TableHead>
-                            <TableHead className="text-left p-4 font-bold text-lg">Per hour</TableHead>
-                            <TableHead className="text-left p-4 font-bold text-lg">Per month</TableHead>
-                            <TableHead className="text-left p-4 font-bold text-lg">Per job</TableHead>
+                            <TableHead className="text-left font-bold text-lg">
+                            <div className="flex items-center gap-2">
+                                    Profile
+                                    <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
+                                        <RiArrowUpDownLine className="h-4 w-4" />
+                                    </div>
+                                </div>
+                            </TableHead>
+                            <TableHead className="text-left font-bold text-lg">
+                            <div className="flex items-center gap-2">
+                                    Contact
+                                    <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
+                                        <RiArrowUpDownLine className="h-4 w-4" />
+                                    </div>
+                                </div>
+                            </TableHead>
+                            <TableHead className="text-left font-bold text-lg">
+                            <div className="flex items-center gap-2">
+                                    Store
+                                    <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
+                                        <RiArrowUpDownLine className="h-4 w-4" />
+                                    </div>
+                                </div>
+                            </TableHead>
+                            <TableHead className="text-left font-bold text-lg">
+                            <div className="flex items-center gap-2">
+                                    Per hour
+                                    <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
+                                        <RiArrowUpDownLine className="h-4 w-4" />
+                                    </div>
+                                </div>
+                            </TableHead>
+                            <TableHead className="text-left font-bold text-lg">
+                            <div className="flex items-center gap-2">
+                                    Per month
+                                    <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
+                                        <RiArrowUpDownLine className="h-4 w-4" />
+                                    </div>
+                                </div>
+                            </TableHead>
+                            <TableHead className="text-left font-bold text-lg">
+                                <div className="flex items-center gap-2">
+                                    Per job
+                                    <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
+                                        <RiArrowUpDownLine className="h-4 w-4" />
+                                    </div>
+                                </div>
+                            </TableHead>
+                            <TableHead className="text-left font-bold text-lg">
+                                <div className="flex items-center gap-2">
+                                    Status
+                                    <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
+                                        <RiArrowUpDownLine className="h-4 w-4" />
+                                    </div>
+                                </div>
+                            </TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -404,11 +455,16 @@ const OwnerOperator = () => {
                                                 <TableCell className="p-4">
                                                     <p className="font-medium">${`${customer.cost_per_job ?? "NA"}`}</p>
                                                 </TableCell>
+                                                <TableCell className="p-4">
+                                                    <span className={`px-3 py-1 rounded-full text-sm ${customer.operator.Status === 1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                {customer.operator.Status === 1 ? "Active" : "Inactive"}
+                                            </span>
+                                                </TableCell>
                                             </TableRow>
                                         </DialogTrigger>
-                                        <DialogContent 
-                                        className="max-w-7xl max-h-[80vh] p-0 overflow-auto" 
-                                        style={{scrollbarWidth: "none"}}>
+                                        <DialogContent
+                                            className="max-w-7xl max-h-[80vh] p-0 overflow-auto"
+                                            style={{ scrollbarWidth: "none" }}>
                                             {/* Tabs - Fixed */}
                                             <div className="flex h-12 border-b">
                                                 <Tabs defaultValue="overview" className="flex-1">
@@ -437,11 +493,11 @@ const OwnerOperator = () => {
                                                             <Avatar className="h-16 w-16">
                                                                 {
                                                                     customer.operator.user.image ?
-                                                                    <AvatarImage 
-                                                                src={customer.operator.user.image} 
-                                                                alt={customer.operator.user.first_name} />
-                                                                :
-                                                                <AvatarFallback>{customer.operator.user.first_name[0]}{customer.operator.user.last_name[0]}</AvatarFallback>
+                                                                        <AvatarImage
+                                                                            src={customer.operator.user.image}
+                                                                            alt={customer.operator.user.first_name} />
+                                                                        :
+                                                                        <AvatarFallback>{customer.operator.user.first_name[0]}{customer.operator.user.last_name[0]}</AvatarFallback>
                                                                 }
                                                             </Avatar>
                                                             <div>
@@ -450,7 +506,7 @@ const OwnerOperator = () => {
                                                                 </h2>
                                                                 <p className="text-sm text-muted-foreground">
                                                                     #{customer.operator_id}
-                                                                    </p>
+                                                                </p>
                                                             </div>
                                                         </div>
 
@@ -460,10 +516,10 @@ const OwnerOperator = () => {
                                                                 <div className="space-y-3">
                                                                     {
                                                                         customer.operator.user.country_code && customer.operator.user.mobile &&
-                                                                    <div className="flex items-center gap-2">
-                                                                        <Phone className="h-4 w-4 text-muted-foreground" />
-                                                                        <span className="text-sm">(629) 555-0123</span>
-                                                                    </div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <Phone className="h-4 w-4 text-muted-foreground" />
+                                                                            <span className="text-sm">(629) 555-0123</span>
+                                                                        </div>
                                                                     }
                                                                     <div className="flex items-center gap-2">
                                                                         <Mail className="h-4 w-4 text-muted-foreground" />

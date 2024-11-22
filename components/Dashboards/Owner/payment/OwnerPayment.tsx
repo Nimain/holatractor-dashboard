@@ -14,9 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '../../../../components/ui/table'
-import { Checkbox } from '@/components/ui/checkbox'
 import { RiArrowUpDownLine } from "react-icons/ri";
-import { X, Copy, ExternalLink } from "lucide-react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -26,8 +24,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { useEffect, useRef, useState } from 'react'
-import { Badge } from "@/components/ui/badge"
-import { Owner } from '@/utils/Types/types'
+import { Owner, Booking } from '@/utils/Types/types'
 import { Input } from '@/components/ui/input'
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
 import { renderInstance } from '@/utils/Axios/RenderInstance'
@@ -39,6 +36,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Backdrop, CircularProgress } from '@mui/material'
 import OwnerShrimmer from '../_components/OwnerShrimmer'
 import PaymentSheet from './PaymentSheet'
+import { DownloadPDFButton } from './PaymentPDF';
 
 const currencies = [
   { code: 'USD', symbol: '$', name: 'US Dollar' },
@@ -61,11 +59,31 @@ const OwnerPayment = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isFetching, setIsFetching] = useState(false)
   const [isOpen, setIsOpen] = useState(false);
-  const onClose = () => setIsOpen(false);
-  const onOpen = () => setIsOpen(true);
+  const [selectedPayments, setSelectedPayments] = useState<string[]>([])
 
   const { cookie } = useCookie()
   const user: user = cookie.get("user")
+
+  const handlePaymentSelect = (paymentId: string) => {
+    setSelectedPayments(prev =>
+      prev.includes(paymentId)
+        ? prev.filter(id => id !== paymentId)
+        : [...prev, paymentId]
+    );
+  };
+
+  const getSelectedPaymentsAndBookings = () => {
+    if (!ownerDetails) {
+      return { payments: [], bookings: [] };
+    }
+
+    const payments = [...ownerDetails.user.paymentReciever, ...ownerDetails.user.paymentSender]
+      .filter(payment => selectedPayments.includes(payment.id));
+    const bookings = payments.map(payment =>
+      ownerDetails.user.Booking.find(booking => booking.id === payment.booking_id)
+    ).filter(Boolean) as Booking[];
+    return { payments, bookings };
+  };
 
   function fetchPageDetails() {
     setIsFetching(true)
@@ -98,7 +116,7 @@ const OwnerPayment = () => {
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink href="/owner">Dasboard</BreadcrumbLink>
+              <BreadcrumbLink href="/owner">Dashboard</BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
@@ -113,7 +131,7 @@ const OwnerPayment = () => {
               Add Payment Method
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-h-[80vh] overflow-auto" style={{scrollbarWidth: "none"}}>
+          <DialogContent className="max-h-[80vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
             <DialogHeader>
               <DialogTitle>Add Payment Method</DialogTitle>
             </DialogHeader>
@@ -238,7 +256,7 @@ const OwnerPayment = () => {
                         Add Payment Method
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-h-[80vh] overflow-auto" style={{scrollbarWidth: "none"}}>
+                    <DialogContent className="max-h-[80vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
                       <DialogHeader>
                         <DialogTitle>Add Payment Method</DialogTitle>
                       </DialogHeader>
@@ -299,63 +317,75 @@ const OwnerPayment = () => {
       </div>
 
       {/* Payment History Section */}
-      
-        <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
-          <div>
-            <h2 className="text-xl font-semibold">Payment History ({ownerDetails.user.paymentReciever.length + ownerDetails.user.paymentSender.length})</h2>
-            <p className="text-gray-600">See history of your payment plan invoice</p>
-          </div>
-          <Button variant="outline" className='bg-primaryColor text-white w-32'>Download All</Button>
-        </div>
 
-        <div className="overflow-x-auto">
-          <Table className="border border-gray-200 rounded-lg">
-            <TableHeader className="bg-gray-50">
-              <TableRow>
-                <TableHead className="w-[50px]">
-                  <Input type="checkbox" className="rounded w-4 h-4 accent-primaryColor" />
-                </TableHead>
-                <TableHead className="font-bold">
-                  <div className="flex items-center gap-2">
-                    Payment Invoice
-                    <RiArrowUpDownLine className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                <TableHead className="font-bold">
-                  <div className="flex items-center gap-2">
-                    Amount
-                    <RiArrowUpDownLine className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                <TableHead className="font-bold">
-                  <div className="flex items-center gap-2">
-                    Last modified
-                    <RiArrowUpDownLine className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                <TableHead className="font-bold">
-                  <div className="flex items-center gap-2">
-                    Status
-                    <RiArrowUpDownLine className="h-4 w-4" />
-                  </div>
-                </TableHead>
-                <TableHead className="font-bold"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {ownerDetails.user.paymentReciever.map((item, index) => {
-                return (
-                  <PaymentSheet index={index} item={item} />
-                )
-              })}
-              {ownerDetails.user.paymentSender.map((item, index) => {
-                return (
-                  <PaymentSheet index={index} item={item} />
-                )
-              })}
-            </TableBody>
-          </Table>
+      <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+        <div>
+          <h2 className="text-xl font-semibold">Payment History ({ownerDetails.user.paymentReciever.length + ownerDetails.user.paymentSender.length})</h2>
+          <p className="text-gray-600">See history of your payment plan invoice</p>
         </div>
+        <DownloadPDFButton
+          payments={getSelectedPaymentsAndBookings().payments}
+          bookings={getSelectedPaymentsAndBookings().bookings}
+          fileName="selected_payments.pdf"
+        />
+      </div>
+
+      <div className="overflow-x-auto">
+        <Table className="border border-gray-200 rounded-lg">
+          <TableHeader className="bg-gray-50">
+            <TableRow>
+              <TableHead className="w-[50px]">
+                <Input type="checkbox" className="rounded w-4 h-4 accent-primaryColor" />
+              </TableHead>
+              <TableHead className="font-bold">
+                <div className="flex items-center gap-2">
+                  Payment Invoice
+                  <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
+                    <RiArrowUpDownLine className="h-4 w-4" />
+                  </div>
+                </div>
+              </TableHead>
+              <TableHead className="font-bold">
+                <div className="flex items-center gap-2">
+                  Amount
+                  <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
+                    <RiArrowUpDownLine className="h-4 w-4" />
+                  </div>
+                </div>
+              </TableHead>
+              <TableHead className="font-bold">
+                <div className="flex items-center gap-2">
+                  Last modified
+                  <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
+                    <RiArrowUpDownLine className="h-4 w-4" />
+                  </div>
+                </div>
+              </TableHead>
+              <TableHead className="font-bold">
+                <div className="flex items-center gap-2">
+                  Status
+                  <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
+                    <RiArrowUpDownLine className="h-4 w-4" />
+                  </div>
+                </div>
+              </TableHead>
+              <TableHead className="font-bold"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {ownerDetails.user.paymentReciever.map((item, index) => {
+              return (
+                <PaymentSheet index={index} item={item} />
+              )
+            })}
+            {ownerDetails.user.paymentSender.map((item, index) => {
+              return (
+                <PaymentSheet index={index} item={item} />
+              )
+            })}
+          </TableBody>
+        </Table>
+      </div>
 
     </div>
 

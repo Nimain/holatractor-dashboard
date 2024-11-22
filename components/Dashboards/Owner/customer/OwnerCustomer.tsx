@@ -111,7 +111,7 @@ const OwnerCustomer = () => {
                 <Breadcrumb>
                     <BreadcrumbList>
                         <BreadcrumbItem>
-                            <BreadcrumbLink href="/owner">Dasboard</BreadcrumbLink>
+                            <BreadcrumbLink href="/owner">Dashboard</BreadcrumbLink>
                         </BreadcrumbItem>
                         <BreadcrumbSeparator />
                         <BreadcrumbItem>
