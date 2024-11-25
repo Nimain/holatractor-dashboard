@@ -268,7 +268,7 @@ const Bookings = () => {
                                                 </Button>
                                             </SheetTrigger>
 
-                                            <SheetContent className="sm:max-w-md  z-50">
+                                            <SheetContent className="overflow-auto" style={{scrollbarWidth: "none"}}>
                                                 <SheetHeader>
                                                     <SheetTitle className="text-xl font-semibold">Details</SheetTitle>
                                                 </SheetHeader>
@@ -297,18 +297,18 @@ const Bookings = () => {
                                                                     <p className="text-gray-500 text-sm">To</p>
                                                                     <p className="flex  justify-between font-medium"><CalendarIcon className="w-4 h-4 mt-1 text-gray-400" />
                                                                         {
-                                                                            ticket.bookingStatus ? ticket.bookingStatus : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()
+                                                                            ticket.booking_hours ? ticket.booking_hours : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()
                                                                         }
                                                                     </p>
                                                                 </div>
                                                             </div>
                                                         </div>
                                                         {
-                                                            ticket.bookingStatus &&
+                                                            ticket.booking_hours &&
                                                             <div className="flex justify-between gap-2">
                                                                 <p className="text-gray-500 text-sm">Estimation</p>
                                                                 <p className="flex items-center font-medium"> <Clock className="w-4 h-4 text-gray-400" />
-                                                                    {ticket.bookingStatus}
+                                                                    {ticket.booking_hours}
                                                                 </p>
                                                             </div>
                                                         }
@@ -357,14 +357,7 @@ const Bookings = () => {
                                                             <div className="flex-1 pb-6">
                                                                 <div className="flex justify-between">
                                                                     <p className="font-medium">
-                                                                        {
-                                                                            ticket.OperatorBookingJob ?
-                                                                                <span>
-                                                                                    {`${ticket.OperatorBookingJob[0].operator?.user.first_name} ${ticket.OperatorBookingJob[0].operator?.user.middle_name ?? ""} ${ticket.OperatorBookingJob[0].operator?.user.last_name} has accepted this booking.`}
-                                                                                </span>
-                                                                                :
-                                                                                "No operators has accepted for this job."
-                                                                        }
+                                                                        Operator has accepted this booking.
                                                                     </p>
                                                                 </div>
                                                             </div>
@@ -419,7 +412,7 @@ const Bookings = () => {
                                                         </div>
                                                         <div className="flex gap-3">
                                                             <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) || (ticket.payment[0].status === PaymentStatus.FarmerPENDING)
+                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) && (ticket.payment[0].status === PaymentStatus.FarmerPENDING)
                                                                     ? 'bg-green-500'
                                                                     : 'bg-yellow-400'
                                                                     }`} />
@@ -435,7 +428,7 @@ const Bookings = () => {
                                                         </div>
                                                         <div className="flex gap-3">
                                                             <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) || (ticket.payment[0].status === PaymentStatus.FarmerCONFIRMED)
+                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) && (ticket.payment[0].status === PaymentStatus.FarmerCONFIRMED)
                                                                     ? 'bg-green-500'
                                                                     : 'bg-yellow-400'
                                                                     }`} />
@@ -451,7 +444,7 @@ const Bookings = () => {
                                                         </div>
                                                         <div className="flex gap-3">
                                                             <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) || (ticket.payment[0].status === PaymentStatus.FarmerCONFIRMED)
+                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) && (ticket.payment[0].status === PaymentStatus.FarmerCONFIRMED)
                                                                     ? 'bg-green-500'
                                                                     : 'bg-yellow-400'
                                                                     }`} />
@@ -467,7 +460,7 @@ const Bookings = () => {
                                                         </div>
                                                         <div className="flex gap-3">
                                                             <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) || (ticket.payment[0].status === PaymentStatus.OwnerREJECTED)
+                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) && (ticket.payment[0].status === PaymentStatus.OwnerREJECTED)
                                                                     ? 'bg-green-500'
                                                                     : 'bg-yellow-400'
                                                                     }`} />
@@ -483,7 +476,7 @@ const Bookings = () => {
                                                         </div>
                                                         <div className="flex gap-3">
                                                             <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) || (ticket.payment[0].status === PaymentStatus.COMPLETED)
+                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) && (ticket.payment[0].status === PaymentStatus.COMPLETED)
                                                                     ? 'bg-green-500'
                                                                     : 'bg-yellow-400'
                                                                     }`} />
@@ -505,7 +498,7 @@ const Bookings = () => {
                                                     <AssignOperator selectedRequest={ticket.id} storeId={ticket.store_id} store={ticket.store} />
                                                 }
                                                 {
-                                                    ticket.payment[0].status === PaymentStatus.FarmerCONFIRMED && <PaymentReview
+                                                    (ticket.payment.length > 0 && ticket.payment[0].status === PaymentStatus.FarmerCONFIRMED) && <PaymentReview
                                                     referenceNumber={ticket.payment[0].transaction_reference[ticket.payment[0].transaction_reference.length - 1]}
                                                     screenshotUrl={ticket.payment[0].screenshots[ticket.payment[0].screenshots.length - 1]}
                                                     paymentId={ticket.payment[0].id} />
