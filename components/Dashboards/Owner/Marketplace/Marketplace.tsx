@@ -17,6 +17,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 
 
 interface Lead {
@@ -223,6 +224,19 @@ const marketplace = () => {
 
   return (
     <>
+      <div className="flex justify-between items-center gap-4 flex-wrap mb-8">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/owner">Dashboard</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/owner/marketplace">Marketplace</BreadcrumbLink>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
       <TooltipProvider>
         <div className="p-6 space-y-6 ">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -631,7 +645,7 @@ const marketplace = () => {
             </div>
           </div>
         </SheetContent>
-        
+
       </Sheet>
 
     </>

@@ -95,21 +95,6 @@ interface Location {
   longitude: number | null;
 }
 
-const notificationIcons = {
-  farmAdded: <Tractor className="h-5 w-5 text-green-500" />,
-  bookingConfirmation: <Calendar className="h-5 w-5 text-blue-500" />,
-  bookingRejected: <AlertCircle className="h-5 w-5 text-red-500" />,
-  bookingAssigned: <CheckCircle className="h-5 w-5 text-green-500" />,
-  bookingArriving: <Clock className="h-5 w-5 text-yellow-500" />,
-  bookingArrived: <CheckCircle className="h-5 w-5 text-green-500" />,
-  workStarted: <PlayCircle className="h-5 w-5 text-blue-500" />,
-  workPaused: <PauseCircle className="h-5 w-5 text-orange-500" />,
-  paymentRequired: <CreditCard className="h-5 w-5 text-purple-500" />,
-  paymentSent: <CreditCard className="h-5 w-5 text-blue-500" />,
-  paymentRejected: <AlertCircle className="h-5 w-5 text-red-500" />,
-  paymentAccepted: <CheckCircle className="h-5 w-5 text-green-500" />,
-};
-
 const FarmerDashboard = () => {
 
   const [farmer, setFarmer] = useState<Farmer | null>(null)
@@ -242,7 +227,6 @@ const FarmerDashboard = () => {
       fetchFarmer()
     }
   }, [])
-
 
   useEffect(() => {
     if (navigator.geolocation) {

@@ -105,7 +105,7 @@ const OwnerCustomer = () => {
     }, []);
 
     return (
-        <div className="p-5">
+        <div>
             {/* Header */}
             <div className="flex justify-between items-center gap-4 flex-wrap mb-8">
                 <Breadcrumb>
