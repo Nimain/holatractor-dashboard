@@ -444,7 +444,7 @@ const Bookings = () => {
                                                         </div>
                                                         <div className="flex gap-3">
                                                             <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) && (ticket.payment[0].status === PaymentStatus.FarmerCONFIRMED)
+                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")
                                                                     ? 'bg-green-500'
                                                                     : 'bg-yellow-400'
                                                                     }`} />
@@ -476,7 +476,7 @@ const Bookings = () => {
                                                         </div>
                                                         <div className="flex gap-3">
                                                             <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) && (ticket.payment[0].status === PaymentStatus.COMPLETED)
+                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED")
                                                                     ? 'bg-green-500'
                                                                     : 'bg-yellow-400'
                                                                     }`} />

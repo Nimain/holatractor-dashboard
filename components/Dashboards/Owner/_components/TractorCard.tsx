@@ -3,6 +3,7 @@
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Tractor, TractorType } from "@/utils/Types/types"
 
 interface TractorCardProps {
   tractor: Tractor
@@ -27,7 +28,7 @@ export function TractorCard({ tractor }: TractorCardProps) {
         </div>
         <p className="text-sm text-muted-foreground mb-2">{tractor.description}</p>
         {tractor.model && <p className="text-sm">Model: {tractor.model}</p>}
-        {tractor.year && <p className="text-sm">Year: {tractor.year.getFullYear()}</p>}
+        {/* {tractor.year && <p className="text-sm">Year: {tractor.year.getFullYear()}</p>} */}
       </CardContent>
       <CardFooter>
         <Button className="w-full">View Details</Button>
