@@ -283,6 +283,10 @@ const marketplace = () => {
     }
   }, [])
 
+  useEffect(()=>{
+    fetchNewBookings()
+  },[])
+
   if (fetchingPageDetails) return <OwnerShrimmer />
 
   if (!user) return <p>user not found</p>
