@@ -70,14 +70,14 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                                     <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                                 </svg>
                             </div>
-                            <span className="text-xl font-semibold">100 USD</span>
+                            <span className="text-xl font-semibold">{item.amount.toFixed(2)} USD</span>
                         </div>
                     </div>
 
                     {/* URL Section */}
                     <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
                         <span className="text-sm text-muted-foreground truncate">
-                            https://arto.plus/preview/KJ098efdjbf
+                            {item.screenshots[item.screenshots.length - 1]}
                         </span>
                         <Button variant="ghost" size="sm" className="h-8">
                             <Copy className="h-4 w-4" />
@@ -94,19 +94,19 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                         <h3 className="text-lg font-semibold">Payment Link Transactions</h3>
                         <div className="grid grid-cols-2 gap-y-3">
                             <span className="text-muted-foreground">Status</span>
-                            <Badge className="justify-self-end w-fit">Paid</Badge>
+                            <Badge className="justify-self-end w-fit">
+                                {item.status}
+                            </Badge>
 
                             <span className="text-muted-foreground">Created on</span>
-                            <span className="text-right">Aug 28, 2023 2:40 PM</span>
-
-                            <span className="text-muted-foreground">Expires on</span>
-                            <span className="text-right">Sept 6, 2023 1:40 PM</span>
+                            <span className="text-right">
+                                {new Date(item.createdAt).toLocaleDateString()}
+                            </span>
 
                             <span className="text-muted-foreground">Reference</span>
-                            <span className="text-right">019283</span>
-
-                            <span className="text-muted-foreground">Notes</span>
-                            <span className="text-right">for pizza party tonight</span>
+                            <span className="text-right">
+                                {item.transaction_reference}
+                            </span>
                         </div>
                     </div>
 
@@ -119,7 +119,7 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                                 <div>
                                     <p className="font-medium">Created Payment Link</p>
                                     <p className="text-sm text-muted-foreground">
-                                        Aug 28, 2023 2:40 PM
+                                    {new Date(item.createdAt).toLocaleDateString()}
                                     </p>
                                 </div>
                             </div>
@@ -133,20 +133,20 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                                 </div>
                             </div>
                             <div className="relative pl-6">
-                                <div className="absolute -left-[5px] h-2.5 w-2.5 rounded-full bg-blue-500" />
+                                <div className={`absolute -left-[5px] h-2.5 w-2.5 rounded-full bg-blue-500 ${`${item.status}` === "COMPLETED" ? "bg-green-500" : "bg-blue-500"}`} />
                                 <div>
                                     <p className="font-medium">Payment Complete</p>
                                     <p className="text-sm text-muted-foreground">
-                                        You have received a payment of 100 USD.
+                                        You have received a payment of {item.amount.toFixed(2)} USD.
                                     </p>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div className=" bottom-0 left-0 right-0 p-6 border-t bg-background flex justify-between">
+                    {/* <div className=" bottom-0 left-0 right-0 p-6 border-t bg-background flex justify-between">
                         <Button variant="outline">Cancel Request</Button>
                         <Button>Request this again</Button>
-                    </div>
+                    </div> */}
                 </div>
             </SheetContent>
         </Sheet>
