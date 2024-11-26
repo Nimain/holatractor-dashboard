@@ -54,6 +54,7 @@ const OwnerOperator = () => {
     const [currentDate, setCurrentDate] = useState<string>("");
 
     const [allOperators, setAllOperators] = useState<OperatorInStore[]>([])
+    const [activeOperators, setActiveOperators] = useState(0)
     const [fetchingOperatorDetails, setFetchingOperatorDetails] = useState(false)
 
     const tabs = [
@@ -119,6 +120,7 @@ const OwnerOperator = () => {
         renderInstance.get(`/owner/get-operators/${user.userId}`)
             .then((res) => {
                 setAllOperators(res.data.operators)
+                setActiveOperators(res.data.activeOperators)
             }).catch((err) => {
                 errorMessage("Error fetching operator lists")
             }).finally(() => {
@@ -176,7 +178,7 @@ const OwnerOperator = () => {
                         </Button>
                     </div>
 
-                    <div className="grid grid-cols-1 500px:grid-cols-2 768px:grid-cols-3 900px:flex gap-5 mt-4">
+                    {/* <div className="grid grid-cols-1 500px:grid-cols-2 768px:grid-cols-3 900px:flex gap-5 mt-4">
                         <div className="col-span-1 900px:flex-1">
                             <div className="text-3xl font-semibold mb-1">$ 32.1k</div>
                             <div className="flex items-center gap-1">
@@ -213,7 +215,7 @@ const OwnerOperator = () => {
                                 {currentDate}
                             </p>
                         </div>
-                    </div>
+                    </div> */}
                 </div>
 
                 {/* Total Operators Card */}
@@ -226,7 +228,7 @@ const OwnerOperator = () => {
                     </div>
 
                     <div className="mt-4 flex justify-between mb-0">
-                        <div className="text-4xl font-semibold">829</div>
+                        <div className="text-4xl font-semibold">{activeOperators}</div>
                         <div className="flex items-center gap-1 mt-2">
                             <span className="text-green-500 text-sm">↑ 15%</span>
                         </div>

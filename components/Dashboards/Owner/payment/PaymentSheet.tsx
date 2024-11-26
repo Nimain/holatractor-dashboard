@@ -75,6 +75,8 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                     </div>
 
                     {/* URL Section */}
+                    {
+                        item.screenshots.length > 0 &&
                     <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
                         <span className="text-sm text-muted-foreground truncate">
                             {item.screenshots[item.screenshots.length - 1]}
@@ -88,10 +90,10 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                             <span className="ml-2">Visit Link</span>
                         </Button>
                     </div>
+                    }
 
                     {/* Transaction Details */}
                     <div className="space-y-4">
-                        <h3 className="text-lg font-semibold">Payment Link Transactions</h3>
                         <div className="grid grid-cols-2 gap-y-3">
                             <span className="text-muted-foreground">Status</span>
                             <Badge className="justify-self-end w-fit">
@@ -103,7 +105,10 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                                 {new Date(item.createdAt).toLocaleDateString()}
                             </span>
 
+{
+    item.transaction_reference &&
                             <span className="text-muted-foreground">Reference</span>
+}
                             <span className="text-right">
                                 {item.transaction_reference}
                             </span>

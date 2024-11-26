@@ -34,6 +34,8 @@ const OwnerDashboardPage = () => {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [tractors, setTractors] = useState<Tractor[]>([])
   const [attachments, setAttachments] = useState<Attachment[]>([])
+  const [tractorsInUse, setTractorsInUse] = useState(0)
+  const [attachmentsInUse, setAttachmentsInUse] = useState(0)
 
   const { cookie } = useCookie()
   const user: user = cookie.get("user")
@@ -48,6 +50,8 @@ const OwnerDashboardPage = () => {
         setBookings(res.data.bookings)
         setTractors(res.data.tractors)
         setAttachments(res.data.attachments)
+        setTractorsInUse(res.data.tractorsInuse)
+        setAttachmentsInUse(res.data.attachmentsInuse)
       }).catch((err) => {
         errorMessage("Error fetching user detaild")
       }).finally(() => {
@@ -111,7 +115,9 @@ const OwnerDashboardPage = () => {
       operators={operators} 
       tractors={tractors} 
       attachments={attachments} 
-      bookings={bookings} />
+      bookings={bookings}
+      tractorsInUse={tractorsInUse}
+      attachmentsInUse={attachmentsInUse} />
 
     </div>
   )

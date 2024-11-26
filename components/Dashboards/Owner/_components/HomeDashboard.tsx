@@ -66,13 +66,17 @@ const HomeDashboard = (
         operators,
         tractors,
         attachments,
-        bookings
+        bookings,
+        tractorsInUse,
+        attachmentsInUse
     }: {
         stores: Store[];
         operators: OperatorInStore[];
         tractors: Tractor[];
         attachments: Attachment[];
-        bookings: Booking[]
+        bookings: Booking[];
+        tractorsInUse: number;
+        attachmentsInUse: number;
     }
 ) => {
     const [slideIndex, setSlideIndex] = useState(0);
@@ -107,8 +111,8 @@ const HomeDashboard = (
         return (inUse / total) * 100
     }
 
-    const tractorProgress = calculateProgress(tractorData.inUse, tractorData.total)
-    const attachmentProgress = calculateProgress(attachmentData.inUse, attachmentData.total)
+    const tractorProgress = calculateProgress(tractorsInUse, tractors.length)
+    const attachmentProgress = calculateProgress(attachmentsInUse, attachments.length)
 
     useEffect(() => {
         if (navigator.geolocation) {
@@ -314,7 +318,7 @@ const HomeDashboard = (
                                 Tractors
                             </div>
                         </CardTitle>
-                        <span className="text-sm text-muted-foreground">2,350 in use</span>
+                        <span className="text-sm text-muted-foreground">{tractorsInUse} use</span>
                     </CardHeader>
                     <CardContent>
                         <p className="text-sm text-muted-foreground">Lack of physical activity</p>
@@ -323,7 +327,7 @@ const HomeDashboard = (
                         </div>
                         <div className="mt-4 text-sm text-muted-foreground flex justify-between">
                             <span>0</span>
-                            <span>2,350 Tractors in use</span>
+                            <span>{tractorsInUse} Tractors in use</span>
                         </div>
                         <div className="mt-2 flex items-center gap-x-1">
                             <Progress value={tractorProgress} className="h-10 [&>div]:bg-primaryColor" />
@@ -343,7 +347,7 @@ const HomeDashboard = (
                                     Attachments
                                 </div>
                             </CardTitle>
-                            <span className="text-sm text-muted-foreground">1,200 in use</span>
+                            <span className="text-sm text-muted-foreground">{attachmentsInUse} in use</span>
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">Various implements for tractors</p>
                         <div className="mt-4 text-2xl font-bold">
@@ -351,7 +355,7 @@ const HomeDashboard = (
                         </div>
                         <div className="mt-4 text-sm text-muted-foreground flex justify-between">
                             <span>0</span>
-                            <span>1,200 Attachments in use</span>
+                            <span>{attachmentsInUse} Attachments in use</span>
                         </div>
                         <div className="mt-2 flex items-center gap-x-1">
                             <Progress value={attachmentProgress} className="h-10 [&>div]:bg-primaryColor" />

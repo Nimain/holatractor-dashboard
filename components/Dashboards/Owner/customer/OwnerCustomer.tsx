@@ -30,27 +30,41 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import Image from 'next/image';
+import { useCookie } from 'next-cookie';
+import { renderInstance } from '@/utils/Axios/RenderInstance';
+import { errorMessage } from '@/utils/Toastify/Messages';
+import OwnerShrimmer from '../_components/OwnerShrimmer';
 
 
 interface Customer {
     id: string;
     name: string;
     email: string;
-    company: {
-        name: string;
-        logo: string;
-        website: string;
-    };
-    status: 'Accepted' | 'Pending' | 'Canceled';
-    estimateValue: number;
-    lastActive: string;
-    phone: string;
+    totalSpent: number;
+    lastStoreName: string;
 }
+
+interface user {
+    userId: string;
+    image: string;
+    name: string;
+    email: string;
+  }
 
 const OwnerCustomer = () => {
     const [activeTab, setActiveTab] = useState('all');
     const [currentTime, setCurrentTime] = useState<string>("");
     const [currentDate, setCurrentDate] = useState<string>("");
+    const [fetchingPageDetails, setFetchingPageDetails] = useState(false)
+
+    const [customers, setCustomers] = useState<Customer[]>([])
+    const [activeCustomers, setActiveCustomers] = useState(0)
+    const [rejectedCustomers, setRejectedCustomers] = useState(0)
+    const [pendingCustomers, setPendingCustomers] = useState(0)
+    const [totalReceived, setTotalReceived] = useState(0)
+
+    const { cookie } = useCookie()
+  const user: user = cookie.get("user")
 
     const tabs = [
         { id: 'all', label: 'All', icon: LayoutGrid },
@@ -59,36 +73,28 @@ const OwnerCustomer = () => {
         { id: 'estimate', label: 'Estimate Value', icon: DollarSign },
     ];
 
-    const customers: Customer[] = [
-        {
-            id: '1',
-            name: 'Olivia Anderson',
-            email: 'olivanderson21@gmail.com',
-            company: {
-                name: 'Tech Wise',
-                logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRH87TKQrWcl19xly2VNs0CjBzy8eaKNM-ZpA&s',
-                website: 'techwise.com'
-            },
-            status: 'Accepted',
-            estimateValue: 2345.00,
-            lastActive: 'Today at 14:50PM',
-            phone: '+62 85292410764 (Indonesia)'
-        },
-        {
-            id: '2',
-            name: 'Benjamin Ramirez',
-            email: 'b.ramirez@gmail.com',
-            company: {
-                name: 'Green Eco',
-                logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRH87TKQrWcl19xly2VNs0CjBzy8eaKNM-ZpA&s',
-                website: 'greeneco.id'
-            },
-            status: 'Pending',
-            estimateValue: 1239.00,
-            lastActive: 'Today at 11:43AM',
-            phone: '+62 85292410764 (Indonesia)'
+    function fetchPageDetails() {
+        setFetchingPageDetails(true)
+    
+        renderInstance.get(`/owner/get-owner-customer-page-details/${user.userId}`)
+          .then((res) => {
+            setCustomers(res.data.customers)
+            setActiveCustomers(res.data.activeCustomers)
+            setRejectedCustomers(res.data.rejectedCustomers)
+            setPendingCustomers(res.data.pendingCustomers)
+            setTotalReceived(res.data.totalReceived)
+          }).catch((err) => {
+            errorMessage("Error fetching user detaild")
+          }).finally(() => {
+            setFetchingPageDetails(false)
+          })
+      }
+    
+      useEffect(() => {
+        if (user) {
+          fetchPageDetails()
         }
-    ];
+      }, [])
 
     useEffect(() => {
         const updateDateTime = () => {
@@ -103,6 +109,10 @@ const OwnerCustomer = () => {
 
         return () => clearInterval(intervalId); // Cleanup on component unmount
     }, []);
+
+    if (fetchingPageDetails) return <OwnerShrimmer />
+
+    if (!user) return <p>user not found</p>
 
     return (
         <div>
@@ -142,7 +152,7 @@ const OwnerCustomer = () => {
 
                     <div className="grid grid-cols-1 500px:grid-cols-2 768px:grid-cols-3 900px:flex gap-5 mt-4">
                         <div className="col-span-1 900px:flex-1">
-                            <div className="text-3xl font-semibold mb-1">$ 32.1k</div>
+                            <div className="text-3xl font-semibold mb-1">$ {totalReceived}</div>
                             <div className="flex items-center gap-1">
                                 <div className="w-2 h-2 rounded-full bg-green-500"></div>
                                 <span className="text-green-500 text-sm">Accepted</span>
@@ -152,7 +162,7 @@ const OwnerCustomer = () => {
                         <div className="w-px bg-gray-200 mx-4 hidden 900px:inline-block"></div>
 
                         <div className="col-span-1 900px:flex-1">
-                            <div className="text-3xl font-semibold mb-1 text-left 500px:text-right 768px:text-left">$ 16.23k</div>
+                            <div className="text-3xl font-semibold mb-1 text-left 500px:text-right 768px:text-left">$ {pendingCustomers}</div>
                             <div className="flex items-center gap-1">
                                 <div className="w-2 h-2 rounded-full bg-orange-400 ml-0 500px:ml-auto 768px:ml-0"></div>
                                 <span className="text-orange-400 text-sm">Pending</span>
@@ -162,7 +172,7 @@ const OwnerCustomer = () => {
                         <div className="w-px bg-gray-200 mx-4 hidden 900px:inline-block"></div>
 
                         <div className="col-span-1 900px:flex-1">
-                            <div className="text-3xl font-semibold mb-1">$ 2.58k</div>
+                            <div className="text-3xl font-semibold mb-1">$ {rejectedCustomers}</div>
                             <div className="flex items-center gap-1">
                                 <div className="w-2 h-2 rounded-full bg-red-500"></div>
                                 <span className="text-red-500 text-sm">Cancelled</span>
@@ -191,10 +201,10 @@ const OwnerCustomer = () => {
                     </div>
 
                     <div className="mt-4 flex justify-between mb-0">
-                        <div className="text-4xl font-semibold">829</div>
-                        <div className="flex items-center gap-1 mt-2">
+                        <div className="text-4xl font-semibold">{activeCustomers}</div>
+                        {/* <div className="flex items-center gap-1 mt-2">
                             <span className="text-green-500 text-sm">↑ 15%</span>
-                        </div>
+                        </div> */}
                     </div>
                 </div>
 
@@ -208,7 +218,7 @@ const OwnerCustomer = () => {
                     </div>
 
                     <div className="flex justify-between mt-4 ">
-                        <div className="text-4xl font-semibold">324</div>
+                        <div className="text-4xl font-semibold">{customers.length}</div>
                         <div className="flex -space-x-2 mt-4">
                             {[1, 2, 3, 4, 5].map((index) => (
                                 <Image
@@ -317,8 +327,7 @@ const OwnerCustomer = () => {
                             </TableHead>
                             <TableHead className="text-left p-4 font-bold text-lg">Profile</TableHead>
                             <TableHead className="text-left p-4 font-bold text-lg">Contact</TableHead>
-                            <TableHead className="text-left p-4 font-bold text-lg">Company</TableHead>
-                            <TableHead className="text-left p-4 font-bold text-lg">Status</TableHead>
+                            <TableHead className="text-left p-4 font-bold text-lg">Store</TableHead>
                             <TableHead className="text-left p-4 font-bold text-lg">Estimate Value</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -339,37 +348,19 @@ const OwnerCustomer = () => {
                                         />
                                         <div>
                                             <p className="font-medium">{customer.name}</p>
-                                            <p className="text-sm text-gray-500">{customer.lastActive}</p>
                                         </div>
                                     </div>
                                 </TableCell>
                                 <TableCell className="p-4">
                                     <p className="text-sm">{customer.email}</p>
-                                    <p className="text-sm text-gray-500">{customer.phone}</p>
                                 </TableCell>
                                 <TableCell className="p-4">
                                     <div className="flex items-center gap-3">
-                                        <Image
-                                            src={customer.company.logo}
-                                            alt={customer.company.name}
-                                            className="w-8 h-8 rounded-full object-cover"
-                                            width={400}
-                                            height={400}
-                                        />
-                                        <p className="text-sm">{customer.company.name}</p>
+                                        <p className="text-sm">{customer.lastStoreName}</p>
                                     </div>
                                 </TableCell>
                                 <TableCell className="p-4">
-                                    <span className={`px-3 py-1 rounded-full text-sm
-                    ${customer.status === 'Accepted' ? 'bg-green-100 text-green-800' : ''}
-                    ${customer.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : ''}
-                    ${customer.status === 'Canceled' ? 'bg-red-100 text-red-800' : ''}
-                  `}>
-                                        {customer.status}
-                                    </span>
-                                </TableCell>
-                                <TableCell className="p-4">
-                                    <p className="font-medium">${customer.estimateValue.toFixed(2)}</p>
+                                    <p className="font-medium">${customer.totalSpent.toFixed(2)}</p>
                                 </TableCell>
                             </TableRow>
                         ))}
