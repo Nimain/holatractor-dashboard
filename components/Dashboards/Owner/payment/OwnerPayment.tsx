@@ -24,7 +24,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { useEffect, useRef, useState } from 'react'
-import { Owner, Booking } from '@/utils/Types/types'
+import { Owner, Booking, Subscriptions } from '@/utils/Types/types'
 import { Input } from '@/components/ui/input'
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
 import { renderInstance } from '@/utils/Axios/RenderInstance'
@@ -37,6 +37,7 @@ import { Backdrop, CircularProgress } from '@mui/material'
 import OwnerShrimmer from '../_components/OwnerShrimmer'
 import PaymentSheet from './PaymentSheet'
 import { DownloadPDFButton } from './PaymentPDF';
+import { addDays } from 'date-fns'
 
 const currencies = [
   { code: 'USD', symbol: '$', name: 'US Dollar' },
@@ -60,6 +61,10 @@ const OwnerPayment = () => {
   const [isFetching, setIsFetching] = useState(false)
   const [isOpen, setIsOpen] = useState(false);
   const [selectedPayments, setSelectedPayments] = useState<string[]>([])
+  const [monthlyRevenue, setMonthlyRevenue] = useState(0)
+  const [monthlyRejected, setMonthlyRejected] = useState(0)
+  const [subscription, setSubscription] = useState<Subscriptions | null>(null)
+  const [subscriptionActive, setSubscriptionActive] = useState<Subscriptions | null>(null)
 
   const { cookie } = useCookie()
   const user: user = cookie.get("user")
@@ -90,7 +95,11 @@ const OwnerPayment = () => {
 
     renderInstance.get(`/owner/get-owner-payment-page-details/${user.userId}`)
       .then((res) => {
-        setOwnerDetails(res.data)
+        setOwnerDetails(res.data.ownerDetails)
+        setMonthlyRevenue(res.data.monthlyRevenue)
+        setMonthlyRejected(res.data.monthlyRejected)
+        setSubscription(res.data.subscription)
+        setSubscriptionActive(res.data.subscriptionActive)
       }).catch((err) => {
         errorMessage("Error fetching operator lists")
       }).finally(() => {
@@ -166,7 +175,7 @@ const OwnerPayment = () => {
                 <div className="space-y-1">
                   <p className="text-sm text-gray-500">Revenue this month</p>
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold">$10,398</span>
+                    <span className="text-2xl font-bold">${monthlyRevenue}</span>
                     <div className="flex items-center text-sm text-emerald-500">
                       <ArrowUpIcon className="h-4 w-4" />
                       <span>+608</span>
@@ -176,7 +185,7 @@ const OwnerPayment = () => {
               </div>
 
               {/* Profit Section */}
-              <div className="border-r border-gray-200 pr-4">
+              {/* <div className="border-r border-gray-200 pr-4">
                 <div className="space-y-1">
                   <p className="text-sm text-gray-500">Profit this month</p>
                   <div className="flex items-center gap-2">
@@ -187,14 +196,14 @@ const OwnerPayment = () => {
                     </div>
                   </div>
                 </div>
-              </div>
+              </div> */}
 
               {/* Rejected Section */}
               <div className="border-r border-gray-200 pr-4">
                 <div className="space-y-1">
                   <p className="text-sm text-gray-500">Rejected this month</p>
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold">45</span>
+                    <span className="text-2xl font-bold">${monthlyRejected}</span>
                     <div className="flex items-center text-sm text-red-500">
                       <ArrowDownIcon className="h-4 w-4" />
                       <span>-15</span>
@@ -204,7 +213,7 @@ const OwnerPayment = () => {
               </div>
 
               {/* Operator Pay Section */}
-              <div className="space-y-1">
+              {/* <div className="space-y-1">
                 <p className="text-sm text-gray-500">Operator Pay</p>
                 <div className="flex items-center gap-2">
                   <span className="text-2xl font-bold">$1,245</span>
@@ -213,7 +222,7 @@ const OwnerPayment = () => {
                     <span>+50</span>
                   </div>
                 </div>
-              </div>
+              </div> */}
             </div>
           </CardContent>
         </Card>
@@ -222,18 +231,24 @@ const OwnerPayment = () => {
       {/* My Plan & Payment Method Section */}
       <div className="grid grid-cols-1 1050px:grid-cols-2 gap-6 mb-8">
         {/* My Plan Section */}
+        {
+          subscription && 
         <Card className="w-full">
           <CardContent className="p-6">
             <h2 className="text-xl font-semibold mb-4">My Plan</h2>
             <p className="text-gray-600 mb-4">Change your plan based on your needs</p>
             <div className="flex items-center gap-2 mb-4">
               <div className="h-2 w-2 bg-green-400 rounded-full"></div>
-              <span className="font-medium">Pro</span>
-              <span className="text-gray-500 text-sm">Billed yearly</span>
+              <span className="font-medium">
+                {subscription.name}
+              </span>
+              <span className="text-gray-500 text-sm">Billed monthly</span>
             </div>
             <div className="mb-4">
-              <span className="text-xl font-semibold">$299.99 USD</span>
-              <span className="text-gray-500 text-sm ml-2">(next renew 24 September 2023)</span>
+              <span className="text-xl font-semibold">${subscription.actual_cost.toFixed(2)} USD</span>
+              <span className="text-gray-500 text-sm ml-2">
+                {subscriptionActive ? `Expires on ${addDays(new Date(subscription.createdAt), subscription.total_days)}` : `Subscription expired.`}
+                </span>
             </div>
             <div className="flex gap-4 flex-wrap">
               <Button variant="default">Explore Plans</Button>
@@ -241,6 +256,7 @@ const OwnerPayment = () => {
             </div>
           </CardContent>
         </Card>
+        }
 
         {/* Payment Method Section */}
         <Card className="w-full">

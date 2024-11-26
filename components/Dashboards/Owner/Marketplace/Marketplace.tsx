@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { FiChevronRight, FiMail, FiPhone, FiMoreVertical } from 'react-icons/fi';
 import {
@@ -18,6 +18,11 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { Booking } from '@/utils/Types/types';
+import OwnerShrimmer from '../_components/OwnerShrimmer';
+import { renderInstance } from '@/utils/Axios/RenderInstance';
+import { errorMessage } from '@/utils/Toastify/Messages';
+import { useCookie } from 'next-cookie';
 
 
 interface Lead {
@@ -36,11 +41,30 @@ interface Column {
   statusColor: string;
 }
 
+interface user {
+  userId: string;
+  image: string;
+  name: string;
+  email: string;
+}
+
 const marketplace = () => {
 
   const [isOpen, setIsOpen] = useState(false);
   const [open, setOpen] = useState(false)
   const [currentLead, setCurrentLead] = useState(null);
+  const [fetchingPageDetails, setFetchingPageDetails] = useState(false)
+
+  const [totalReceived, setTotalReceived] = useState(0)
+  const [totalStandAloneBookimgs, setTotalStandAloneBookimgs] = useState(0)
+  const [customers, setCustomers] = useState(0)
+  const [openBookings, setOpenBookings] = useState<Booking[]>([])
+  const [newBookings, setNewBookings] = useState<Booking[]>([])
+  const [inProgressBookings, setInProgressBookings] = useState<Booking[]>([])
+  const [completedBookings, setCompletedBookings] = useState<Booking[]>([])
+
+  const { cookie } = useCookie()
+  const user: user = cookie.get("user")
 
   const toggleDialog = () => {
     setIsOpen(!isOpen);
@@ -182,28 +206,28 @@ const marketplace = () => {
   const stats = [
     {
       title: "INCOME",
-      value: "$53,765",
+      value: `$${totalReceived}`,
       change: "10.5%",
       isPositive: true,
       description: "vs last month",
     },
     {
       title: "AVG. SALES",
-      value: "$16,459",
+      value: `$${totalReceived}`,
       change: "6.2%",
       isPositive: true,
       description: "vs last month",
     },
     {
       title: "BOOKINGS",
-      value: "22,451",
+      value: totalStandAloneBookimgs,
       change: "0.7%",
       isPositive: false,
       description: "vs last month",
     },
     {
       title: "LEADS",
-      value: "516K",
+      value: customers,
       change: "15.2%",
       isPositive: false,
       description: "vs last month",
@@ -221,6 +245,47 @@ const marketplace = () => {
     setOpen(false);        // Close the dialog
     setCurrentLead(null);  // Reset the selected lead
   };
+
+  function fetchPageDetails() {
+    setFetchingPageDetails(true)
+
+    renderInstance.get(`/owner/get-owner-market-page-details/${user.userId}`)
+      .then((res) => {
+        setCustomers(res.data.customers)
+        setTotalStandAloneBookimgs(res.data.totalStandAloneBookimgs)
+        setOpenBookings(res.data.openBookings)
+        setInProgressBookings(res.data.inProgressBookings)
+        setTotalReceived(res.data.totalReceived)
+        setCompletedBookings(res.data.completedBookings)
+      }).catch((err) => {
+        errorMessage("Error fetching user detaild")
+      }).finally(() => {
+        setFetchingPageDetails(false)
+      })
+  }
+
+  function fetchNewBookings() {
+    setFetchingPageDetails(true)
+
+    renderInstance.get(`/booking/get/stand-alone/bookings`)
+      .then((res) => {
+        setNewBookings(res.data)
+      }).catch((err) => {
+        errorMessage("Error fetching user detaild")
+      }).finally(() => {
+        setFetchingPageDetails(false)
+      })
+  }
+
+  useEffect(() => {
+    if (user) {
+      fetchPageDetails()
+    }
+  }, [])
+
+  if (fetchingPageDetails) return <OwnerShrimmer />
+
+  if (!user) return <p>user not found</p>
 
   return (
     <>
@@ -285,27 +350,30 @@ const marketplace = () => {
                   </span>
                 </CardHeader>
               </Card>
-              {columns[0].leads.map((lead) => (
+              {newBookings.length === 0 ? <p>No open bookings available</p> : newBookings.map((lead) => (
                 <Card key={lead.id} className="overflow-hidden bg-white shadow-sm rounded-md mt-3">
                   <CardContent className="flex items-center space-x-4 p-4">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={lead.avatar} alt={lead.name} />
+                      {
+                        lead.user && lead.user?.image &&
+                      <AvatarImage src={lead.user?.image} alt={lead.user.first_name} />
+                      }
                       <AvatarFallback>
-                        {lead.name.split(" ").map((n) => n[0]).join("")}
+                        {lead.user?.first_name[0]}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium leading-none">{lead.name}</p>
-                      <p className="text-sm text-muted-foreground">{lead.time}</p>
+                      <p className="text-sm font-medium leading-none">{lead.user?.first_name} {lead.user?.middle_name ?? ""} {lead.user?.last_name}</p>
+                      <p className="text-sm text-muted-foreground">{new Date(lead.createdAt).toLocaleDateString()}</p>
                       <div className="flex items-center pt-2">
                         <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
                         <span className="text-sm">
-                          {`${lead.email.split('@')[0].slice(0, 3)}...@${lead.email.split('@')[1]}`}
+                          {`${lead.user?.email.split('@')[0].slice(0, 3)}...@${lead.user?.email.split('@')[1]}`}
                         </span>
                       </div>
                       <div className="flex items-center">
                         <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm">{`${lead.phone.slice(0, 3)}-XXX-XXXX)`}</span>
+                        <span className="text-sm">{`${lead.total_cost}`}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -326,27 +394,30 @@ const marketplace = () => {
                   </span>
                 </CardHeader>
               </Card>
-              {columns[1].leads.map((lead) => (
+              {openBookings.length === 0 ? <p>No open bookings available</p> : openBookings.map((lead) => (
                 <Card key={lead.id} className="overflow-hidden bg-white shadow-sm rounded-md mt-3">
                   <CardContent className="flex items-center space-x-4 p-4">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={lead.avatar} alt={lead.name} />
+                      {
+                        lead.user && lead.user?.image &&
+                      <AvatarImage src={lead.user?.image} alt={lead.user.first_name} />
+                      }
                       <AvatarFallback>
-                        {lead.name.split(" ").map((n) => n[0]).join("")}
+                        {lead.user?.first_name[0]}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium leading-none">{lead.name}</p>
-                      <p className="text-sm text-muted-foreground">{lead.time}</p>
+                      <p className="text-sm font-medium leading-none">{lead.user?.first_name} {lead.user?.middle_name ?? ""} {lead.user?.last_name}</p>
+                      <p className="text-sm text-muted-foreground">{new Date(lead.createdAt).toLocaleDateString()}</p>
                       <div className="flex items-center pt-2">
                         <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
                         <span className="text-sm">
-                          {`${lead.email.split('@')[0].slice(0, 3)}...@${lead.email.split('@')[1]}`}
+                          {`${lead.user?.email.split('@')[0].slice(0, 3)}...@${lead.user?.email.split('@')[1]}`}
                         </span>
                       </div>
                       <div className="flex items-center">
                         <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm">{`${lead.phone.slice(0, 3)}-XXX-XXXX)`}</span>
+                        <span className="text-sm">{`${lead.total_cost}`}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -367,27 +438,30 @@ const marketplace = () => {
                   </span>
                 </CardHeader>
               </Card>
-              {columns[2].leads.map((lead) => (
+              {inProgressBookings.length === 0 ? <p>No open bookings available</p> :inProgressBookings.map((lead) => (
                 <Card key={lead.id} className="overflow-hidden bg-white shadow-sm rounded-md mt-3">
                   <CardContent className="flex items-center space-x-4 p-4">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={lead.avatar} alt={lead.name} />
+                      {
+                        lead.user && lead.user?.image &&
+                      <AvatarImage src={lead.user?.image} alt={lead.user.first_name} />
+                      }
                       <AvatarFallback>
-                        {lead.name.split(" ").map((n) => n[0]).join("")}
+                        {lead.user?.first_name[0]}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium leading-none">{lead.name}</p>
-                      <p className="text-sm text-muted-foreground">{lead.time}</p>
+                      <p className="text-sm font-medium leading-none">{lead.user?.first_name} {lead.user?.middle_name ?? ""} {lead.user?.last_name}</p>
+                      <p className="text-sm text-muted-foreground">{new Date(lead.createdAt).toLocaleDateString()}</p>
                       <div className="flex items-center pt-2">
                         <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
                         <span className="text-sm">
-                          {`${lead.email.split('@')[0].slice(0, 3)}...@${lead.email.split('@')[1]}`}
+                          {`${lead.user?.email.split('@')[0].slice(0, 3)}...@${lead.user?.email.split('@')[1]}`}
                         </span>
                       </div>
                       <div className="flex items-center">
                         <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm">{`${lead.phone.slice(0, 3)}-XXX-XXXX)`}</span>
+                        <span className="text-sm">{`${lead.total_cost}`}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -408,27 +482,30 @@ const marketplace = () => {
                   </span>
                 </CardHeader>
               </Card>
-              {columns[3].leads.map((lead) => (
+              {completedBookings.length === 0 ? <p>No open bookings available</p> :completedBookings.map((lead) => (
                 <Card key={lead.id} className="overflow-hidden bg-white shadow-sm rounded-md mt-3">
                   <CardContent className="flex items-center space-x-4 p-4">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={lead.avatar} alt={lead.name} />
+                      {
+                        lead.user && lead.user?.image &&
+                      <AvatarImage src={lead.user?.image} alt={lead.user.first_name} />
+                      }
                       <AvatarFallback>
-                        {lead.name.split(" ").map((n) => n[0]).join("")}
+                        {lead.user?.first_name[0]}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium leading-none">{lead.name}</p>
-                      <p className="text-sm text-muted-foreground">{lead.time}</p>
+                      <p className="text-sm font-medium leading-none">{lead.user?.first_name} {lead.user?.middle_name ?? ""} {lead.user?.last_name}</p>
+                      <p className="text-sm text-muted-foreground">{new Date(lead.createdAt).toLocaleDateString()}</p>
                       <div className="flex items-center pt-2">
                         <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
                         <span className="text-sm">
-                          {`${lead.email.split('@')[0].slice(0, 3)}...@${lead.email.split('@')[1]}`}
+                          {`${lead.user?.email.split('@')[0].slice(0, 3)}...@${lead.user?.email.split('@')[1]}`}
                         </span>
                       </div>
                       <div className="flex items-center">
                         <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm">{`${lead.phone.slice(0, 3)}-XXX-XXXX)`}</span>
+                        <span className="text-sm">{`${lead.total_cost}`}</span>
                       </div>
                     </div>
                   </CardContent>

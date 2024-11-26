@@ -98,7 +98,8 @@ const Bookings = () => {
 
         renderInstance.get(`/owner/get-owner-booking-page-details/${user.userId}`)
             .then((res) => {
-                setAllBookings(res.data.allBookings[0])
+                console.log(res.data)
+                setAllBookings(res.data.allBookings)
             }).catch((err) => {
                 errorMessage("Error fetching operator lists")
             }).finally(() => {

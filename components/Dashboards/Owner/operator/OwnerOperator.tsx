@@ -170,7 +170,7 @@ const OwnerOperator = () => {
             {/* Stats Cards */}
             <div className="grid grid-cols-1 900px:grid-cols-2 1300px:grid-cols-4 gap-4 mb-8">
                 {/* Total Estimate Card */}
-                <div className="grid-cols-1 900px:col-span-2 bg-white rounded-lg border shadow-sm p-6">
+                {/* <div className="grid-cols-1 900px:col-span-2 bg-white rounded-lg border shadow-sm p-6">
                     <div className="flex justify-between items-center">
                         <h3 className="text-gray-600 text-sm font-medium">Total Spend</h3>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -178,7 +178,7 @@ const OwnerOperator = () => {
                         </Button>
                     </div>
 
-                    {/* <div className="grid grid-cols-1 500px:grid-cols-2 768px:grid-cols-3 900px:flex gap-5 mt-4">
+                    <div className="grid grid-cols-1 500px:grid-cols-2 768px:grid-cols-3 900px:flex gap-5 mt-4">
                         <div className="col-span-1 900px:flex-1">
                             <div className="text-3xl font-semibold mb-1">$ 32.1k</div>
                             <div className="flex items-center gap-1">
@@ -215,8 +215,8 @@ const OwnerOperator = () => {
                                 {currentDate}
                             </p>
                         </div>
-                    </div> */}
-                </div>
+                    </div>
+                </div> */}
 
                 {/* Total Operators Card */}
                 <div className="col-span-1 bg-white rounded-lg border shadow-sm p-6">
@@ -559,27 +559,22 @@ const OwnerOperator = () => {
                                                             <table className="w-full">
                                                                 <thead>
                                                                     <tr className="border-b bg-gray-50">
-                                                                        <th className="text-left p-4 text-xs font-medium text-gray-500">DEPARTMENT</th>
-                                                                        <th className="text-left p-4 text-xs font-medium text-gray-500">DIVISION</th>
-                                                                        <th className="text-left p-4 text-xs font-medium text-gray-500">MANAGER</th>
-                                                                        <th className="text-left p-4 text-xs font-medium text-gray-500">HIRE DATE</th>
-                                                                        <th className="text-left p-4 text-xs font-medium text-gray-500">LOCATION</th>
+                                                                        <th className="text-left p-4 text-xs font-medium text-gray-500">Start date</th>
+                                                                        <th className="text-left p-4 text-xs font-medium text-gray-500">Duration</th>
+                                                                        <th className="text-left p-4 text-xs font-medium text-gray-500">End date</th>
+                                                                        <th className="text-left p-4 text-xs font-medium text-gray-500">Total cost</th>
+                                                                        <th className="text-left p-4 text-xs font-medium text-gray-500">Status</th>
                                                                         <th className="w-16"></th>
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
-                                                                    {jobInfo.map((job, index) => (
+                                                                    {customer.operator.OperatorBookingJob.map((job, index) => (
                                                                         <tr key={index} className="border-b last:border-0">
-                                                                            <td className="p-4 text-sm">{job.department}</td>
-                                                                            <td className="p-4 text-sm">{job.division}</td>
-                                                                            <td className="p-4 text-sm">{job.manager}</td>
-                                                                            <td className="p-4 text-sm">{job.hireDate}</td>
-                                                                            <td className="p-4 text-sm">{job.location}</td>
-                                                                            <td className="p-4">
-                                                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                                                                    <MoreHorizontal className="h-4 w-4" />
-                                                                                </Button>
-                                                                            </td>
+                                                                            <td className="p-4 text-sm">{new Date(job.booking.start_date).toLocaleDateString()}</td>
+                                                                            <td className="p-4 text-sm">{job.booking.booking_hours ?? "More than 8 hours"}</td>
+                                                                            <td className="p-4 text-sm">{job.booking.end_date ?new Date(job.booking.end_date).toLocaleDateString() : new Date().toLocaleDateString()}</td>
+                                                                            <td className="p-4 text-sm">{job.booking.total_cost.toFixed(2)}</td>
+                                                                            <td className="p-4 text-sm">{job.booking.bookingStatus}</td>
                                                                         </tr>
                                                                     ))}
                                                                 </tbody>
@@ -587,8 +582,8 @@ const OwnerOperator = () => {
                                                         </div>
 
                                                         {/* Activity and Compensation Grid */}
-                                                        <div className="grid grid-cols-2 gap-6">
-                                                            {/* Activity */}
+                                                        {/* <div className="grid grid-cols-2 gap-6">
+                                                            
                                                             <div className="bg-white rounded-lg p-6 border">
                                                                 <div className="flex justify-between items-center mb-6">
                                                                     <h3 className="font-semibold">Activity</h3>
@@ -616,7 +611,7 @@ const OwnerOperator = () => {
                                                                 </Button>
                                                             </div>
 
-                                                            {/* Compensation */}
+                                                            
                                                             <div className="bg-white rounded-lg p-6 border">
                                                                 <div className="flex justify-between items-center mb-6">
                                                                     <h3 className="font-semibold">Compensation</h3>
@@ -633,7 +628,7 @@ const OwnerOperator = () => {
                                                                     View all
                                                                 </Button>
                                                             </div>
-                                                        </div>
+                                                        </div> */}
                                                     </div>
                                                 </div>
                                             </div>

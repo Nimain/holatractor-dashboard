@@ -79,7 +79,7 @@ const OwnerCustomer = () => {
         renderInstance.get(`/owner/get-owner-customer-page-details/${user.userId}`)
           .then((res) => {
             setCustomers(res.data.customers)
-            setActiveCustomers(res.data.activeCustomers)
+            setActiveCustomers(res.data.activeCustomers.length)
             setRejectedCustomers(res.data.rejectedCustomers)
             setPendingCustomers(res.data.pendingCustomers)
             setTotalReceived(res.data.totalReceived)
@@ -152,7 +152,7 @@ const OwnerCustomer = () => {
 
                     <div className="grid grid-cols-1 500px:grid-cols-2 768px:grid-cols-3 900px:flex gap-5 mt-4">
                         <div className="col-span-1 900px:flex-1">
-                            <div className="text-3xl font-semibold mb-1">$ {totalReceived}</div>
+                            <div className="text-3xl font-semibold mb-1">$ {totalReceived.toFixed(2)}</div>
                             <div className="flex items-center gap-1">
                                 <div className="w-2 h-2 rounded-full bg-green-500"></div>
                                 <span className="text-green-500 text-sm">Accepted</span>
@@ -162,7 +162,7 @@ const OwnerCustomer = () => {
                         <div className="w-px bg-gray-200 mx-4 hidden 900px:inline-block"></div>
 
                         <div className="col-span-1 900px:flex-1">
-                            <div className="text-3xl font-semibold mb-1 text-left 500px:text-right 768px:text-left">$ {pendingCustomers}</div>
+                            <div className="text-3xl font-semibold mb-1 text-left 500px:text-right 768px:text-left">$ {pendingCustomers.toFixed(2)}</div>
                             <div className="flex items-center gap-1">
                                 <div className="w-2 h-2 rounded-full bg-orange-400 ml-0 500px:ml-auto 768px:ml-0"></div>
                                 <span className="text-orange-400 text-sm">Pending</span>
@@ -172,7 +172,7 @@ const OwnerCustomer = () => {
                         <div className="w-px bg-gray-200 mx-4 hidden 900px:inline-block"></div>
 
                         <div className="col-span-1 900px:flex-1">
-                            <div className="text-3xl font-semibold mb-1">$ {rejectedCustomers}</div>
+                            <div className="text-3xl font-semibold mb-1">$ {rejectedCustomers.toFixed(2)}</div>
                             <div className="flex items-center gap-1">
                                 <div className="w-2 h-2 rounded-full bg-red-500"></div>
                                 <span className="text-red-500 text-sm">Cancelled</span>
