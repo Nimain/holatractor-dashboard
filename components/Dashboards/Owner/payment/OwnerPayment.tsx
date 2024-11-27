@@ -114,6 +114,8 @@ const OwnerPayment = () => {
     }
   }, [])
 
+  console.log(ownerDetails)
+
   if (isFetching) return <OwnerShrimmer />
 
   if (!ownerDetails) return <p>Owner details not present</p>
@@ -261,40 +263,40 @@ const OwnerPayment = () => {
 
         {/* Payment Method Section */}
         <Card className="w-full">
-          <CardContent className="p-6 flex flex-col gap-3 max-h-[300px] overflow-auto" style={{scrollbarWidth: "none"}}>
+          <CardContent className="p-6 flex flex-col gap-3 max-h-[300px] overflow-auto" style={{ scrollbarWidth: "none" }}>
             <div className="w-full flex items-center justify-between gap-4 flex-wrap">
               <h2 className="text-xl font-semibold mb-4">Payment Method</h2>
               {
                 ((ownerDetails.user.BankAccount.length === 0) && (ownerDetails.user.PayPal.length === 0) && (ownerDetails.user.UPI.length === 0)) &&
-                  <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Payment Method
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-h-[80vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
-                      <DialogHeader>
-                        <DialogTitle>Add Payment Method</DialogTitle>
-                      </DialogHeader>
-                      <Tabs defaultValue="bank">
-                        <TabsList className="grid w-full grid-cols-3">
-                          <TabsTrigger value="bank">Bank Account</TabsTrigger>
-                          <TabsTrigger value="paypal">PayPal</TabsTrigger>
-                          <TabsTrigger value="upi">UPI</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="bank">
-                          <BankAccountForm />
-                        </TabsContent>
-                        <TabsContent value="paypal">
-                          <PayPalForm />
-                        </TabsContent>
-                        <TabsContent value="upi">
-                          <UPIForm />
-                        </TabsContent>
-                      </Tabs>
-                    </DialogContent>
-                  </Dialog>
+                <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Add Payment Method
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-h-[80vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
+                    <DialogHeader>
+                      <DialogTitle>Add Payment Method</DialogTitle>
+                    </DialogHeader>
+                    <Tabs defaultValue="bank">
+                      <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="bank">Bank Account</TabsTrigger>
+                        <TabsTrigger value="paypal">PayPal</TabsTrigger>
+                        <TabsTrigger value="upi">UPI</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="bank">
+                        <BankAccountForm />
+                      </TabsContent>
+                      <TabsContent value="paypal">
+                        <PayPalForm />
+                      </TabsContent>
+                      <TabsContent value="upi">
+                        <UPIForm />
+                      </TabsContent>
+                    </Tabs>
+                  </DialogContent>
+                </Dialog>
               }
             </div>
             {
@@ -311,31 +313,31 @@ const OwnerPayment = () => {
               })
             }
             {
-              ownerDetails.user.UPI.map((upi, i)=>{
-                return(
+              ownerDetails.user.UPI.map((upi, i) => {
+                return (
                   <div className="flex items-center justify-between flex-wrap gap-4 border p-4 rounded-lg" key={i}>
-                <div className="flex items-center flex-wrap gap-4">
-                  <PayPalIcon className="h-6 w-6 text-blue-600" />
-                  <p>{upi.upi_id}</p>
-                </div>
-                <UPIReadonly upi={upi} />
-              </div>
+                    <div className="flex items-center flex-wrap gap-4">
+                      <PayPalIcon className="h-6 w-6 text-blue-600" />
+                      <p>{upi.upi_id}</p>
+                    </div>
+                    <UPIReadonly upi={upi} />
+                  </div>
                 )
               })
             }
             {
-              ownerDetails.user.BankAccount.map((bankAccount, i)=>{
-                return(
+              ownerDetails.user.BankAccount.map((bankAccount, i) => {
+                return (
                   <div className="flex items-center justify-between flex-wrap gap-4 border p-4 rounded-lg" key={i}>
-                <div className="flex items-center flex-wrap gap-4">
-                  <PayPalIcon className="h-6 w-6 text-blue-600" />
-                  <div>
-                    <p>{bankAccount.accountNumber}</p>
-                    <p className="text-sm text-gray-500">{bankAccount.bankName}</p>
+                    <div className="flex items-center flex-wrap gap-4">
+                      <PayPalIcon className="h-6 w-6 text-blue-600" />
+                      <div>
+                        <p>{bankAccount.accountNumber}</p>
+                        <p className="text-sm text-gray-500">{bankAccount.bankName}</p>
+                      </div>
+                    </div>
+                    <BankAccountReadOnly bankAccount={bankAccount} />
                   </div>
-                </div>
-                <BankAccountReadOnly bankAccount={bankAccount} />
-              </div>
                 )
               })
             }
@@ -351,9 +353,13 @@ const OwnerPayment = () => {
           <p className="text-gray-600">See history of your payment plan invoice</p>
         </div>
         <DownloadPDFButton
-          payments={getSelectedPaymentsAndBookings().payments}
-          bookings={getSelectedPaymentsAndBookings().bookings}
-          fileName="selected_payments.pdf"
+          payments={[...ownerDetails.user.paymentReciever, ...ownerDetails.user.paymentSender]}
+          bookings={[...ownerDetails.user.paymentReciever, ...ownerDetails.user.paymentSender]
+            .map(payment =>
+              ownerDetails.user.Booking.find(booking => booking.id === payment.booking_id)
+            ).filter(Boolean) as Booking[]
+          }
+          fileName="all_payments.pdf"
         />
       </div>
 
@@ -643,8 +649,8 @@ function UPIForm() {
   )
 }
 
-function UPIReadonly({upi}:{upi: UPI}){
-  return(
+function UPIReadonly({ upi }: { upi: UPI }) {
+  return (
     <Dialog>
       <DialogTrigger asChild>
         <Button variant={"outline"}>
@@ -653,7 +659,7 @@ function UPIReadonly({upi}:{upi: UPI}){
       </DialogTrigger>
       <DialogContent className='w-fit'>
         <Card>
-          <CardContent className='max-w-sm max-h-[80vh] overflow-auto' style={{scrollbarWidth: "none"}}>
+          <CardContent className='max-w-sm max-h-[80vh] overflow-auto' style={{ scrollbarWidth: "none" }}>
             <div className='space-y-4'>
               <Input value={upi.upi_id} readOnly />
               <Image alt={upi.upi_id} src={upi.qr_code} width={400} height={400} className='w-full h-auto object-cover' unoptimized={true} />
