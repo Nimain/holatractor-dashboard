@@ -1,6 +1,6 @@
 "use client"
 
-import { ShoppingCartIcon as PayPalIcon, PlusCircle, Upload } from 'lucide-react'
+import { Wallet as PayPalIcon, PlusCircle, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ArrowUpIcon, ArrowDownIcon } from 'lucide-react'
@@ -174,7 +174,7 @@ const OwnerPayment = () => {
               {/* Revenue Section */}
               <div className="border-r border-gray-200 pr-4">
                 <div className="space-y-1">
-                  <p className="text-sm text-gray-500">Revenue this month</p>
+                  <p className="text-sm text-gray-500">Total spend this month</p>
                   <div className="flex items-center gap-2">
                     <span className="text-2xl font-bold">${monthlyRevenue}</span>
                     {/* <div className="flex items-center text-sm text-emerald-500">
@@ -186,23 +186,23 @@ const OwnerPayment = () => {
               </div>
 
               {/* Profit Section */}
-              {/* <div className="border-r border-gray-200 pr-4">
+              <div className="border-r border-gray-200 pr-4">
                 <div className="space-y-1">
-                  <p className="text-sm text-gray-500">Profit this month</p>
+                  <p className="text-sm text-gray-500">Total spend in Tractor </p>
                   <div className="flex items-center gap-2">
                     <span className="text-2xl font-bold">$3,982</span>
-                    <div className="flex items-center text-sm text-emerald-500">
+                    {/* <div className="flex items-center text-sm text-emerald-500">
                       <ArrowUpIcon className="h-4 w-4" />
                       <span>+198</span>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
-              </div> */}
+              </div>
 
               {/* Rejected Section */}
               <div className="border-r border-gray-200 pr-4">
                 <div className="space-y-1">
-                  <p className="text-sm text-gray-500">Rejected this month</p>
+                  <p className="text-sm text-gray-500">Total spend in seed/ fertilizer</p>
                   <div className="flex items-center gap-2">
                     <span className="text-2xl font-bold">${monthlyRejected}</span>
                     {/* <div className="flex items-center text-sm text-red-500">
@@ -214,16 +214,16 @@ const OwnerPayment = () => {
               </div>
 
               {/* Operator Pay Section */}
-              {/* <div className="space-y-1">
-                <p className="text-sm text-gray-500">Operator Pay</p>
+              <div className="space-y-1">
+                <p className="text-sm text-gray-500">Total spend in Attachment </p>
                 <div className="flex items-center gap-2">
                   <span className="text-2xl font-bold">$1,245</span>
-                  <div className="flex items-center text-sm text-emerald-500">
+                  {/* <div className="flex items-center text-sm text-emerald-500">
                     <ArrowUpIcon className="h-4 w-4" />
                     <span>+50</span>
-                  </div>
+                  </div> */}
                 </div>
-              </div> */}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -366,7 +366,7 @@ const OwnerPayment = () => {
               </TableHead>
               <TableHead className="font-bold">
                 <div className="flex items-center gap-2">
-                  Payment Invoice
+                  Payment Id
                   <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
                     <RiArrowUpDownLine className="h-4 w-4" />
                   </div>
@@ -374,7 +374,15 @@ const OwnerPayment = () => {
               </TableHead>
               <TableHead className="font-bold">
                 <div className="flex items-center gap-2">
-                  Amount
+                  Type
+                  <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
+                    <RiArrowUpDownLine className="h-4 w-4" />
+                  </div>
+                </div>
+              </TableHead>
+              <TableHead className="font-bold">
+                <div className="flex items-center gap-2">
+                  Amount Paid to Store
                   <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
                     <RiArrowUpDownLine className="h-4 w-4" />
                   </div>
@@ -391,6 +399,14 @@ const OwnerPayment = () => {
               <TableHead className="font-bold">
                 <div className="flex items-center gap-2">
                   Status
+                  <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
+                    <RiArrowUpDownLine className="h-4 w-4" />
+                  </div>
+                </div>
+              </TableHead>
+              <TableHead className="font-bold">
+                <div className="flex items-center gap-2">
+                  Attachments
                   <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
                     <RiArrowUpDownLine className="h-4 w-4" />
                   </div>

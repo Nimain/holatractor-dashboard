@@ -61,8 +61,18 @@ interface Location {
     latitude: number | null;
     longitude: number | null;
 }
+interface ChartData {
+    time: string;
+    passengers: number;
+  }
+  
+  // Define the structure of the `chartData` object
+  interface ChartDataSet {
+    last30: ChartData[];
+  }
 
 const Bookings = () => {
+
     const [date, setDate] = useState(new Date());
     const [location, setLocation] = useState<Location>({ latitude: null, longitude: null });
     const [error, setError] = useState<string | null>(null);
@@ -71,25 +81,30 @@ const Bookings = () => {
     const [fetchingBookings, setFetchingBookings] = useState(false)
     const [query, setQuery] = useState('');
 
-    const [timeRange, setTimeRange] = useState('last30');
+
     const [dayFilter, setDayFilter] = useState('sunday');
-    const chartData = {
+    const [timeRange, setTimeRange] = useState("last30");
+    const [selectedYear, setSelectedYear] = useState(2022);
+  
+    const years: number[] = [2020, 2021, 2022, 2023, 2024, 2025];
+  
+    const chartData: ChartDataSet = {
         last30: [
-            { time: 'Jan', passengers: 200 },
-            { time: 'Feb', passengers: 600 },
-            { time: 'Mar', passengers: 400 },
-            { time: 'Apr', passengers: 300 },
-            { time: 'May', passengers: 650 },
-            { time: 'Jun', passengers: 450 },
-            { time: 'Jul', passengers: 350 },
-            { time: 'Aug', passengers: 250 },
-            { time: 'Sep', passengers: 450 },
-            { time: 'Oct', passengers: 550 },
-            { time: 'Nov', passengers: 400 },
-            { time: 'Dec', passengers: 300 },
+          { time: 'Jan', passengers: 200 },
+          { time: 'Feb', passengers: 600 },
+          { time: 'Mar', passengers: 400 },
+          { time: 'Apr', passengers: 300 },
+          { time: 'May', passengers: 650 },
+          { time: 'Jun', passengers: 450 },
+          { time: 'Jul', passengers: 350 },
+          { time: 'Aug', passengers: 250 },
+          { time: 'Sep', passengers: 450 },
+          { time: 'Oct', passengers: 550 },
+          { time: 'Nov', passengers: 400 },
+          { time: 'Dec', passengers: 300 },
         ],
-        // Add more data for other time periods if needed
-    };
+      };
+  
 
     const { cookie } = useCookie()
     const user: user = cookie.get("user")
@@ -143,7 +158,7 @@ const Bookings = () => {
 
 
                 {/* Left Section - Train Cards */}
-                <div className="w-2/5 mx-auto p-4">
+                <div className="w-2/5 mx-auto p-4 overflow-auto">
                     {/* Search Bar */}
                     <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
                         <div className="flex items-center gap-4">
@@ -153,7 +168,7 @@ const Bookings = () => {
                                     type="text"
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
-                                    placeholder="From: Lorta Station, SMG"
+                                    placeholder="Search Deatils"
                                     className="w-full py-3 pl-12 pr-4 text-gray-700 bg-gray-50 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
                                 />
                             </div>
@@ -248,7 +263,7 @@ const Bookings = () => {
                                                 </Button>
                                             </SheetTrigger>
 
-                                            <SheetContent className="overflow-auto" style={{scrollbarWidth: "none"}}>
+                                            <SheetContent className="overflow-auto" style={{ scrollbarWidth: "none" }}>
                                                 <SheetHeader>
                                                     <SheetTitle className="text-xl font-semibold">Details</SheetTitle>
                                                 </SheetHeader>
@@ -479,9 +494,9 @@ const Bookings = () => {
                                                 }
                                                 {
                                                     (ticket.payment.length > 0 && ticket.payment[0].status === PaymentStatus.FarmerCONFIRMED) && <PaymentReview
-                                                    referenceNumber={ticket.payment[0].transaction_reference[ticket.payment[0].transaction_reference.length - 1]}
-                                                    screenshotUrl={ticket.payment[0].screenshots[ticket.payment[0].screenshots.length - 1]}
-                                                    paymentId={ticket.payment[0].id} />
+                                                        referenceNumber={ticket.payment[0].transaction_reference[ticket.payment[0].transaction_reference.length - 1]}
+                                                        screenshotUrl={ticket.payment[0].screenshots[ticket.payment[0].screenshots.length - 1]}
+                                                        paymentId={ticket.payment[0].id} />
                                                 }
                                             </SheetContent>
                                         </Sheet>
@@ -540,82 +555,107 @@ const Bookings = () => {
                             </div> */}
 
                             {/* Tab Content */}
-                            <div className="space-y-4">
+                            <div className="bg-white shadow-sm rounded-xl p-6 max-w-4xl mx-auto">
+                                <div className="flex justify-between items-center mb-6">
                                     <div>
-                                        <div className="flex items-center justify-between">
-                                            <h3 className="text-lg font-medium">Popular times</h3>
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className={`rounded-full ${timeRange === "last30" ? "bg-gray-100" : ""
-                                                        }`}
-                                                    onClick={() => setTimeRange("last30")}
-                                                >
-                                                    Last 30 days
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className={`rounded-full ${dayFilter === "sunday" ? "bg-gray-100" : ""
-                                                        }`}
-                                                    onClick={() => setDayFilter("sunday")}
-                                                >
-                                                    Sunday
-                                                </Button>
-                                            </div>
+                                        <h2 className="text-2xl font-semibold text-gray-800">Booking</h2>
+                             </div>
+
+                                    <div className="flex items-center space-x-4">
+                                        <div className="flex space-x-2">
+                                            <Button
+                                                variant={timeRange === "last30" ? "default" : "outline"}
+                                                size="sm"
+                                                onClick={() => setTimeRange("last30")}
+                                                className="rounded-full"
+                                            >
+                                                Last 30 Days
+                                            </Button>
+                                            <Button
+                                                variant={timeRange === "last90" ? "default" : "outline"}
+                                                size="sm"
+                                                onClick={() => setTimeRange("last90")}
+                                                className="rounded-full"
+                                            >
+                                                Last 90 Days
+                                            </Button>
                                         </div>
 
-                                        {/* Chart Card */}
-                                        <Card className="p-4 mt-5">
-                                            <CardContent className="pt-4">
-                                                <ResponsiveContainer width="100%" height={300}>
-                                                    <BarChart data={chartData[timeRange as keyof typeof chartData]} barSize={40}>
-                                                        <CartesianGrid vertical={false} stroke="#f0f0f0" />
-                                                        <XAxis
-                                                            dataKey="time"
-                                                            axisLine={false}
-                                                            tickLine={false}
-                                                            dy={10}
-                                                        />
-                                                        <YAxis
-                                                            axisLine={false}
-                                                            tickLine={false}
-                                                            ticks={[200, 400, 600, 800]}
-                                                            dx={-10}
-                                                        />
-                                                        <Tooltip
-                                                            cursor={false}
-                                                            content={({ active, payload }) => {
-                                                                if (active && payload && payload.length) {
-                                                                    return (
-                                                                        <div className="bg-white p-2 shadow-lg rounded border">
-                                                                            <p className="text-sm">
-                                                                                Average passengers
-                                                                                <br />
-                                                                                {payload[0].payload.time}, 2022
-                                                                            </p>
-                                                                            <p className="text-sm font-bold">
-                                                                                {payload[0].value}{" "}
-                                                                                <span className="text-green-500">12%</span>
-                                                                            </p>
-                                                                        </div>
-                                                                    );
-                                                                }
-                                                                return null;
-                                                            }}
-                                                        />
-                                                        <Bar
-                                                            dataKey="passengers"
-                                                            fill="#1a73e8"
-                                                            radius={[4, 4, 0, 0]}
-                                                            background={{ fill: "#f8f9fa" }}
-                                                        />
-                                                    </BarChart>
-                                                </ResponsiveContainer>
-                                            </CardContent>
-                                        </Card>
+                                        <Select
+                                            value={selectedYear.toString()}
+                                            onValueChange={(value) => setSelectedYear(Number(value))}
+                                            
+                                        >
+                                            <SelectTrigger className="w-[100px] bg-gray-50 border-none rounded-xl py-1">
+                                                <SelectValue placeholder="Select Year" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {years.map(year => (
+                                                    <SelectItem key={year} value={year.toString()}>
+                                                        {year}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
+                                </div>
+
+                                <Card className="border-none shadow-none">
+                                    <CardContent className="p-0">
+                                        <ResponsiveContainer width="100%" height={350}>
+                                        <BarChart
+            data={chartData[timeRange as keyof ChartDataSet]} // Type assertion for timeRange
+            margin={{ top: 20, right: 0, left: -20, bottom: 0 }}
+          >
+                                                <CartesianGrid
+                                                    vertical={false}
+                                                    horizontal={true}
+                                                    stroke="#f3f4f6"
+                                                    strokeDasharray="3 3"
+                                                />
+                                                <XAxis
+                                                    dataKey="time"
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                                                />
+                                                <YAxis
+                                                    axisLine={false}
+                                                    tickLine={false}
+                                                    tick={{ fill: '#6b7280', fontSize: 12 }}
+                                                    ticks={[200, 400, 600, 800]}
+                                                />
+                                                <Tooltip
+                                                    cursor={{ fill: 'transparent' }}
+                                                    content={({ active, payload }) => {
+                                                        if (active && payload && payload.length) {
+                                                            return (
+                                                                <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
+                                                                    <p className="text-xs text-gray-500 mb-1">
+                                                                        {payload[0].payload.time} {selectedYear}
+                                                                    </p>
+                                                                    <p className="text-base font-semibold text-gray-800">
+                                                                        {payload[0].value} Bookings
+                                                                        <span className="text-green-600 text-xs ml-2">
+                                                                            +12% from last month
+                                                                        </span>
+                                                                    </p>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    }}
+                                                />
+                                                <Bar
+                                                    dataKey="passengers"
+                                                    fill="#3b82f6"
+                                                    radius={[8, 8, 0, 0]}
+                                                    background={{ fill: "#e5e7eb", radius: 8 }}
+                                                />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </CardContent>
+                                </Card>
                             </div>
                         </div>
 
