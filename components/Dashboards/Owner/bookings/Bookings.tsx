@@ -39,7 +39,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Booking, BookingStatus, OperatorInStore, PaymentStatus } from "@/utils/Types/types";
+import { Booking, BookingHours, BookingStatus, OperatorInStore, PaymentStatus } from "@/utils/Types/types";
 import { useCookie } from "next-cookie";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage } from "@/utils/Toastify/Messages";
@@ -74,6 +74,10 @@ const Bookings = () => {
 
     const [timeRange, setTimeRange] = useState('last30');
     const [dayFilter, setDayFilter] = useState('sunday');
+
+    const leftSectionRef = useRef<HTMLDivElement>(null)
+    const rightSectionRef = useRef<HTMLDivElement>(null)
+
     const chartData = {
         last30: [
             { time: 'Jan', passengers: 200 },
@@ -108,6 +112,31 @@ const Bookings = () => {
                 setFetchingBookings(false)
             })
     }
+
+    
+
+    useEffect(() => {
+        const handleScroll = (e: WheelEvent) => {
+          const target = e.currentTarget as HTMLDivElement
+          target.scrollTop += e.deltaY
+        }
+    
+        const section = leftSectionRef.current
+        if (section) {
+          section.addEventListener('wheel', handleScroll)
+        }
+    
+        const rsection = rightSectionRef.current
+        if (rsection) {
+          rsection.addEventListener('wheel', handleScroll)
+        }
+    
+        return () => {
+          if (section) {
+            section.removeEventListener('wheel', handleScroll)
+          }
+        }
+      }, [])
 
     useEffect(() => {
         if (user) {
@@ -144,7 +173,7 @@ const Bookings = () => {
 
 
                 {/* Left Section - Train Cards */}
-                <div className="w-2/5 mx-auto p-4">
+                <div className="w-2/5 mx-auto p-4 overflow-auto" style={{scrollbarWidth: "none"}} ref={leftSectionRef}>
                     {/* Search Bar */}
                     <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
                         <div className="flex items-center gap-4">
@@ -176,7 +205,7 @@ const Bookings = () => {
                                 <SelectItem value="ongoing">On going</SelectItem>
                                 <SelectItem value="unpaid">Unpaid</SelectItem>
                                 <SelectItem value="review">Review</SelectItem>
-                                <SelectItem value="completed">Complted</SelectItem>
+                                <SelectItem value="completed">Completed</SelectItem>
                                 <SelectItem value="rejected">Rejected</SelectItem>
                             </SelectContent>
                         </Select>
@@ -217,7 +246,7 @@ const Bookings = () => {
                                                 </h3>
                                             </div>
                                             <span className="text-lg font-semibold text-green-500">
-                                                {ticket.total_cost.toFixed(2)}
+                                                ${ticket.total_cost.toFixed(2)}
                                             </span>
                                         </div>
     
@@ -228,7 +257,9 @@ const Bookings = () => {
                                             </div>
                                             <div className="grow mx-4 border-t-2 border-dashed border-gray-300" />
                                             <div className="text-right">
-                                                <p className="font-medium">{ticket.booking_hours ? ticket.booking_hours : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
+                                                <p className="font-medium">{ticket.booking_hours ? <span className="text-sm text-muted-foreground">
+                                    Duration: <span className="font-medium">{ticket.booking_hours === BookingHours.EIGHT_HOURS ? "8 hours" : ticket.booking_hours === BookingHours.SEVEN_HOURS ? "7 hours" : ticket.booking_hours === BookingHours.SIX_HOURS ? "6 hours" : ticket.booking_hours === BookingHours.FIVE_HOURS ? "5 hours" : ticket.booking_hours === BookingHours.FOUR_HOURS ? "4 hours" : ticket.booking_hours === BookingHours.THREE_HOURS ? "3 hours" : ticket.booking_hours === BookingHours.TWO_HOURS ? "2 hours" : "1 hour"}</span>
+                                </span> : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
                                                 {/* <p className="text-sm text-blue-500">{ticket.to.time}</p> */}
                                             </div>
                                         </div>
@@ -496,7 +527,7 @@ const Bookings = () => {
                                                 </h3>
                                             </div>
                                             <span className="text-lg font-semibold text-green-500">
-                                                {ticket.total_cost.toFixed(2)}
+                                                ${ticket.total_cost.toFixed(2)}
                                             </span>
                                         </div>
     
@@ -507,7 +538,9 @@ const Bookings = () => {
                                             </div>
                                             <div className="grow mx-4 border-t-2 border-dashed border-gray-300" />
                                             <div className="text-right">
-                                                <p className="font-medium">{ticket.booking_hours ? ticket.booking_hours : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
+                                                <p className="font-medium">{ticket.booking_hours ? <span className="text-sm text-muted-foreground">
+                                    Duration: <span className="font-medium">{ticket.booking_hours === BookingHours.EIGHT_HOURS ? "8 hours" : ticket.booking_hours === BookingHours.SEVEN_HOURS ? "7 hours" : ticket.booking_hours === BookingHours.SIX_HOURS ? "6 hours" : ticket.booking_hours === BookingHours.FIVE_HOURS ? "5 hours" : ticket.booking_hours === BookingHours.FOUR_HOURS ? "4 hours" : ticket.booking_hours === BookingHours.THREE_HOURS ? "3 hours" : ticket.booking_hours === BookingHours.TWO_HOURS ? "2 hours" : "1 hour"}</span>
+                                </span> : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
                                                 {/* <p className="text-sm text-blue-500">{ticket.to.time}</p> */}
                                             </div>
                                         </div>
@@ -775,7 +808,7 @@ const Bookings = () => {
                                                 </h3>
                                             </div>
                                             <span className="text-lg font-semibold text-green-500">
-                                                {ticket.total_cost.toFixed(2)}
+                                                ${ticket.total_cost.toFixed(2)}
                                             </span>
                                         </div>
     
@@ -786,7 +819,9 @@ const Bookings = () => {
                                             </div>
                                             <div className="grow mx-4 border-t-2 border-dashed border-gray-300" />
                                             <div className="text-right">
-                                                <p className="font-medium">{ticket.booking_hours ? ticket.booking_hours : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
+                                                <p className="font-medium">{ticket.booking_hours ? <span className="text-sm text-muted-foreground">
+                                    Duration: <span className="font-medium">{ticket.booking_hours === BookingHours.EIGHT_HOURS ? "8 hours" : ticket.booking_hours === BookingHours.SEVEN_HOURS ? "7 hours" : ticket.booking_hours === BookingHours.SIX_HOURS ? "6 hours" : ticket.booking_hours === BookingHours.FIVE_HOURS ? "5 hours" : ticket.booking_hours === BookingHours.FOUR_HOURS ? "4 hours" : ticket.booking_hours === BookingHours.THREE_HOURS ? "3 hours" : ticket.booking_hours === BookingHours.TWO_HOURS ? "2 hours" : "1 hour"}</span>
+                                </span> : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
                                                 {/* <p className="text-sm text-blue-500">{ticket.to.time}</p> */}
                                             </div>
                                         </div>
@@ -1054,7 +1089,7 @@ const Bookings = () => {
                                                 </h3>
                                             </div>
                                             <span className="text-lg font-semibold text-green-500">
-                                                {ticket.total_cost.toFixed(2)}
+                                                ${ticket.total_cost.toFixed(2)}
                                             </span>
                                         </div>
     
@@ -1065,7 +1100,9 @@ const Bookings = () => {
                                             </div>
                                             <div className="grow mx-4 border-t-2 border-dashed border-gray-300" />
                                             <div className="text-right">
-                                                <p className="font-medium">{ticket.booking_hours ? ticket.booking_hours : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
+                                                <p className="font-medium">{ticket.booking_hours ? <span className="text-sm text-muted-foreground">
+                                    Duration: <span className="font-medium">{ticket.booking_hours === BookingHours.EIGHT_HOURS ? "8 hours" : ticket.booking_hours === BookingHours.SEVEN_HOURS ? "7 hours" : ticket.booking_hours === BookingHours.SIX_HOURS ? "6 hours" : ticket.booking_hours === BookingHours.FIVE_HOURS ? "5 hours" : ticket.booking_hours === BookingHours.FOUR_HOURS ? "4 hours" : ticket.booking_hours === BookingHours.THREE_HOURS ? "3 hours" : ticket.booking_hours === BookingHours.TWO_HOURS ? "2 hours" : "1 hour"}</span>
+                                </span> : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
                                                 {/* <p className="text-sm text-blue-500">{ticket.to.time}</p> */}
                                             </div>
                                         </div>
@@ -1318,7 +1355,7 @@ const Bookings = () => {
                             ))
                         }
                         {
-                            selectedFilter === "unpaid" && allBookings.filter(bo=>((bo.bookingStatus === BookingStatus.Finished)||(`${bo.payment[0].status}` === "FarmerPENDING")||(`${bo.payment[0].status}` === "OwnerREJECTED"))).map((ticket, i) => (
+                            selectedFilter === "unpaid" && allBookings.filter(bo=>bo.payment.length > 0).filter(bo=>((bo.bookingStatus === BookingStatus.Finished)||(`${bo.payment[0].status}` === "FarmerPENDING")||(`${bo.payment[0].status}` === "OwnerREJECTED"))).map((ticket, i) => (
                                 <Card
                                     key={i}
                                     className={cn(
@@ -1333,7 +1370,7 @@ const Bookings = () => {
                                                 </h3>
                                             </div>
                                             <span className="text-lg font-semibold text-green-500">
-                                                {ticket.total_cost.toFixed(2)}
+                                                ${ticket.total_cost.toFixed(2)}
                                             </span>
                                         </div>
     
@@ -1344,7 +1381,9 @@ const Bookings = () => {
                                             </div>
                                             <div className="grow mx-4 border-t-2 border-dashed border-gray-300" />
                                             <div className="text-right">
-                                                <p className="font-medium">{ticket.booking_hours ? ticket.booking_hours : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
+                                                <p className="font-medium">{ticket.booking_hours ? <span className="text-sm text-muted-foreground">
+                                    Duration: <span className="font-medium">{ticket.booking_hours === BookingHours.EIGHT_HOURS ? "8 hours" : ticket.booking_hours === BookingHours.SEVEN_HOURS ? "7 hours" : ticket.booking_hours === BookingHours.SIX_HOURS ? "6 hours" : ticket.booking_hours === BookingHours.FIVE_HOURS ? "5 hours" : ticket.booking_hours === BookingHours.FOUR_HOURS ? "4 hours" : ticket.booking_hours === BookingHours.THREE_HOURS ? "3 hours" : ticket.booking_hours === BookingHours.TWO_HOURS ? "2 hours" : "1 hour"}</span>
+                                </span> : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
                                                 {/* <p className="text-sm text-blue-500">{ticket.to.time}</p> */}
                                             </div>
                                         </div>
@@ -1597,7 +1636,7 @@ const Bookings = () => {
                             ))
                         }
                         {
-                            selectedFilter === "review" && allBookings.filter(bo=>((bo.bookingStatus === BookingStatus.Finished)||(`${bo.payment[0].status}` === "FarmerCONFIRMED"))).map((ticket, i) => (
+                            selectedFilter === "review" && allBookings.filter(bo=>bo.payment.length > 0).filter(bo=>((bo.bookingStatus === BookingStatus.Finished)||(`${bo.payment[0].status}` === "FarmerCONFIRMED"))).map((ticket, i) => (
                                 <Card
                                     key={i}
                                     className={cn(
@@ -1612,7 +1651,7 @@ const Bookings = () => {
                                                 </h3>
                                             </div>
                                             <span className="text-lg font-semibold text-green-500">
-                                                {ticket.total_cost.toFixed(2)}
+                                                ${ticket.total_cost.toFixed(2)}
                                             </span>
                                         </div>
     
@@ -1623,7 +1662,9 @@ const Bookings = () => {
                                             </div>
                                             <div className="grow mx-4 border-t-2 border-dashed border-gray-300" />
                                             <div className="text-right">
-                                                <p className="font-medium">{ticket.booking_hours ? ticket.booking_hours : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
+                                                <p className="font-medium">{ticket.booking_hours ? <span className="text-sm text-muted-foreground">
+                                    Duration: <span className="font-medium">{ticket.booking_hours === BookingHours.EIGHT_HOURS ? "8 hours" : ticket.booking_hours === BookingHours.SEVEN_HOURS ? "7 hours" : ticket.booking_hours === BookingHours.SIX_HOURS ? "6 hours" : ticket.booking_hours === BookingHours.FIVE_HOURS ? "5 hours" : ticket.booking_hours === BookingHours.FOUR_HOURS ? "4 hours" : ticket.booking_hours === BookingHours.THREE_HOURS ? "3 hours" : ticket.booking_hours === BookingHours.TWO_HOURS ? "2 hours" : "1 hour"}</span>
+                                </span> : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
                                                 {/* <p className="text-sm text-blue-500">{ticket.to.time}</p> */}
                                             </div>
                                         </div>
@@ -1876,7 +1917,7 @@ const Bookings = () => {
                             ))
                         }
                         {
-                            selectedFilter === "completed" && allBookings.filter(bo=>((bo.bookingStatus === BookingStatus.Finished)||(`${bo.payment[0].status}` === "COMPLETED"))).map((ticket, i) => (
+                            selectedFilter === "completed" && allBookings.filter(bo=>bo.payment.length > 0).filter(bo=>((bo.bookingStatus === BookingStatus.Finished)||(`${bo.payment[0].status}` === "COMPLETED"))).map((ticket, i) => (
                                 <Card
                                     key={i}
                                     className={cn(
@@ -1891,7 +1932,7 @@ const Bookings = () => {
                                                 </h3>
                                             </div>
                                             <span className="text-lg font-semibold text-green-500">
-                                                {ticket.total_cost.toFixed(2)}
+                                                ${ticket.total_cost.toFixed(2)}
                                             </span>
                                         </div>
     
@@ -1902,7 +1943,9 @@ const Bookings = () => {
                                             </div>
                                             <div className="grow mx-4 border-t-2 border-dashed border-gray-300" />
                                             <div className="text-right">
-                                                <p className="font-medium">{ticket.booking_hours ? ticket.booking_hours : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
+                                                <p className="font-medium">{ticket.booking_hours ? <span className="text-sm text-muted-foreground">
+                                    Duration: <span className="font-medium">{ticket.booking_hours === BookingHours.EIGHT_HOURS ? "8 hours" : ticket.booking_hours === BookingHours.SEVEN_HOURS ? "7 hours" : ticket.booking_hours === BookingHours.SIX_HOURS ? "6 hours" : ticket.booking_hours === BookingHours.FIVE_HOURS ? "5 hours" : ticket.booking_hours === BookingHours.FOUR_HOURS ? "4 hours" : ticket.booking_hours === BookingHours.THREE_HOURS ? "3 hours" : ticket.booking_hours === BookingHours.TWO_HOURS ? "2 hours" : "1 hour"}</span>
+                                </span> : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
                                                 {/* <p className="text-sm text-blue-500">{ticket.to.time}</p> */}
                                             </div>
                                         </div>
@@ -2170,7 +2213,7 @@ const Bookings = () => {
                                                 </h3>
                                             </div>
                                             <span className="text-lg font-semibold text-green-500">
-                                                {ticket.total_cost.toFixed(2)}
+                                                ${ticket.total_cost.toFixed(2)}
                                             </span>
                                         </div>
     
@@ -2181,7 +2224,9 @@ const Bookings = () => {
                                             </div>
                                             <div className="grow mx-4 border-t-2 border-dashed border-gray-300" />
                                             <div className="text-right">
-                                                <p className="font-medium">{ticket.booking_hours ? ticket.booking_hours : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
+                                                <p className="font-medium">{ticket.booking_hours ? <span className="text-sm text-muted-foreground">
+                                    Duration: <span className="font-medium">{ticket.booking_hours === BookingHours.EIGHT_HOURS ? "8 hours" : ticket.booking_hours === BookingHours.SEVEN_HOURS ? "7 hours" : ticket.booking_hours === BookingHours.SIX_HOURS ? "6 hours" : ticket.booking_hours === BookingHours.FIVE_HOURS ? "5 hours" : ticket.booking_hours === BookingHours.FOUR_HOURS ? "4 hours" : ticket.booking_hours === BookingHours.THREE_HOURS ? "3 hours" : ticket.booking_hours === BookingHours.TWO_HOURS ? "2 hours" : "1 hour"}</span>
+                                </span> : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
                                                 {/* <p className="text-sm text-blue-500">{ticket.to.time}</p> */}
                                             </div>
                                         </div>
@@ -2437,7 +2482,7 @@ const Bookings = () => {
                 </div>
 
                 {/* Right Section - Map & Statistics */}
-                <div className="w-3/5 p-4 bg-white shadow overflow-auto">
+                <div className="w-3/5 p-4 bg-white shadow overflow-auto" style={{scrollbarWidth: "none"}} ref={rightSectionRef}>
                     <div className="h-full flex flex-col">
                         {/* Map */}
 
