@@ -24,7 +24,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { useEffect, useRef, useState } from 'react'
-import { Owner, Booking, Subscriptions } from '@/utils/Types/types'
+import { Owner, Booking, Subscriptions, PayPal, BankAccount, UPI } from '@/utils/Types/types'
 import { Input } from '@/components/ui/input'
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
 import { renderInstance } from '@/utils/Axios/RenderInstance'
@@ -38,6 +38,7 @@ import OwnerShrimmer from '../_components/OwnerShrimmer'
 import PaymentSheet from './PaymentSheet'
 import { DownloadPDFButton } from './PaymentPDF';
 import { addDays } from 'date-fns'
+import Image from 'next/image'
 
 const currencies = [
   { code: 'USD', symbol: '$', name: 'US Dollar' },
@@ -176,10 +177,10 @@ const OwnerPayment = () => {
                   <p className="text-sm text-gray-500">Revenue this month</p>
                   <div className="flex items-center gap-2">
                     <span className="text-2xl font-bold">${monthlyRevenue}</span>
-                    <div className="flex items-center text-sm text-emerald-500">
+                    {/* <div className="flex items-center text-sm text-emerald-500">
                       <ArrowUpIcon className="h-4 w-4" />
                       <span>+608</span>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               </div>
@@ -204,10 +205,10 @@ const OwnerPayment = () => {
                   <p className="text-sm text-gray-500">Rejected this month</p>
                   <div className="flex items-center gap-2">
                     <span className="text-2xl font-bold">${monthlyRejected}</span>
-                    <div className="flex items-center text-sm text-red-500">
+                    {/* <div className="flex items-center text-sm text-red-500">
                       <ArrowDownIcon className="h-4 w-4" />
                       <span>-15</span>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               </div>
@@ -232,39 +233,39 @@ const OwnerPayment = () => {
       <div className="grid grid-cols-1 1050px:grid-cols-2 gap-6 mb-8">
         {/* My Plan Section */}
         {
-          subscription && 
-        <Card className="w-full">
-          <CardContent className="p-6">
-            <h2 className="text-xl font-semibold mb-4">My Plan</h2>
-            <p className="text-gray-600 mb-4">Change your plan based on your needs</p>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="h-2 w-2 bg-green-400 rounded-full"></div>
-              <span className="font-medium">
-                {subscription.name}
-              </span>
-              <span className="text-gray-500 text-sm">Billed monthly</span>
-            </div>
-            <div className="mb-4">
-              <span className="text-xl font-semibold">${subscription.actual_cost.toFixed(2)} USD</span>
-              <span className="text-gray-500 text-sm ml-2">
-                {subscriptionActive ? `Expires on ${addDays(new Date(subscription.createdAt), subscription.total_days)}` : `Subscription expired.`}
+          subscription &&
+          <Card className="w-full">
+            <CardContent className="p-6">
+              <h2 className="text-xl font-semibold mb-4">My Plan</h2>
+              <p className="text-gray-600 mb-4">Change your plan based on your needs</p>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-2 w-2 bg-green-400 rounded-full"></div>
+                <span className="font-medium">
+                  {subscription.name}
                 </span>
-            </div>
-            <div className="flex gap-4 flex-wrap">
-              <Button variant="default">Explore Plans</Button>
-              <Button variant="outline">Manage Plans</Button>
-            </div>
-          </CardContent>
-        </Card>
+                <span className="text-gray-500 text-sm">Billed monthly</span>
+              </div>
+              <div className="mb-4">
+                <span className="text-xl font-semibold">${subscription.actual_cost.toFixed(2)} USD</span>
+                <span className="text-gray-500 text-sm ml-2">
+                  {subscriptionActive ? `Expires on ${addDays(new Date(subscription.createdAt), subscription.total_days)}` : `Subscription expired.`}
+                </span>
+              </div>
+              <div className="flex gap-4 flex-wrap">
+                <Button variant="default">Explore Plans</Button>
+                <Button variant="outline">Manage Plans</Button>
+              </div>
+            </CardContent>
+          </Card>
         }
 
         {/* Payment Method Section */}
         <Card className="w-full">
-          <CardContent className="p-6 flex flex-col gap-3">
+          <CardContent className="p-6 flex flex-col gap-3 max-h-[300px] overflow-auto" style={{scrollbarWidth: "none"}}>
             <div className="w-full flex items-center justify-between gap-4 flex-wrap">
               <h2 className="text-xl font-semibold mb-4">Payment Method</h2>
               {
-                ((ownerDetails.user.BankAccount.length === 0) && (ownerDetails.user.PayPal.length === 0) && (ownerDetails.user.UPI.length === 0)) ?
+                ((ownerDetails.user.BankAccount.length === 0) && (ownerDetails.user.PayPal.length === 0) && (ownerDetails.user.UPI.length === 0)) &&
                   <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
                     <DialogTrigger asChild>
                       <Button>
@@ -294,39 +295,49 @@ const OwnerPayment = () => {
                       </Tabs>
                     </DialogContent>
                   </Dialog>
-                  :
-                  <Button>View all</Button>
               }
             </div>
             {
-              ownerDetails.user.PayPal.length !== 0 && <div className="flex items-center justify-between flex-wrap gap-4 border p-4 rounded-lg">
-                <div className="flex items-center flex-wrap gap-4">
-                  <PayPalIcon className="h-6 w-6 text-blue-600" />
-                  <p>{ownerDetails.user.PayPal[0].email}</p>
-                </div>
-                <Button variant="ghost">View</Button>
-              </div>
+              ownerDetails.user.PayPal.map((paypal, i) => {
+                return (
+                  <div className="flex items-center justify-between flex-wrap gap-4 border p-4 rounded-lg" key={i}>
+                    <div className="flex items-center flex-wrap gap-4">
+                      <PayPalIcon className="h-6 w-6 text-blue-600" />
+                      <p>{paypal.email}</p>
+                    </div>
+                    <PaypalReadOnly email={paypal.email} />
+                  </div>
+                )
+              })
             }
             {
-              ownerDetails.user.UPI.length !== 0 && <div className="flex items-center justify-between flex-wrap gap-4 border p-4 rounded-lg">
+              ownerDetails.user.UPI.map((upi, i)=>{
+                return(
+                  <div className="flex items-center justify-between flex-wrap gap-4 border p-4 rounded-lg" key={i}>
                 <div className="flex items-center flex-wrap gap-4">
                   <PayPalIcon className="h-6 w-6 text-blue-600" />
-                  <p>{ownerDetails.user.UPI[0].upi_id}</p>
+                  <p>{upi.upi_id}</p>
                 </div>
-                <Button variant="ghost">View</Button>
+                <UPIReadonly upi={upi} />
               </div>
+                )
+              })
             }
             {
-              ownerDetails.user.BankAccount.length !== 0 && <div className="flex items-center justify-between flex-wrap gap-4 border p-4 rounded-lg">
+              ownerDetails.user.BankAccount.map((bankAccount, i)=>{
+                return(
+                  <div className="flex items-center justify-between flex-wrap gap-4 border p-4 rounded-lg" key={i}>
                 <div className="flex items-center flex-wrap gap-4">
                   <PayPalIcon className="h-6 w-6 text-blue-600" />
                   <div>
-                    <p>{ownerDetails.user.BankAccount[0].accountNumber}</p>
-                    <p className="text-sm text-gray-500">{ownerDetails.user.BankAccount[0].bankName}</p>
+                    <p>{bankAccount.accountNumber}</p>
+                    <p className="text-sm text-gray-500">{bankAccount.bankName}</p>
                   </div>
                 </div>
-                <Button variant="ghost">View</Button>
+                <BankAccountReadOnly bankAccount={bankAccount} />
               </div>
+                )
+              })
             }
           </CardContent>
         </Card>
@@ -482,6 +493,32 @@ function BankAccountForm() {
   )
 }
 
+function BankAccountReadOnly({ bankAccount }: { bankAccount: BankAccount }) {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant={"outline"}>
+          View
+        </Button>
+      </DialogTrigger>
+      <DialogContent className='w-fit'>
+        <Card>
+          <CardContent className='space-y-4 max-w-sm'>
+            <Input value={bankAccount.accountHolderName} readOnly />
+            <Input value={bankAccount.bankName} readOnly />
+            <Input value={bankAccount.accountNumber} readOnly />
+            <Input value={bankAccount.swiftCode} readOnly />
+            <Input value={bankAccount.iban} readOnly />
+            <Input value={bankAccount.routingNumber} readOnly />
+            <Input value={bankAccount.branchCode} readOnly />
+            <Input value={bankAccount.currency} readOnly />
+          </CardContent>
+        </Card>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function PayPalForm() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
@@ -517,6 +554,27 @@ function PayPalForm() {
       <Input type="email" placeholder="PayPal Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
       <Button type="submit">Add PayPal</Button>
     </form>
+  )
+}
+
+function PaypalReadOnly({ email }: { email: string; }) {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant={"outline"}>
+          View
+        </Button>
+      </DialogTrigger>
+      <DialogContent className='w-fit'>
+        <Card>
+          <CardContent className='max-w-sm'>
+            <div className='space-y-4'>
+              <Input value={email} readOnly />
+            </div>
+          </CardContent>
+        </Card>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -582,5 +640,27 @@ function UPIForm() {
       {qrCode && <p className="text-sm text-muted-foreground">File selected: {qrCode.name}</p>}
       <Button type="submit">Add UPI</Button>
     </form>
+  )
+}
+
+function UPIReadonly({upi}:{upi: UPI}){
+  return(
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant={"outline"}>
+          View
+        </Button>
+      </DialogTrigger>
+      <DialogContent className='w-fit'>
+        <Card>
+          <CardContent className='max-w-sm max-h-[80vh] overflow-auto' style={{scrollbarWidth: "none"}}>
+            <div className='space-y-4'>
+              <Input value={upi.upi_id} readOnly />
+              <Image alt={upi.upi_id} src={upi.qr_code} width={400} height={400} className='w-full h-auto object-cover' unoptimized={true} />
+            </div>
+          </CardContent>
+        </Card>
+      </DialogContent>
+    </Dialog>
   )
 }
