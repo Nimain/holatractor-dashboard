@@ -184,12 +184,12 @@ const LogInPage = () => {
 
             </div>
 
-            <Backdrop
+            {/* <Backdrop
                         sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
                         open={loading}
                     >
                         <CircularProgress />
-                    </Backdrop>
+                    </Backdrop> */}
 
         </div>
     )

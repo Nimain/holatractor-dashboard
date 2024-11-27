@@ -328,13 +328,13 @@ const marketplace = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stat.value}</div>
-                  <p className="text-xs text-muted-foreground">
+                  {/* <p className="text-xs text-muted-foreground">
                     <span className={stat.isPositive ? "text-green-600" : "text-red-600"}>
                       {stat.isPositive ? "▲" : "▼"} {stat.change}
                     </span>
                     {" "}
                     {stat.description}
-                  </p>
+                  </p> */}
                 </CardContent>
               </Card>
             ))}
@@ -350,7 +350,7 @@ const marketplace = () => {
                     <span>New</span>
                   </CardTitle>
                   <span className="text-sm text-muted-foreground">
-                    {columns[0].leads.length} Leads
+                    {newBookings.length} Leads
                   </span>
                 </CardHeader>
               </Card>
@@ -375,10 +375,6 @@ const marketplace = () => {
                           {`${lead.user?.email.split('@')[0].slice(0, 3)}...@${lead.user?.email.split('@')[1]}`}
                         </span>
                       </div>
-                      <div className="flex items-center">
-                        <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm">{`${lead.total_cost}`}</span>
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -394,7 +390,7 @@ const marketplace = () => {
                     <span>Open</span>
                   </CardTitle>
                   <span className="text-sm text-muted-foreground">
-                    {columns[1].leads.length} Leads
+                    {openBookings.length} Leads
                   </span>
                 </CardHeader>
               </Card>
@@ -419,10 +415,6 @@ const marketplace = () => {
                           {`${lead.user?.email.split('@')[0].slice(0, 3)}...@${lead.user?.email.split('@')[1]}`}
                         </span>
                       </div>
-                      <div className="flex items-center">
-                        <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm">{`${lead.total_cost}`}</span>
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -438,7 +430,7 @@ const marketplace = () => {
                     <span>In Progress</span>
                   </CardTitle>
                   <span className="text-sm text-muted-foreground">
-                    {columns[2].leads.length} Leads
+                    {inProgressBookings.length} Leads
                   </span>
                 </CardHeader>
               </Card>
@@ -463,10 +455,6 @@ const marketplace = () => {
                           {`${lead.user?.email.split('@')[0].slice(0, 3)}...@${lead.user?.email.split('@')[1]}`}
                         </span>
                       </div>
-                      <div className="flex items-center">
-                        <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm">{`${lead.total_cost}`}</span>
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -482,7 +470,7 @@ const marketplace = () => {
                     <span>Closed</span>
                   </CardTitle>
                   <span className="text-sm text-muted-foreground">
-                    {columns[3].leads.length} Leads
+                    {completedBookings.length} Leads
                   </span>
                 </CardHeader>
               </Card>
@@ -506,10 +494,6 @@ const marketplace = () => {
                         <span className="text-sm">
                           {`${lead.user?.email.split('@')[0].slice(0, 3)}...@${lead.user?.email.split('@')[1]}`}
                         </span>
-                      </div>
-                      <div className="flex items-center">
-                        <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm">{`${lead.total_cost}`}</span>
                       </div>
                     </div>
                   </CardContent>
