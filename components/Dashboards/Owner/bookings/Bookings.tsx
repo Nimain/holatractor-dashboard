@@ -63,29 +63,30 @@ interface Location {
 }
 
 const Bookings = () => {
-
-    const [activeTab, setActiveTab] = useState("Statistics");
     const [date, setDate] = useState(new Date());
     const [location, setLocation] = useState<Location>({ latitude: null, longitude: null });
     const [error, setError] = useState<string | null>(null);
 
     const [allBookings, setAllBookings] = useState<Booking[]>([])
     const [fetchingBookings, setFetchingBookings] = useState(false)
-
-    const [quantity, setQuantity] = useState(1)
     const [query, setQuery] = useState('');
 
     const [timeRange, setTimeRange] = useState('last30');
     const [dayFilter, setDayFilter] = useState('sunday');
     const chartData = {
         last30: [
-            { time: '6AM', passengers: 200 },
-            { time: '8AM', passengers: 600 },
-            { time: '10AM', passengers: 400 },
-            { time: '12PM', passengers: 300 },
-            { time: '2PM', passengers: 650 },
-            { time: '4PM', passengers: 450 },
-            { time: '6PM', passengers: 350 },
+            { time: 'Jan', passengers: 200 },
+            { time: 'Feb', passengers: 600 },
+            { time: 'Mar', passengers: 400 },
+            { time: 'Apr', passengers: 300 },
+            { time: 'May', passengers: 650 },
+            { time: 'Jun', passengers: 450 },
+            { time: 'Jul', passengers: 350 },
+            { time: 'Aug', passengers: 250 },
+            { time: 'Sep', passengers: 450 },
+            { time: 'Oct', passengers: 550 },
+            { time: 'Nov', passengers: 400 },
+            { time: 'Dec', passengers: 300 },
         ],
         // Add more data for other time periods if needed
     };
@@ -191,28 +192,6 @@ const Bookings = () => {
                                 />
                             </PopoverContent>
                         </Popover>
-
-                        <div className="flex items-center gap-2 bg-white rounded-lg border">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                className="h-10 w-10"
-                            >
-                                <Minus className="h-4 w-4" />
-                            </Button>
-                            <span className="w-8 text-center">
-                                {quantity}
-                            </span>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setQuantity(quantity + 1)}
-                                className="h-10 w-10"
-                            >
-                                <Plus className="h-4 w-4" />
-                            </Button>
-                        </div>
                     </div>
 
                     {/* Train List */}
@@ -544,7 +523,7 @@ const Bookings = () => {
                         {/* Statistics */}
                         <div className="space-y-6 mt-6">
                             {/* Navigation Tabs */}
-                            <div className="flex justify-between border-b">
+                            {/* <div className="flex justify-between border-b">
                                 {["Details", "Amenities", "Statistics", "Route", "Reviews"].map((tab) => (
                                     <Button
                                         key={tab}
@@ -558,23 +537,10 @@ const Bookings = () => {
                                         {tab}
                                     </Button>
                                 ))}
-                            </div>
+                            </div> */}
 
                             {/* Tab Content */}
                             <div className="space-y-4">
-                                {activeTab === "Details" && (
-                                    <div>
-                                        <h3 className="text-lg font-medium">Details</h3>
-                                        <p>Here are the details about the item.</p>
-                                    </div>
-                                )}
-                                {activeTab === "Amenities" && (
-                                    <div>
-                                        <h3 className="text-lg font-medium">Amenities</h3>
-                                        <p>Here are the available amenities.</p>
-                                    </div>
-                                )}
-                                {activeTab === "Statistics" && (
                                     <div>
                                         <div className="flex items-center justify-between">
                                             <h3 className="text-lg font-medium">Popular times</h3>
@@ -650,19 +616,6 @@ const Bookings = () => {
                                             </CardContent>
                                         </Card>
                                     </div>
-                                )}
-                                {activeTab === "Route" && (
-                                    <div>
-                                        <h3 className="text-lg font-medium">Route</h3>
-                                        <p>Here is the route information.</p>
-                                    </div>
-                                )}
-                                {activeTab === "Reviews" && (
-                                    <div>
-                                        <h3 className="text-lg font-medium">Reviews</h3>
-                                        <p>Here are the reviews.</p>
-                                    </div>
-                                )}
                             </div>
                         </div>
 
