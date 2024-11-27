@@ -12,6 +12,7 @@ import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
 import { useCookie } from 'next-cookie';
 import NewBookings from './NewBookings'
+import SeeBooking from './SeeBooking'
 
 
 interface Lead {
@@ -229,29 +230,7 @@ const marketplace = () => {
                 </CardHeader>
               </Card>
               {openBookings.length === 0 ? <p>No open bookings available</p> : openBookings.map((lead) => (
-                <Card key={lead.id} className="overflow-hidden bg-white shadow-sm rounded-md mt-3">
-                  <CardContent className="flex items-center space-x-4 p-4">
-                    <Avatar className="h-12 w-12">
-                      {
-                        lead.user && lead.user?.image &&
-                      <AvatarImage src={lead.user?.image} alt={lead.user.first_name} />
-                      }
-                      <AvatarFallback>
-                        {lead.user?.first_name[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium leading-none">{lead.user?.first_name} {lead.user?.middle_name ?? ""} {lead.user?.last_name}</p>
-                      <p className="text-sm text-muted-foreground">{new Date(lead.createdAt).toLocaleDateString()}</p>
-                      <div className="flex items-center pt-2">
-                        <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm">
-                          {`${lead.user?.email.split('@')[0].slice(0, 3)}...@${lead.user?.email.split('@')[1]}`}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <SeeBooking booking={lead} />
               ))}
             </div>
 

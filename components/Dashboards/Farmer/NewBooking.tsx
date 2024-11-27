@@ -295,7 +295,7 @@ const NewBooking = () => {
                 user_id: user.userId,
                 store_id: store_id,
                 start_date: new Date(startDate),
-                end_date: BookingHours === "more" ? endDate : new Date(),
+                end_date: endDate,
                 tractor_ids: selectedTractorIds,
                 attachment_ids: selectedAttachmentIds,
             };
@@ -305,7 +305,6 @@ const NewBooking = () => {
                 user_id: user.userId,
                 store_id: store_id,
                 start_date: new Date(startDate),
-                end_date: BookingHours === "more" ? endDate : new Date(),
                 booking_hours: BookingHours,
                 tractor_ids: selectedTractorIds,
                 attachment_ids: selectedAttachmentIds,
@@ -705,7 +704,10 @@ const NewBooking = () => {
             <MapPin className="h-5 w-5 text-primary" />
             <h3 className="font-semibold">Distance Details</h3>
           </div>
+          {
+            booking.distance &&
           <p className="pl-7">Total Distance: {parseFloat(booking.distance).toFixed(2)} km</p>
+          }
         </div>
 
         <Separator />

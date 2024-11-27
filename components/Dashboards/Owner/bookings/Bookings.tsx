@@ -248,7 +248,7 @@ const Bookings = () => {
                                                 </Button>
                                             </SheetTrigger>
 
-                                            <SheetContent className="overflow-auto" style={{scrollbarWidth: "none"}}>
+                                            <SheetContent className="overflow-auto" style={{ scrollbarWidth: "none" }}>
                                                 <SheetHeader>
                                                     <SheetTitle className="text-xl font-semibold">Details</SheetTitle>
                                                 </SheetHeader>
@@ -314,7 +314,7 @@ const Bookings = () => {
                                                     <div className="space-y-6">
                                                         <div className="flex gap-3">
                                                             <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${ticket.bookingStatus === BookingStatus.Open
+                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Open) || (ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
                                                                     ? 'bg-green-500'
                                                                     : 'bg-yellow-400'
                                                                     }`} />
@@ -328,7 +328,7 @@ const Bookings = () => {
                                                         </div>
                                                         <div className="flex gap-3">
                                                             <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${ticket.bookingStatus === BookingStatus.Accepted
+                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
                                                                     ? 'bg-green-500'
                                                                     : 'bg-yellow-400'
                                                                     }`} />
@@ -344,7 +344,7 @@ const Bookings = () => {
                                                         </div>
                                                         <div className="flex gap-3">
                                                             <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${ticket.bookingStatus === BookingStatus.Arriving
+                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
                                                                     ? 'bg-green-500'
                                                                     : 'bg-yellow-400'
                                                                     }`} />
@@ -360,7 +360,7 @@ const Bookings = () => {
                                                         </div>
                                                         <div className="flex gap-3">
                                                             <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${ticket.bookingStatus === BookingStatus.Arrived
+                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
                                                                     ? 'bg-green-500'
                                                                     : 'bg-yellow-400'
                                                                     }`} />
@@ -376,7 +376,7 @@ const Bookings = () => {
                                                         </div>
                                                         <div className="flex gap-3">
                                                             <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped)
+                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
                                                                     ? 'bg-green-500'
                                                                     : 'bg-yellow-400'
                                                                     }`} />
@@ -392,7 +392,7 @@ const Bookings = () => {
                                                         </div>
                                                         <div className="flex gap-3">
                                                             <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) && (ticket.payment[0].status === PaymentStatus.FarmerPENDING)
+                                                                <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
                                                                     ? 'bg-green-500'
                                                                     : 'bg-yellow-400'
                                                                     }`} />
@@ -408,7 +408,7 @@ const Bookings = () => {
                                                         </div>
                                                         <div className="flex gap-3">
                                                             <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) && (ticket.payment[0].status === PaymentStatus.FarmerCONFIRMED)
+                                                                <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
                                                                     ? 'bg-green-500'
                                                                     : 'bg-yellow-400'
                                                                     }`} />
@@ -424,23 +424,7 @@ const Bookings = () => {
                                                         </div>
                                                         <div className="flex gap-3">
                                                             <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")
-                                                                    ? 'bg-green-500'
-                                                                    : 'bg-yellow-400'
-                                                                    }`} />
-                                                            </div>
-
-                                                            <div className="flex-1 pb-6">
-                                                                <div className="flex justify-between">
-                                                                    <p className="font-medium">
-                                                                        Farmer has submitted payment details
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex gap-3">
-                                                            <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) && (ticket.payment[0].status === PaymentStatus.OwnerREJECTED)
+                                                                <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
                                                                     ? 'bg-green-500'
                                                                     : 'bg-yellow-400'
                                                                     }`} />
@@ -456,7 +440,7 @@ const Bookings = () => {
                                                         </div>
                                                         <div className="flex gap-3">
                                                             <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED")
+                                                                <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
                                                                     ? 'bg-green-500'
                                                                     : 'bg-yellow-400'
                                                                     }`} />
@@ -479,9 +463,9 @@ const Bookings = () => {
                                                 }
                                                 {
                                                     (ticket.payment.length > 0 && ticket.payment[0].status === PaymentStatus.FarmerCONFIRMED) && <PaymentReview
-                                                    referenceNumber={ticket.payment[0].transaction_reference[ticket.payment[0].transaction_reference.length - 1]}
-                                                    screenshotUrl={ticket.payment[0].screenshots[ticket.payment[0].screenshots.length - 1]}
-                                                    paymentId={ticket.payment[0].id} />
+                                                        referenceNumber={ticket.payment[0].transaction_reference[ticket.payment[0].transaction_reference.length - 1]}
+                                                        screenshotUrl={ticket.payment[0].screenshots[ticket.payment[0].screenshots.length - 1]}
+                                                        paymentId={ticket.payment[0].id} />
                                                 }
                                             </SheetContent>
                                         </Sheet>
@@ -541,81 +525,81 @@ const Bookings = () => {
 
                             {/* Tab Content */}
                             <div className="space-y-4">
-                                    <div>
-                                        <div className="flex items-center justify-between">
-                                            <h3 className="text-lg font-medium">Popular times</h3>
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className={`rounded-full ${timeRange === "last30" ? "bg-gray-100" : ""
-                                                        }`}
-                                                    onClick={() => setTimeRange("last30")}
-                                                >
-                                                    Last 30 days
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className={`rounded-full ${dayFilter === "sunday" ? "bg-gray-100" : ""
-                                                        }`}
-                                                    onClick={() => setDayFilter("sunday")}
-                                                >
-                                                    Sunday
-                                                </Button>
-                                            </div>
+                                <div>
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-lg font-medium">Popular times</h3>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className={`rounded-full ${timeRange === "last30" ? "bg-gray-100" : ""
+                                                    }`}
+                                                onClick={() => setTimeRange("last30")}
+                                            >
+                                                Last 30 days
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className={`rounded-full ${dayFilter === "sunday" ? "bg-gray-100" : ""
+                                                    }`}
+                                                onClick={() => setDayFilter("sunday")}
+                                            >
+                                                Sunday
+                                            </Button>
                                         </div>
-
-                                        {/* Chart Card */}
-                                        <Card className="p-4 mt-5">
-                                            <CardContent className="pt-4">
-                                                <ResponsiveContainer width="100%" height={300}>
-                                                    <BarChart data={chartData[timeRange as keyof typeof chartData]} barSize={40}>
-                                                        <CartesianGrid vertical={false} stroke="#f0f0f0" />
-                                                        <XAxis
-                                                            dataKey="time"
-                                                            axisLine={false}
-                                                            tickLine={false}
-                                                            dy={10}
-                                                        />
-                                                        <YAxis
-                                                            axisLine={false}
-                                                            tickLine={false}
-                                                            ticks={[200, 400, 600, 800]}
-                                                            dx={-10}
-                                                        />
-                                                        <Tooltip
-                                                            cursor={false}
-                                                            content={({ active, payload }) => {
-                                                                if (active && payload && payload.length) {
-                                                                    return (
-                                                                        <div className="bg-white p-2 shadow-lg rounded border">
-                                                                            <p className="text-sm">
-                                                                                Average passengers
-                                                                                <br />
-                                                                                {payload[0].payload.time}, 2022
-                                                                            </p>
-                                                                            <p className="text-sm font-bold">
-                                                                                {payload[0].value}{" "}
-                                                                                <span className="text-green-500">12%</span>
-                                                                            </p>
-                                                                        </div>
-                                                                    );
-                                                                }
-                                                                return null;
-                                                            }}
-                                                        />
-                                                        <Bar
-                                                            dataKey="passengers"
-                                                            fill="#1a73e8"
-                                                            radius={[4, 4, 0, 0]}
-                                                            background={{ fill: "#f8f9fa" }}
-                                                        />
-                                                    </BarChart>
-                                                </ResponsiveContainer>
-                                            </CardContent>
-                                        </Card>
                                     </div>
+
+                                    {/* Chart Card */}
+                                    <Card className="p-4 mt-5">
+                                        <CardContent className="pt-4">
+                                            <ResponsiveContainer width="100%" height={300}>
+                                                <BarChart data={chartData[timeRange as keyof typeof chartData]} barSize={40}>
+                                                    <CartesianGrid vertical={false} stroke="#f0f0f0" />
+                                                    <XAxis
+                                                        dataKey="time"
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        dy={10}
+                                                    />
+                                                    <YAxis
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        ticks={[200, 400, 600, 800]}
+                                                        dx={-10}
+                                                    />
+                                                    <Tooltip
+                                                        cursor={false}
+                                                        content={({ active, payload }) => {
+                                                            if (active && payload && payload.length) {
+                                                                return (
+                                                                    <div className="bg-white p-2 shadow-lg rounded border">
+                                                                        <p className="text-sm">
+                                                                            Average passengers
+                                                                            <br />
+                                                                            {payload[0].payload.time}, 2022
+                                                                        </p>
+                                                                        <p className="text-sm font-bold">
+                                                                            {payload[0].value}{" "}
+                                                                            <span className="text-green-500">12%</span>
+                                                                        </p>
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            return null;
+                                                        }}
+                                                    />
+                                                    <Bar
+                                                        dataKey="passengers"
+                                                        fill="#1a73e8"
+                                                        radius={[4, 4, 0, 0]}
+                                                        background={{ fill: "#f8f9fa" }}
+                                                    />
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </CardContent>
+                                    </Card>
+                                </div>
                             </div>
                         </div>
 

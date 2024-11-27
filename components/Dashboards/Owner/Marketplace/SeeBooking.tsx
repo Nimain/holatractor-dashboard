@@ -1,6 +1,6 @@
 "use client"
 
-import { Booking, BookingHours, BookingStatus, Store } from "@/utils/Types/types"
+import { Booking, BookingHours, BookingStatus, PaymentStatus, Store } from "@/utils/Types/types"
 import {
     Sheet,
     SheetClose,
@@ -21,84 +21,10 @@ import { useEffect, useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { Backdrop, CircularProgress } from "@mui/material";
+import AssignOperator from "../bookings/AssignOperator";
+import PaymentReview from "../_components/PaymentProofAction";
 
-interface AvailStore {
-    storeId: string;
-    storeName: string;
-    availableTractors: {
-        tractorId: string;
-        tractorName: string;
-    }[];
-    availableAttachments: {
-        attachmentId: string;
-        attachmentName: string;
-    }[];
-}
-
-const NewBookings = ({ booking }: { booking: Booking }) => {
-
-    const [availableStores, setAvailableStores] = useState<AvailStore[]>([])
-    const [checkingAvailability, setCheckingAvailability] = useState(false)
-    const [converting, setConverting] = useState(false)
-
-    const { cookie } = useCookie();
-    const access_token = cookie.get("access_token");
-
-    function fetchAvailableStores() {
-        setCheckingAvailability(true)
-        renderInstance.post(`/booking/standalone-booking/${booking.id}/check-available-stores`, {}, {
-            headers: {
-                Authorization: `Bearer ${access_token}`,
-            },
-        })
-            .then((res) => {
-                setAvailableStores(res.data)
-            }).catch((err) => {
-                if (err.response) {
-                    if (err.response.status === 404 && err.response.data.message === "Log in user not valid") {
-                        errorMessage("Log in user not valid")
-                    } else if (err.response.status === 404 && err.response.data.message === "Booking not found") {
-                        errorMessage("Booking not found")
-                    } else if (err.response.status === 409 && err.response.data.message === "Booking has been taken by another store") {
-                        errorMessage("Booking has been taken by another store")
-                    }
-                }
-            }).finally(() => {
-                setCheckingAvailability(false)
-            })
-    }
-
-    function bookingConverting(storeId: string, bookingId: string){
-        setConverting(true)
-        renderInstance.post(`/booking/standalone-booking/${bookingId}/convert-booking/store/${storeId}`, {}, {
-            headers: {
-                Authorization: `Bearer ${access_token}`,
-            },
-        })
-            .then((res) => {
-                successMessage("Booked")
-                window.location.reload()
-            }).catch((err) => {
-                if (err.response) {
-                    if (err.response.status === 404 && err.response.data.message === "Login User not found") {
-                        errorMessage("Login User not found")
-                    } else if (err.response.status === 404 && err.response.data.message === "Store not found or not owned by the user") {
-                        errorMessage("Store not found or not owned by the user")
-                    } else if (err.response.status === 404 && err.response.data.message === "Booking not found") {
-                        errorMessage("Booking not found")
-                    } else if (err.response.status === 409 && err.response.data.message === "Booking has taken by other owner") {
-                        errorMessage("Booking has taken by other owner")
-                    }
-                }
-            }).finally(() => {
-                setConverting(false)
-            })
-    }
-
-    useEffect(() => {
-        fetchAvailableStores()
-    }, [])
-
+const SeeBooking = ({ booking }: { booking: Booking }) => {
     return (
         <Sheet>
             <SheetTrigger asChild>
@@ -133,49 +59,6 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
                             <ChevronRight className="h-4 w-4" />
                             <span className="text-lg font-semibold">Lead Preview</span>
                         </div>
-                        <Collapsible>
-                            <CollapsibleTrigger>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="flex items-center space-x-2 border border-gray-300 px-4 py-2 rounded-md"
-                                >
-                                    {
-                                        checkingAvailability ? <span className="text-sm">
-                                            Checking availability
-                                        </span>
-                                            :
-                                            <span className="text-sm">
-                                                Available stores {availableStores.length}
-                                            </span>
-                                    }
-                                    {
-                                        !checkingAvailability &&
-                                        <ChevronsUpDown className="h-4 w-4 text-gray-600" />
-                                    }
-                                </Button>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent>
-                                {
-                                    availableStores.map((storeDetails, i) => {
-                                        return (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="flex items-center space-x-2 border border-gray-300 px-4 py-2 rounded-md"
-                                                key={i}
-                                                onClick={()=>{bookingConverting(storeDetails.storeId, booking.id)}}
-                                            >
-                                                <span className="text-sm">
-                                                    {storeDetails.storeName}
-                                                </span>
-                                                <ChevronRight className="h-4 w-4 text-gray-600" />
-                                            </Button>
-                                        )
-                                    })
-                                }
-                            </CollapsibleContent>
-                        </Collapsible>
                     </SheetTitle>
                 </SheetHeader>
 
@@ -292,7 +175,7 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
                             <h3 className="text-lg font-semibold">
                                 Booking timeline:
                             </h3>
-                            <div className="space-y-6">
+                            <div className="space-y-6 py-4">
                                 <div className="flex gap-3">
                                     <div className="flex flex-col items-center">
                                         <div className={`w-3 h-3 rounded-full ${(booking.bookingStatus === BookingStatus.Open) || (booking.bookingStatus === BookingStatus.Accepted) || (booking.bookingStatus === BookingStatus.Arriving) || (booking.bookingStatus === BookingStatus.Arrived) || (booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
@@ -436,20 +319,22 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
                                     </div>
                                 </div>
                             </div>
+                            {
+                                                    booking.bookingStatus === BookingStatus.Open &&
+                                                    <AssignOperator selectedRequest={booking.id} storeId={booking.store_id} store={booking.store} />
+                                                }
+                                                {
+                                                    (booking.payment.length > 0 && booking.payment[0].status === PaymentStatus.FarmerCONFIRMED) && <PaymentReview
+                                                        referenceNumber={booking.payment[0].transaction_reference[booking.payment[0].transaction_reference.length - 1]}
+                                                        screenshotUrl={booking.payment[0].screenshots[booking.payment[0].screenshots.length - 1]}
+                                                        paymentId={booking.payment[0].id} />
+                                                }
                         </div>
                     }
                 </div>
-
-                <Backdrop
-                        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-                        open={converting}
-                    >
-                        <CircularProgress />
-                    </Backdrop>
             </SheetContent>
-
         </Sheet>
     )
 }
 
-export default NewBookings
+export default SeeBooking
