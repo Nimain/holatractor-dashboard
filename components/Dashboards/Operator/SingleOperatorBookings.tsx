@@ -232,7 +232,7 @@ export default function Operator() {
         else if (value === BookingStatus.Started) url = `/operatorbooking/${id}/starting`
         if (!url) {
             errorMessage("Invalid select")
-            ReceiptPoundSterling
+            return
         }
         renderInstance.patch(url, {}, {
             headers: {

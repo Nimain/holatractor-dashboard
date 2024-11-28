@@ -1,7 +1,7 @@
 import dynamic from 'next/dynamic'
 
 const OperatorPage = dynamic(
-  ()=> import('@/components/Dashboards/Operator/Operator'),
+  ()=> import('@/components/Dashboards/Operator/NewDashboard'),
   {
       ssr: false,
       loading: () => (

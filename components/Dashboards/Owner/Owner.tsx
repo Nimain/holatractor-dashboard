@@ -19,6 +19,7 @@ import { WelcomeTranslation } from '../Farmer/FarmerTranslation'
 import Languages from '@/components/Menubar/Languages'
 import { Input } from '@/components/ui/input'
 import OwnerShrimmer from './_components/OwnerShrimmer'
+import NewStore from './_components/NewStore'
 
 interface user {
   userId: string;
@@ -98,8 +99,8 @@ const OwnerDashboardPage = () => {
             </svg>
           </div>
 
-          <Button 
-          className="bg-green-600 hover:bg-green-900 text-white py-2 px-6 rounded-full text-sm hidden 1200px:inline-block">
+          <Button
+            className="bg-green-600 hover:bg-green-900 text-white py-2 px-6 rounded-full text-sm hidden 1200px:inline-block">
             Upgrade Plan
           </Button>
 
@@ -110,14 +111,14 @@ const OwnerDashboardPage = () => {
 
       {/* Main Content */}
 
-      <HomeDashboard 
-      stores={stores} 
-      operators={operators} 
-      tractors={tractors} 
-      attachments={attachments} 
-      bookings={bookings}
-      tractorsInUse={tractorsInUse}
-      attachmentsInUse={attachmentsInUse} />
+      <HomeDashboard
+        stores={stores}
+        operators={operators}
+        tractors={tractors}
+        attachments={attachments}
+        bookings={bookings}
+        tractorsInUse={tractorsInUse}
+        attachmentsInUse={attachmentsInUse} />
 
     </div>
   )

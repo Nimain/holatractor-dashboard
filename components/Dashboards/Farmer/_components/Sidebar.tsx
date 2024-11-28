@@ -12,6 +12,7 @@ import { useState } from "react"
 import { useDispatch } from "react-redux"
 import { Tooltip } from "@mui/material"
 import { Separator } from "@/components/ui/separator"
+import { useRouter } from "next/navigation"
 
 interface user {
   userId: string;
@@ -27,6 +28,8 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
 
   const dispatch = useDispatch();
 
+  const router = useRouter()
+
   const { cookie } = useCookie()
   const user: user = cookie.get("user")
 
@@ -37,7 +40,7 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
     cookie.remove("isOperator")
     cookie.remove("isOwner")
     cookie.remove("isODealer")
-    window.location.reload()
+    router.push("/login")
   }
 
   if (!user) return

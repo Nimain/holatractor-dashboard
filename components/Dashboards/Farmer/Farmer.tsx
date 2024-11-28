@@ -81,6 +81,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import io, { Socket } from 'socket.io-client';
 import WithoutStoreBooking from "./WithoutStoreBooking"
+import LatestBookingComponent from "./_components/LatestBookingComponent"
 
 interface user {
   userId: string;
@@ -509,36 +510,7 @@ const FarmerDashboard = () => {
                 <TranslatedText greetings={recentBookingsTranslation} />
               </h1>
 
-              <div className="space-y-4">
-                {
-                  bookings.length === 0 ?
-                    <p>
-                      <TranslatedText greetings={noBookingsAvailableTranslation} />
-                    </p>
-                    :
-                    bookings.map((booking, i) => {
-                      if (i > 1) return null
-                      return (
-                        <Card className="w-full 900px:max-w-sm 900px:min-w-sm flex items-center justify-between flex-shrink-0 py-2 px-4 rounded-2xl bg-[#D0E1E9]" key={i}>
-                          <div className="flex items-center">
-                            <TractorIcon className="h-6 w-6 mr-2 text-muted-foreground" />
-                            <div className='w-full'>
-                              <div className='w-full flex items-center justify-betweenn flex-wrap gap-1'>
-                                <p className="font-bold text-sm"><TranslatedText greetings={bookingTranslation} /> #{`Holabooking${booking.id.slice(-4)}`}</p>
-                                <Badge className='text-xs bg-yellow-200 text-yellow-800 hover:text-yellow-900 hover:bg-yellow-300'>
-                                  <p>{booking.bookingStatus}</p>
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-muted-foreground"><TranslatedText greetings={totalTractorsTranslation} /> {booking.tractors.length}</p>
-                              <p className="text-sm text-muted-foreground"><TranslatedText greetings={totalAttachmentsTranslation} /> {booking.attachments.length}</p>
-                            </div>
-                          </div>
-                          <BookingCard booking={booking} id={`#Holabooking${booking.id.slice(-4)}`} />
-                        </Card>
-                      )
-                    })
-                }
-              </div>
+              <LatestBookingComponent booking={bookings} bookingLength={totalBookings} />
 
             </div>
 
@@ -611,44 +583,7 @@ const FarmerDashboard = () => {
               isOnline={true}
               name={user.name} />
 
-            <div className="w-fit flex flex-col gap-4">
-
-              <h1 className="text-2xl font-bold text-center">
-                <TranslatedText greetings={recentBookingsTranslation} />
-              </h1>
-
-              <div className="space-y-4">
-                {
-                  bookings.length === 0 ?
-                    <p>
-                      <TranslatedText greetings={noBookingsAvailableTranslation} />
-                    </p>
-                    :
-                    bookings.map((booking, i) => {
-                      if (i > 1) return null
-                      return (
-                        <Card className="w-full max-w-sm min-w-sm flex items-center justify-between flex-shrink-0 py-2 px-4 rounded-2xl bg-[#D0E1E9]" key={i}>
-                          <div className="flex items-center">
-                            <TractorIcon className="h-6 w-6 mr-2 text-muted-foreground" />
-                            <div className='w-full'>
-                              <div className='w-full flex items-center justify-betweenn flex-wrap gap-1'>
-                                <p className="font-bold text-sm"><TranslatedText greetings={bookingTranslation} /> #{`Holabooking${booking.id.slice(-4)}`}</p>
-                                <Badge className='text-xs bg-yellow-200 text-yellow-800 hover:text-yellow-900 hover:bg-yellow-300'>
-                                  <p>{booking.bookingStatus}</p>
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-muted-foreground"><TranslatedText greetings={totalTractorsTranslation} /> {booking.tractors.length}</p>
-                              <p className="text-sm text-muted-foreground"><TranslatedText greetings={totalAttachmentsTranslation} /> {booking.attachments.length}</p>
-                            </div>
-                          </div>
-                          <BookingCard booking={booking} id={`#Holabooking${booking.id.slice(-4)}`} />
-                        </Card>
-                      )
-                    })
-                }
-              </div>
-
-            </div>
+              <LatestBookingComponent booking={bookings} bookingLength={totalBookings} />
 
             <WeatherWidget city={city} />
 
