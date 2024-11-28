@@ -1,7 +1,7 @@
 import dynamic from 'next/dynamic'
 
-const Booking = dynamic(
-    ()=> import('@/components/Dashboards/Farmer/Booking/NewBooking'),
+const PaymentHistory = dynamic(
+    ()=> import('@/components/Dashboards/Farmer/PaymentHistory/PaymentHistory'),
     {
         ssr: false,
         loading: () => (
@@ -12,11 +12,10 @@ const Booking = dynamic(
       }
   )
 
-const NewBooking = () => {
-
-    return (
-        <Booking />
-    )
+const PaymentHistoryPage = () => {
+  return (
+    <PaymentHistory />
+  )
 }
 
-export default NewBooking
+export default PaymentHistoryPage

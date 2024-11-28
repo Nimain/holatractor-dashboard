@@ -4,15 +4,17 @@ import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { changeFarm } from "@/redux/ActiveFarm/ActiveFarm"
 import { Farm } from "@/utils/Types/types"
-import { ChevronDown, ChevronLeft, ChevronRight, Home, Plus, Settings, Tractor } from "lucide-react"
+import { BellElectric, ChevronDown, ChevronLeft, ChevronRight, Home, Plus, Settings, Store, Tractor, Wallet } from "lucide-react"
 import { useCookie } from "next-cookie"
 import Image from "next/image"
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useDispatch } from "react-redux"
 import { Tooltip } from "@mui/material"
 import { Separator } from "@/components/ui/separator"
 import { useRouter } from "next/navigation"
+import { renderInstance } from "@/utils/Axios/RenderInstance"
+import { errorMessage } from "@/utils/Toastify/Messages"
 
 interface user {
   userId: string;
@@ -21,10 +23,12 @@ interface user {
   email: string;
 }
 
-const Sidebar = ({ farms }: { farms: Farm[] }) => {
+const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [showFarmList, setShowFarmList] = useState(false)
   const [showBookingList, setShowBookingList] = useState(false)
+
+  const [farms, setFarms] = useState<Farm[]>([])
 
   const dispatch = useDispatch();
 
@@ -41,13 +45,34 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
     cookie.remove("isOwner")
     cookie.remove("isODealer")
     router.push("/login")
+
+    function fetchFarmer() {
+
+      renderInstance.get(`/farmer/${user.userId}`)
+        .then((res) => {
+          setFarms(res.data.farms)
+          dispatch(changeFarm(res.data.farms[0]))
+        }).catch((err) => {
+          if (err.response && err.response.status === 404 && err.response.data.message === "Farmer not found") {
+            errorMessage("Farmer not found")
+          } else {
+            errorMessage("Error fetching user detaild")
+          }
+        })
+    }
+
+    useEffect(() => {
+      if (user) {
+        fetchFarmer()
+      }
+    }, [])
   }
 
   if (!user) return
 
   return (
     <aside
-      className={`shadow-md transition-all duration-300 rounded-2xl ${isExpanded ? 'w-64' : 'w-16'} h-[90vh] bg-primaryColor text-white`}>
+      className={`shadow-md transition-all duration-300 rounded-2xl ${isExpanded ? 'w-64' : 'w-16'} h-[90vh] bg-primaryColor text-white my-auto`}>
       <div className="flex items-center justify-center gap-2 w-full mx-auto mt-4 mb-2">
         <Image
           src={"https://holaimagesdata.s3.us-west-2.amazonaws.com/web/logo/ISOLOGO_HT_BLANCO.png"}
@@ -70,7 +95,7 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
               className={`flex gap-2 items-center bg-transparent hover:bg-white/20 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
             >
               <Tooltip title={"Farms"} placement="right">
-              <Home className="h-6 w-6" />
+                <Home className="h-6 w-6" />
               </Tooltip>
               {isExpanded && (
                 <>
@@ -82,16 +107,16 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
           </CollapsibleTrigger>
           <CollapsibleContent className="pl-6 mt-2 space-y-2">
             {isExpanded && farms.map((store) => (
-                <Button
-                  className="w-full justify-start text-sm bg-transparent hover:bg-white/20"
-                  key={store.id}
-                  onClick={() => {
-                    dispatch(changeFarm(store))
-                    setIsExpanded(false)
-                  }}
-                >
-                  {store.name}
-                </Button>
+              <Button
+                className="w-full justify-start text-sm bg-transparent hover:bg-white/20"
+                key={store.id}
+                onClick={() => {
+                  dispatch(changeFarm(store))
+                  setIsExpanded(false)
+                }}
+              >
+                {store.name}
+              </Button>
             ))}
             {isExpanded && <Link href={"/farmer/farm/new"}>
               <Button
@@ -109,7 +134,7 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
               className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
             >
               <Tooltip title={"Bookings"} placement="right">
-              <Tractor className="h-6 w-6" />
+                <Tractor className="h-6 w-6" />
               </Tooltip>
               {isExpanded && (
                 <>
@@ -120,7 +145,7 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="pl-6 mt-2 space-y-2">
-            {isExpanded && <Link href={"#"}>
+            {isExpanded && <Link href={"/farmer/bookinghistory"}>
               <Button
                 className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
               >
@@ -138,14 +163,44 @@ const Sidebar = ({ farms }: { farms: Farm[] }) => {
             </Link>}
           </CollapsibleContent>
         </Collapsible>
+        <Link href={"/farmer/paymenthistory"}>
+          <Button
+            className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
+          >
+            <Tooltip title={"Payment history"} placement="right">
+              <Wallet className="h-6 w-6" />
+            </Tooltip>
+            {isExpanded && "Payment history"}
+          </Button>
+        </Link>
+        <Link href={"/farmer/stores"}>
+          <Button
+            className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
+          >
+            <Tooltip title={"Stores"} placement="right">
+              <Store className="h-6 w-6" />
+            </Tooltip>
+            {isExpanded && "Stores"}
+          </Button>
+        </Link>
+        <Link href={"/farmer/logs"}>
+          <Button
+            className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
+          >
+            <Tooltip title={"Logs"} placement="right">
+              <BellElectric className="h-6 w-6" />
+            </Tooltip>
+            {isExpanded && "Logs"}
+          </Button>
+        </Link>
         <Separator className={`mt-4 ${isExpanded ? "w-[90%]" : "w-[75%]"} mx-auto`} />
         <Button
           className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
           onClick={() => { handleLogOut() }}
         >
           <Tooltip title={"Log out"} placement="right">
-          <Settings className="h-6 w-6" />
-              </Tooltip>
+            <Settings className="h-6 w-6" />
+          </Tooltip>
           {isExpanded && "Log out"}
         </Button>
       </nav>

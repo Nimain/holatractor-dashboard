@@ -19,6 +19,7 @@ import "leaflet-draw/dist/leaflet.draw.css";
 import NewStore from "./NewStore"
 import { useDispatch } from "react-redux"
 import { changeNewStoreShow } from "@/redux/NewStoreShow/NewStoreShow"
+import { useRouter } from "next/navigation"
 
 interface user {
     userId: string;
@@ -38,6 +39,8 @@ const Sidebar = () => {
 
     const dispatch = useDispatch()
 
+    const router = useRouter()
+
     function fetchOwner() {
         renderInstance.get(`/owner/${user.userId}`)
             .then((res) => {
@@ -54,7 +57,7 @@ const Sidebar = () => {
         cookie.remove("isOperator")
         cookie.remove("isOwner")
         cookie.remove("isODealer")
-        window.location.reload()
+        router.push("/login")
     }
 
     useEffect(() => {

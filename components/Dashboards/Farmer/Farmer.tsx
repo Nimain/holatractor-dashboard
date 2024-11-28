@@ -306,11 +306,7 @@ const FarmerDashboard = () => {
   if (!user) return <p>user not found</p>
 
   return (
-    <div className="w-full mx-auto my-2 flex gap-5 h-screen overflow-hidden">
-
-      <Sidebar farms={farms} />
-
-      <div className="h-screen overflow-auto w-full" style={{ scrollbarWidth: "none" }}>
+      <div className="h-screen overflow-auto w-full my-4" style={{ scrollbarWidth: "none" }}>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div className="flex items-center mb-4 md:mb-0">
@@ -594,7 +590,6 @@ const FarmerDashboard = () => {
         <FarmerBookingHistory />
 
       </div>
-    </div>
   )
 }
 

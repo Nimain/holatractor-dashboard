@@ -114,8 +114,6 @@ const OwnerPayment = () => {
     }
   }, [])
 
-  console.log(ownerDetails)
-
   if (isFetching) return <OwnerShrimmer />
 
   if (!ownerDetails) return <p>Owner details not present</p>
@@ -453,7 +451,7 @@ function BankAccountForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    renderInstance.post("/bank_account", { ...formData, ownerId: user.userId }, {
+    renderInstance.post("/bank-account", { ...formData, ownerId: user.userId }, {
       headers: {
         Authorization: `Bearer ${access_token}`,
       },

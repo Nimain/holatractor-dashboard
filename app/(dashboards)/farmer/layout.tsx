@@ -2,26 +2,27 @@ import "../../globals.css"
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ReduxWrapper from "../_components/ReduxWrapper";
+import SidebarWrapper from "./_components/SidebarWrapper";
 
 function FarmerDashboardLayout({
-    children,
-  }: {
-    children: React.ReactNode
-  }) {
-    return (
-      <html lang="en">
-        <body>
-          <div className="flex h-screen bg-[#EDF4FA]">
-            <main className="flex-1 overflow-y-auto p-4 md:p-8">
-              <ReduxWrapper>
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en">
+      <body>
+        <ReduxWrapper>
+          <SidebarWrapper>
+            <main className="flex-1 overflow-y-auto my-2">
               <ToastContainer />
               {children}
-              </ReduxWrapper>
             </main>
-          </div>
-        </body>
-      </html>
-    )
-  }
+          </SidebarWrapper>
+        </ReduxWrapper>
+      </body>
+    </html>
+  )
+}
 
 export default FarmerDashboardLayout
