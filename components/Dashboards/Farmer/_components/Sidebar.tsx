@@ -45,28 +45,29 @@ const Sidebar = () => {
     cookie.remove("isOwner")
     cookie.remove("isODealer")
     router.push("/login")
-
-    function fetchFarmer() {
-
-      renderInstance.get(`/farmer/${user.userId}`)
-        .then((res) => {
-          setFarms(res.data.farms)
-          dispatch(changeFarm(res.data.farms[0]))
-        }).catch((err) => {
-          if (err.response && err.response.status === 404 && err.response.data.message === "Farmer not found") {
-            errorMessage("Farmer not found")
-          } else {
-            errorMessage("Error fetching user detaild")
-          }
-        })
-    }
-
-    useEffect(() => {
-      if (user) {
-        fetchFarmer()
-      }
-    }, [])
   }
+
+  function fetchFarmer() {
+
+    renderInstance.get(`/farmer/${user.userId}`)
+      .then((res) => {
+        console.log(res.data)
+        setFarms(res.data.farms)
+        dispatch(changeFarm(res.data.farms[0]))
+      }).catch((err) => {
+        if (err.response && err.response.status === 404 && err.response.data.message === "Farmer not found") {
+          errorMessage("Farmer not found")
+        } else {
+          errorMessage("Error fetching user detaild")
+        }
+      })
+  }
+
+  useEffect(() => {
+    if (user) {
+      fetchFarmer()
+    }
+  }, [])
 
   if (!user) return
 
@@ -107,16 +108,14 @@ const Sidebar = () => {
           </CollapsibleTrigger>
           <CollapsibleContent className="pl-6 mt-2 space-y-2">
             {isExpanded && farms.map((store) => (
-              <Button
-                className="w-full justify-start text-sm bg-transparent hover:bg-white/20"
+              <Link
                 key={store.id}
-                onClick={() => {
-                  dispatch(changeFarm(store))
-                  setIsExpanded(false)
-                }}
-              >
+              href={`/farmer/farm/${store.id}`}>
+              <Button
+                className="w-full justify-start text-sm bg-transparent hover:bg-white/20">
                 {store.name}
               </Button>
+                </Link>
             ))}
             {isExpanded && <Link href={"/farmer/farm/new"}>
               <Button
