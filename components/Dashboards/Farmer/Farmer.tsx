@@ -55,14 +55,9 @@ import {
   totalCostTranslation,
   logTranslations
 } from "./FarmerTranslation"
-import Languages from "@/components/Menubar/Languages"
 import { useDispatch, useSelector } from "react-redux"
 import { RootState } from "@/redux/store"
 import { changeFarm } from "@/redux/ActiveFarm/ActiveFarm"
-import { motion, AnimatePresence } from 'framer-motion'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import io, { Socket } from 'socket.io-client';
-import WithoutStoreBooking from "./WithoutStoreBooking"
 import LatestBookingComponent from "./_components/LatestBookingComponent"
 
 interface user {
@@ -97,11 +92,6 @@ const FarmerDashboard = () => {
   const [allLogs, setAllLogs] = useState<Logs[]>([])
   const [fetchingLogs, setFetchingLogs] = useState(false)
 
-  const [notifications, setNotifications] = useState<FarmerNotification[]>([])
-  const [isOpen, setIsOpen] = useState(false)
-
-  const [socket, setSocket] = useState<Socket | null>(null);
-
   const { activeFarm } = useSelector(
     (root: RootState) => root.ActiveFarm
   );
@@ -124,6 +114,7 @@ const FarmerDashboard = () => {
         settotalBookings(res.data.totalBookings)
         setBookings(res.data.bookings)
         setFarms(res.data.farms)
+        setAllLogs(res.data.logs)
         dispatch(changeFarm(res.data.farms[0]))
       }).catch((err) => {
         if (err.response && err.response.status === 404 && err.response.data.message === "Farmer not found") {
@@ -133,18 +124,6 @@ const FarmerDashboard = () => {
         }
       }).finally(() => {
         setFetchingFarmerDetails(false)
-      })
-  }
-
-  function fetchLogs() {
-    setFetchingLogs(true)
-    renderInstance.get('/log')
-      .then((res) => {
-        setAllLogs(res.data)
-      }).catch((err) => {
-        errorMessage("Error in fetching log details")
-      }).finally(() => {
-        setFetchingLogs(false)
       })
   }
 
@@ -165,10 +144,6 @@ const FarmerDashboard = () => {
   const truncateDetails = (details: string) => {
     return details.slice(0, 15) + (details.length > 15 ? '...' : '')
   }
-
-  useEffect(() => {
-    fetchLogs()
-  }, [])
 
   useEffect(() => {
     if (user) {

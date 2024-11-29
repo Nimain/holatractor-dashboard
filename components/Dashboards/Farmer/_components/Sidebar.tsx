@@ -73,7 +73,7 @@ const Sidebar = () => {
   return (
     <aside
       className={`shadow-md transition-all duration-300 rounded-2xl ${isExpanded ? 'w-64' : 'w-16'} h-[90vh] bg-primaryColor text-white my-auto`}>
-      <div className="flex items-center justify-center gap-2 w-full mx-auto mt-4 mb-2">
+      <Link href={"/farmer"} className="flex items-center justify-center gap-2 w-full mx-auto mt-4 mb-2">
         <Image
           src={"https://holaimagesdata.s3.us-west-2.amazonaws.com/web/logo/ISOLOGO_HT_BLANCO.png"}
           alt="Logo"
@@ -81,7 +81,7 @@ const Sidebar = () => {
           height={24}
           className="h-6 object-cover w-auto" />
         {isExpanded && <h1 className="text-xl md:text-2xl font-medium md:font-bold">Holatractor</h1>}
-      </div>
+      </Link>
       <div className="px-4 flex justify-between items-center">
         {isExpanded && <h1 className="text-xl md:text-2xl font-medium md:font-bold">Dashboard</h1>}
         <Button size="icon" onClick={() => setIsExpanded(!isExpanded)} className="bg-transparent hover:bg-white/20">
@@ -130,20 +130,20 @@ const Sidebar = () => {
           <Button
             className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
           >
-            <Tooltip title={"Booking history"} placement="right">
+            <Tooltip title={"Booking"} placement="right">
               <Tractor className="h-6 w-6" />
             </Tooltip>
-            {isExpanded && "Booking history"}
+            {isExpanded && "Booking"}
           </Button>
         </Link>
         <Link href={"/farmer/paymenthistory"}>
           <Button
             className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
           >
-            <Tooltip title={"Payment history"} placement="right">
+            <Tooltip title={"Payment"} placement="right">
               <Wallet className="h-6 w-6" />
             </Tooltip>
-            {isExpanded && "Payment history"}
+            {isExpanded && "Payment"}
           </Button>
         </Link>
         <Link href={"/farmer/stores"}>

@@ -293,7 +293,7 @@ const WithoutStoreBooking = () => {
                         setOpen(true);
                     }}
                 >
-                    <span>Post Booking</span>
+                    <span>New Booking</span>
                 </Button>
             </DialogTrigger>
 
@@ -339,6 +339,8 @@ const WithoutStoreBooking = () => {
                                 <Separator />
 
                                 {/* Distance Section */}
+                                {
+                                    newBooking.distance &&
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-2">
                                         <MapPin className="h-5 w-5 text-primary" />
@@ -346,6 +348,7 @@ const WithoutStoreBooking = () => {
                                     </div>
                                     <p className="pl-7">Total Distance: {parseFloat(newBooking.distance).toFixed(2)} km</p>
                                 </div>
+                                }
 
                                 <Separator />
 

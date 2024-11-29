@@ -1,98 +1,91 @@
 "use client"
 
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ChevronDown, Search, ArrowUpDown, Check, X } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Logs } from '@/utils/Types/types';
+import { useCookie } from 'next-cookie';
+import { renderInstance } from '@/utils/Axios/RenderInstance';
+import { errorMessage } from '@/utils/Toastify/Messages';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { logTranslations } from "../FarmerTranslation"
+import TranslatedText from "@/components/Menubar/TranslatedText"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
-// Payment interface
-interface Payment {
-  id: string;
-  booking_id: string;
-  user_id: string;
-  amount: number;
-  status: 'Completed' | 'Pending' | 'Failed';
-  payment_method: string;
-  transaction_id: string;
-  created_at: Date;
-  updated_at: Date;
+interface user {
+  userId: string;
+  image: string;
+  name: string;
+  email: string;
 }
 
-// Mock data for demonstration
-const mockPayments: Payment[] = [
-  {
-    id: 'PAY001',
-    booking_id: 'BOOK001',
-    user_id: 'user1',
-    amount: 500.00,
-    status: 'Completed',
-    payment_method: 'Credit Card',
-    transaction_id: 'TXN123456',
-    created_at: new Date('2024-01-15T10:30:00'),
-    updated_at: new Date('2024-01-15T10:35:00'),
-  },
-  {
-    id: 'PAY002',
-    booking_id: 'BOOK002',
-    user_id: 'user2',
-    amount: 750.50,
-    status: 'Pending',
-    payment_method: 'Bank Transfer',
-    transaction_id: 'TXN789012',
-    created_at: new Date('2024-02-20T09:15:00'),
-    updated_at: new Date('2024-02-20T09:15:00'),
-  },
-  {
-    id: 'PAY003',
-    booking_id: 'BOOK003',
-    user_id: 'user3',
-    amount: 300.25,
-    status: 'Failed',
-    payment_method: 'PayPal',
-    transaction_id: 'TXN345678',
-    created_at: new Date('2024-03-05T14:45:00'),
-    updated_at: new Date('2024-03-05T14:50:00'),
-  },
-];
-
 const FarmerLogs = () => {
-    const [payments, setPayments] = useState<Payment[]>(mockPayments);
+    const [payments, setPayments] = useState<Logs[]>([]);
     const [searchTerm, setSearchTerm] = useState<string>('');
+    const [fetching, setFetching] = useState(false)
+
+    const { cookie } = useCookie()
+    const user: user = cookie.get("user")
   
     // Search handler
     const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
       const term = event.target.value.toLowerCase();
       setSearchTerm(term);
   
-      const filteredPayments = mockPayments.filter(payment => 
+      const filteredPayments = payments.filter(payment => 
         payment.id.toLowerCase().includes(term) ||
-        payment.booking_id.toLowerCase().includes(term) ||
-        payment.payment_method.toLowerCase().includes(term) ||
-        payment.status.toLowerCase().includes(term)
+        payment.email.toLowerCase().includes(term) ||
+        payment.action.toLowerCase().includes(term) ||
+        payment.details.toLowerCase().includes(term)
       );
   
       setPayments(filteredPayments);
     };
-  
-    // Status badge component
-    const StatusBadge: React.FC<{ status: Payment['status'] }> = ({ status }) => {
-      const statusStyles = {
-        Completed: 'bg-green-100 text-green-800',
-        Pending: 'bg-yellow-100 text-yellow-800',
-        Failed: 'bg-red-100 text-red-800',
+
+    const truncateDetails = (details: string) => {
+      return details.slice(0, 15) + (details.length > 15 ? '...' : '')
+    }
+
+    const formatDate = (date: string | Date): string => {
+      const options: Intl.DateTimeFormatOptions = {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
       };
   
-      return (
-        <Badge className={`${statusStyles[status]} capitalize`}>
-          {status === 'Completed' && <Check className="w-3 h-3 mr-1" />}
-          {status === 'Failed' && <X className="w-3 h-3 mr-1" />}
-          {status}
-        </Badge>
-      );
+      const dateObj = typeof date === "string" ? new Date(date) : date;
+  
+      return dateObj.toLocaleDateString(undefined, options);
     };
+
+    function fetchPayments(){
+      setFetching(true)
+      renderInstance.get(`/farmer/logPage/${user.userId}`)
+      .then((res)=>{
+        setPayments(res.data)
+      }).catch((err)=>{
+        errorMessage("Error fetching payments")
+      }).finally(()=>{
+        setFetching(false)
+      })
+    }
+  
+    useEffect(()=>{
+      if(user){
+        fetchPayments()
+      }
+    },[])
   
     return (
       <div className="p-6">
@@ -106,18 +99,15 @@ const FarmerLogs = () => {
             onClick={() => {
               // Export functionality
               const headers = [
-                'Payment ID', 'Booking ID', 'Amount', 'Status', 
-                'Payment Method', 'Transaction ID', 'Date'
+                'Id', 'Action', 'Details', 'Email', 'Time'
               ];
   
               const csvData = payments.map(payment => [
                 payment.id,
-                payment.booking_id,
-                `$${payment.amount.toFixed(2)}`,
-                payment.status,
-                payment.payment_method,
-                payment.transaction_id,
-                format(payment.created_at, 'yyyy-MM-dd HH:mm')
+                payment.action,
+                payment.details,
+                payment.email,
+                format(payment.createdAt, 'yyyy-MM-dd HH:mm')
               ]);
   
               const csvContent = [
@@ -160,50 +150,47 @@ const FarmerLogs = () => {
   
         {/* Payments Table */}
         <Card className="overflow-x-auto">
-          <table className="w-full min-w-[800px]">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left p-4 font-medium text-gray-600">
-                  Payment ID <ArrowUpDown size={14} className="inline ml-1" />
-                </th>
-                <th className="text-left p-4 font-medium text-gray-600">
-                  Booking ID <ArrowUpDown size={14} className="inline ml-1" />
-                </th>
-                <th className="text-left p-4 font-medium text-gray-600">
-                  Amount <ArrowUpDown size={14} className="inline ml-1" />
-                </th>
-                <th className="text-left p-4 font-medium text-gray-600">
-                  Status <ArrowUpDown size={14} className="inline ml-1" />
-                </th>
-                <th className="text-left p-4 font-medium text-gray-600">
-                  Payment Method <ArrowUpDown size={14} className="inline ml-1" />
-                </th>
-                <th className="text-left p-4 font-medium text-gray-600">
-                  Transaction ID <ArrowUpDown size={14} className="inline ml-1" />
-                </th>
-                <th className="text-left p-4 font-medium text-gray-600">
-                  Date <ArrowUpDown size={14} className="inline ml-1" />
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {payments.map((payment, index) => (
-                <tr key={index} className="border-b hover:bg-gray-50">
-                  <td className="p-4 text-sm text-blue-600">{payment.id}</td>
-                  <td className="p-4 text-sm">{payment.booking_id}</td>
-                  <td className="p-4 text-sm font-medium">${payment.amount.toFixed(2)}</td>
-                  <td className="p-4 text-sm">
-                    <StatusBadge status={payment.status} />
-                  </td>
-                  <td className="p-4 text-sm">{payment.payment_method}</td>
-                  <td className="p-4 text-sm text-gray-600">{payment.transaction_id}</td>
-                  <td className="p-4 text-sm text-gray-600">
-                    {format(payment.created_at, 'yyyy-MM-dd HH:mm')}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <Table>
+                      <TableCaption>
+                        <TranslatedText greetings={logTranslations.recentActivitiesList} />
+                      </TableCaption>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="font-bold">
+                            <TranslatedText greetings={logTranslations.slNo} />
+                          </TableHead>
+                          <TableHead className="font-bold">
+                            <TranslatedText greetings={logTranslations.action} />
+                          </TableHead>
+                          <TableHead className="font-bold">
+                            <TranslatedText greetings={logTranslations.details} />
+                          </TableHead>
+                          <TableHead className="font-bold">
+                            <TranslatedText greetings={logTranslations.time} />
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {payments.length === 0 ? <p><TranslatedText greetings={logTranslations.noLogsPresent} /></p> : payments.filter((log) => (log.userId === user.userId)).reverse().map((log, index) => (
+                          <TooltipProvider
+                            key={index}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <TableRow>
+                                  <TableCell>{index + 1}</TableCell>
+                                  <TableCell>{log.action}</TableCell>
+                                  <TableCell>{truncateDetails(log.details)}</TableCell>
+                                  <TableCell>{formatDate(log.createdAt)}</TableCell>
+                                </TableRow>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{log.details}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ))}
+                      </TableBody>
+                    </Table>
         </Card>
       </div>
     );

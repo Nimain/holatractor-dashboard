@@ -13,25 +13,12 @@ import {
     CardTitle,
 } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-
-import {
-    ChartConfig,
-    ChartContainer,
-    ChartTooltip,
-    ChartTooltipContent,
-} from "@/components/ui/chart"
 import { YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 import { CalendarIcon, ChevronDown, Minus, Plus, Search, User, X, Wifi, Share2, Users, ArrowRight, MapPin, Clock, Phone, } from 'lucide-react'
 import { addDays, format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
 import {
     Select,
     SelectContent,
@@ -42,11 +29,12 @@ import {
 import { Booking, BookingHours, BookingStatus, OperatorInStore, PaymentStatus } from "@/utils/Types/types";
 import { useCookie } from "next-cookie";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
-import { errorMessage } from "@/utils/Toastify/Messages";
+import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import OwnerShrimmer from "../_components/OwnerShrimmer";
 import { Badge } from "@/components/ui/badge";
 import AssignOperator from "./AssignOperator";
 import PaymentReview from "../_components/PaymentProofAction";
+import PaymentMethods from '../_components/BankAccountSelect'
 
 interface user {
     userId: string;
@@ -69,6 +57,7 @@ const Bookings = () => {
     const [allBookings, setAllBookings] = useState<Booking[]>([])
     const [fetchingBookings, setFetchingBookings] = useState(false)
     const [query, setQuery] = useState('');
+    const [confirming, setConfirming] = useState(false)
 
     const [timeRange, setTimeRange] = useState('last30');
     const [dayFilter, setDayFilter] = useState('sunday');
@@ -96,6 +85,7 @@ const Bookings = () => {
 
     const { cookie } = useCookie()
     const user: user = cookie.get("user")
+    const access_token = cookie.get("access_token")
 
     function fetchBookings() {
         setFetchingBookings(true)
@@ -111,7 +101,30 @@ const Bookings = () => {
             })
     }
 
-
+    const handleReject = (id: string) => {
+        setConfirming(true)
+        // Implement accept logic here
+        renderInstance.patch(`/booking/${id}/owner_reject`, {}, {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+          },
+        }).then((res) => {
+          successMessage("You have rejected this request")
+          fetchBookings()
+        }).catch((err) => {
+          if (err.response && err.response.status === 404 && err.response.data.message === "Booking is not valid") {
+            errorMessage("Log in user not found")
+          } else if (err.response && err.response.status === 400 && err.response.data.message === "User has not confirmed the booking. Wait till user booked") {
+            errorMessage("User has not confirmed the booking. Wait till user booked")
+          } else if (err.response && err.response.status === 400 && err.response.data.message === "You are not allowed to perform this task") {
+            errorMessage("You are not allowed to perform this task")
+          } else {
+            errorMessage("Some error occurred")
+          }
+        }).finally(() => {
+          setConfirming(false)
+        })
+      }
 
     useEffect(() => {
         const handleScroll = (e: WheelEvent) => {
@@ -572,6 +585,17 @@ const Bookings = () => {
                                                     <div className="space-y-4 mt-6">
                                                         {/* Order Info */}
                                                         <div className="space-y-2">
+
+                                                            {
+                                                                !ticket.owner_confirm && <div className="flex items-center space-x-2">
+                                                                    {/* <Button onClick={() => handleAccept(request.id)}>Accept</Button> */}
+                                                                    <PaymentMethods bookingId={ticket.id} />
+                                                                    <Button variant="destructive" onClick={() => handleReject(ticket.id)}>
+                                                                        Reject
+                                                                    </Button>
+                                                                </div>
+                                                            }
+
                                                             <div className="flex justify-between text-sm">
                                                                 <span className="text-gray-500">Id</span>
                                                                 <span>#holabook{ticket.id.slice(-5)}</span>

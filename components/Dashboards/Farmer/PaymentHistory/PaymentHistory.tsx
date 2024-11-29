@@ -19,7 +19,6 @@ interface user {
   email: string;
 }
 
-
 const PaymentHistory = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
