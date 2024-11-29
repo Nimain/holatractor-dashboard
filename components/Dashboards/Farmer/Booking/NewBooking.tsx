@@ -40,19 +40,7 @@ const NewBooking = () => {
     const [startDate, setstartDate] = useState<Date>();
     const [endDate, setEndDate] = useState<Date>();
     const [BookingHours, setBookingHours] = useState("");
-
-    const [countryName, setCountryName] = useState("");
-    const [allCountry, setAllCountry] = useState<Country[]>([]);
-    const [zipCode, setZipCode] = useState("");
-    const [fetchingCity, setFetchingCity] = useState(false);
-    const [allcity, setAllCity] = useState<City[]>([]);
-    const [popoverOpenCity, setPopoverOpenCity] = useState(false)
-    const [fetchingContry, setFetchingCountry] = useState(false);
-    const [roadName, setRoadName] = useState("");
-    const [address, setAddress] = useState("");
-    const [city, setCity] = useState("");
-    const [state, setState] = useState("");
-    const [popoverOpen, setPopoverOpen] = useState(false)
+    
     const [farms, setFarms] = useState<Farm[]>([])
     const [fetchingFarms, setFetchingFarms] = useState(false)
     const [selectedFarm, setSelectedFarm] = useState("")

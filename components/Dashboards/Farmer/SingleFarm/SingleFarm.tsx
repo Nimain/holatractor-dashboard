@@ -16,85 +16,86 @@ import Slider from 'react-slick';
 
 import 'slick-carousel/slick/slick-theme.css';
 interface Location {
-    latitude: number | null;
-    longitude: number | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 import {
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
+import FarmerShimmer from '../_components/FarmerShrimmer'
 
 const chartData = [
-    { month: "January", desktop: 186, mobile: 80 },
-    { month: "February", desktop: 305, mobile: 200 },
-    { month: "March", desktop: 237, mobile: 120 },
-    { month: "April", desktop: 73, mobile: 190 },
-    { month: "May", desktop: 209, mobile: 130 },
-    { month: "June", desktop: 214, mobile: 140 },
-    { month: "july", desktop: 209, mobile: 130 },
-    { month: "Aug", desktop: 214, mobile: 140 },
+  { month: "January", desktop: 186, mobile: 80 },
+  { month: "February", desktop: 305, mobile: 200 },
+  { month: "March", desktop: 237, mobile: 120 },
+  { month: "April", desktop: 73, mobile: 190 },
+  { month: "May", desktop: 209, mobile: 130 },
+  { month: "June", desktop: 214, mobile: 140 },
+  { month: "july", desktop: 209, mobile: 130 },
+  { month: "Aug", desktop: 214, mobile: 140 },
 ];
 const cardData = [
-    {
-        id: 1,
-        title: 'Signal',
-        level: 'Medium',
-        latitude: '49.8397°N',
-        longitude: '24.0297°E',
-    },
-    {
-        id: 2,
-        title: 'Location 2',
-        level: 'Low',
-        latitude: '40.7128°N',
-        longitude: '74.0060°W',
-    },
-    {
-        id: 3,
-        title: 'Location 3',
-        level: 'High',
-        latitude: '51.5074°N',
-        longitude: '0.1278°W',
-    }
+  {
+    id: 1,
+    title: 'Signal',
+    level: 'Medium',
+    latitude: '49.8397°N',
+    longitude: '24.0297°E',
+  },
+  {
+    id: 2,
+    title: 'Location 2',
+    level: 'Low',
+    latitude: '40.7128°N',
+    longitude: '74.0060°W',
+  },
+  {
+    id: 3,
+    title: 'Location 3',
+    level: 'High',
+    latitude: '51.5074°N',
+    longitude: '0.1278°W',
+  }
 ];
 const cardDataLeft = [
-    {
-        title: 'pH',
-        value: '6.5',
-        description: 'The pH of the soil decreased',
-        bgClass: 'bg-zinc-900/50',
-        textClass: 'text-black/50'
-    },
-    {
-        title: 'Acidity',
-        value: '5.8',
-        description: 'Soil acidity is changing',
-        bgClass: 'bg-zinc-800/50',
-        textClass: 'text-black/50'
-    }
+  {
+    title: 'pH',
+    value: '6.5',
+    description: 'The pH of the soil decreased',
+    bgClass: 'bg-zinc-900/50',
+    textClass: 'text-black/50'
+  },
+  {
+    title: 'Acidity',
+    value: '5.8',
+    description: 'Soil acidity is changing',
+    bgClass: 'bg-zinc-800/50',
+    textClass: 'text-black/50'
+  }
 ];
 
 const cardDataRight = [
-    {
-        title: 'Temperature',
-        value: '23°',
-        description: 'Soil temperature in degrees Celsius',
-        bgClass: 'bg-[#1A1600]',
-        textClass: 'text-amber-500',
-        highlightClass: 'text-amber-500'
-    },
-    {
-        title: 'Heat Index',
-        value: '26°',
-        description: 'Feels like temperature',
-        bgClass: 'bg-[#2A2600]',
-        textClass: 'text-amber-600',
-        highlightClass: 'text-amber-600'
-    }
+  {
+    title: 'Temperature',
+    value: '23°',
+    description: 'Soil temperature in degrees Celsius',
+    bgClass: 'bg-[#1A1600]',
+    textClass: 'text-amber-500',
+    highlightClass: 'text-amber-500'
+  },
+  {
+    title: 'Heat Index',
+    value: '26°',
+    description: 'Feels like temperature',
+    bgClass: 'bg-[#2A2600]',
+    textClass: 'text-amber-600',
+    highlightClass: 'text-amber-600'
+  }
 ];
 
 interface Location {
@@ -102,8 +103,22 @@ interface Location {
   longitude: number | null;
 }
 
+interface FarmDetails {
+  farmDetails: Farm,
+  centerPoint: {
+    lat: number | null,
+    lng: number | null
+  },
+  cropYields: {
+    wheat: number | null,
+    corn: number | null,
+    soybean: number | null,
+    rice: number | null
+  }
+}
+
 const SingleFarm = () => {
-  const [farm, setFarm] = useState<Farm | null>(null)
+  const [farm, setFarm] = useState<FarmDetails | null>(null)
   const [fetching, setFetching] = useState(false)
   const [error, setError] = useState<string | null>(null);
   const [location, setLocation] = useState<Location>({ latitude: null, longitude: null });
@@ -118,22 +133,13 @@ const SingleFarm = () => {
       .then((res) => {
         setFarm(res.data)
       }).catch(() => {
+        console.log(error)
         errorMessage("Error fetching farm details")
       }).finally(() => {
         setFetching(false)
       })
   }
 
-  if (fetching) return <p>Getting farm details</p>
-
-  // if (!farm) return <p>Farm details not available</p>
-
-  const crops = [
-    { name: "Wheat", yield: "4.5", unit: "tons/acre" },
-    { name: "Corn", yield: "180", unit: "bushels/acre" },
-    { name: "Soybeans", yield: "52", unit: "bushels/acre" },
-    { name: "Rice", yield: "8700", unit: "lbs/acre" },
-  ]
   const sliderSettings = {
     dots: true,
     infinite: true,
@@ -179,12 +185,6 @@ const SingleFarm = () => {
     )
   };
 
-  // useEffect(() => {
-  //   if (slug) {
-  //     fetchFarmer()
-  //   }
-  // }, [slug])
-
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -203,6 +203,16 @@ const SingleFarm = () => {
     }
   }, []);
 
+  useEffect(() => {
+    if (slug) {
+      fetchFarmer()
+    }
+  }, [])
+
+  if (fetching) return <FarmerShimmer />
+
+  if (!farm) return <p>Farm details not available</p>
+
   return (
     <div className="min-h-screen bg-white text-black">
       {/* Main Content */}
@@ -211,7 +221,9 @@ const SingleFarm = () => {
         <Card className="relative h-full min-h-[400px] bg-zinc-900/50">
           <div className="flex justify-between border-b border-none px-6 py-4 bg-white">
             <div className="flex items-center">
-              <span className="text-xl font-light">Farm Name</span>
+              <span className="text-xl font-light">
+                {farm.farmDetails.name}
+              </span>
               <MoreHorizontal className="h-6 w-6" />
             </div>
             <div>
@@ -224,8 +236,8 @@ const SingleFarm = () => {
           <div className="h-[calc(100%-80px)]">
             {(location?.latitude && location?.longitude) ? (
               <MapContainer
-                center={[location.latitude, location.longitude]}
-                zoom={6}
+                center={(farm.centerPoint.lat && farm.centerPoint.lng) ? [farm.centerPoint.lat, farm.centerPoint.lng] : [location.latitude, location.longitude]}
+                zoom={18}
                 scrollWheelZoom={false}
                 className="h-full w-full"
               >
@@ -233,6 +245,7 @@ const SingleFarm = () => {
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 />
+                <Polygon pathOptions={limeOptions} positions={farm.farmDetails.boundary.coordinates} />
               </MapContainer>
             ) : (
               <div className="flex items-center justify-center h-full">
@@ -277,17 +290,38 @@ const SingleFarm = () => {
                 </CardHeader>
                 <CardContent className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-800">
                   <div className="space-y-4">
-                    {crops.map((crop, index) => (
-                      <div
-                        key={index}
-                        className="flex justify-between items-center py-3 px-2 border-b border-zinc-800 last:border-b-0 hover:bg-zinc-800/50 transition-colors rounded-lg"
-                      >
-                        <span className="text-lg font-medium">{crop.name}</span>
-                        <span className="text-zinc-400">
-                          {crop.yield} <span className="text-sm">{crop.unit}</span>
-                        </span>
-                      </div>
-                    ))}
+                    <div
+                      className="flex justify-between items-center py-3 px-2 border-b border-zinc-800 last:border-b-0 hover:bg-zinc-800/50 transition-colors rounded-lg"
+                    >
+                      <span className="text-lg font-medium">Wheat</span>
+                      <span className="text-zinc-400">
+                        {farm.cropYields.wheat?.toFixed(2)} <span className="text-sm">per/acer</span>
+                      </span>
+                    </div>
+                    <div
+                      className="flex justify-between items-center py-3 px-2 border-b border-zinc-800 last:border-b-0 hover:bg-zinc-800/50 transition-colors rounded-lg"
+                    >
+                      <span className="text-lg font-medium">Corn</span>
+                      <span className="text-zinc-400">
+                        {farm.cropYields.corn?.toFixed(2)} <span className="text-sm">per/acer</span>
+                      </span>
+                    </div>
+                    <div
+                      className="flex justify-between items-center py-3 px-2 border-b border-zinc-800 last:border-b-0 hover:bg-zinc-800/50 transition-colors rounded-lg"
+                    >
+                      <span className="text-lg font-medium">Soyabean</span>
+                      <span className="text-zinc-400">
+                        {farm.cropYields.soybean?.toFixed(2)} <span className="text-sm">per/acer</span>
+                      </span>
+                    </div>
+                    <div
+                      className="flex justify-between items-center py-3 px-2 border-b border-zinc-800 last:border-b-0 hover:bg-zinc-800/50 transition-colors rounded-lg"
+                    >
+                      <span className="text-lg font-medium">Rice</span>
+                      <span className="text-zinc-400">
+                        {farm.cropYields.rice?.toFixed(2)} <span className="text-sm">per/acer</span>
+                      </span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -439,27 +473,27 @@ const SingleFarm = () => {
     </div>
   )
 
-  return (
-    <>
-      {error ? (
-        <p>Error: {error}</p>
-      ) : (location.latitude && location.longitude) ? (
-        <MapContainer
-          center={farm?.boundary.coordinates[0]}
-          zoom={13}
-          scrollWheelZoom={false}
-          style={{ width: "100%", height: "100vh", zIndex: 1 }}>
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <Polygon pathOptions={limeOptions} positions={farm?.boundary.coordinates} />
-        </MapContainer>
-      ) : (
-        <p>Latitude and longitude not available</p>
-      )}
-    </>
-  )
+  // return (
+  //   <>
+  //     {error ? (
+  //       <p>Error: {error}</p>
+  //     ) : (location.latitude && location.longitude) ? (
+  //       <MapContainer
+  //         center={farm?.boundary.coordinates[0]}
+  //         zoom={13}
+  //         scrollWheelZoom={false}
+  //         style={{ width: "100%", height: "100vh", zIndex: 1 }}>
+  //         <TileLayer
+  //           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  //           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+  //         />
+  //         <Polygon pathOptions={limeOptions} positions={farm?.boundary.coordinates} />
+  //       </MapContainer>
+  //     ) : (
+  //       <p>Latitude and longitude not available</p>
+  //     )}
+  //   </>
+  // )
 }
 
 export default SingleFarm

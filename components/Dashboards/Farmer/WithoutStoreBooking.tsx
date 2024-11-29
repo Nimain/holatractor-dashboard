@@ -232,7 +232,6 @@ const WithoutStoreBooking = () => {
                 user_id: user.userId,
                 farm_id: selectedFarm,
                 start_date: start_date,
-                end_date: BookingHours === "more" ? date?.to : new Date(),
                 booking_hours: BookingHours,
                 tractors: selectedTractors,
                 attachments: selectedAttachments,

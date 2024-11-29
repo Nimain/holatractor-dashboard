@@ -16,19 +16,7 @@ import AddAttachment from './_components/AddAttachment'
 import { AttachmentCard } from './_components/AttachmentCard'
 import AlternatingAddForm from './_components/AlternatingAddform'
 
-export default function StorePage({
-  location = 'Greece',
-  temperature = 28,
-  priceRange = { min: 1581, max: 3162 },
-}: {
-  storeImages: string[];
-  location?: string;
-  temperature?: number;
-  priceRange?: {
-    min: number;
-    max: number;
-  };
-}) {
+export default function StorePage() {
   const [store, setStore] = useState<Store | null>(null)
   const [fetchingStoreDetails, setFetchingStoreDetails] = useState(false)
 
@@ -49,7 +37,6 @@ export default function StorePage({
     renderInstance.get(`/store/${slug}`)
       .then((res) => {
         setStore(res.data)
-        console.log(res.data)
       }).catch((err) => {
         errorMessage("Error fetching store details")
       }).finally(() => {

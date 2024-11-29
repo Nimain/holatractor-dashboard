@@ -50,7 +50,6 @@ const Sidebar = () => {
 
     renderInstance.get(`/farmer/${user.userId}`)
       .then((res) => {
-        console.log(res.data)
         setFarms(res.data.farms)
         dispatch(changeFarm(res.data.farms[0]))
       }).catch((err) => {

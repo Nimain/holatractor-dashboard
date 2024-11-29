@@ -1,69 +1,70 @@
 "use client"
 
 import { renderInstance } from '@/utils/Axios/RenderInstance';
+import { errorMessage } from '@/utils/Toastify/Messages';
 import { Store } from '@/utils/Types/types';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import FarmerShimmer from '../_components/FarmerShrimmer';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+
+interface Location {
+  latitude: number | null;
+  longitude: number | null;
+}
+
+interface DistanceStore {
+  store: Store,
+  distance: number,
+  cheapestEquipment: number | null,
+  mostExpensiveEquipment: number | null
+}
 
 const Stores = () => {
-  const [stores, setStores] = useState<Store[]>([])
+  const [stores, setStores] = useState<DistanceStore[]>([])
   const [fetching, setFetching] = useState(false)
 
-  const centers = [
-    {
-      name: "Distance",
-      rating: 7.5,
-      distance: "2 miles",
-      service: "Price ",
-      price: 587.0,
-      image: "https://chehalisfarmstore.com/wp-content/uploads/2023/06/The-Farm-Store-sq.jpg",
-    },
-    {
-      name: "Distance",
-      rating: 8.0,
-      distance: "8 miles",
-      service: "Price",
-      price: 490.0,
-      image: "https://chehalisfarmstore.com/wp-content/uploads/2023/06/The-Farm-Store-sq.jpg",
-    },
-    {
-      name: "Distance",
-      rating: 6.3,
-      distance: "28 miles",
-      service: "Price",
-      price: 325.0,
-      image: "https://chehalisfarmstore.com/wp-content/uploads/2023/06/The-Farm-Store-sq.jpg",
-    },
-    {
-      name: "Distance",
-      rating: 7.8,
-      distance: "5 miles",
-      service: "Price",
-      price: 450.0,
-      image: "https://chehalisfarmstore.com/wp-content/uploads/2023/06/The-Farm-Store-sq.jpg",
-    },
-    {
-      name: "Distance",
-      rating: 8.2,
-      distance: "12 miles",
-      service: "Price",
-      price: 275.0,
-      image: "https://chehalisfarmstore.com/wp-content/uploads/2023/06/The-Farm-Store-sq.jpg",
-    },
-    {
-      name: "Distance",
-      rating: 8.5,
-      distance: "15 miles",
-      service: "Price",
-      price: 899.0,
-      image: "https://chehalisfarmstore.com/wp-content/uploads/2023/06/The-Farm-Store-sq.jpg",
-    },
-  ];
+  const [location, setLocation] = useState<Location>({ latitude: null, longitude: null });
+  const [error, setError] = useState<string | null>(null);
 
   function getAllStores() {
-    setFetching(true)
-    renderInstance.get("/store")
+    if(location.latitude && location.longitude){
+      setFetching(true)
+      renderInstance.get(`/store/all_stores/with_in_distance?lat=${location.latitude}&lng=${location.longitude}&radius=80`)
+      .then(res=>{
+        setStores(res.data)
+      }).catch((err)=>{
+        errorMessage("Error fetching stores")
+      }).finally(()=>{
+        setFetching(false)
+      })
+    }
   }
+
+  useEffect(()=>{
+    getAllStores()
+  },[location])
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position: GeolocationPosition) => {
+          setLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error: GeolocationPositionError) => {
+          setError(error.message);
+        }
+      );
+    } else {
+      setError("Geolocation is not supported by this browser.");
+    }
+  }, []);
+
+  if(fetching) return <FarmerShimmer />
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -71,7 +72,9 @@ const Stores = () => {
       <div className="flex justify-between items-center mb-8">
         <div className="flex items-center gap-4">
           <h1 className="text-3xl font-semibold text-gray-900">Farm store</h1>
-          <span className="text-2xl text-gray-500">175</span>
+          <span className="text-2xl text-gray-500">
+            {stores.length}
+          </span>
         </div>
 
         <div className="flex gap-4">
@@ -101,44 +104,43 @@ const Stores = () => {
 
       {/* Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {centers.map((center, index) => (
-          <div
-            key={index}
-            className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-          >
-            <div className="relative">
-              <Image
-                src={"https://wallpapercave.com/wp/wp7313761.jpg"}
-                alt={center.name}
-                width={400}
-                height={250}
-                className="w-full h-48 object-cover"
-                placeholder="blur"
-                blurDataURL="https://chehalisfarmstore.com/wp-content/uploads/2023/06/The-Farm-Store-sq.jpg"
-              />
-              <div className="absolute top-4 left-4 bg-white px-2 py-1 rounded-lg shadow-sm">
-                <span className="font-medium">⬥ {center.rating}</span>
-              </div>
-            </div>
+        {stores.map((center, index) => (
+           <Link
+           href={`/farmer/stores/${center.store.id}`}
+           key={index}
+           className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+         >
+           <div className="relative">
+             <Image
+               src={center.store.image}
+               alt={center.store.name}
+               width={400}
+               height={250}
+               className="w-full h-48 object-cover"
+               placeholder="blur"
+               blurDataURL="https://chehalisfarmstore.com/wp-content/uploads/2023/06/The-Farm-Store-sq.jpg"
+             />
+             {/* <div className="absolute top-4 left-4 bg-white px-2 py-1 rounded-lg shadow-sm">
+               <span className="font-medium">⬥ {center.rating}</span>
+             </div> */}
+           </div>
 
-            <div className="p-4">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 className="font-medium text-lg text-gray-900">{center.name}</h3>
-                  <div className="flex items-center gap-2 text-gray-500">
-                    <span>{center.service}</span>
-                    <span>›</span>
-                    <div className="text-xl font-semibold text-gray-900">
-                      ${center.price.toFixed(2)}
-                    </div>
-                  </div>
-                </div>
-                <span className="text-gray-500 text-sm">{center.distance}</span>
-              </div>
+           <div className="p-4">
+             <div className="flex justify-between items-start mb-2">
+               <div>
+                 <h3 className="font-medium text-lg text-gray-900">{center.store.name}</h3>
+                 <div className="flex items-center gap-2 text-gray-500">
+                   <div className="text-xl font-semibold text-gray-900">
+               ${center.cheapestEquipment ? `${center.cheapestEquipment}` : "0"} - ${center.mostExpensiveEquipment ? center.mostExpensiveEquipment : "0"}
+             </div>
+                 </div>
+               </div>
+               <span className="text-gray-500 text-sm">{center.distance}Km</span>
+             </div>
 
-
-            </div>
-          </div>
+             
+           </div>
+         </Link>
         ))}
       </div>
     </div>

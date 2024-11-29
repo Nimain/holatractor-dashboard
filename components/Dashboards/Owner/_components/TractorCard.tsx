@@ -4,6 +4,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tractor, TractorType } from "@/utils/Types/types"
+import Image from "next/image"
 
 interface TractorCardProps {
   tractor: Tractor
@@ -11,23 +12,24 @@ interface TractorCardProps {
 
 export function TractorCard({ tractor }: TractorCardProps) {
   return (
-    <Card className="w-full max-w-sm">
+    <Card className="w-full max-w-sm hover:drop-shadow-lg hover:scale-110 transition-all duration-300">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>{tractor.name}</span>
-          <Badge variant={getTractorTypeBadgeVariant(tractor.type)}>{tractor.type}</Badge>
+          <Badge>{tractor.type}</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="aspect-square relative mb-4">
-          <img
+          <Image
             src={tractor.images[0] || "/placeholder.svg?height=300&width=300"}
             alt={tractor.name}
-            className="object-cover rounded-md"
+            width={400}
+            height={400}
+            unoptimized={true}
+            className="object-cover w-full h-48 rounded-md"
           />
-        </div>
-        <p className="text-sm text-muted-foreground mb-2">{tractor.description}</p>
-        {tractor.model && <p className="text-sm">Model: {tractor.model}</p>}
+        <p className="text-muted-foreground my-2">{tractor.description}</p>
+        {tractor.model && <p>Model: {tractor.model}</p>}
         {/* {tractor.year && <p className="text-sm">Year: {tractor.year.getFullYear()}</p>} */}
       </CardContent>
       <CardFooter>
@@ -35,17 +37,4 @@ export function TractorCard({ tractor }: TractorCardProps) {
       </CardFooter>
     </Card>
   )
-}
-
-function getTractorTypeBadgeVariant(type: TractorType) {
-  switch (type) {
-    case TractorType.LARGE:
-      return "destructive"
-    case TractorType.MEDIUM:
-      return "default"
-    case TractorType.SMALL:
-      return "secondary"
-    default:
-      return "outline"
-  }
 }
