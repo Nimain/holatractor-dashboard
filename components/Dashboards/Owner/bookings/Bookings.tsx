@@ -45,8 +45,6 @@ import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage } from "@/utils/Toastify/Messages";
 import OwnerShrimmer from "../_components/OwnerShrimmer";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import Image from "next/image";
 import AssignOperator from "./AssignOperator";
 import PaymentReview from "../_components/PaymentProofAction";
 
