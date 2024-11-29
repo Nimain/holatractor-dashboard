@@ -1,18 +1,33 @@
 "use client"
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   ChevronDown, 
   Search, 
   ArrowUpDown 
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { Payment } from '@/utils/Types/types';
+import { Booking, BookingHours, Payment } from '@/utils/Types/types';
+import { renderInstance } from '@/utils/Axios/RenderInstance';
+import { errorMessage } from '@/utils/Toastify/Messages';
+import { useCookie } from 'next-cookie';
+
+interface user {
+  userId: string;
+  image: string;
+  name: string;
+  email: string;
+}
 
 const NewBookingHistory = () => {
-    const [bookings, setBookings] = useState<Payment[]>([]);
+    const [bookings, setBookings] = useState<Booking[]>([]);
     const [searchTerm, setSearchTerm] = useState<string>('');
-  
+    const [fetching, setFetching] = useState(false)
+
+    const { cookie } = useCookie()
+  const user: user = cookie.get("user")
+  const access_token = cookie.get("access_token")
+
     // Search handler
     const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
       const term = event.target.value.toLowerCase();
@@ -20,13 +35,41 @@ const NewBookingHistory = () => {
   
       const filteredBookings = bookings.filter(booking => 
         booking.id.toLowerCase().includes(term) ||
-        booking.reciever.first_name.toLowerCase().includes(term) ||
-        booking.reciever.last_name.toLowerCase().includes(term) ||
-        booking.reciever.middle_name?.toLowerCase().includes(term)
+        booking.store?.name.toLowerCase().includes(term)
       );
   
       setBookings(filteredBookings);
     };
+
+    const filterBookingHours = (val: string) =>{
+      let hours = "1 hour"
+      if(val === BookingHours.EIGHT_HOURS) hours = "8 hours"
+      else if(val === BookingHours.SEVEN_HOURS) hours = "7 hours"
+      else if(val === BookingHours.SIX_HOURS) hours = "6 hours"
+      else if(val === BookingHours.FIVE_HOURS) hours = "5 hours"
+      else if(val === BookingHours.FOUR_HOURS) hours = "4 hours"
+      else if(val === BookingHours.THREE_HOURS) hours = "3 hours"
+      else if(val === BookingHours.TWO_HOURS) hours = "2 hours"
+      return hours
+    }
+
+    function fetchPayments(){
+      setFetching(true)
+      renderInstance.get(`/farmer/bookingPage/${user.userId}`)
+      .then((res)=>{
+        setBookings(res.data)
+      }).catch((err)=>{
+        errorMessage("Error fetching payments")
+      }).finally(()=>{
+        setFetching(false)
+      })
+    }
+  
+    useEffect(()=>{
+      if(user){
+        fetchPayments()
+      }
+    },[])
   
     return (
       <div className="p-6">
@@ -41,19 +84,19 @@ const NewBookingHistory = () => {
             onClick={() => {
               // Export functionality
               const headers = [
-                'Booking ID', 'Owner', 'Creation Date', 
-                'Booking Type', 'Payment Date', 
-                'Payment Type', 'Total Price'
+                'Booking ID', 'Owner',
+                'Booking Type', 'Start Date', 
+                'Duration', 'Total Price', "status"
               ];
-  
+
               const csvData = bookings.map(booking => [
                 booking.id,
-                `${booking.reciever.first_name} ${booking.reciever.middle_name ?? ""} ${booking.reciever.last_name}`,
-                new Date(booking.createdAt).toISOString(),
-                booking.booking.bookingType || 'N/A',
-                `${booking.status}` === "COMPLETED" ? new Date(booking.updatedAt).toISOString() : 'N/A',
-                booking.transactionMethod || 'N/A',
-                `$${booking.amount.toFixed(2)}`
+                booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A",
+                booking.bookingType || 'N/A',
+                new Date(booking.start_date).toISOString(),
+                booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toISOString() : 'N/A',
+                `$${booking.total_cost.toFixed(2)}`,
+                booking.bookingStatus
               ]);
   
               const csvContent = [
@@ -105,19 +148,19 @@ const NewBookingHistory = () => {
                   Owner Name <ArrowUpDown size={14} className="inline" />
                 </th>
                 <th className="text-left p-4 font-medium text-gray-600">
-                  Creation Date <ArrowUpDown size={14} className="inline" />
-                </th>
-                <th className="text-left p-4 font-medium text-gray-600">
                   Booking Type <ArrowUpDown size={14} className="inline" />
                 </th>
                 <th className="text-left p-4 font-medium text-gray-600">
-                  Payment Date <ArrowUpDown size={14} className="inline" />
+                  Start Date <ArrowUpDown size={14} className="inline" />
                 </th>
                 <th className="text-left p-4 font-medium text-gray-600">
-                  Payment Type <ArrowUpDown size={14} className="inline" />
+                  Duration <ArrowUpDown size={14} className="inline" />
                 </th>
                 <th className="text-left p-4 font-medium text-gray-600">
                   Total Price <ArrowUpDown size={14} className="inline" />
+                </th>
+                <th className="text-left p-4 font-medium text-gray-600">
+                  Status <ArrowUpDown size={14} className="inline" />
                 </th>
               </tr>
             </thead>
@@ -127,27 +170,19 @@ const NewBookingHistory = () => {
                   <td className="p-4 text-sm text-blue-600">{booking.id}</td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">
-                      <div 
-                        className="w-8 h-8 bg-gray-200 rounded-full bg-cover bg-center"
-                        style={{
-                          backgroundImage: booking.reciever.image 
-                            ? `url(${booking.reciever.image})` 
-                            : 'none'
-                        }} 
-                      />
-                      <span className="text-sm">{`${booking.reciever.first_name} ${booking.reciever.middle_name ?? ""} ${booking.reciever.last_name}`}</span>
+                      <span className="text-sm">{booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A"}</span>
                     </div>
                   </td>
                   <td className="p-4 text-sm text-gray-600">
-                    {new Date(booking.createdAt).toISOString()}
+                  {booking.bookingType || 'N/A'}
                   </td>
-                  <td className="p-4 text-sm">{booking.booking.bookingType || 'N/A'}</td>
+                  <td className="p-4 text-sm">{new Date(booking.start_date).toISOString()}</td>
                   <td className="p-4 text-sm text-gray-600">
-                    {`${booking.status}` === "COMPLETED" ? new Date(booking.updatedAt).toISOString() : 'N/A'}
+                    {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toISOString() : 'N/A'}
                   </td>
-                  <td className="p-4 text-sm">{booking.transactionMethod}</td>
+                  <td className="p-4 text-sm">${booking.total_cost.toFixed(2)}</td>
                   <td className="p-4 text-sm text-blue-600 font-medium">
-                    ${booking.amount.toFixed(2)}
+                    {booking.bookingStatus}
                   </td>
                 </tr>
               ))}
