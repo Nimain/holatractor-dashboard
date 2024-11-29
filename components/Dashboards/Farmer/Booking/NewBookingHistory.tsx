@@ -93,8 +93,8 @@ const NewBookingHistory = () => {
                 booking.id,
                 booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A",
                 booking.bookingType || 'N/A',
-                new Date(booking.start_date).toISOString(),
-                booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toISOString() : 'N/A',
+                new Date(booking.start_date).toLocaleDateString(),
+                booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A',
                 `$${booking.total_cost.toFixed(2)}`,
                 booking.bookingStatus
               ]);
@@ -176,9 +176,9 @@ const NewBookingHistory = () => {
                   <td className="p-4 text-sm text-gray-600">
                   {booking.bookingType || 'N/A'}
                   </td>
-                  <td className="p-4 text-sm">{new Date(booking.start_date).toISOString()}</td>
+                  <td className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</td>
                   <td className="p-4 text-sm text-gray-600">
-                    {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toISOString() : 'N/A'}
+                    {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A'}
                   </td>
                   <td className="p-4 text-sm">${booking.total_cost.toFixed(2)}</td>
                   <td className="p-4 text-sm text-blue-600 font-medium">

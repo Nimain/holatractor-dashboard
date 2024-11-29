@@ -107,7 +107,7 @@ const FarmerLogs = () => {
                 payment.action,
                 payment.details,
                 payment.email,
-                format(payment.createdAt, 'yyyy-MM-dd HH:mm')
+                new Date(payment.createdAt).toLocaleDateString()
               ]);
   
               const csvContent = [
@@ -180,7 +180,7 @@ const FarmerLogs = () => {
                                   <TableCell>{index + 1}</TableCell>
                                   <TableCell>{log.action}</TableCell>
                                   <TableCell>{truncateDetails(log.details)}</TableCell>
-                                  <TableCell>{formatDate(log.createdAt)}</TableCell>
+                                  <TableCell>{new Date(log.createdAt).toLocaleDateString()}</TableCell>
                                 </TableRow>
                               </TooltipTrigger>
                               <TooltipContent>

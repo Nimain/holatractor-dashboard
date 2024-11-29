@@ -84,7 +84,7 @@ const PaymentHistory = () => {
               payment.status,
               payment.transactionMethod,
               `${payment.reciever.first_name} ${payment.reciever.middle_name ?? ""} ${payment.reciever.last_name}`,
-              `${payment.status}` === "COMPLETED" ? new Date(payment.createdAt).toISOString() : "Payment not settled yed"
+              `${payment.status}` === "COMPLETED" ? new Date(payment.createdAt).toLocaleDateString() : "Payment not settled yed"
             ]);
 
             const csvContent = [
@@ -167,7 +167,7 @@ const PaymentHistory = () => {
                 <td className="p-4 text-sm">{payment.transactionMethod}</td>
                 <td className="p-4 text-sm text-gray-600">{`${payment.reciever.first_name} ${payment.reciever.middle_name ?? ""} ${payment.reciever.last_name}`}</td>
                 <td className="p-4 text-sm text-gray-600">
-                  {`${payment.status}` === "COMPLETED" ? new Date(payment.createdAt).toISOString() : "Payment not settled yed"}
+                  {`${payment.status}` === "COMPLETED" ? new Date(payment.createdAt).toLocaleDateString() : "Payment not settled yed"}
                 </td>
               </tr>
             ))}
