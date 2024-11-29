@@ -1,68 +1,16 @@
 "use client"
 
-import React, { useState } from 'react';
-import { format } from 'date-fns';
+import { useState } from 'react';
 import { 
   ChevronDown, 
   Search, 
   ArrowUpDown 
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-
-// Booking interface matching previous definition
-interface Booking {
-  id: string;
-  user_id: string;
-  store_id: string;
-  start_date: Date;
-  end_date?: Date | null;
-  total_cost: number;
-  tractors: {
-    type: string;
-  }[];
-  user: {
-    name: string;
-    avatar?: string;
-  };
-  payment: {
-    type: string;
-  }[];
-}
-
-// Mock data for demonstration
-const mockBookings: Booking[] = [
-  {
-    id: 'BOOK001',
-    user_id: 'user1',
-    store_id: 'store1',
-    start_date: new Date('2024-01-15T10:00:00'),
-    end_date: new Date('2024-01-16T14:00:00'),
-    total_cost: 500.00,
-    tractors: [{ type: 'Excavator' }],
-    user: { 
-      name: 'John Doe',
-      avatar: '/path/to/avatar.jpg'
-    },
-    payment: [{ type: 'Credit Card' }]
-  },
-  {
-    id: 'BOOK002',
-    user_id: 'user2',
-    store_id: 'store2',
-    start_date: new Date('2024-02-20T09:00:00'),
-    end_date: new Date('2024-02-21T16:00:00'),
-    total_cost: 750.50,
-    tractors: [{ type: 'Tractor' }],
-    user: { 
-      name: 'Jane Smith',
-      avatar: '/path/to/avatar2.jpg'
-    },
-    payment: [{ type: 'Bank Transfer' }]
-  }
-];
+import { Payment } from '@/utils/Types/types';
 
 const NewBookingHistory = () => {
-    const [bookings, setBookings] = useState<Booking[]>(mockBookings);
+    const [bookings, setBookings] = useState<Payment[]>([]);
     const [searchTerm, setSearchTerm] = useState<string>('');
   
     // Search handler
@@ -70,10 +18,11 @@ const NewBookingHistory = () => {
       const term = event.target.value.toLowerCase();
       setSearchTerm(term);
   
-      const filteredBookings = mockBookings.filter(booking => 
+      const filteredBookings = bookings.filter(booking => 
         booking.id.toLowerCase().includes(term) ||
-        booking.user.name.toLowerCase().includes(term) ||
-        booking.tractors[0].type.toLowerCase().includes(term)
+        booking.reciever.first_name.toLowerCase().includes(term) ||
+        booking.reciever.last_name.toLowerCase().includes(term) ||
+        booking.reciever.middle_name?.toLowerCase().includes(term)
       );
   
       setBookings(filteredBookings);
@@ -85,7 +34,7 @@ const NewBookingHistory = () => {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-2xl font-bold mb-1">Booking History</h1>
-            <p className="text-gray-500 text-sm">Get your latest bookings for the last 7 days</p>
+            <p className="text-gray-500 text-sm">All of your booking history in one place.</p>
           </div>
           <button 
             className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
@@ -93,18 +42,18 @@ const NewBookingHistory = () => {
               // Export functionality
               const headers = [
                 'Booking ID', 'Owner', 'Creation Date', 
-                'Tractor Type', 'Delivery Date', 
+                'Booking Type', 'Payment Date', 
                 'Payment Type', 'Total Price'
               ];
   
               const csvData = bookings.map(booking => [
                 booking.id,
-                booking.user.name,
-                format(booking.start_date, 'yyyy-MM-dd'),
-                booking.tractors[0]?.type || 'N/A',
-                booking.end_date ? format(booking.end_date, 'yyyy-MM-dd') : 'N/A',
-                booking.payment[0]?.type || 'N/A',
-                `$${booking.total_cost.toFixed(2)}`
+                `${booking.reciever.first_name} ${booking.reciever.middle_name ?? ""} ${booking.reciever.last_name}`,
+                new Date(booking.createdAt).toISOString(),
+                booking.booking.bookingType || 'N/A',
+                `${booking.status}` === "COMPLETED" ? new Date(booking.updatedAt).toISOString() : 'N/A',
+                booking.transactionMethod || 'N/A',
+                `$${booking.amount.toFixed(2)}`
               ]);
   
               const csvContent = [
@@ -159,10 +108,10 @@ const NewBookingHistory = () => {
                   Creation Date <ArrowUpDown size={14} className="inline" />
                 </th>
                 <th className="text-left p-4 font-medium text-gray-600">
-                  Tractor Type <ArrowUpDown size={14} className="inline" />
+                  Booking Type <ArrowUpDown size={14} className="inline" />
                 </th>
                 <th className="text-left p-4 font-medium text-gray-600">
-                  Return Date <ArrowUpDown size={14} className="inline" />
+                  Payment Date <ArrowUpDown size={14} className="inline" />
                 </th>
                 <th className="text-left p-4 font-medium text-gray-600">
                   Payment Type <ArrowUpDown size={14} className="inline" />
@@ -181,24 +130,24 @@ const NewBookingHistory = () => {
                       <div 
                         className="w-8 h-8 bg-gray-200 rounded-full bg-cover bg-center"
                         style={{
-                          backgroundImage: booking.user.avatar 
-                            ? `url(${booking.user.avatar})` 
+                          backgroundImage: booking.reciever.image 
+                            ? `url(${booking.reciever.image})` 
                             : 'none'
                         }} 
                       />
-                      <span className="text-sm">{booking.user.name}</span>
+                      <span className="text-sm">{`${booking.reciever.first_name} ${booking.reciever.middle_name ?? ""} ${booking.reciever.last_name}`}</span>
                     </div>
                   </td>
                   <td className="p-4 text-sm text-gray-600">
-                    {format(booking.start_date, 'yyyy-MM-dd')}
+                    {new Date(booking.createdAt).toISOString()}
                   </td>
-                  <td className="p-4 text-sm">{booking.tractors[0]?.type || 'N/A'}</td>
+                  <td className="p-4 text-sm">{booking.booking.bookingType || 'N/A'}</td>
                   <td className="p-4 text-sm text-gray-600">
-                    {booking.end_date ? format(booking.end_date, 'yyyy-MM-dd') : 'N/A'}
+                    {`${booking.status}` === "COMPLETED" ? new Date(booking.updatedAt).toISOString() : 'N/A'}
                   </td>
-                  <td className="p-4 text-sm">{booking.payment[0]?.type || 'N/A'}</td>
+                  <td className="p-4 text-sm">{booking.transactionMethod}</td>
                   <td className="p-4 text-sm text-blue-600 font-medium">
-                    ${booking.total_cost.toFixed(2)}
+                    ${booking.amount.toFixed(2)}
                   </td>
                 </tr>
               ))}
