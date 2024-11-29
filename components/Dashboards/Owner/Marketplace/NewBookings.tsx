@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronRight, ChevronsUpDown, Mail, MessageCircle, MoreHorizontal, NotepadText, Phone, Plus } from "lucide-react";
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { useCookie } from "next-cookie";
@@ -21,6 +21,17 @@ import { useEffect, useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { Backdrop, CircularProgress } from "@mui/material";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { MapContainer, Polygon, TileLayer } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import Image from "next/image";
+import { Pagination, Autoplay } from 'swiper/modules';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import 'swiper/css';
+import 'swiper/css/autoplay';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
+import 'swiper/css/scrollbar';
 
 interface AvailStore {
     storeId: string;
@@ -43,6 +54,8 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
 
     const { cookie } = useCookie();
     const access_token = cookie.get("access_token");
+
+    const limeOptions = { color: 'lime' }
 
     function fetchAvailableStores() {
         setCheckingAvailability(true)
@@ -68,7 +81,7 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
             })
     }
 
-    function bookingConverting(storeId: string, bookingId: string){
+    function bookingConverting(storeId: string, bookingId: string) {
         setConverting(true)
         renderInstance.post(`/booking/standalone-booking/${bookingId}/convert-booking/store/${storeId}`, {}, {
             headers: {
@@ -159,18 +172,41 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
                                 {
                                     availableStores.map((storeDetails, i) => {
                                         return (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="flex items-center space-x-2 border border-gray-300 px-4 py-2 rounded-md"
-                                                key={i}
-                                                onClick={()=>{bookingConverting(storeDetails.storeId, booking.id)}}
-                                            >
-                                                <span className="text-sm">
-                                                    {storeDetails.storeName}
-                                                </span>
-                                                <ChevronRight className="h-4 w-4 text-gray-600" />
-                                            </Button>
+                                            <Dialog key={i}>
+                                                <DialogTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="flex items-center space-x-2 border border-gray-300 px-4 py-2 rounded-md"
+                                                    >
+                                                        <span className="text-sm">
+                                                            {storeDetails.storeName}
+                                                        </span>
+                                                        <ChevronRight className="h-4 w-4 text-gray-600" />
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent>
+                                                    <DialogHeader>
+                                                        <DialogTitle className="text-xl font-semibold">
+                                                            Confirm this booking lead for the store {storeDetails.storeName}
+                                                        </DialogTitle>
+                                                        <DialogDescription>
+                                                            Are you sure you want to book this lead? This action cannot be undone.
+                                                        </DialogDescription>
+                                                    </DialogHeader>
+                                                    <DialogFooter className="sm:justify-start">
+                                                        <DialogClose asChild>
+                                                            <Button variant="outline">
+                                                                Don't book
+                                                            </Button>
+                                                        </DialogClose>
+                                                        <Button
+                                                            onClick={() => { bookingConverting(storeDetails.storeId, booking.id) }}>
+                                                            Yes, book
+                                                        </Button>
+                                                    </DialogFooter>
+                                                </DialogContent>
+                                            </Dialog>
                                         )
                                     })
                                 }
@@ -285,167 +321,159 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
                             }}
                             className="text-xl text-blue-500" />
                     </div>
-
                     {
-                        booking.owner_confirm &&
+                        booking.farm &&
                         <div className="mt-6">
-                            <h3 className="text-lg font-semibold">
-                                Booking timeline:
-                            </h3>
-                            <div className="space-y-6">
-                                <div className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <div className={`w-3 h-3 rounded-full ${(booking.bookingStatus === BookingStatus.Open) || (booking.bookingStatus === BookingStatus.Accepted) || (booking.bookingStatus === BookingStatus.Arriving) || (booking.bookingStatus === BookingStatus.Arrived) || (booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
-                                            ? 'bg-green-500'
-                                            : 'bg-yellow-400'
-                                            }`} />
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button className="w-full">
+                                        See farm location
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <MapContainer
+                                        center={[
+                                            booking.farm.boundary.coordinates[0][0],
+                                            booking.farm.boundary.coordinates[0][1]
+                                        ]}
+                                        zoom={13}
+                                        scrollWheelZoom={false}
+                                        style={{ width: "100%", height: "80vh", zIndex: 1 }}>
+                                        <TileLayer
+                                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                        />
+                                        <Polygon pathOptions={limeOptions} positions={booking.farm.boundary.coordinates} />
+                                    </MapContainer>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
+                    }
+                    {
+                        booking.standaloneTractors.length > 0 &&
+                        <div className="mt-6">
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button className="w-full">
+                                        Total tractors {booking.standaloneTractors.length}
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <div>
+                                        {
+                                            booking.standaloneTractors.map((tractorDetails, i) => {
+                                                return (
+                                                    <Card key={i}>
+                                                        <CardTitle>
+                                                            {tractorDetails.tractor.name}
+                                                        </CardTitle>
+                                                        <CardContent>
+                                                            <Swiper
+                                                                modules={[Autoplay, Pagination]}
+                                                                spaceBetween={0}
+                                                                slidesPerView={1}
+                                                                loop={true}
+                                                                pagination={true}
+                                                                autoplay={true}
+                                                                className="w-full h-full"
+                                                            >
+                                                                {
+                                                                    tractorDetails.tractor.images.map((imageLink) => {
+                                                                        return (
+                                                                            <SwiperSlide className="w-full h-full">
+                                                                                <Image
+                                                                                    alt={tractorDetails.tractor.name}
+                                                                                    src={imageLink}
+                                                                                    width={400}
+                                                                                    height={400}
+                                                                                    className="h-52 w-full object-cover"
+                                                                                    unoptimized={true} />
+                                                                            </SwiperSlide>
+                                                                        )
+                                                                    })
+                                                                }
+                                                            </Swiper>
+                                                            <p>
+                                                                TractorType: {tractorDetails.tractor.type}
+                                                            </p>
+                                                            <p>
+                                                                Quantity: {tractorDetails.count}
+                                                            </p>
+                                                        </CardContent>
+                                                    </Card>
+                                                )
+                                            })
+                                        }
                                     </div>
-
-                                    <div className="flex-1 pb-6">
-                                        <div className="flex justify-between">
-                                            <p className="font-medium">You just confirmed the booking</p>
-                                        </div>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
+                    }
+                    {
+                        booking.standaloneAttachments.length > 0 &&
+                        <div className="mt-6">
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button className="w-full">
+                                        Total tractors {booking.standaloneAttachments.length}
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <div>
+                                        {
+                                            booking.standaloneAttachments.map((tractorDetails, i) => {
+                                                return (
+                                                    <Card key={i}>
+                                                        <CardTitle>
+                                                            {tractorDetails.attachment.name}
+                                                        </CardTitle>
+                                                        <CardContent>
+                                                            <Swiper
+                                                                modules={[Autoplay, Pagination]}
+                                                                spaceBetween={0}
+                                                                slidesPerView={1}
+                                                                loop={true}
+                                                                pagination={true}
+                                                                autoplay={true}
+                                                                className="w-full h-full"
+                                                            >
+                                                                {
+                                                                    tractorDetails.attachment.images.map((imageLink) => {
+                                                                        return (
+                                                                            <SwiperSlide className="w-full h-full">
+                                                                                <Image
+                                                                                    alt={tractorDetails.attachment.name}
+                                                                                    src={imageLink}
+                                                                                    width={400}
+                                                                                    height={400}
+                                                                                    className="h-52 w-full object-cover"
+                                                                                    unoptimized={true} />
+                                                                            </SwiperSlide>
+                                                                        )
+                                                                    })
+                                                                }
+                                                            </Swiper>
+                                                            <p>
+                                                                Quantity: {tractorDetails.count}
+                                                            </p>
+                                                        </CardContent>
+                                                    </Card>
+                                                )
+                                            })
+                                        }
                                     </div>
-                                </div>
-                                <div className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <div className={`w-3 h-3 rounded-full ${(booking.bookingStatus === BookingStatus.Accepted) || (booking.bookingStatus === BookingStatus.Arriving) || (booking.bookingStatus === BookingStatus.Arrived) || (booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
-                                            ? 'bg-green-500'
-                                            : 'bg-yellow-400'
-                                            }`} />
-                                    </div>
-
-                                    <div className="flex-1 pb-6">
-                                        <div className="flex justify-between">
-                                            <p className="font-medium">
-                                                Operator has accepted this booking.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <div className={`w-3 h-3 rounded-full ${(booking.bookingStatus === BookingStatus.Arriving) || (booking.bookingStatus === BookingStatus.Arrived) || (booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
-                                            ? 'bg-green-500'
-                                            : 'bg-yellow-400'
-                                            }`} />
-                                    </div>
-
-                                    <div className="flex-1 pb-6">
-                                        <div className="flex justify-between">
-                                            <p className="font-medium">
-                                                The booking has left for it's destination.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <div className={`w-3 h-3 rounded-full ${(booking.bookingStatus === BookingStatus.Arrived) || (booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
-                                            ? 'bg-green-500'
-                                            : 'bg-yellow-400'
-                                            }`} />
-                                    </div>
-
-                                    <div className="flex-1 pb-6">
-                                        <div className="flex justify-between">
-                                            <p className="font-medium">
-                                                The booking has arrived at it's destination.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <div className={`w-3 h-3 rounded-full ${(booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
-                                            ? 'bg-green-500'
-                                            : 'bg-yellow-400'
-                                            }`} />
-                                    </div>
-
-                                    <div className="flex-1 pb-6">
-                                        <div className="flex justify-between">
-                                            <p className="font-medium">
-                                                The booking has started it's work.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <div className={`w-3 h-3 rounded-full ${((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
-                                            ? 'bg-green-500'
-                                            : 'bg-yellow-400'
-                                            }`} />
-                                    </div>
-
-                                    <div className="flex-1 pb-6">
-                                        <div className="flex justify-between">
-                                            <p className="font-medium">
-                                                The booking has completed. Wailting for farmer to pay.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <div className={`w-3 h-3 rounded-full ${((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
-                                            ? 'bg-green-500'
-                                            : 'bg-yellow-400'
-                                            }`} />
-                                    </div>
-
-                                    <div className="flex-1 pb-6">
-                                        <div className="flex justify-between">
-                                            <p className="font-medium">
-                                                FArmer has submitted payment details
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <div className={`w-3 h-3 rounded-full ${((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
-                                            ? 'bg-green-500'
-                                            : 'bg-yellow-400'
-                                            }`} />
-                                    </div>
-
-                                    <div className="flex-1 pb-6">
-                                        <div className="flex justify-between">
-                                            <p className="font-medium">
-                                                You have rejected the booking payment details.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <div className={`w-3 h-3 rounded-full ${((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
-                                            ? 'bg-green-500'
-                                            : 'bg-yellow-400'
-                                            }`} />
-                                    </div>
-
-                                    <div className="flex-1 pb-6">
-                                        <div className="flex justify-between">
-                                            <p className="font-medium">
-                                                The booking job has completed and you have accepted the payment.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                                </DialogContent>
+                            </Dialog>
                         </div>
                     }
                 </div>
 
                 <Backdrop
-                        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-                        open={converting}
-                    >
-                        <CircularProgress />
-                    </Backdrop>
+                    sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+                    open={converting}
+                >
+                    <CircularProgress />
+                </Backdrop>
             </SheetContent>
 
         </Sheet>

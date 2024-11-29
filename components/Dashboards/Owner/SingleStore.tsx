@@ -2,19 +2,13 @@
 
 import { useEffect, useState, FC } from 'react'
 import { useParams } from 'next/navigation'
-import Image from 'next/image'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, MapPin, Hotel, List, Heart, Share, Zap, Maximize2, CreditCard, MessageCircleQuestion, Sun, Mic, Map } from 'lucide-react'
-import OwnerModule from './_components/OwnerModule'
 import { renderInstance } from '@/utils/Axios/RenderInstance'
 import { errorMessage } from '@/utils/Toastify/Messages'
 import { Store } from '@/utils/Types/types'
 import "leaflet/dist/leaflet.css";
 import { FaImage, FaStore } from 'react-icons/fa'; // Importing Image and Store icons
-import { FaRegChartBar, FaHotel, FaRegCalendarAlt, FaPlane } from "react-icons/fa";
-import { Button } from '@/components/ui/button'
-import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet'
+import { FaRegChartBar, FaHotel, FaRegCalendarAlt } from "react-icons/fa";
 import OwnerShrimmer from './_components/OwnerShrimmer'
 import { TractorCard } from './_components/TractorCard'
 import AddTractor from './_components/AddTractor'

@@ -3,6 +3,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ReduxWrapper from "../_components/ReduxWrapper";
 import SidebarWrapper from "./_components/SidebarWrapper";
+import Header from "@/components/Dashboards/Farmer/_components/Header";
 
 function FarmerDashboardLayout({
   children,
@@ -11,11 +12,12 @@ function FarmerDashboardLayout({
 }) {
   return (
     <html lang="en">
-      <body>
+      <body style={{fontFamily: 'Poppins'}}>
         <ReduxWrapper>
           <SidebarWrapper>
             <main className="flex-1 overflow-y-auto my-2">
               <ToastContainer />
+              <Header />
               {children}
             </main>
           </SidebarWrapper>

@@ -41,7 +41,7 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
                         </Avatar>
                         <div className="flex-1 space-y-1">
                             <p className="text-sm font-medium leading-none">{booking.user?.first_name} {booking.user?.middle_name ?? ""} {booking.user?.last_name}</p>
-                            <p className="text-sm text-muted-foreground">{new Date(booking.createdAt).toLocaleDateString()}</p>
+                            <p className="text-sm text-muted-foreground">{new Date(booking.updatedAt).toLocaleDateString()}</p>
                             <div className="flex items-center pt-2">
                                 <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
                                 <span className="text-sm">
@@ -175,7 +175,7 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
                             <h3 className="text-lg font-semibold">
                                 Booking timeline:
                             </h3>
-                            <div className="space-y-6 py-4">
+                            <div className="space-y-6">
                                 <div className="flex gap-3">
                                     <div className="flex flex-col items-center">
                                         <div className={`w-3 h-3 rounded-full ${(booking.bookingStatus === BookingStatus.Open) || (booking.bookingStatus === BookingStatus.Accepted) || (booking.bookingStatus === BookingStatus.Arriving) || (booking.bookingStatus === BookingStatus.Arrived) || (booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
@@ -190,6 +190,10 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
                                         </div>
                                     </div>
                                 </div>
+                                {
+                                    booking.bookingStatus === BookingStatus.Open &&
+                                    <AssignOperator selectedRequest={booking.id} storeId={booking.store_id} store={booking.store} />
+                                }
                                 <div className="flex gap-3">
                                     <div className="flex flex-col items-center">
                                         <div className={`w-3 h-3 rounded-full ${(booking.bookingStatus === BookingStatus.Accepted) || (booking.bookingStatus === BookingStatus.Arriving) || (booking.bookingStatus === BookingStatus.Arrived) || (booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
@@ -318,17 +322,13 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
                                         </div>
                                     </div>
                                 </div>
+                                {
+                                    (booking.payment.length > 0 && booking.payment[0].status === PaymentStatus.FarmerCONFIRMED) && <PaymentReview
+                                        referenceNumber={booking.payment[0].transaction_reference[booking.payment[0].transaction_reference.length - 1]}
+                                        screenshotUrl={booking.payment[0].screenshots[booking.payment[0].screenshots.length - 1]}
+                                        paymentId={booking.payment[0].id} />
+                                }
                             </div>
-                            {
-                                                    booking.bookingStatus === BookingStatus.Open &&
-                                                    <AssignOperator selectedRequest={booking.id} storeId={booking.store_id} store={booking.store} />
-                                                }
-                                                {
-                                                    (booking.payment.length > 0 && booking.payment[0].status === PaymentStatus.FarmerCONFIRMED) && <PaymentReview
-                                                        referenceNumber={booking.payment[0].transaction_reference[booking.payment[0].transaction_reference.length - 1]}
-                                                        screenshotUrl={booking.payment[0].screenshots[booking.payment[0].screenshots.length - 1]}
-                                                        paymentId={booking.payment[0].id} />
-                                                }
                         </div>
                     }
                 </div>

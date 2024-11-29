@@ -4,35 +4,6 @@ const OwnerShrimmer = () => {
     return (
         <div className="flex bg-gray-100 min-h-screen gap-5">
 
-            <div className="flex flex-col items-center bg-white w-24 h-screen py-6 px-2 shadow-lg rounded-r-lg">
-                {/* Logo */}
-                <div className="mb-8 p-2 rounded-full shadow-lg">
-                    <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
-                </div>
-
-                {/* Navigation Icons */}
-                <div className="flex flex-col items-center flex-grow space-y-4">
-                    {Array.from({ length: 6 }).map((_, index) => (
-                        <div
-                            key={index}
-                            className="p-3 w-12 h-12 bg-gray-200 rounded-full animate-pulse"
-                        ></div>
-                    ))}
-                    <hr className="w-10 my-6 border-gray-300" />
-                    {Array.from({ length: 3 }).map((_, index) => (
-                        <div
-                            key={index}
-                            className="p-3 w-12 h-12 bg-gray-200 rounded-full animate-pulse"
-                        ></div>
-                    ))}
-                </div>
-
-                {/* Profile Image */}
-                <div className="w-12 h-12 rounded-full border-2 border-black-500 overflow-hidden shadow-md flex justify-center items-center">
-                    <div className="w-12 h-12 bg-gray-200 rounded-full animate-pulse"></div>
-                </div>
-            </div>
-
             {/* Main Content Shimmer */}
             <div className="flex-1 ">
                 {/* Header Shimmer */}

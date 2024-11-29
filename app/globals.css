@@ -78,8 +78,13 @@
   src: url("../assets/fonts/arial-cufonfonts/ARIAL.TTF");
 }
 
+@font-face {
+  font-family: Poppins;
+  src: url("../assets/fonts/Poppins/Poppins-Regular.ttf");
+}
+
 * {
-  font-family: ARIALCUSTOMFONTS;
+  font-family: Poppins;
   scroll-behavior: smooth;
 }
 

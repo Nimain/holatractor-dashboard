@@ -26,7 +26,6 @@ interface user {
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [showFarmList, setShowFarmList] = useState(false)
-  const [showBookingList, setShowBookingList] = useState(false)
 
   const [farms, setFarms] = useState<Farm[]>([])
 
@@ -127,41 +126,16 @@ const Sidebar = () => {
             </Link>}
           </CollapsibleContent>
         </Collapsible>
-        <Collapsible open={showBookingList} onOpenChange={setShowBookingList}>
-          <CollapsibleTrigger asChild>
-            <Button
-              className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
-            >
-              <Tooltip title={"Bookings"} placement="right">
-                <Tractor className="h-6 w-6" />
-              </Tooltip>
-              {isExpanded && (
-                <>
-                  {`Bookings`}
-                  <ChevronDown className="h-4 w-4 ml-auto" />
-                </>
-              )}
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="pl-6 mt-2 space-y-2">
-            {isExpanded && <Link href={"/farmer/bookinghistory"}>
-              <Button
-                className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
-              >
-                {/* <Plus className="h-6 w-6" /> */}
-                Booking History
-              </Button>
-            </Link>}
-            {isExpanded && <Link href={"/farmer/new-booking"}>
-              <Button
-                className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
-              >
-                {/* <Plus className="h-6 w-6" /> */}
-                New Booking
-              </Button>
-            </Link>}
-          </CollapsibleContent>
-        </Collapsible>
+        <Link href={"/farmer/bookinghistory"}>
+          <Button
+            className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
+          >
+            <Tooltip title={"Booking history"} placement="right">
+              <Tractor className="h-6 w-6" />
+            </Tooltip>
+            {isExpanded && "Booking history"}
+          </Button>
+        </Link>
         <Link href={"/farmer/paymenthistory"}>
           <Button
             className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}

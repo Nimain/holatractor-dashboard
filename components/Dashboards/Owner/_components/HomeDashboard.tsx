@@ -97,16 +97,6 @@ const HomeDashboard = (
         setSlideIndex((prevIndex) => (prevIndex - 1 + totalSlides) % totalSlides);
     };
 
-    const tractorData = {
-        total: 2540,
-        inUse: 2350
-    }
-
-    const attachmentData = {
-        total: 1500,
-        inUse: 1200
-    }
-
     const calculateProgress = (inUse: number, total: number) => {
         return (inUse / total) * 100
     }

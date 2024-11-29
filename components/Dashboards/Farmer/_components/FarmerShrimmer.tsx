@@ -4,28 +4,6 @@ import React from 'react';
 const FarmerShimmer: React.FC = () => {
   return (
     <div className="w-full flex gap-4 my-4 animate-pulse">
-      {/* Main Content Section */}
-      <div className="flex flex-col w-64 bg-primary transition-all duration-300 ease-in-out min-h-screen">
-
-        {/* <div className="p-4 pb-2">
-          <div className="flex items-center gap-2">
-            <div className="h-10 w-10 bg-gray-300 rounded-full animate-pulse"></div>
-            <div className="h-6 bg-gray-300 rounded w-32 animate-pulse"></div>
-          </div>
-        </div> */}
-
-        {/* Navigation Items */}
-        <div className="mt-8 px-4 space-y-6">
-          {Array(4)
-            .fill(0)
-            .map((_, index) => (
-              <div key={index} className="flex items-center gap-3">
-                <div className="h-8 w-8 bg-gray-300/30 rounded animate-pulse"></div>
-                <div className="h-4 bg-gray-300/30 rounded w-28 animate-pulse"></div>
-              </div>
-            ))}
-        </div>
-      </div>
 
       <div className="w-full space-y-6">
         {/* header */}

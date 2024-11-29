@@ -6,7 +6,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 const AuthenticationLayout = ({ children }: { children: ReactNode }) => {
   return (
     <html lang="en">
-      <body style={{ fontFamily: "ARIALCUSTOMFONTS" }} className="w-full min-h-screen">
+      <body style={{ fontFamily: "Poppins" }} className="w-full min-h-screen">
         <GoogleOAuthProvider clientId="316072302761-qn635is55ki0ons7rk7rshbtlhb1ovkn.apps.googleusercontent.com">
         <ReduxWrapper>
         {children}

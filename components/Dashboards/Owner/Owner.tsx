@@ -1,11 +1,6 @@
 "use client"
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
-import { Separator } from '@/components/ui/separator'
 import { renderInstance } from '@/utils/Axios/RenderInstance'
 import { errorMessage } from '@/utils/Toastify/Messages'
 import { Attachment, Booking, Operator, OperatorInStore, Owner, Store, Tractor } from '@/utils/Types/types'

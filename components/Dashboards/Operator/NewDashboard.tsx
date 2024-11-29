@@ -147,7 +147,7 @@ const NewDashboard = () => {
                     <div className="flex gap-6">
                       {
                         latestBookings.map((booking, index)=>{
-                          const user_name = `${booking.user?.first_name} + ${booking.user?.middle_name ?? ""} + ${booking.user?.last_name}`
+                          const user_name = `${booking.user?.first_name} ${booking.user?.middle_name ?? ""} ${booking.user?.last_name}`
                           return(
                             <Card className="w-full max-w-3xl bg-zinc-900 text-white shadow-lg">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

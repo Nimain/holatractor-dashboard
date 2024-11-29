@@ -13,7 +13,7 @@ const OwnerDashboardLayout = ({
 }) => {
   return (
     <html lang="en">
-      <body>
+      <body style={{fontFamily: 'Poppins'}}>
         <ReduxWrapper>
           <SidebarWrapper>
             <main className="flex-1 overflow-y-auto my-2">

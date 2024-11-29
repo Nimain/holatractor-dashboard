@@ -9,7 +9,7 @@ export default function DashboardLayout({
 }) {
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100" style={{fontFamily: 'Poppins'}}>
       <ToastContainer />
 
       {/* Sidebar */}
