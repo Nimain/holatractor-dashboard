@@ -74,7 +74,7 @@ const AssignOperator = ({ selectedRequest, storeId, store }: { selectedRequest: 
 
     useEffect(() => {
         handleFetchAllOperators()
-    })
+    },[])
 
     return (
         <Dialog open={isAssignOpen} onOpenChange={setIsAssignOpen}>

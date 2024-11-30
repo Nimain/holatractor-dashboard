@@ -242,7 +242,7 @@ const Bookings = () => {
                     {/* Train List */}
                     <div className="space-y-4">
                         {
-                            selectedFilter === "all" && allBookings.map((ticket, i) => (
+                            selectedFilter === "all" && allBookings.filter(bo=>bo.confirm).map((ticket, i) => (
                                 <Card
                                     key={i}
                                     className={cn(
@@ -523,7 +523,7 @@ const Bookings = () => {
                             ))
                         }
                         {
-                            selectedFilter === "open" && allBookings.filter(bo => bo.bookingStatus === BookingStatus.Open).map((ticket, i) => (
+                            selectedFilter === "open" && allBookings.filter(bo => (bo.bookingStatus === BookingStatus.Open && bo.confirm)).map((ticket, i) => (
                                 <Card
                                     key={i}
                                     className={cn(
@@ -654,7 +654,7 @@ const Bookings = () => {
                                                         <div className="space-y-6">
                                                             <div className="flex gap-3">
                                                                 <div className="flex flex-col items-center">
-                                                                    <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Open) || (ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                    <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Open) && ticket.owner_confirm) || (ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
                                                                         ? 'bg-green-500'
                                                                         : 'bg-yellow-400'
                                                                         }`} />
@@ -666,6 +666,10 @@ const Bookings = () => {
                                                                     </div>
                                                                 </div>
                                                             </div>
+                                                            {
+                                                        ticket.bookingStatus === BookingStatus.Open && ticket.owner_confirm &&
+                                                        <AssignOperator selectedRequest={ticket.id} storeId={ticket.store_id} store={ticket.store} />
+                                                    }
                                                             <div className="flex gap-3">
                                                                 <div className="flex flex-col items-center">
                                                                     <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))

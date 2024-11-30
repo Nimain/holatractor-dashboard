@@ -26,6 +26,7 @@ interface user {
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [showFarmList, setShowFarmList] = useState(false)
+  const [fetching, setFetching] = useState(false)
 
   const [farms, setFarms] = useState<Farm[]>([])
 
@@ -48,6 +49,7 @@ const Sidebar = () => {
 
   function fetchFarmer() {
 
+    setFetching(true)
     renderInstance.get(`/farmer/${user.userId}`)
       .then((res) => {
         setFarms(res.data.farms)
@@ -58,6 +60,8 @@ const Sidebar = () => {
         } else {
           errorMessage("Error fetching user detaild")
         }
+      }).finally(()=>{
+        setFetching(false)
       })
   }
 
@@ -98,7 +102,7 @@ const Sidebar = () => {
               </Tooltip>
               {isExpanded && (
                 <>
-                  {`Farms (${farms.length})`}
+                  {fetching ? "Farms (Loading)" : `Farms (${farms.length})`}
                   <ChevronDown className="h-4 w-4 ml-auto" />
                 </>
               )}

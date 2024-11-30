@@ -240,6 +240,7 @@ const SingleFarm = () => {
                 zoom={18}
                 scrollWheelZoom={false}
                 className="h-full w-full"
+                style={{ zIndex: 1 }}
               >
                 <TileLayer
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

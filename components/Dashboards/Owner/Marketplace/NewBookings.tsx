@@ -332,11 +332,8 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
                                 </DialogTrigger>
                                 <DialogContent>
                                     <MapContainer
-                                        center={[
-                                            booking.farm.boundary.coordinates[0][0],
-                                            booking.farm.boundary.coordinates[0][1]
-                                        ]}
-                                        zoom={13}
+                                        center={booking.farm.boundary.coordinates[0]}
+                                        zoom={16}
                                         scrollWheelZoom={false}
                                         style={{ width: "100%", height: "80vh", zIndex: 1 }}>
                                         <TileLayer

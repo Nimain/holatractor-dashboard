@@ -142,25 +142,25 @@ const NewBookingHistory = () => {
             <thead>
               <tr className="border-b">
                 <th className="text-left p-4 font-medium text-gray-600">
-                  Booking No. <ArrowUpDown size={14} className="inline" />
+                  Booking No. <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
                 </th>
                 <th className="text-left p-4 font-medium text-gray-600">
-                  Owner Name <ArrowUpDown size={14} className="inline" />
+                  Owner Name <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
                 </th>
                 <th className="text-left p-4 font-medium text-gray-600">
-                  Booking Type <ArrowUpDown size={14} className="inline" />
+                  Booking Type <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
                 </th>
                 <th className="text-left p-4 font-medium text-gray-600">
-                  Start Date <ArrowUpDown size={14} className="inline" />
+                  Start Date <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
                 </th>
                 <th className="text-left p-4 font-medium text-gray-600">
-                  Duration <ArrowUpDown size={14} className="inline" />
+                  Duration <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
                 </th>
                 <th className="text-left p-4 font-medium text-gray-600">
-                  Total Price <ArrowUpDown size={14} className="inline" />
+                  Total Price <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
                 </th>
                 <th className="text-left p-4 font-medium text-gray-600">
-                  Status <ArrowUpDown size={14} className="inline" />
+                  Status <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
                 </th>
               </tr>
             </thead>

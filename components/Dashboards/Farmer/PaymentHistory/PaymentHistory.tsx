@@ -131,25 +131,25 @@ const PaymentHistory = () => {
           <thead>
             <tr className="border-b">
               <th className="text-left p-4 font-medium text-gray-600">
-                Payment ID <ArrowUpDown size={14} className="inline ml-1" />
+                Payment ID <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </th>
               <th className="text-left p-4 font-medium text-gray-600">
-                Booking ID <ArrowUpDown size={14} className="inline ml-1" />
+                Booking ID <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </th>
               <th className="text-left p-4 font-medium text-gray-600">
-                Amount <ArrowUpDown size={14} className="inline ml-1" />
+                Amount <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </th>
               <th className="text-left p-4 font-medium text-gray-600">
-                Status <ArrowUpDown size={14} className="inline ml-1" />
+                Status <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </th>
               <th className="text-left p-4 font-medium text-gray-600">
-                Payment Method <ArrowUpDown size={14} className="inline ml-1" />
+                Payment Method <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </th>
               <th className="text-left p-4 font-medium text-gray-600">
-                Receiver <ArrowUpDown size={14} className="inline ml-1" />
+                Receiver <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </th>
               <th className="text-left p-4 font-medium text-gray-600">
-                Date <ArrowUpDown size={14} className="inline ml-1" />
+                Date <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </th>
             </tr>
           </thead>
