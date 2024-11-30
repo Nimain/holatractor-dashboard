@@ -11,6 +11,7 @@ import { Booking, BookingHours, Payment } from '@/utils/Types/types';
 import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
 import { useCookie } from 'next-cookie';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface user {
   userId: string;
@@ -138,56 +139,56 @@ const NewBookingHistory = () => {
   
         {/* Bookings Table */}
         <Card className="overflow-x-auto">
-          <table className="w-full min-w-[800px]">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left p-4 font-medium text-gray-600">
+          <Table className="w-full min-w-[800px]">
+            <TableHeader>
+              <TableRow className="border-b">
+                <TableHead className="text-left p-4 font-medium text-gray-600">
                   Booking No. <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
-                </th>
-                <th className="text-left p-4 font-medium text-gray-600">
+                </TableHead>
+                <TableHead className="text-left p-4 font-medium text-gray-600">
                   Owner Name <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
-                </th>
-                <th className="text-left p-4 font-medium text-gray-600">
+                </TableHead>
+                <TableHead className="text-left p-4 font-medium text-gray-600">
                   Booking Type <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
-                </th>
-                <th className="text-left p-4 font-medium text-gray-600">
+                </TableHead>
+                <TableHead className="text-left p-4 font-medium text-gray-600">
                   Start Date <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
-                </th>
-                <th className="text-left p-4 font-medium text-gray-600">
+                </TableHead>
+                <TableHead className="text-left p-4 font-medium text-gray-600">
                   Duration <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
-                </th>
-                <th className="text-left p-4 font-medium text-gray-600">
+                </TableHead>
+                <TableHead className="text-left p-4 font-medium text-gray-600">
                   Total Price <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
-                </th>
-                <th className="text-left p-4 font-medium text-gray-600">
+                </TableHead>
+                <TableHead className="text-left p-4 font-medium text-gray-600">
                   Status <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {bookings.map((booking, index) => (
-                <tr key={index} className="border-b hover:bg-gray-50">
-                  <td className="p-4 text-sm text-blue-600">{booking.id}</td>
-                  <td className="p-4">
+                <TableRow key={index} className="border-b hover:bg-gray-50">
+                  <TableCell className="p-4 text-sm text-blue-600">{booking.id}</TableCell>
+                  <TableCell className="p-4">
                     <div className="flex items-center gap-2">
                       <span className="text-sm">{booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A"}</span>
                     </div>
-                  </td>
-                  <td className="p-4 text-sm text-gray-600">
+                  </TableCell>
+                  <TableCell className="p-4 text-sm text-gray-600">
                   {booking.bookingType || 'N/A'}
-                  </td>
-                  <td className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</td>
-                  <td className="p-4 text-sm text-gray-600">
+                  </TableCell>
+                  <TableCell className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</TableCell>
+                  <TableCell className="p-4 text-sm text-gray-600">
                     {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A'}
-                  </td>
-                  <td className="p-4 text-sm">${booking.total_cost.toFixed(2)}</td>
-                  <td className="p-4 text-sm text-blue-600 font-medium">
+                  </TableCell>
+                  <TableCell className="p-4 text-sm">${booking.total_cost.toFixed(2)}</TableCell>
+                  <TableCell className="p-4 text-sm text-blue-600 font-medium">
                     {booking.bookingStatus}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </Card>
       </div>
     );

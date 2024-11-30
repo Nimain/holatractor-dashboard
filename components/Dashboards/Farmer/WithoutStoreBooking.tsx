@@ -164,6 +164,7 @@ const WithoutStoreBooking = () => {
                 },
             }).then((res) => {
                 successMessage("Successfully booked")
+                setNewBooking(null)
                 setOpen(false)
             }).catch((err) => {
                 if (err.response && err.response.status === 404 && err.response.data.message === "Booking is not valid") {

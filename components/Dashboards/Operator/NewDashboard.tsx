@@ -224,7 +224,7 @@ const NewDashboard = () => {
                                   <Button className="bg-primaryColor text-white hover:bg-primaryColor" onClick={()=>{handleStatusChange(booking.id, BookingStatus.Started)}}>
                                     Starting
                                   </Button>
-                                  : (booking.bookingStatus === BookingStatus.Started) && <div className='space-y-2'>
+                                  : (booking.bookingStatus === BookingStatus.Started) && <div className='space-x-2'>
                                   <Button className="bg-primaryColor text-white hover:bg-primaryColor" onClick={()=>{handleStatusChange(booking.id, BookingStatus.Stopped)}}>
                                     Pause
                                   </Button>

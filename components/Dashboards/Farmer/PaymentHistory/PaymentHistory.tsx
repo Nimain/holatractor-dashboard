@@ -11,6 +11,7 @@ import { useCookie } from 'next-cookie';
 import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
 import FarmerShimmer from '../_components/FarmerShrimmer';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface user {
   userId: string;
@@ -41,25 +42,25 @@ const PaymentHistory = () => {
     setPayments(filteredPayments);
   };
 
-  function fetchPayments(){
+  function fetchPayments() {
     setFetching(true)
     renderInstance.get(`/farmer/paymentPage/${user.userId}`)
-    .then((res)=>{
-      setPayments(res.data)
-    }).catch((err)=>{
-      errorMessage("Error fetching payments")
-    }).finally(()=>{
-      setFetching(false)
-    })
+      .then((res) => {
+        setPayments(res.data)
+      }).catch((err) => {
+        errorMessage("Error fetching payments")
+      }).finally(() => {
+        setFetching(false)
+      })
   }
 
-  useEffect(()=>{
-    if(user){
+  useEffect(() => {
+    if (user) {
       fetchPayments()
     }
-  },[])
+  }, [])
 
-  if(fetching) return <FarmerShimmer />
+  if (fetching) return <FarmerShimmer />
 
   return (
     <div className="p-6">
@@ -127,52 +128,59 @@ const PaymentHistory = () => {
 
       {/* Payments Table */}
       <Card className="overflow-x-auto">
-        <table className="w-full min-w-[800px]">
-          <thead>
-            <tr className="border-b">
-              <th className="text-left p-4 font-medium text-gray-600">
+        <Table className="w-full min-w-[800px]">
+          <TableHeader>
+            <TableRow className="border-b">
+              <TableHead className="w-8 p-4">
+                <Input type="checkbox" className="rounded w-4 h-4 accent-primaryColor" />
+              </TableHead>
+              <TableHead className="text-left p-4 font-medium text-gray-600">
                 Payment ID <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
-              </th>
-              <th className="text-left p-4 font-medium text-gray-600">
+              </TableHead>
+              <TableHead className="text-left p-4 font-medium text-gray-600">
                 Booking ID <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
-              </th>
-              <th className="text-left p-4 font-medium text-gray-600">
+              </TableHead>
+              <TableHead className="text-left p-4 font-medium text-gray-600">
                 Amount <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
-              </th>
-              <th className="text-left p-4 font-medium text-gray-600">
+              </TableHead>
+              <TableHead className="text-left p-4 font-medium text-gray-600">
                 Status <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
-              </th>
-              <th className="text-left p-4 font-medium text-gray-600">
+              </TableHead>
+              <TableHead className="text-left p-4 font-medium text-gray-600">
                 Payment Method <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
-              </th>
-              <th className="text-left p-4 font-medium text-gray-600">
+              </TableHead>
+              <TableHead className="text-left p-4 font-medium text-gray-600">
                 Receiver <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
-              </th>
-              <th className="text-left p-4 font-medium text-gray-600">
+              </TableHead>
+              <TableHead className="text-left p-4 font-medium text-gray-600">
                 Date <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {payments.map((payment, index) => (
-              <tr key={index} className="border-b hover:bg-gray-50">
-                <td className="p-4 text-sm text-blue-600">{payment.id}</td>
-                <td className="p-4 text-sm">{payment.booking_id}</td>
-                <td className="p-4 text-sm font-medium">${payment.amount.toFixed(2)}</td>
-                <td className="p-4 text-sm">
+              <TableRow key={index} className="border-b hover:bg-gray-50">
+                <Input
+                  type="checkbox"
+                  className="rounded w-4 h-4 accent-primaryColor"
+                  onClick={e => { e.stopPropagation() }} />
+                <TableCell className="p-4 text-sm text-blue-600">{payment.id}</TableCell>
+                <TableCell className="p-4 text-sm">{payment.booking_id}</TableCell>
+                <TableCell className="p-4 text-sm font-medium">${payment.amount.toFixed(2)}</TableCell>
+                <TableCell className="p-4 text-sm">
                   <Badge className={`bg-gray-100 text-gray-800'} capitalize`}>
                     {payment.status}
                   </Badge>
-                </td>
-                <td className="p-4 text-sm">{payment.transactionMethod}</td>
-                <td className="p-4 text-sm text-gray-600">{`${payment.reciever.first_name} ${payment.reciever.middle_name ?? ""} ${payment.reciever.last_name}`}</td>
-                <td className="p-4 text-sm text-gray-600">
+                </TableCell>
+                <TableCell className="p-4 text-sm">{payment.transactionMethod}</TableCell>
+                <TableCell className="p-4 text-sm text-gray-600">{`${payment.reciever.first_name} ${payment.reciever.middle_name ?? ""} ${payment.reciever.last_name}`}</TableCell>
+                <TableCell className="p-4 text-sm text-gray-600">
                   {`${payment.status}` === "COMPLETED" ? new Date(payment.createdAt).toLocaleDateString() : "Payment not settled yed"}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </Card>
     </div>
   );

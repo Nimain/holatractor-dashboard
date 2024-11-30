@@ -39,6 +39,7 @@ import { OperatorInStore } from '@/utils/Types/types';
 import { useCookie } from 'next-cookie';
 import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
+import RequestNewOperator from './RequestNewOperator';
 
 interface user {
     userId: string;
@@ -151,7 +152,7 @@ const OwnerOperator = () => {
     return (
         <div>
             {/* Header */}
-            <div className="flex justify-between items-center mb-8">
+            <div className="flex justify-between items-center mb-8 pt-4">
 
                 <Breadcrumb>
                     <BreadcrumbList>
@@ -164,6 +165,8 @@ const OwnerOperator = () => {
                         </BreadcrumbItem>
                     </BreadcrumbList>
                 </Breadcrumb>
+
+                <RequestNewOperator />
 
             </div>
 

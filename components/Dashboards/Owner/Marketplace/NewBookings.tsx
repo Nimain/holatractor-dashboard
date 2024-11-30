@@ -185,7 +185,7 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
                                                         <ChevronRight className="h-4 w-4 text-gray-600" />
                                                     </Button>
                                                 </DialogTrigger>
-                                                <DialogContent>
+                                                <DialogContent className="max-w-xl">
                                                     <DialogHeader>
                                                         <DialogTitle className="text-xl font-semibold">
                                                             Confirm this booking lead for the store {storeDetails.storeName}

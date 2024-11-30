@@ -1,16 +1,14 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { MoreHorizontal, MessageSquare, Users, ChevronDown, Plus, Calendar, Clock, MapPin, Tractor, Paperclip, Send } from 'lucide-react';
+import { ChevronDown, Plus, Calendar, Clock, MapPin, Tractor, Paperclip, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCookie } from 'next-cookie';
 import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { BookingHours, BookingStatus, OperatorBookingJob, ownerOperatorRequest } from '@/utils/Types/types';
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { MapContainer, Polygon, TileLayer } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
 import { Backdrop, CircularProgress } from '@mui/material';
+import SeeFarm from './SeeFarm';
 
 interface user {
     userId: string;
@@ -35,8 +33,6 @@ const KanbanBoard = () => {
     const { cookie } = useCookie();
     const user: user = cookie.get("user")
     const access_token = cookie.get("access_token");
-
-    const limeOptions = { color: 'lime' }
 
     function handleFetchAllRequests() {
         setFetchingRequests(true)
@@ -218,7 +214,7 @@ const KanbanBoard = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* New bookings */}
-                <div className="space-y-4 border border-gray-300 p-4 rounded-[25px]">
+                <div className="space-y-4 border border-gray-300 p-4 rounded-[25px] h-fit">
                     <div className="flex items-center justify-between">
                         <h2 className="font-medium text-gray-900 flex items-center gap-2">
                             <span className="text-gray-400">▸</span>
@@ -331,31 +327,7 @@ const KanbanBoard = () => {
                                                         })
                                                 }
                                                 {
-                                                    request.booking.farm && <Dialog>
-                                                        <DialogTrigger asChild>
-                                                            <div className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                                                                <div className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300">
-                                                                    <MapPin size={14} />
-                                                                </div>
-                                                                <span>
-                                                                    Click to see farm Location
-                                                                </span>
-                                                            </div>
-                                                        </DialogTrigger>
-                                                        <DialogContent>
-                                                            <MapContainer
-                                                                center={request.booking.farm.boundary.coordinates[0]}
-                                                                zoom={16}
-                                                                scrollWheelZoom={false}
-                                                                style={{ width: "100%", height: "80vh", zIndex: 1 }}>
-                                                                <TileLayer
-                                                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                                                />
-                                                                <Polygon pathOptions={limeOptions} positions={request.booking.farm.boundary.coordinates} />
-                                                            </MapContainer>
-                                                        </DialogContent>
-                                                    </Dialog>
+                                                    request.booking.farm && <SeeFarm farm={request.booking.farm} />
                                                 }
                                             </div>
 
@@ -385,7 +357,7 @@ const KanbanBoard = () => {
                     }
                 </div>
                 {/* Accepted bookings */}
-                <div className="space-y-4 border border-gray-300 p-4 rounded-[25px]">
+                <div className="space-y-4 border border-gray-300 p-4 rounded-[25px] h-fit">
                     <div className="flex items-center justify-between">
                         <h2 className="font-medium text-gray-900 flex items-center gap-2">
                             <span className="text-gray-400">▸</span>
@@ -491,31 +463,7 @@ const KanbanBoard = () => {
                                                         })
                                                 }
                                                 {
-                                                    request.booking.farm && <Dialog>
-                                                        <DialogTrigger asChild>
-                                                            <div className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                                                                <div className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300">
-                                                                    <MapPin size={14} />
-                                                                </div>
-                                                                <span>
-                                                                    Click to see farm Location
-                                                                </span>
-                                                            </div>
-                                                        </DialogTrigger>
-                                                        <DialogContent>
-                                                            <MapContainer
-                                                                center={request.booking.farm.boundary.coordinates[0]}
-                                                                zoom={16}
-                                                                scrollWheelZoom={false}
-                                                                style={{ width: "100%", height: "80vh", zIndex: 1 }}>
-                                                                <TileLayer
-                                                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                                                />
-                                                                <Polygon pathOptions={limeOptions} positions={request.booking.farm.boundary.coordinates} />
-                                                            </MapContainer>
-                                                        </DialogContent>
-                                                    </Dialog>
+                                                    request.booking.farm && <SeeFarm farm={request.booking.farm} />
                                                 }
                                             </div>
 
@@ -545,7 +493,7 @@ const KanbanBoard = () => {
                     }
                 </div>
                 {/* Ongoing bookings */}
-                <div className="space-y-4 border border-gray-300 p-4 rounded-[25px]">
+                <div className="space-y-4 border border-gray-300 p-4 rounded-[25px] h-fit">
                     <div className="flex items-center justify-between">
                         <h2 className="font-medium text-gray-900 flex items-center gap-2">
                             <span className="text-gray-400">▸</span>
@@ -668,31 +616,7 @@ const KanbanBoard = () => {
                                                         })
                                                 }
                                                 {
-                                                    request.booking.farm && <Dialog>
-                                                        <DialogTrigger asChild>
-                                                            <div className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                                                                <div className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300">
-                                                                    <MapPin size={14} />
-                                                                </div>
-                                                                <span>
-                                                                    Click to see farm Location
-                                                                </span>
-                                                            </div>
-                                                        </DialogTrigger>
-                                                        <DialogContent>
-                                                            <MapContainer
-                                                                center={request.booking.farm.boundary.coordinates[0]}
-                                                                zoom={16}
-                                                                scrollWheelZoom={false}
-                                                                style={{ width: "100%", height: "80vh", zIndex: 1 }}>
-                                                                <TileLayer
-                                                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                                                />
-                                                                <Polygon pathOptions={limeOptions} positions={request.booking.farm.boundary.coordinates} />
-                                                            </MapContainer>
-                                                        </DialogContent>
-                                                    </Dialog>
+                                                    request.booking.farm && <SeeFarm farm={request.booking.farm} />
                                                 }
                                             </div>
 
@@ -722,7 +646,7 @@ const KanbanBoard = () => {
                     }
                 </div>
                 {/* Completed bookings */}
-                <div className="space-y-4 border border-gray-300 p-4 rounded-[25px]">
+                <div className="space-y-4 border border-gray-300 p-4 rounded-[25px] h-fit">
                     <div className="flex items-center justify-between">
                         <h2 className="font-medium text-gray-900 flex items-center gap-2">
                             <span className="text-gray-400">▸</span>
@@ -817,31 +741,7 @@ const KanbanBoard = () => {
                                                         })
                                                 }
                                                 {
-                                                    request.booking.farm && <Dialog>
-                                                        <DialogTrigger asChild>
-                                                            <div className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                                                                <div className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300">
-                                                                    <MapPin size={14} />
-                                                                </div>
-                                                                <span>
-                                                                    Click to see farm Location
-                                                                </span>
-                                                            </div>
-                                                        </DialogTrigger>
-                                                        <DialogContent>
-                                                            <MapContainer
-                                                                center={request.booking.farm.boundary.coordinates[0]}
-                                                                zoom={16}
-                                                                scrollWheelZoom={false}
-                                                                style={{ width: "100%", height: "80vh", zIndex: 1 }}>
-                                                                <TileLayer
-                                                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                                                />
-                                                                <Polygon pathOptions={limeOptions} positions={request.booking.farm.boundary.coordinates} />
-                                                            </MapContainer>
-                                                        </DialogContent>
-                                                    </Dialog>
+                                                    request.booking.farm && <SeeFarm farm={request.booking.farm} />
                                                 }
                                             </div>
 

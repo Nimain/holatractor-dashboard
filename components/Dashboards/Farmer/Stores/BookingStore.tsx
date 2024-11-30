@@ -20,7 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Dialog, DialogClose, DialogContent } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 import { Backdrop, CircularProgress } from '@mui/material'
 
@@ -221,6 +221,7 @@ const BookingStore = () => {
                 },
             }).then((res) => {
                 successMessage("Successfully booked")
+                setNewBooking(null)
                 setOpen(false)
             }).catch((err) => {
                 if (err.response && err.response.status === 404 && err.response.data.message === "Booking is not valid") {
@@ -613,7 +614,9 @@ const BookingStore = () => {
                                 </div>
                             </CardContent>
                             <CardFooter className="flex justify-between">
+                                <DialogClose asChild>
                                 <Button>Cancel</Button>
+                                </DialogClose>
                                 <Button onClick={() => { userBookingConfirm() }}>Confirm Booking</Button>
                             </CardFooter>
                         </Card>

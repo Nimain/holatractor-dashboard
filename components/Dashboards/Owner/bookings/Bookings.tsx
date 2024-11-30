@@ -105,26 +105,26 @@ const Bookings = () => {
         setConfirming(true)
         // Implement accept logic here
         renderInstance.patch(`/booking/${id}/owner_reject`, {}, {
-          headers: {
-            Authorization: `Bearer ${access_token}`,
-          },
+            headers: {
+                Authorization: `Bearer ${access_token}`,
+            },
         }).then((res) => {
-          successMessage("You have rejected this request")
-          fetchBookings()
+            successMessage("You have rejected this request")
+            fetchBookings()
         }).catch((err) => {
-          if (err.response && err.response.status === 404 && err.response.data.message === "Booking is not valid") {
-            errorMessage("Log in user not found")
-          } else if (err.response && err.response.status === 400 && err.response.data.message === "User has not confirmed the booking. Wait till user booked") {
-            errorMessage("User has not confirmed the booking. Wait till user booked")
-          } else if (err.response && err.response.status === 400 && err.response.data.message === "You are not allowed to perform this task") {
-            errorMessage("You are not allowed to perform this task")
-          } else {
-            errorMessage("Some error occurred")
-          }
+            if (err.response && err.response.status === 404 && err.response.data.message === "Booking is not valid") {
+                errorMessage("Log in user not found")
+            } else if (err.response && err.response.status === 400 && err.response.data.message === "User has not confirmed the booking. Wait till user booked") {
+                errorMessage("User has not confirmed the booking. Wait till user booked")
+            } else if (err.response && err.response.status === 400 && err.response.data.message === "You are not allowed to perform this task") {
+                errorMessage("You are not allowed to perform this task")
+            } else {
+                errorMessage("Some error occurred")
+            }
         }).finally(() => {
-          setConfirming(false)
+            setConfirming(false)
         })
-      }
+    }
 
     useEffect(() => {
         const handleScroll = (e: WheelEvent) => {
@@ -242,7 +242,7 @@ const Bookings = () => {
                     {/* Train List */}
                     <div className="space-y-4">
                         {
-                            selectedFilter === "all" && allBookings.filter(bo=>bo.confirm).map((ticket, i) => (
+                            selectedFilter === "all" && allBookings.filter(bo => bo.confirm).map((ticket, i) => (
                                 <Card
                                     key={i}
                                     className={cn(
@@ -300,6 +300,20 @@ const Bookings = () => {
                                                     <SheetHeader>
                                                         <SheetTitle className="text-xl font-semibold">Details</SheetTitle>
                                                     </SheetHeader>
+
+                                                    {
+                                                        !ticket.confirm && <p className="text-red-700">User has not confirmed this booking</p>
+                                                    }
+
+                                                    {
+                                                        !ticket.owner_confirm && <div className="flex items-center space-x-2">
+                                                            {/* <Button onClick={() => handleAccept(request.id)}>Accept</Button> */}
+                                                            <PaymentMethods bookingId={ticket.id} />
+                                                            <Button variant="destructive" onClick={() => handleReject(ticket.id)}>
+                                                                Reject
+                                                            </Button>
+                                                        </div>
+                                                    }
 
                                                     <div className="space-y-4 mt-6">
                                                         {/* Order Info */}
@@ -362,7 +376,7 @@ const Bookings = () => {
                                                         <div className="space-y-6">
                                                             <div className="flex gap-3">
                                                                 <div className="flex flex-col items-center">
-                                                                    <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Open) || (ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                    <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Open) && ticket.owner_confirm) || (ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
                                                                         ? 'bg-green-500'
                                                                         : 'bg-yellow-400'
                                                                         }`} />
@@ -375,7 +389,7 @@ const Bookings = () => {
                                                                 </div>
                                                             </div>
                                                             {
-                                                                ticket.bookingStatus === BookingStatus.Open &&
+                                                                ticket.bookingStatus === BookingStatus.Open && ticket.owner_confirm &&
                                                                 <AssignOperator selectedRequest={ticket.id} storeId={ticket.store_id} store={ticket.store} />
                                                             }
                                                             <div className="flex gap-3">
@@ -667,9 +681,9 @@ const Bookings = () => {
                                                                 </div>
                                                             </div>
                                                             {
-                                                        ticket.bookingStatus === BookingStatus.Open && ticket.owner_confirm &&
-                                                        <AssignOperator selectedRequest={ticket.id} storeId={ticket.store_id} store={ticket.store} />
-                                                    }
+                                                                ticket.bookingStatus === BookingStatus.Open && ticket.owner_confirm &&
+                                                                <AssignOperator selectedRequest={ticket.id} storeId={ticket.store_id} store={ticket.store} />
+                                                            }
                                                             <div className="flex gap-3">
                                                                 <div className="flex flex-col items-center">
                                                                     <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))

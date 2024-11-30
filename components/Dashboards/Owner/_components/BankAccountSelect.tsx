@@ -144,6 +144,8 @@ export default function PaymentMethods({ bookingId }: { bookingId: string }) {
                     errorMessage("User has not confirmed the booking. Wait till user booked")
                 } else if(err.response.data.message === "You are not allowed to perform this task"){
                     errorMessage("You are not allowed to perform this task")
+                } else if(err.response.data.message === "Bank details not found"){
+                    errorMessage("Bank details not found")
                 }
             } else {
                 errorMessage("Some error occurred")
@@ -308,7 +310,7 @@ function BankAccountForm() {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
-        renderInstance.post("/bank_account", { ...formData, ownerId: user.userId }, {
+        renderInstance.post("/bank-account", { ...formData, ownerId: user.userId }, {
             headers: {
                 Authorization: `Bearer ${access_token}`,
             },

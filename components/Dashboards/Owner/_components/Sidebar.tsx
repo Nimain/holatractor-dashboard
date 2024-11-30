@@ -78,7 +78,7 @@ const Sidebar = () => {
                     width={24}
                     height={24}
                     className="h-6 object-cover w-auto" />
-                {isExpanded && <h1 className="text-xl md:text-2xl font-medium md:font-bold">Holatractpor</h1>}
+                {isExpanded && <h1 className="text-xl md:text-2xl font-medium md:font-bold">Holatractor</h1>}
             </Link>
             <div className="px-4 flex justify-between items-center">
                 {isExpanded && <h1 className="text-xl md:text-2xl font-medium md:font-bold">Dashboard</h1>}

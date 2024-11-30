@@ -5,7 +5,6 @@ import { errorMessage } from '@/utils/Toastify/Messages';
 import { Store } from '@/utils/Types/types';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
-import FarmerShimmer from '../_components/FarmerShrimmer';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
@@ -64,7 +63,7 @@ const Stores = () => {
     }
   }, []);
 
-  if(fetching) return <FarmerShimmer />
+  if(fetching) return <p>Loading...</p>
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -106,7 +105,7 @@ const Stores = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stores.map((center, index) => (
            <Link
-           href={`/farmer/stores/${center.store.id}`}
+           href={`/operator/stores/${center.store.id}`}
            key={index}
            className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
          >
