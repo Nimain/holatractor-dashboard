@@ -35,11 +35,12 @@ import { Phone, Mail, MapPin, User } from 'lucide-react'
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
-import { OperatorInStore } from '@/utils/Types/types';
+import { OperatorAddStoreReuests, OperatorInStore } from '@/utils/Types/types';
 import { useCookie } from 'next-cookie';
 import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
 import RequestNewOperator from './RequestNewOperator';
+import OperatorRequests from './OperatorRequests';
 
 interface user {
     userId: string;
@@ -57,6 +58,8 @@ const OwnerOperator = () => {
     const [allOperators, setAllOperators] = useState<OperatorInStore[]>([])
     const [activeOperators, setActiveOperators] = useState(0)
     const [fetchingOperatorDetails, setFetchingOperatorDetails] = useState(false)
+
+    const [operatorRequests, setOperatorRequests] = useState<OperatorAddStoreReuests[]>([])
 
     const tabs = [
         { id: 'all', label: 'All', icon: LayoutGrid },
@@ -129,11 +132,23 @@ const OwnerOperator = () => {
             })
     }
 
+    function fetchAllOperatorRequests(){
+        renderInstance.get(`/owner/get-requests-from-operators-to-join-store/${user.userId}`)
+        .then((res)=>{setOperatorRequests(res.data)})
+        .catch((err)=>{errorMessage("Error in fetching operator requests")})
+    }
+
     useEffect(() => {
         if (user) {
             fetchOperators()
         }
     }, [])
+
+    useEffect(()=>{
+        if(user){
+            fetchAllOperatorRequests()
+        }
+    },[])
 
     useEffect(() => {
         const updateDateTime = () => {
@@ -165,8 +180,11 @@ const OwnerOperator = () => {
                         </BreadcrumbItem>
                     </BreadcrumbList>
                 </Breadcrumb>
-
+                
+                <div className='flex items-center gap-3'>
+                {operatorRequests.length > 0 && <OperatorRequests requests={operatorRequests} />}
                 <RequestNewOperator />
+                </div>
 
             </div>
 

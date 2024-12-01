@@ -26,10 +26,7 @@ const RequestNewOperator = () => {
     function fetchAllOperators() {
         setFetching(true)
         renderInstance.get(`/owner/get-operators-not-in-store/${user.userId}`)
-            .then((res) => { 
-                console.log(res)
-                setOperators(res.data)
-             })
+            .then((res) => { setOperators(res.data) })
             .catch((err) => { errorMessage("Error fetching operators") })
             .finally(() => { setFetching(false) })
     }

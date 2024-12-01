@@ -263,13 +263,6 @@ function FillAcceptanceForm({id, slug}:{id: string; slug: string;}){
                     </CardFooter>
                 </Card>
             </DialogContent>
-            <Backdrop
-                    sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
-                    open={requesting}>
-
-                    <CircularProgress />
-
-                </Backdrop >
         </Dialog>
     )
 }

@@ -4,7 +4,7 @@ import { format, addDays, subDays } from 'date-fns';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import React, { useState } from 'react';
-import { Calendar, Clock, Filter, Search } from 'lucide-react';
+import { Calendar, Clock, Filter, Hand, Search } from 'lucide-react';
 import { ChevronLeft, ChevronRight, MoreVertical, FileText, UserPlus, Star, BriefcaseBusiness, Warehouse } from 'lucide-react';
 import { ArrowUpDown } from "lucide-react";
 import {
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import StoreRequest from './StoreRequest';
 const AttendanceDashboard = () => {
     const getStatusBadge = (status: "active" | "pending" | "inactive") => {
         let badgeClasses = "";
@@ -152,6 +153,7 @@ const AttendanceDashboard = () => {
                             <FileText className="h-4 w-4" />
                             Attendance Report
                         </button>
+                        <StoreRequest />
                         <button className="px-4 py-2 bg-teal-600 text-white rounded-lg flex items-center gap-2">
                             <UserPlus className="h-4 w-4" />
                             Add Attendance
