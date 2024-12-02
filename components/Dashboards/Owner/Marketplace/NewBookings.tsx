@@ -32,6 +32,7 @@ import 'swiper/css/autoplay';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/scrollbar';
+import PaymentMethods from "./BankAccountSelect";
 
 interface AvailStore {
     storeId: string;
@@ -200,10 +201,7 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
                                                                 Don't book
                                                             </Button>
                                                         </DialogClose>
-                                                        <Button
-                                                            onClick={() => { bookingConverting(storeDetails.storeId, booking.id) }}>
-                                                            Yes, book
-                                                        </Button>
+                                                        <PaymentMethods bookingId={booking.id} storeId={storeDetails.storeId} />
                                                     </DialogFooter>
                                                 </DialogContent>
                                             </Dialog>

@@ -655,7 +655,7 @@ const KanbanBoard = () => {
                     </div>
                     {
                         fetchingCompletedJobs ? <p>Fetching all Accepted jobs</p> : completedJobs.filter(booking => booking.booking.bookingStatus === BookingStatus.Finished).length === 0 ? <p>Currently you have not accepted any jobs</p> :
-                            completedJobs.filter(booking => booking.booking.bookingStatus === BookingStatus.Accepted).map((request, index) => {
+                            completedJobs.filter(booking => booking.booking.bookingStatus === BookingStatus.Finished).map((request, index) => {
                                 return (
                                     <div className="space-y-3" key={index}>
                                         <div className={`bg-green-200 rounded-xl p-4 mb-4 shadow-sm`}>

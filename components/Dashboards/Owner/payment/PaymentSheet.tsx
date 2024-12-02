@@ -16,20 +16,85 @@ import {
 import { TableCell, TableRow } from "@/components/ui/table"
 import { Payment } from "@/utils/Types/types"
 import { Copy, ExternalLink } from "lucide-react"
+import { renderInstance } from '@/utils/Axios/RenderInstance'
+import { useCookie } from 'next-cookie'
+import { useState } from "react"
+import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
 
 const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
+    
+    const [loading, setLoading] = useState(false)
+    const [isRejecting, setIsRejecting] = useState(false)
+    const [Rejecting, setRejecting] = useState(false)
+    const [rejectionReason, setRejectionReason] = useState('')
+    
+    const { cookie } = useCookie()
+    const access_token = cookie.get("access_token")
 
     const paymentDate = new Date(item.updatedAt).toLocaleDateString("en-GB");
+
+    const handleAccept = () => {
+        // Here you would typically send the acceptance to your backend
+        setLoading(true)
+        renderInstance.patch(`/owner/confirm_payment/${item.id}`, {}, {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+          },
+        })
+          .then((res) => {
+            successMessage("Accepted")
+            window.location.reload()
+          }).catch((err) => {
+            if (err.response && err.response.status === 404 && err.response.data.message === "Log in user not found") {
+              errorMessage("Log in user not found")
+            } else if (err.response && err.response.status === 404 && err.response.data.message === "Payment not found") {
+              errorMessage("Payment not found")
+            } else if (err.response && err.response.status === 409 && err.response.data.message === "You are not the correct reciever") {
+              errorMessage("You are not the correct reciever")
+            } else if (err.response && err.response.status === 400 && err.response.data.message === "Farmer has not confirmed this payment") {
+              errorMessage("Farmer has not confirmed this payment")
+            } else {
+              errorMessage("Error in accepting")
+            }
+          }).finally(() => {
+            setLoading(false)
+          })
+      }
+
+      const handleReject = () => {
+        if (rejectionReason.trim() === '') {
+          errorMessage('Please provide a reason for rejection')
+          return
+        }
+        // Here you would typically send the rejection to your backend
+        setRejecting(true)
+        renderInstance.patch(`/owner/reject_payment/${item.id}`, {
+          reason: rejectionReason
+        }, {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+          },
+        })
+          .then((res) => {
+            successMessage("Accepted")
+          }).catch(() => {
+            errorMessage("Error in rejecting")
+          }).finally(() => {
+            setRejecting(false)
+          })
+      }
 
     return (
         <Sheet>
             <SheetTrigger asChild>
                 <TableRow key={index}>
                     <TableCell>
-                        <Input 
-                        type="checkbox" 
-                        className="rounded w-4 h-4 accent-primaryColor" 
-                        onClick={e=>{e.stopPropagation()}} />
+                        <Input
+                            type="checkbox"
+                            className="rounded w-4 h-4 accent-primaryColor"
+                            onClick={e => { e.stopPropagation() }} />
                     </TableCell>
                     <TableCell>{item.id}</TableCell>
                     <TableCell>${item.amount.toFixed(2)}</TableCell>
@@ -37,7 +102,7 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                     <TableCell>
                         <span className="inline-flex items-center">
                             <span className="h-2 w-2 bg-green-400 rounded-full mr-2"></span>
-                            {item.status}
+                            {`${item.status}` === "FarmerPENDING" ? "Pending" : `${item.status}` === "FarmerCONFIRMED" ? "Farmer paid" : `${item.status}` === "OwnerREJECTED" ? "Rejected" : "Completed"}
                         </span>
                     </TableCell>
                     <TableCell>
@@ -77,19 +142,21 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                     {/* URL Section */}
                     {
                         item.screenshots.length > 0 &&
-                    <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                        <span className="text-sm text-muted-foreground truncate">
-                            {item.screenshots[item.screenshots.length - 1]}
-                        </span>
-                        <Button variant="ghost" size="sm" className="h-8">
-                            <Copy className="h-4 w-4" />
-                            <span className="ml-2">Copy</span>
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-8">
-                            <ExternalLink className="h-4 w-4" />
-                            <span className="ml-2">Visit Link</span>
-                        </Button>
-                    </div>
+                        <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                            <span className="text-sm text-muted-foreground truncate">
+                                {item.screenshots[item.screenshots.length - 1]}
+                            </span>
+                            {/* <Button variant="ghost" size="sm" className="h-8">
+                                <Copy className="h-4 w-4" />
+                                <span className="ml-2">Copy</span>
+                            </Button> */}
+                            <a href={item.screenshots[item.screenshots.length - 1]} target="_blank">
+                            <Button variant="ghost" size="sm" className="h-8">
+                                <ExternalLink className="h-4 w-4" />
+                                <span className="ml-2">Visit Link</span>
+                            </Button>
+                            </a>
+                        </div>
                     }
 
                     {/* Transaction Details */}
@@ -97,7 +164,7 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                         <div className="grid grid-cols-2 gap-y-3">
                             <span className="text-muted-foreground">Status</span>
                             <Badge className="justify-self-end w-fit">
-                                {item.status}
+                                {`${item.status}` === "FarmerPENDING" ? "Pending" : `${item.status}` === "FarmerCONFIRMED" ? "Farmer paid" : `${item.status}` === "OwnerREJECTED" ? "Rejected" : "Completed"}
                             </Badge>
 
                             <span className="text-muted-foreground">Created on</span>
@@ -105,10 +172,10 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                                 {new Date(item.createdAt).toLocaleDateString()}
                             </span>
 
-{
-    item.transaction_reference &&
-                            <span className="text-muted-foreground">Reference</span>
-}
+                            {
+                                item.transaction_reference &&
+                                <span className="text-muted-foreground">Reference</span>
+                            }
                             <span className="text-right">
                                 {item.transaction_reference}
                             </span>
@@ -124,12 +191,12 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                                 <div>
                                     <p className="font-medium">Created Payment Link</p>
                                     <p className="text-sm text-muted-foreground">
-                                    {new Date(item.createdAt).toLocaleDateString()}
+                                        {new Date(item.createdAt).toLocaleDateString()}
                                     </p>
                                 </div>
                             </div>
-                            <div className="relative pl-6 border-l-2 border-green-500 pb-4">
-                                <div className="absolute -left-[5px] h-2.5 w-2.5 rounded-full bg-green-500" />
+                            <div className={`relative pl-6 border-l-2 ${(`${item.status}` === "FarmerCONFIRMED") || (`${item.status} === "COMPLETED`) ? "border-green-500" : "border-blue-500"} pb-4`}>
+                                <div className={`absolute -left-[5px] h-2.5 w-2.5 rounded-full ${(`${item.status}` === "FarmerCONFIRMED") || (`${item.status} === "COMPLETED`) ? "bg-blue-500" : "bg-green-500"}`} />
                                 <div>
                                     <p className="font-medium">Awaiting Payment</p>
                                     <p className="text-sm text-muted-foreground">
@@ -138,7 +205,7 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                                 </div>
                             </div>
                             <div className="relative pl-6">
-                                <div className={`absolute -left-[5px] h-2.5 w-2.5 rounded-full bg-blue-500 ${`${item.status}` === "COMPLETED" ? "bg-green-500" : "bg-blue-500"}`} />
+                                <div className={`absolute -left-[5px] h-2.5 w-2.5 rounded-full ${`${item.status}` === "COMPLETED" ? "bg-green-500" : "bg-blue-500"}`} />
                                 <div>
                                     <p className="font-medium">Payment Complete</p>
                                     <p className="text-sm text-muted-foreground">
@@ -148,10 +215,39 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                             </div>
                         </div>
                     </div>
-                    {/* <div className=" bottom-0 left-0 right-0 p-6 border-t bg-background flex justify-between">
-                        <Button variant="outline">Cancel Request</Button>
-                        <Button>Request this again</Button>
-                    </div> */}
+
+                    {isRejecting && (
+              <div className="space-y-2">
+                <Label htmlFor="rejectionReason">Reason for Rejection</Label>
+                <Textarea
+                  id="rejectionReason"
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Provide a reason for rejection"
+                  required
+                />
+              </div>
+            )}
+
+                    {
+                        `${item.status}` === "FarmerCONFIRMED" &&
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {
+                                isRejecting ? 
+                                <Button variant="outline" onClick={()=>{handleReject()}} disabled={Rejecting}>
+                                    {
+                                        Rejecting ? "Rejecting" : "Confirm reject"
+                                    }
+                                </Button>
+                                :
+                                <Button variant="outline" onClick={()=>{setIsRejecting(true)}}>Reject</Button>
+
+                            }
+                            <Button disabled={loading} onClick={()=>{handleAccept()}}>
+                                {loading ? "Accepting" : "Accept"}
+                            </Button>
+                        </div>
+                    }
                 </div>
             </SheetContent>
         </Sheet>

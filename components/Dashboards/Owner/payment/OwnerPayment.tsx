@@ -66,9 +66,33 @@ const OwnerPayment = () => {
   const [monthlyRejected, setMonthlyRejected] = useState(0)
   const [subscription, setSubscription] = useState<Subscriptions | null>(null)
   const [subscriptionActive, setSubscriptionActive] = useState<Subscriptions | null>(null)
+  const [activeFilter, setActiveFilter] = useState("all")
 
   const { cookie } = useCookie()
   const user: user = cookie.get("user")
+
+  const bookingFilters = [
+    {
+      placeholder: "All",
+      value: "all",
+    },
+    {
+      placeholder: "Un paid",
+      value: "unpaid",
+    },
+    {
+      placeholder: "Owner review",
+      value: "review",
+    },
+    {
+      placeholder: "Rejected",
+      value: "rejected",
+    },
+    {
+      placeholder: "Completed",
+      value: "completed",
+    },
+  ]
 
   const handlePaymentSelect = (paymentId: string) => {
     setSelectedPayments(prev =>
@@ -350,6 +374,23 @@ const OwnerPayment = () => {
           <h2 className="text-xl font-semibold">Payment History ({ownerDetails.user.paymentReciever.length + ownerDetails.user.paymentSender.length})</h2>
           <p className="text-gray-600">See history of your payment plan invoice</p>
         </div>
+        <div className="flex items-center gap-2">
+        <Select onValueChange={e => setActiveFilter(e)} defaultValue='all'>
+          <SelectTrigger className='w-[180px]'>
+            <SelectValue placeholder="Filter by" />
+          </SelectTrigger>
+          <SelectContent>
+            {
+              bookingFilters.map((filer, index) => {
+                return (
+                  <SelectItem key={index} value={filer.value}>
+                    {filer.placeholder}
+                  </SelectItem>
+                )
+              })
+            }
+          </SelectContent>
+        </Select>
         <DownloadPDFButton
           payments={[...ownerDetails.user.paymentReciever, ...ownerDetails.user.paymentSender]}
           bookings={[...ownerDetails.user.paymentReciever, ...ownerDetails.user.paymentSender]
@@ -358,7 +399,8 @@ const OwnerPayment = () => {
             ).filter(Boolean) as Booking[]
           }
           fileName="all_payments.pdf"
-        />
+          />
+          </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -404,12 +446,27 @@ const OwnerPayment = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {ownerDetails.user.paymentReciever.map((item, index) => {
+            {activeFilter === "all" && ownerDetails.user.paymentReciever.map((item, index) => {
               return (
                 <PaymentSheet index={index} item={item} />
               )
             })}
-            {ownerDetails.user.paymentSender.map((item, index) => {
+            {activeFilter === "unpaid" && ownerDetails.user.paymentSender.filter(po=>(`${po.status}` === "FarmerPENDING")).map((item, index) => {
+              return (
+                <PaymentSheet index={index} item={item} />
+              )
+            })}
+            {activeFilter === "review" && ownerDetails.user.paymentSender.filter(po=>(`${po.status}` === "FarmerCONFIRMED")).map((item, index) => {
+              return (
+                <PaymentSheet index={index} item={item} />
+              )
+            })}
+            {activeFilter === "rejected" && ownerDetails.user.paymentSender.filter(po=>(`${po.status}` === "OwnerREJECTED")).map((item, index) => {
+              return (
+                <PaymentSheet index={index} item={item} />
+              )
+            })}
+            {activeFilter === "completed" && ownerDetails.user.paymentSender.filter(po=>(`${po.status}` === "COMPLETED")).map((item, index) => {
               return (
                 <PaymentSheet index={index} item={item} />
               )

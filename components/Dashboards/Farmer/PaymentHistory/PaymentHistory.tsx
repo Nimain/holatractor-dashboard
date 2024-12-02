@@ -1,17 +1,25 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { ChevronDown, Search, ArrowUpDown, Check, X } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { ChevronDown, Search, ArrowUpDown, Check, X, Download, Printer, Wallet, Eye, CreditCard, Banknote } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Payment } from '@/utils/Types/types';
+import { Payment, TransactionMethod } from '@/utils/Types/types';
 import { useCookie } from 'next-cookie';
 import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
 import FarmerShimmer from '../_components/FarmerShrimmer';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import Image from 'next/image';
+import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
+import { BankAccountForm, PayPalForm, UPIForm } from '../BookingHistory';
+import PaymentDetailsSheet from './PaymentDetailsSheet';
 
 interface user {
   userId: string;
@@ -24,10 +32,10 @@ const PaymentHistory = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [fetching, setFetching] = useState(false)
+  const [activeFilter, setActiveFilter] = useState("unpaid")
 
   const { cookie } = useCookie()
   const user: user = cookie.get("user")
-  const access_token = cookie.get("access_token")
 
   // Search handler
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,6 +61,29 @@ const PaymentHistory = () => {
         setFetching(false)
       })
   }
+
+  const bookingFilters = [
+    {
+      placeholder: "All",
+      value: "all",
+    },
+    {
+      placeholder: "Un paid",
+      value: "unpaid",
+    },
+    {
+      placeholder: "Owner review",
+      value: "review",
+    },
+    {
+      placeholder: "Rejected",
+      value: "rejected",
+    },
+    {
+      placeholder: "Completed",
+      value: "completed",
+    },
+  ]
 
   useEffect(() => {
     if (user) {
@@ -103,9 +134,9 @@ const PaymentHistory = () => {
             link.click();
             document.body.removeChild(link);
           }}
-          className="bg-primary text-primary-foreground"
+          className="bg-primaryColor text-primary-foreground"
         >
-          Export <ChevronDown className="ml-2 h-4 w-4" />
+          Export
         </Button>
       </div>
 
@@ -121,9 +152,22 @@ const PaymentHistory = () => {
             className="pl-10"
           />
         </div>
-        <Button variant="outline" className="ml-4">
-          Filter by <ChevronDown className="ml-2 h-4 w-4" />
-        </Button>
+        <Select onValueChange={e => setActiveFilter(e)} defaultValue='unpaid'>
+          <SelectTrigger className='w-[180px]'>
+            <SelectValue placeholder="Filter by" />
+          </SelectTrigger>
+          <SelectContent>
+            {
+              bookingFilters.map((filer, index) => {
+                return (
+                  <SelectItem key={index} value={filer.value}>
+                    {filer.placeholder}
+                  </SelectItem>
+                )
+              })
+            }
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Payments Table */}
@@ -155,30 +199,38 @@ const PaymentHistory = () => {
               <TableHead className="text-left p-4 font-medium text-gray-600">
                 Date <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
+              {
+                activeFilter === "unpaid" &&
+                <TableHead className="text-left p-4 font-medium text-gray-600">
+                  Action <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+                </TableHead>
+              }
             </TableRow>
           </TableHeader>
           <TableBody>
-            {payments.map((payment, index) => (
-              <TableRow key={index} className="border-b hover:bg-gray-50">
-                <Input
-                  type="checkbox"
-                  className="rounded w-4 h-4 accent-primaryColor"
-                  onClick={e => { e.stopPropagation() }} />
-                <TableCell className="p-4 text-sm text-blue-600">{payment.id}</TableCell>
-                <TableCell className="p-4 text-sm">{payment.booking_id}</TableCell>
-                <TableCell className="p-4 text-sm font-medium">${payment.amount.toFixed(2)}</TableCell>
-                <TableCell className="p-4 text-sm">
-                  <Badge className={`bg-gray-100 text-gray-800'} capitalize`}>
-                    {payment.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="p-4 text-sm">{payment.transactionMethod}</TableCell>
-                <TableCell className="p-4 text-sm text-gray-600">{`${payment.reciever.first_name} ${payment.reciever.middle_name ?? ""} ${payment.reciever.last_name}`}</TableCell>
-                <TableCell className="p-4 text-sm text-gray-600">
-                  {`${payment.status}` === "COMPLETED" ? new Date(payment.createdAt).toLocaleDateString() : "Payment not settled yed"}
-                </TableCell>
-              </TableRow>
-            ))}
+            {activeFilter === "unpaid" ?
+              payments.length === 0 ? <p>No payment history available</p> : payments.filter(po=>(`${po.status}` === "FarmerPENDING")).map((payment) => (
+                <PaymentDetailsSheet payment={payment} key={payment.id} />
+              ))
+              :
+              activeFilter === "review" ?
+              payments.filter(po=>(`${po.status}` === "FarmerCONFIRMED")).map((payment) => (
+                <PaymentDetailsSheet payment={payment} key={payment.id} />
+              ))
+              :
+              activeFilter === "rejected" ?
+              payments.filter(po=>(`${po.status}` === "OwnerREJECTED")).map((payment) => (
+                <PaymentDetailsSheet payment={payment} key={payment.id} />
+              ))
+              :
+              activeFilter === "completed" ?
+              payments.filter(po=>(`${po.status}` === "COMPLETED")).map((payment) => (
+                <PaymentDetailsSheet payment={payment} key={payment.id} />
+              ))
+              :
+              payments.map((payment) => (
+                <PaymentDetailsSheet payment={payment} key={payment.id} />
+              ))}
           </TableBody>
         </Table>
       </Card>
