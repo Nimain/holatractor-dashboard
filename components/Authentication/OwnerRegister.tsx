@@ -89,6 +89,8 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
     const [selectedPlan, setSelectedPlan] = useState<Subscriptions | null>(null)
     const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
 
+    const [purchasing, setPurchasing] = useState(false)
+
     const { cookie } = useCookie()
     const access_token = cookie.get("access_token");
 
@@ -222,6 +224,11 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
             return
         }
 
+        if(!selectedPlan){
+            errorMessage("Please select a plan")
+            return
+        }
+
         const { firstName, middleName, lastName } = splitFullName(name);
         const encryptedPassword = CryptoJS.AES.encrypt(
             agPassword,
@@ -296,8 +303,19 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                 .then((res) => {
                     if (res.status === 201 && res.data.access_token) {
                         successMessage("Created successfully")
-                        router.refresh()
-                        window.location.reload()
+                        setPurchasing(true)
+                        renderInstance.post(`/subscription/owner_purchase/${selectedPlan.id}`,{},{
+                            headers: {
+                                Authorization: `Bearer ${res.data.access_token}`,
+                            }
+                        }).then(()=>{
+                            successMessage("Subscription purchased")
+                            router.push("/login")
+                        }).catch(()=>{
+                            errorMessage("Failed to purchase subscription")
+                        }).finally(()=>{
+                            setPurchasing(false)
+                        })
                     }
                 })
                 .catch((err) => {
@@ -338,9 +356,19 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                         cookie.remove("access_token", { path: "/" });
 
                         successMessage("User sign up successfully");
-                        setTimeout(() => {
-                            router.push("/login");
-                        }, 3000);
+                        setPurchasing(true)
+                        renderInstance.post(`/subscription/owner_purchase/${selectedPlan.id}`,{},{
+                            headers: {
+                                Authorization: `Bearer ${res.data.access_token}`,
+                            }
+                        }).then(()=>{
+                            successMessage("Subscription purchased")
+                            router.push("/login")
+                        }).catch((err)=>{
+                            errorMessage("Failed to purchase subscription")
+                        }).finally(()=>{
+                            setPurchasing(false)
+                        })
                     }
                 })
                 .catch((err) => {
@@ -388,7 +416,7 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
 
     const handleSelectPlan = (subscription: Subscriptions) => {
         setSelectedPlan(subscription)
-        setIsPaymentDialogOpen(true)
+        // setIsPaymentDialogOpen(true)
     }
 
     const handlePayment = (e: React.FormEvent) => {
@@ -428,7 +456,7 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
 
                 <Backdrop
                     sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-                    open={loading}
+                    open={loading || purchasing}
                 >
                     <CircularProgress />
                 </Backdrop>
@@ -1191,7 +1219,9 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                                         <div className='w-full flex justify-end items-center my-4'>
                                             <Button
                                             onClick={()=>{ ownerRegister() }}>
-                                                Skip subscription
+                                                {
+                                                    selectedPlan ? "Create account" : "Skip subscription"
+                                                }
                                             </Button>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -46,6 +46,10 @@ export default function SubscriptionsPage() {
     total_days: 0,
     for_owner: false,
     for_dealer: false,
+    total_stores: 0,
+    total_operators: 0,
+    total_tractors: 0,
+    total_attachments: 0
   })
   const [editFeature, setEditFeature] = useState('')
   const [editFocusedFeature, setEditFocusedFeature] = useState('')
@@ -255,7 +259,6 @@ export default function SubscriptionsPage() {
       fetchAllSubscriptions()
       setAddSubscription(false)
     }).catch((err) => {
-      console.log(err)
       errorMessage("Error adding subscription")
     }).finally(() => {
       setIsDeleting(false)
@@ -402,6 +405,54 @@ export default function SubscriptionsPage() {
                 />
                 <Label htmlFor="for_dealer">For Dealers</Label>
               </div>
+              {
+                formData.for_owner && <> 
+                <div className="space-y-2">
+                <Label htmlFor="total_stores">Total stores</Label>
+                <Input
+                  id="total_stores"
+                  name="total_stores"
+                  type="number"
+                  value={formData.total_stores}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div> 
+                <div className="space-y-2">
+                <Label htmlFor="total_operators">Total operators</Label>
+                <Input
+                  id="total_operators"
+                  name="total_operators"
+                  type="number"
+                  value={formData.total_operators}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div> 
+                <div className="space-y-2">
+                <Label htmlFor="total_tractors">Total tractors</Label>
+                <Input
+                  id="total_tractors"
+                  name="total_tractors"
+                  type="number"
+                  value={formData.total_tractors}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div> 
+                <div className="space-y-2">
+                <Label htmlFor="total_attachments">Total attachments</Label>
+                <Input
+                  id="total_attachments"
+                  name="total_attachments"
+                  type="number"
+                  value={formData.total_attachments}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div> 
+              </>
+              }
               {
                 idDeleting ?
                 <CircularProgress />

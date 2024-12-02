@@ -1,6 +1,6 @@
 "use client"
 
-import { Calendar, DollarSign, House, MapPin, Paperclip, Store as StoreIcon, Tractor, User, X } from 'lucide-react';
+import { Calendar, DollarSign, Heart, House, MapPin, Paperclip, Store as StoreIcon, Tractor, User, X } from 'lucide-react';
 import Image from "next/image"
 import Link from 'next/link';
 import { Progress } from "@/components/ui/progress"
@@ -343,19 +343,50 @@ const NewDashboard = () => {
     
                 <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
                   {stores.map((influencer, i) => (
-                    <Card key={i} className="p-4 transition-all duration-500 hover:scale-110 hover:drop-shadow-lg">
-                      <div className="flex flex-col items-center text-center">
-                        <Image
-                          src={influencer.store.image}
-                          alt={influencer.store.name}
-                          className="mb-3 rounded-full h-24 w-24 object-cover"
-                          width={64}
-                          height={64}
-                        />
-                        <h3 className="font-medium">{influencer.store.name}</h3>
-                        <p className="text-sm text-muted-foreground">Member sinces {new Date(influencer.createdAt).toLocaleDateString()}</p>
-                      </div>
-                    </Card>
+                    <Card 
+                    key={i} 
+                    className="w-64 flex-shrink-0 rounded-xl bg-white shadow-md transition-all duration-300 hover:scale-55 hover:shadow-xl hover:bg-green-100 hover:ring-2 hover:ring-green-300"
+                  >
+                       <div className="relative">
+                         <Image
+                           src={influencer.store.image}
+                           alt={`${influencer.store.name}'s profile`}
+                           width={400}
+                           height={300}
+                           className="aspect-[4/3] w-full object-cover rounded-t-xl"
+                         />
+                         <button className="absolute right-4 top-4 rounded-full bg-white p-2">
+                           <Heart className="h-4 w-4 text-gray-600" />
+                         </button>
+                       </div>
+                       <div className="p-4">
+                         <div className="mb-2 flex items-center justify-between">
+                           <div className="flex items-center gap-1">
+                             <span className="text-2xl font-semibold">€80</span>
+                             <span className="text-gray-600">/night</span>
+                           </div>
+                         </div>
+                         <p className="mb-3 text-sm text-gray-600">{influencer.store.name}</p>
+                         <div className="flex items-center gap-4 text-gray-600">
+                           <div className="flex items-center gap-1">
+                             <svg
+                               className="h-5 w-5"
+                               fill="none"
+                               stroke="currentColor"
+                               viewBox="0 0 24 24"
+                             >
+                               <path
+                                 strokeLinecap="round"
+                                 strokeLinejoin="round"
+                                 strokeWidth={1.5}
+                                 d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                               />
+                             </svg>
+                             <span>{influencer.store.Booking.length}</span>
+                           </div>
+                         </div>
+                       </div>
+                     </Card>
                   ))}
                 </div>
               </div>

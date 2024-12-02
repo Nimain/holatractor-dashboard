@@ -28,6 +28,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import FarmerShimmer from '../_components/FarmerShrimmer'
+import BookingCard from './BookingCard'
 
 const chartData = [
   { month: "January", desktop: 186, mobile: 80 },
@@ -328,9 +329,9 @@ const SingleFarm = () => {
               </Card>
 
               {/* Slider Card */}
-              <Card className="w-full bg-zinc-900 border-zinc-800 text-white h-[400px] overflow-hidden">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-zinc-900/90 backdrop-blur-sm border-b border-zinc-800">
-                  <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+              <Card className="w-full h-[400px] overflow-hidden">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
                     Bookings
                   </CardTitle>
                   <button className="rounded-full hover:bg-zinc-800 p-2">
@@ -339,36 +340,8 @@ const SingleFarm = () => {
                 </CardHeader>
                 <CardContent className="p-0 h-[calc(100%-64px)]">
                   <Slider {...settings} className="h-full">
-                    {cardData.map((card) => (
-                      <div key={card.id} className="h-full px-1">
-                        <div className="bg-zinc-800 h-full rounded-lg flex items-center justify-center p-6">
-                          <div className="relative w-full aspect-square max-w-[240px] mx-auto">
-                            <svg
-                              viewBox="0 0 200 200"
-                              className="w-full h-full"
-                              style={{ filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2))' }}
-                            >
-                              <path
-                                d="M100 20 L160 140 L40 140 Z"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                className="text-gray-400"
-                              />
-                              <circle
-                                cx="100"
-                                cy="90"
-                                r="10"
-                                fill="currentColor"
-                                className="text-blue-500"
-                              />
-                              <circle cx="160" cy="140" r="4" fill="#fbbf24" />
-                              <circle cx="40" cy="140" r="4" fill="#fbbf24" />
-                              <circle cx="100" cy="20" r="4" fill="#fbbf24" />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
+                    {farm.farmDetails.Booking.map((card) => (
+                      <BookingCard booking={card} key={card.id} />
                     ))}
                   </Slider>
                 </CardContent>
@@ -421,54 +394,82 @@ const SingleFarm = () => {
 
           {/* Bottom Sliders */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left Slider */}
-            <div className="w-full">
-              <Slider {...sliderSettings} className="h-full">
-                {cardDataLeft.map((card, index) => (
-                  <div key={index} className="p-2 h-full">
-                    <Card className={`${card.bgClass} p-4 h-full flex flex-col`}>
-                      <div className="mb-4 flex items-center justify-between">
-                        <div className="text-lg">{card.title}</div>
-                        <button className="rounded-full p-2 hover:bg-white/10">
-                          <MoreHorizontal className="h-5 w-5" />
-                        </button>
-                      </div>
-                      <div className="text-center flex-grow flex flex-col justify-center">
-                        <div className="text-6xl font-light">{card.value}</div>
-                        <div className={`mt-2 text-sm ${card.textClass}`}>
-                          {card.description}
-                        </div>
-                      </div>
-                    </Card>
-                  </div>
-                ))}
-              </Slider>
-            </div>
-
-            {/* Right Slider */}
-            <div className="w-full">
-              <Slider {...sliderSettings} className="h-full">
-                {cardDataRight.map((card, index) => (
-                  <div key={index} className="p-2 h-full">
-                    <Card className={`relative overflow-hidden ${card.bgClass} p-4 h-full flex flex-col`}>
-                      <div className="mb-4 flex items-center justify-between">
-                        <div className={`text-lg ${card.highlightClass}`}>{card.title}</div>
-                        <button className="rounded-full p-2 hover:bg-white/10">
-                          <MoreHorizontal className={`h-5 w-5 ${card.highlightClass}`} />
-                        </button>
-                      </div>
-                      <div className="text-center flex-grow flex flex-col justify-center">
-                        <div className={`text-6xl font-light ${card.highlightClass}`}>{card.value}</div>
-                        <div className={`mt-2 text-sm ${card.textClass}`}>
-                          {card.description}
-                        </div>
-                      </div>
-                    </Card>
-                  </div>
-                ))}
-              </Slider>
-            </div>
+      {/* Left Slider */}
+      <div className="w-full">
+        <Slider {...sliderSettings} className="h-full">
+          <div className="p-2 h-full">
+            <Card className="bg-zinc-900/50 p-4 h-full flex flex-col transition-colors hover:bg-yellow-400">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="text-lg text-white">pH</div>
+                <button className="rounded-full p-2 hover:bg-white/10">
+                  <MoreHorizontal className="h-5 w-5 text-white" />
+                </button>
+              </div>
+              <div className="text-center flex-grow flex flex-col justify-center">
+                <div className="text-6xl font-light text-white">6.5</div>
+                <div className="mt-2 text-sm text-black/50">
+                  The pH of the soil decreased
+                </div>
+              </div>
+            </Card>
           </div>
+          <div className="p-2 h-full">
+            <Card className="bg-zinc-800/50 p-4 h-full flex flex-col transition-colors hover:bg-zinc-700/60">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="text-lg text-white">Acidity</div>
+                <button className="rounded-full p-2 hover:bg-white/10">
+                  <MoreHorizontal className="h-5 w-5 text-white" />
+                </button>
+              </div>
+              <div className="text-center flex-grow flex flex-col justify-center">
+                <div className="text-6xl font-light text-white">5.8</div>
+                <div className="mt-2 text-sm text-black/50">
+                  Soil acidity is changing
+                </div>
+              </div>
+            </Card>
+          </div>
+        </Slider>
+      </div>
+
+      {/* Right Slider */}
+      <div className="w-full">
+        <Slider {...sliderSettings} className="h-full">
+          <div className="p-2 h-full">
+            <Card className="relative overflow-hidden bg-[#1A1600] p-4 h-full flex flex-col transition-colors hover:bg-[#2A2600]">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="text-lg text-amber-500">Temperature</div>
+                <button className="rounded-full p-2 hover:bg-white/10">
+                  <MoreHorizontal className="h-5 w-5 text-amber-500" />
+                </button>
+              </div>
+              <div className="text-center flex-grow flex flex-col justify-center">
+                <div className="text-6xl font-light text-amber-500">23°</div>
+                <div className="mt-2 text-sm text-amber-500">
+                  Soil temperature in degrees Celsius
+                </div>
+              </div>
+            </Card>
+          </div>
+          <div className="p-2 h-full">
+            <Card className="relative overflow-hidden bg-[#2A2600] p-4 h-full flex flex-col transition-colors hover:bg-[#3A3600]">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="text-lg text-amber-600">Heat Index</div>
+                <button className="rounded-full p-2 hover:bg-white/10">
+                  <MoreHorizontal className="h-5 w-5 text-amber-600" />
+                </button>
+              </div>
+              <div className="text-center flex-grow flex flex-col justify-center">
+                <div className="text-6xl font-light text-amber-600">26°</div>
+                <div className="mt-2 text-sm text-amber-600">
+                  Feels like temperature
+                </div>
+              </div>
+            </Card>
+          </div>
+        </Slider>
+      </div>
+    </div>
         </div>
       </div>
     </div>

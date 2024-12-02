@@ -62,8 +62,13 @@ const Bookings = () => {
     const [timeRange, setTimeRange] = useState('last30');
     const [dayFilter, setDayFilter] = useState('sunday');
 
+    const [selectedRange, setSelectedRange] = useState<TimeRange>("")
+
     const leftSectionRef = useRef<HTMLDivElement>(null)
     const rightSectionRef = useRef<HTMLDivElement>(null)
+
+    const timeRanges = ["Last 30 Days", "Last 90 Days"] as const
+    type TimeRange = typeof timeRanges[number] | string
 
     const chartData = {
         last30: [
@@ -86,6 +91,15 @@ const Bookings = () => {
     const { cookie } = useCookie()
     const user: user = cookie.get("user")
     const access_token = cookie.get("access_token")
+
+    function generateYearOptions() {
+        const currentYear = new Date().getFullYear();
+        const years = [];
+        for (let year = 2021; year <= currentYear; year++) {
+            years.push(year.toString());
+        }
+        return years.reverse();
+    }
 
     function fetchBookings() {
         setFetchingBookings(true)
@@ -2569,28 +2583,36 @@ const Bookings = () => {
 
                             {/* Tab Content */}
                             <div className="space-y-4">
-                                <div>
+                                <div className="w-full space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-lg font-medium">Popular times</h3>
-                                        <div className="flex gap-2">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className={`rounded-full ${timeRange === "last30" ? "bg-gray-100" : ""
-                                                    }`}
-                                                onClick={() => setTimeRange("last30")}
+                                        <h2 className="text-2xl font-semibold tracking-tight">Booking</h2>
+                                        <div className="flex items-center gap-2">
+                                            {timeRanges.map((range) => (
+                                                <Button
+                                                    key={range}
+                                                    variant={selectedRange === range ? "secondary" : "outline"}
+                                                    size="sm"
+                                                    className="rounded-full"
+                                                    onClick={() => setSelectedRange(range)}
+                                                >
+                                                    {range}
+                                                </Button>
+                                            ))}
+                                            <Select
+                                                value={selectedRange}
+                                                onValueChange={(value) => setSelectedRange(value)}
                                             >
-                                                Last 30 days
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className={`rounded-full ${dayFilter === "sunday" ? "bg-gray-100" : ""
-                                                    }`}
-                                                onClick={() => setDayFilter("sunday")}
-                                            >
-                                                Sunday
-                                            </Button>
+                                                <SelectTrigger className="w-[120px]">
+                                                    <SelectValue placeholder="Select year" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {generateYearOptions().map((year) => (
+                                                        <SelectItem key={year} value={year}>
+                                                            {year}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                         </div>
                                     </div>
 
@@ -2617,16 +2639,25 @@ const Bookings = () => {
                                                         content={({ active, payload }) => {
                                                             if (active && payload && payload.length) {
                                                                 return (
-                                                                    <div className="bg-white p-2 shadow-lg rounded border">
-                                                                        <p className="text-sm">
-                                                                            Average passengers
-                                                                            <br />
-                                                                            {payload[0].payload.time}, 2022
-                                                                        </p>
-                                                                        <p className="text-sm font-bold">
-                                                                            {payload[0].value}{" "}
-                                                                            <span className="text-green-500">12%</span>
-                                                                        </p>
+                                                                    <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                                                        <div className="grid grid-cols-2 gap-2">
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                                                                    Bookings
+                                                                                </span>
+                                                                                <span className="font-bold text-muted-foreground">
+                                                                                    {payload[0].value}
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                                                                    Change
+                                                                                </span>
+                                                                                <span className="font-bold text-emerald-500">
+                                                                                    +12%
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
                                                                 );
                                                             }

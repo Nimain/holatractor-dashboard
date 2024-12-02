@@ -15,6 +15,8 @@ import AddTractor from './_components/AddTractor'
 import AddAttachment from './_components/AddAttachment'
 import { AttachmentCard } from './_components/AttachmentCard'
 import AlternatingAddForm from './_components/AlternatingAddform'
+import Image from 'next/image'
+import { Card, CardContent } from '@/components/ui/card'
 
 export default function StorePage() {
   const [store, setStore] = useState<Store | null>(null)
@@ -55,93 +57,41 @@ export default function StorePage() {
   if (!store) return <p>Store details not available</p>
 
   return (
-    <div className="bg-gray-50 min-h-screen p-6 flex-1 overflow-y-auto overflow-x-hidden">
+    <div className="min-h-screen w-full bg-white overflow-auto" style={{ scrollbarWidth: "none" }}>
 
-      {/* Hero Section */}
-      <main className="mt-4">
-        <div className="rounded-xl text-white p-3 mb-6 bg-cover bg-center" style={{ backgroundImage: `url(${mainImage})` }}>
-          <div className="flex flex-col min-h-[65vh] justify-between">
-            {/* Top Section */}
-            <div className="flex justify-between items-start p-6">
-              <div className="flex space-x-2 items-center">
-                {/* Loop through the first 4 images */}
-                {/* {images.slice(0, 4).map((image, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setMainImage(image)}
-                      className={`w-12 h-12 bg-white/20 rounded-lg ${mainImage === image ? "border-2 border-white" : ""
-                        }`}
-                    >
-                      <div className="relative w-full h-full">
-                        <Image
-                          src={image}
-                          alt={`Thumbnail ${index + 1}`}
-                          layout="fill" // Makes the image fill the parent container
-                          objectFit="cover" // Ensures the image doesn't stretch
-                          className="rounded-lg"
-                          unoptimized={true} // Optional: Skip Next.js optimizations if needed
-                        />
-                      </div>
-                    </button>
-                  ))} */}
+      <div className='w-full relative h-[60vh] rounded-xl overflow-hidden'>
 
-                {/* If there are more than 4 images, show a box indicating how many are left */}
-                {/* {images.length > 4 && (
-                    <div className="w-12 h-12 bg-gray-700 text-white flex items-center justify-center rounded-lg">
-                      +{images.length - 4}
-                    </div>
-                  )} */}
+        <Image
+          alt={store.name}
+          src={store.image}
+          width={400}
+          height={400}
+          unoptimized={true}
+          className='w-full h-full object-cover z-0 absolute top-0 left-0' />
 
-                {/* Additional Information Box */}
+        <div className='z-0 w-full h-full absolute top-0 left-0 bg-black/20' />
 
-              </div>
+        <div className="flex flex-col items-center justify-center text-center w-full h-full rounded-lg p-6 mx-6">
+          <h1 className="text-4xl font-bold text-white mb-2 z-10">
+            {store.name}
+          </h1>
+          <p className="text-lg text-white max-w-md z-10">
+            {store.description}
+          </p>
+        </div>
 
+        <div className='w-full absolute bottom-0 p-4 flex items-center justify-between'>
 
-
+          <div className="flex items-center gap-2 -mt-36">
+            <div className="flex items-center gap-2 rounded-[40px] bg-white/60 px-4 py-4 backdrop-blur-sm">
+              <Heart className="h-4 w-4 text-black" />
             </div>
-
-            {/* Center Section */}
-            <div className="flex flex-col items-center justify-center text-center  rounded-lg p-6 mx-6">
-              <h1 className="text-4xl font-bold text-white mb-2">
-                {store.name}
-              </h1>
-              <p className="text-lg text-white max-w-md">
-                {store.description}
-              </p>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 rounded-[40px] bg-white/60 px-4 py-4 backdrop-blur-sm">
-                  <Heart className="h-4 w-4 text-black" />
-                </div>
-                <div className="flex items-center gap-2 rounded-[40px] bg-white/60 px-4 py-4 backdrop-blur-sm">
-                  <Share className="h-4 w-4 text-black" />
-                </div>
-              </div>
-            </div>
-            {/* Bottom Section */}
-            <div className="flex items-center justify-between p-6">
-              {/* Left content (optional, could be empty) */}
-              <div></div>
-
-              {/* Right-side content */}
-              <div className="flex items-center gap-4 ml-auto bottom-0">
-                <div className="flex items-center gap-2 rounded-[40px] bg-white/60 px-4 py-4 backdrop-blur-sm">
-                  <FaImage className="h-4 w-4 text-black" />
-                </div>
-                <div className="flex items-center gap-2 rounded-[40px] bg-white/60 px-4 py-4 backdrop-blur-sm">
-                  <FaStore className="h-4 w-4 text-black" />
-                </div>
-              </div>
+            <div className="flex items-center gap-2 rounded-[40px] bg-white/60 px-4 py-4 backdrop-blur-sm">
+              <Share className="h-4 w-4 text-black" />
             </div>
           </div>
 
-        </div>
-      </main>
-      <div className="-mt-[6rem] " style={{ overflow: 'hidden' }}>
-        {/* Tabs */}
-        <div className="flex justify-center mb-8">
-          <div className="flex gap-2 p-2 bg-white backdrop-blur-lg rounded-xl shadow-lg ">
+          <div className="flex items-center justify-center absolute left-1/2 -translate-x-1/2 rounded-xl bg-white/40 text-black">
             {[
               { name: "Overview", icon: <FaRegChartBar /> },
               { name: "Tractor", icon: <FaHotel /> },
@@ -150,83 +100,65 @@ export default function StorePage() {
               <button
                 key={tab.name}
                 onClick={() => setSelectedTab(tab.name)}
-                className={`
-                flex items-center gap-2 px-6 py-2.5 
-                rounded-lg transition-all duration-300 
-                font-medium text-sm 
-                ${selectedTab === tab.name
-                    ? "bg-primary text-primary-foreground shadow-sm transform scale-105"
-                    : "text-gray-600 hover:bg-gray-100"
-                  }
-              `}
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg transition-all duration-300 font-medium text-sm ${selectedTab === tab.name ? "bg-white shadow-sm transform scale-105" : "text-white hover:text-gray-600 hover:bg-gray-100"}`}
               >
                 {tab.icon}
                 {tab.name}
               </button>
             ))}
           </div>
-        </div>
 
-        {/* Tab Content */}
-        <div className="pt-6 p-2">
-          {selectedTab === 'Overview' && (
-            <div className="container mx-auto p-6">
-            <div className="flex flex-col xl:flex-row gap-6">
-              <div className="w-full xl:w-[47%] min-w-[350px]">
-                <AlternatingAddForm tractors={store.TractorInStore} attachments={store.AttachmentInStore} />
-              </div>
-              <div className="w-full xl:w-[53%]">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {store.TractorInStore.map((tractor) => (
-                    <TractorCard key={tractor.id} tractor={tractor.baseTractor} />
-                  ))}
-                </div>
-              </div>
+          <div className="flex items-center gap-4 ml-auto bottom-0">
+            <div className="flex items-center gap-2 rounded-[40px] bg-white/60 px-4 py-4 backdrop-blur-sm">
+              <FaImage className="h-4 w-4 text-black" />
+            </div>
+            <div className="flex items-center gap-2 rounded-[40px] bg-white/60 px-4 py-4 backdrop-blur-sm">
+              <FaStore className="h-4 w-4 text-black" />
             </div>
           </div>
-          )}
-
-          {selectedTab === 'Tractor' && (
-            <div className="container mx-auto p-6">
-              <div className="flex flex-col xl:flex-row gap-6">
-                <div className="w-full xl:w-[47%] min-w-[350px]">
-                  <AddTractor alreadyTractors={store.TractorInStore} />
-                </div>
-                <div className="w-full xl:w-[53%]">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {store.TractorInStore.map((tractor) => (
-                      <TractorCard key={tractor.id} tractor={tractor.baseTractor} />
-                    ))}
-                    {store.AttachmentInStore.map((tractor) => (
-                    <AttachmentCard key={tractor.id} attachment={tractor.baseAttachment} />
-                  ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {selectedTab === 'Attachment' && (
-            <div className="container mx-auto p-6">
-            <div className="flex flex-col xl:flex-row gap-6">
-              <div className="w-full xl:w-[47%] min-w-[350px]">
-                <AddAttachment alreadyAttachments={store.AttachmentInStore} />
-              </div>
-              <div className="w-full xl:w-[53%]">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {store.AttachmentInStore.map((tractor) => (
-                    <AttachmentCard key={tractor.id} attachment={tractor.baseAttachment} />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-          )}
-
 
         </div>
+
       </div>
-      {/* Dashboard Grid */}
+
+      <div className='mt-4 flex gap-6'>
+
+                <Card className='w-[600px] -mt-24 z-10 ml-4 h-fit'>
+                    <CardContent className='pt-3'>
+                    {
+                  selectedTab === "Overview" && <AlternatingAddForm tractors={store.TractorInStore} attachments={store.AttachmentInStore} />
+                }
+                {
+                  selectedTab === "Tractor" && <AddTractor alreadyTractors={store.TractorInStore} />
+                }
+                {
+                  selectedTab === "Attachment" && <AddAttachment alreadyAttachments={store.AttachmentInStore} />
+                }
+                    </CardContent>
+                </Card>
+                
+
+                <div className='w-full grid gap-6 grid-cols-3'>
+
+                    {selectedTab === "Overview" && store.TractorInStore.map((tractor) => (
+                          <TractorCard key={tractor.id} tractor={tractor.baseTractor} />
+                    ))}
+
+                    {selectedTab === "Overview" && store.AttachmentInStore.map((tractor) => (
+                          <AttachmentCard key={tractor.id} attachment={tractor.baseAttachment} />
+                    ))}
+
+                    {selectedTab === "Tractor" && store.TractorInStore.map((tractor) => (
+                          <TractorCard key={tractor.id} tractor={tractor.baseTractor} />
+                    ))}
+
+                    {selectedTab === "Attachment" && store.AttachmentInStore.map((tractor) => (
+                        <AttachmentCard key={tractor.id} attachment={tractor.baseAttachment} />
+                    ))}
+
+                </div>
+
+            </div>
 
     </div>
   )

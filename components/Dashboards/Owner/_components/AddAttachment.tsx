@@ -98,7 +98,7 @@ const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentI
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <div className="bg-white rounded-xl p-6 shadow-lg w-full xl:w-[47%] min-w-[350px] xl:-mt-[8.7rem]">
+        <div>
           <div className="flex flex-col items-center justify-center h-full space-y-4">
             <div className="w-32 h-32 bg-gray-200 rounded-full flex items-center justify-center">
               <Image

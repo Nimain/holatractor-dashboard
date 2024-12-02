@@ -2,7 +2,7 @@
 
 import { renderInstance } from '@/utils/Axios/RenderInstance'
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
-import { Booking, Farm, Store } from '@/utils/Types/types'
+import { Booking, Farm, Store, BookingHours as BookingHoursTypes } from '@/utils/Types/types'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
@@ -569,7 +569,7 @@ const BookingStore = () => {
                                     {!newBooking.end_date && (
                                         <div className="flex items-center gap-2 pl-7">
                                             <Clock className="h-4 w-4 text-gray-500" />
-                                            <p>Duration: {newBooking.booking_hours} hours</p>
+                                            <p>Duration: {newBooking.booking_hours === BookingHoursTypes.EIGHT_HOURS ? "8 hours" : newBooking.booking_hours === BookingHoursTypes.SEVEN_HOURS ? "7 hours" : newBooking.booking_hours === BookingHoursTypes.SIX_HOURS ? "6 hours" : newBooking.booking_hours === BookingHoursTypes.FIVE_HOURS ? "5 hours" : newBooking.booking_hours === BookingHoursTypes.FOUR_HOURS ? "4 hours" : newBooking.booking_hours === BookingHoursTypes.THREE_HOURS ? "3 hours" : newBooking.booking_hours === BookingHoursTypes.TWO_HOURS ? "2 hours" : "1 hour"}</p>
                                         </div>
                                     )}
                                 </div>

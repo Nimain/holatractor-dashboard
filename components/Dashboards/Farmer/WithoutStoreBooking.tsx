@@ -10,14 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils';
 import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages';
-import { Attachment, Booking, Farm, Tractor } from '@/utils/Types/types'
+import { Attachment, Booking, Farm, Tractor, BookingHours as BookingHoursTypes } from '@/utils/Types/types'
 import { addDays, format } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CalendarIcon, Clock, MapPin, Minus, Plus, Receipt, Search, Tractor as TractorIcon, Truck, X } from 'lucide-react';
 import { useCookie } from 'next-cookie'
 import { useState, useEffect, ReactNode, FC } from 'react'
 import { DateRange } from 'react-day-picker';
-import { useRouter, useSearchParams } from 'next/navigation'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
@@ -66,10 +65,6 @@ const WithoutStoreBooking = () => {
     const [selectedAttachments, setSelectedAttachments] = useState<EquipmentItem[]>([])
 
     const [newBooking, setNewBooking] = useState<Booking | null>(null)
-
-    const router = useRouter()
-    const searchParams = useSearchParams()
-    const bookingId = searchParams.get('bookingId')
 
     const { cookie } = useCookie()
     const user: user = cookie.get("user")
@@ -331,7 +326,7 @@ const WithoutStoreBooking = () => {
                                     {!newBooking.end_date && (
                                         <div className="flex items-center gap-2 pl-7">
                                             <Clock className="h-4 w-4 text-gray-500" />
-                                            <p>Duration: {newBooking.booking_hours} hours</p>
+                                            <p>Duration: {newBooking.booking_hours === BookingHoursTypes.EIGHT_HOURS ? "8 hours" : newBooking.booking_hours === BookingHoursTypes.SEVEN_HOURS ? "7 hours" : newBooking.booking_hours === BookingHoursTypes.SIX_HOURS ? "6 hours" : newBooking.booking_hours === BookingHoursTypes.FIVE_HOURS ? "5 hours" : newBooking.booking_hours === BookingHoursTypes.FOUR_HOURS ? "4 hours" : newBooking.booking_hours === BookingHoursTypes.THREE_HOURS ? "3 hours" : newBooking.booking_hours === BookingHoursTypes.TWO_HOURS ? "2 hours" : "1 hour"}</p>
                                         </div>
                                     )}
                                 </div>
