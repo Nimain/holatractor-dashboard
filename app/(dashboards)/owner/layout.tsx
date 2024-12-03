@@ -5,6 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 import ReduxWrapper from '../_components/ReduxWrapper';
 import SidebarWrapper from './_components/SidebarWrapper';
 import NewStore from '@/components/Dashboards/Owner/_components/NewStore';
+import Header from '@/components/Dashboards/Owner/_components/Header';
 
 const OwnerDashboardLayout = ({
   children,
@@ -19,6 +20,7 @@ const OwnerDashboardLayout = ({
             <main className="flex-1 overflow-y-auto my-2">
               <NewStore />
               <ToastContainer />
+              <Header />
               {children}
             </main>
           </SidebarWrapper>

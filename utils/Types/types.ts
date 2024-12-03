@@ -1005,6 +1005,25 @@ export interface FarmerNotification {
   base: Base
 }
 
+export interface OwnerNotification {
+  id        :string              
+  title     :string
+  message   :string
+  type      :OwnerNotificationType
+  userId    :string
+  baseId    :string
+  createdAt :Date
+  updatedAt :Date
+
+  user :User
+  base :Base
+}
+
+export enum OwnerNotificationType {
+  storeCreated,
+  Booking
+}
+
 export enum FarmerNotificationType {
   farmAdded,
   bookingConfirmation,

@@ -179,6 +179,8 @@ const NewStore = () => {
                 setOpeningTime("");
                 setClosingTime("");
                 setClosingDays([]);
+                setFiles([])
+                setMainImage(null)
                 setOpen()
             }
         }).catch((err) => {

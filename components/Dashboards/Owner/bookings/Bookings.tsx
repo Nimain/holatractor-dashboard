@@ -60,7 +60,6 @@ const Bookings = () => {
     const [confirming, setConfirming] = useState(false)
 
     const [timeRange, setTimeRange] = useState('last30');
-    const [dayFilter, setDayFilter] = useState('sunday');
 
     const [selectedRange, setSelectedRange] = useState<TimeRange>("")
 
@@ -106,7 +105,6 @@ const Bookings = () => {
 
         renderInstance.get(`/owner/get-owner-booking-page-details/${user.userId}`)
             .then((res) => {
-                console.log(res.data)
                 setAllBookings(res.data.allBookings)
             }).catch((err) => {
                 errorMessage("Error fetching operator lists")
