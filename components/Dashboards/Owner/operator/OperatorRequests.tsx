@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { renderInstance } from '@/utils/Axios/RenderInstance'
+import { NestJsBaseURL, renderInstance } from '@/utils/Axios/RenderInstance'
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
 import { OperatorAddStoreReuests } from '@/utils/Types/types'
 import { CheckCircle, Clock, DollarSign, MessageCircle } from 'lucide-react'
@@ -39,7 +39,6 @@ const OperatorRequests = ({ requests }: { requests: OperatorAddStoreReuests[]; }
             }
         }).then(() => {
             successMessage("Congratulations")
-            window.location.reload()
         }).catch((err) => {
             if (err.response && err.response.status === 404 && err.response.data.message === "User is not found") {
                 errorMessage("User not found")
@@ -120,7 +119,9 @@ const OperatorRequests = ({ requests }: { requests: OperatorAddStoreReuests[]; }
                                     </CardContent>
                                     <CardFooter className="flex justify-end space-x-2 mt-4">
                                         <FillAcceptanceForm id={requset.id} />
-                                        <Button onClick={() => {handleAccept(requset)}} disabled={loading}>Accept</Button>
+                                        <Button onClick={() => {handleAccept(requset)}} disabled={loading}>
+                                            {loading ? "Accepting..." : "Accept"}
+                                        </Button>
                                     </CardFooter>
                                 </Card>
                             )
@@ -135,6 +136,7 @@ const OperatorRequests = ({ requests }: { requests: OperatorAddStoreReuests[]; }
 export default OperatorRequests
 
 function FillAcceptanceForm({id}:{id: string;}){
+    const [open, setOpen] = useState(false)
     const [requesting, setRequesting] = useState(false)
     
     const { cookie } = useCookie()
@@ -171,9 +173,8 @@ function FillAcceptanceForm({id}:{id: string;}){
           }).then((res) => {
               // Logic to fetch all request
               successMessage("Requested")
-              window.location.reload()
+              setOpen(false)
           }).catch((err) => {
-            console.log(err)
               if (err.response && err.response.status === 404 && err.response.data.message === "Store not found") {
                   errorMessage("Store not found")
               } else if (err.response && err.response.status === 404 && err.response.data.message === "Operator not found") {
@@ -191,7 +192,7 @@ function FillAcceptanceForm({id}:{id: string;}){
       }
 
     return(
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button variant={"outline"}>
                     Reject

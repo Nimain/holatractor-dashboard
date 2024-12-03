@@ -37,10 +37,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import Image from 'next/image';
 import { OperatorAddStoreReuests, OperatorInStore } from '@/utils/Types/types';
 import { useCookie } from 'next-cookie';
-import { renderInstance } from '@/utils/Axios/RenderInstance';
+import { NestJsBaseURL, renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
 import RequestNewOperator from './RequestNewOperator';
 import OperatorRequests from './OperatorRequests';
+import { io, Socket } from 'socket.io-client';
 
 interface user {
     userId: string;
@@ -66,53 +67,6 @@ const OwnerOperator = () => {
         { id: 'company', label: 'Company', icon: Building2 },
         { id: 'contact', label: 'Contact', icon: Users },
         { id: 'estimate', label: 'Estimate Value', icon: DollarSign },
-    ];
-
-    const jobInfo = [
-        { department: "Creative Associate", division: "Project Management", manager: "Alex Foster", hireDate: "May 13, 2024", location: "Metro DC" },
-        { department: "Marketing Team", division: "Leadership", manager: "Jack Danniel", hireDate: "Sep 05, 2024", location: "Bergen, NJ" },
-        { department: "Team Lead", division: "Creator", manager: "Alina Skazka", hireDate: "Jun 08, 2023", location: "Miami, FL" },
-        { department: "Finance & Accounting", division: "Senior Consultant", manager: "John Miller", hireDate: "Sep 13, 2022", location: "Chicago, IL" },
-        { department: "Team Lead", division: "Creator", manager: "Mark Baldwin", hireDate: "Jul 07, 2023", location: "Miami, FL" },
-    ];
-
-    const activities = [
-        {
-            avatar: "/api/placeholder/32/32",
-            name: "John Miller",
-            action: "last login on",
-            date: "Jul 13, 2024",
-            time: "05:36 PM"
-        },
-        {
-            avatar: "/api/placeholder/32/32",
-            name: "Merva Sahin",
-            action: "date created on",
-            date: "Sep 08, 2024",
-            time: "03:12 PM"
-        },
-        {
-            avatar: "/api/placeholder/32/32",
-            name: "Tammy Collier",
-            action: "updated on",
-            date: "Aug 15, 2023",
-            time: "05:36 PM"
-        }
-    ];
-
-    const compensation = [
-        {
-            amount: "862.00 USD per month",
-            effectiveDate: "May 10, 2015"
-        },
-        {
-            amount: "1560.00 USD per quarter",
-            effectiveDate: "Jun 08, 2022"
-        },
-        {
-            amount: "378.00 USD per week",
-            effectiveDate: "Jun 08, 2022"
-        }
     ];
 
     const { cookie } = useCookie()
@@ -162,6 +116,27 @@ const OwnerOperator = () => {
         updateDateTime(); // Initialize immediately
 
         return () => clearInterval(intervalId); // Cleanup on component unmount
+    }, []);
+
+    useEffect(() => {
+        // Connect to the socket server
+        const newSocket: Socket = io(NestJsBaseURL, {
+            query: {
+                userId: user.userId
+            }
+        });
+
+        // Listen for the 'newFarmerNotification' event
+        newSocket.on('acceptedOperatorRequest', (request: OperatorAddStoreReuests) => {
+            setOperatorRequests((prevRequests) =>
+                prevRequests.filter((req) => req.id !== request.id)
+              );
+         });
+
+        // Clean up the event listener when the component unmounts
+        return () => {
+            newSocket.disconnect();
+        };
     }, []);
 
     return (

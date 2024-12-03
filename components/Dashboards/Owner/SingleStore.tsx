@@ -3,7 +3,7 @@
 import { useEffect, useState, FC } from 'react'
 import { useParams } from 'next/navigation'
 import { Calendar, MapPin, Hotel, List, Heart, Share, Zap, Maximize2, CreditCard, MessageCircleQuestion, Sun, Mic, Map } from 'lucide-react'
-import { renderInstance } from '@/utils/Axios/RenderInstance'
+import { NestJsBaseURL, renderInstance } from '@/utils/Axios/RenderInstance'
 import { errorMessage } from '@/utils/Toastify/Messages'
 import { Store } from '@/utils/Types/types'
 import "leaflet/dist/leaflet.css";
@@ -17,6 +17,15 @@ import { AttachmentCard } from './_components/AttachmentCard'
 import AlternatingAddForm from './_components/AlternatingAddform'
 import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
+import { io, Socket } from 'socket.io-client'
+import { useCookie } from 'next-cookie'
+
+interface user {
+  userId: string;
+  image: string;
+  name: string;
+  email: string;
+}
 
 export default function StorePage() {
   const [store, setStore] = useState<Store | null>(null)
@@ -30,7 +39,9 @@ export default function StorePage() {
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT243T7YIOkC6yRwBVPQ6wPFXfo_Ssl1aYlcQ&s",
     "https://thumbs.dreamstime.com/b/tractor-modern-agriculture-equipment-14081589.jpg",
   ];
-  const [mainImage, setMainImage] = useState(images[0]);
+
+  const { cookie } = useCookie()
+  const user: user = cookie.get("user")
 
   const { slug } = useParams()
 
@@ -45,6 +56,25 @@ export default function StorePage() {
         setFetchingStoreDetails(false)
       })
   }
+
+  useEffect(() => {
+    // Connect to the socket server
+    const newSocket: Socket = io(NestJsBaseURL, {
+      query: {
+        userId: user.userId
+      }
+    });
+
+    // Listen for the 'newFarmerNotification' event
+    newSocket.on('newOwnerStore', (addedStore: Store) => {
+      setStore(addedStore)
+    });
+
+    // Clean up the event listener when the component unmounts
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     if (slug) {

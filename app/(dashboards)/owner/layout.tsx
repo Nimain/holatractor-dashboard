@@ -5,7 +5,14 @@ import "react-toastify/dist/ReactToastify.css";
 import ReduxWrapper from '../_components/ReduxWrapper';
 import SidebarWrapper from './_components/SidebarWrapper';
 import NewStore from '@/components/Dashboards/Owner/_components/NewStore';
-import Header from '@/components/Dashboards/Owner/_components/Header';
+import dynamic from "next/dynamic";
+
+const Header = dynamic(
+  ()=> import('@/components/Dashboards/Owner/_components/Header'),
+  {
+      ssr: false,
+    }
+)
 
 const OwnerDashboardLayout = ({
   children,

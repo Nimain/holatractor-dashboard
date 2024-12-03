@@ -1,20 +1,12 @@
 "use client"
 
-import { Button } from '@/components/ui/button'
 import { NestJsBaseURL, renderInstance } from '@/utils/Axios/RenderInstance'
 import { errorMessage } from '@/utils/Toastify/Messages'
 import { Attachment, Booking, Operator, OperatorInStore, Owner, Store, Tractor } from '@/utils/Types/types'
-import { BarChartIcon, CalendarIcon, ClipboardListIcon, ClockIcon, DollarSignIcon, MapPinIcon, TractorIcon, Truck, UserIcon } from 'lucide-react'
 import { useCookie } from 'next-cookie'
-import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import HomeDashboard from './_components/HomeDashboard'
-import TranslatedText from '@/components/Menubar/TranslatedText'
-import { WelcomeTranslation } from '../Farmer/FarmerTranslation'
-import Languages from '@/components/Menubar/Languages'
-import { Input } from '@/components/ui/input'
 import OwnerShrimmer from './_components/OwnerShrimmer'
-import NewStore from './_components/NewStore'
 import { io, Socket } from 'socket.io-client'
 
 interface user {

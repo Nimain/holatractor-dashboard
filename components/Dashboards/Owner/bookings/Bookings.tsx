@@ -28,13 +28,14 @@ import {
 } from "@/components/ui/select"
 import { Booking, BookingHours, BookingStatus, OperatorInStore, PaymentStatus } from "@/utils/Types/types";
 import { useCookie } from "next-cookie";
-import { renderInstance } from "@/utils/Axios/RenderInstance";
+import { NestJsBaseURL, renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import OwnerShrimmer from "../_components/OwnerShrimmer";
 import { Badge } from "@/components/ui/badge";
 import AssignOperator from "./AssignOperator";
 import PaymentReview from "../_components/PaymentProofAction";
 import PaymentMethods from '../_components/BankAccountSelect'
+import { io, Socket } from "socket.io-client";
 
 interface user {
     userId: string;
@@ -122,7 +123,6 @@ const Bookings = () => {
             },
         }).then((res) => {
             successMessage("You have rejected this request")
-            fetchBookings()
         }).catch((err) => {
             if (err.response && err.response.status === 404 && err.response.data.message === "Booking is not valid") {
                 errorMessage("Log in user not found")
@@ -160,6 +160,34 @@ const Bookings = () => {
             }
         }
     }, [])
+
+    useEffect(() => {
+        // Connect to the socket server
+        const newSocket: Socket = io(NestJsBaseURL, {
+            query: {
+                userId: user.userId
+            }
+        });
+
+        // Listen for the 'newFarmerNotification' event
+        newSocket.on('newBooking', (booking: Booking) => {
+            setAllBookings(prevBookings => {
+                const existingBookingIndex = prevBookings.findIndex(b => b.id === booking.id);
+                
+                if (existingBookingIndex !== -1) {
+                    const updatedBookings = prevBookings.filter(b => b.id !== booking.id);
+                    return [booking, ...updatedBookings];
+                } else {
+                    return [booking, ...prevBookings];
+                }
+            });
+         });
+
+        // Clean up the event listener when the component unmounts
+        return () => {
+            newSocket.disconnect();
+        };
+    }, []);
 
     useEffect(() => {
         if (user) {
@@ -232,23 +260,6 @@ const Bookings = () => {
                                 <SelectItem value="rejected">Rejected</SelectItem>
                             </SelectContent>
                         </Select>
-
-                        {/* <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" className="bg-white flex items-center gap-5">
-                                    <CalendarIcon className="h-4 w-4 text-gray-500" />
-                                    {format(date, "EEE, d MMM")}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                    mode="single"
-                                    selected={date}
-                                    // onSelect={setDate}
-                                    initialFocus
-                                />
-                            </PopoverContent>
-                        </Popover> */}
                     </div>
 
                     {/* Train List */}
@@ -318,11 +329,11 @@ const Bookings = () => {
                                                     }
 
                                                     {
-                                                        !ticket.owner_confirm && <div className="flex items-center space-x-2">
+                                                        !ticket.owner_confirm && ticket.bookingStatus !== BookingStatus.Rejected && <div className="flex items-center space-x-2">
                                                             {/* <Button onClick={() => handleAccept(request.id)}>Accept</Button> */}
                                                             <PaymentMethods bookingId={ticket.id} />
-                                                            <Button variant="destructive" onClick={() => handleReject(ticket.id)}>
-                                                                Reject
+                                                            <Button variant="destructive" onClick={() => handleReject(ticket.id)} disabled={confirming}>
+                                                                {confirming ? "Rejecting..." : "Reject"}
                                                             </Button>
                                                         </div>
                                                     }
@@ -613,11 +624,13 @@ const Bookings = () => {
                                                         <div className="space-y-2">
 
                                                             {
-                                                                !ticket.owner_confirm && <div className="flex items-center space-x-2">
+                                                                !ticket.owner_confirm && ticket.bookingStatus !== BookingStatus.Rejected && <div className="flex items-center space-x-2">
                                                                     {/* <Button onClick={() => handleAccept(request.id)}>Accept</Button> */}
                                                                     <PaymentMethods bookingId={ticket.id} />
-                                                                    <Button variant="destructive" onClick={() => handleReject(ticket.id)}>
-                                                                        Reject
+                                                                    <Button variant="destructive" onClick={() => handleReject(ticket.id)} disabled={confirming}>
+                                                                        {
+                                                                            confirming ? "Rejecting..." : "Reject"
+                                                                        }
                                                                     </Button>
                                                                 </div>
                                                             }
@@ -2562,22 +2575,6 @@ const Bookings = () => {
 
                         {/* Statistics */}
                         <div className="space-y-6 mt-6">
-                            {/* Navigation Tabs */}
-                            {/* <div className="flex justify-between border-b">
-                                {["Details", "Amenities", "Statistics", "Route", "Reviews"].map((tab) => (
-                                    <Button
-                                        key={tab}
-                                        variant="ghost"
-                                        onClick={() => setActiveTab(tab)}
-                                        className={`px-4 py-2 -mb-px ${tab === activeTab
-                                            ? "border-b-2 border-blue-500 text-blue-600"
-                                            : "text-gray-500"
-                                            }`}
-                                    >
-                                        {tab}
-                                    </Button>
-                                ))}
-                            </div> */}
 
                             {/* Tab Content */}
                             <div className="space-y-4">

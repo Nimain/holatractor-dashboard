@@ -24,10 +24,10 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { useEffect, useRef, useState } from 'react'
-import { Owner, Booking, Subscriptions, PayPal, BankAccount, UPI } from '@/utils/Types/types'
+import { Owner, Booking, Subscriptions, PayPal, BankAccount, UPI, Payment } from '@/utils/Types/types'
 import { Input } from '@/components/ui/input'
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
-import { renderInstance } from '@/utils/Axios/RenderInstance'
+import { NestJsBaseURL, renderInstance } from '@/utils/Axios/RenderInstance'
 import { uploadFileToS3 } from '@/utils/AWS/FileUpload'
 import { useCookie } from 'next-cookie'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -39,6 +39,7 @@ import PaymentSheet from './PaymentSheet'
 import { DownloadPDFButton } from './PaymentPDF';
 import { addDays } from 'date-fns'
 import Image from 'next/image'
+import { io, Socket } from 'socket.io-client'
 
 const currencies = [
   { code: 'USD', symbol: '$', name: 'US Dollar' },
@@ -60,13 +61,14 @@ const OwnerPayment = () => {
   const [ownerDetails, setOwnerDetails] = useState<Owner | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isFetching, setIsFetching] = useState(false)
-  const [isOpen, setIsOpen] = useState(false);
   const [selectedPayments, setSelectedPayments] = useState<string[]>([])
   const [monthlyRevenue, setMonthlyRevenue] = useState(0)
   const [monthlyRejected, setMonthlyRejected] = useState(0)
   const [subscription, setSubscription] = useState<Subscriptions | null>(null)
   const [subscriptionActive, setSubscriptionActive] = useState<Subscriptions | null>(null)
   const [activeFilter, setActiveFilter] = useState("all")
+  const [receiverPayments, setReceiverPayments] = useState<Payment[]>([])
+  const [senderPayments, setSenderPayments] = useState<Payment[]>([])
 
   const { cookie } = useCookie()
   const user: user = cookie.get("user")
@@ -121,6 +123,8 @@ const OwnerPayment = () => {
     renderInstance.get(`/owner/get-owner-payment-page-details/${user.userId}`)
       .then((res) => {
         setOwnerDetails(res.data.ownerDetails)
+        setReceiverPayments(res.data.ownerDetails.user.paymentReciever)
+        setSenderPayments(res.data.ownerDetails.user.paymentSender)
         setMonthlyRevenue(res.data.monthlyRevenue)
         setMonthlyRejected(res.data.monthlyRejected)
         setSubscription(res.data.subscription)
@@ -131,6 +135,48 @@ const OwnerPayment = () => {
         setIsFetching(false)
       })
   }
+
+  useEffect(() => {
+    // Connect to the socket server
+    const newSocket: Socket = io(NestJsBaseURL, {
+        query: {
+            userId: user.userId
+        }
+    });
+
+    // Listen for the 'newFarmerNotification' event
+    newSocket.on('getUpdatedPayment', (payment: Payment) => {
+      setSenderPayments((prevPayments) => {
+        const existingPaymentIndex = prevPayments.findIndex((b) => b.id === payment.id);
+    
+        if (existingPaymentIndex !== -1) {
+          // If payment exists, remove the old one and add the new one at the start
+          const updatedPayments = prevPayments.filter((b) => b.id !== payment.id);
+          return [payment, ...updatedPayments];
+        } else {
+          // If payment doesn't exist, leave the array as it is
+          return prevPayments;
+        }
+      });
+      setReceiverPayments((prevPayments) => {
+        const existingPaymentIndex = prevPayments.findIndex((b) => b.id === payment.id);
+    
+        if (existingPaymentIndex !== -1) {
+          // If payment exists, remove the old one and add the new one at the start
+          const updatedPayments = prevPayments.filter((b) => b.id !== payment.id);
+          return [payment, ...updatedPayments];
+        } else {
+          // If payment doesn't exist, leave the array as it is
+          return prevPayments;
+        }
+      });
+     });
+
+    // Clean up the event listener when the component unmounts
+    return () => {
+        newSocket.disconnect();
+    };
+}, []);
 
   useEffect(() => {
     if (user) {
@@ -176,13 +222,13 @@ const OwnerPayment = () => {
                 <TabsTrigger value="upi">UPI</TabsTrigger>
               </TabsList>
               <TabsContent value="bank">
-                <BankAccountForm />
+                <BankAccountForm setIsAddModalOpen={setIsAddModalOpen} />
               </TabsContent>
               <TabsContent value="paypal">
-                <PayPalForm />
+                <PayPalForm setIsAddModalOpen={setIsAddModalOpen} />
               </TabsContent>
               <TabsContent value="upi">
-                <UPIForm />
+                <UPIForm setIsAddModalOpen={setIsAddModalOpen} />
               </TabsContent>
             </Tabs>
           </DialogContent>
@@ -308,13 +354,13 @@ const OwnerPayment = () => {
                         <TabsTrigger value="upi">UPI</TabsTrigger>
                       </TabsList>
                       <TabsContent value="bank">
-                        <BankAccountForm />
+                        <BankAccountForm setIsAddModalOpen={setIsAddModalOpen} />
                       </TabsContent>
                       <TabsContent value="paypal">
-                        <PayPalForm />
+                        <PayPalForm setIsAddModalOpen={setIsAddModalOpen} />
                       </TabsContent>
                       <TabsContent value="upi">
-                        <UPIForm />
+                        <UPIForm setIsAddModalOpen={setIsAddModalOpen} />
                       </TabsContent>
                     </Tabs>
                   </DialogContent>
@@ -446,27 +492,27 @@ const OwnerPayment = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {activeFilter === "all" && ownerDetails.user.paymentReciever.map((item, index) => {
+            {activeFilter === "all" && receiverPayments.map((item, index) => {
               return (
                 <PaymentSheet index={index} item={item} />
               )
             })}
-            {activeFilter === "unpaid" && ownerDetails.user.paymentSender.filter(po=>(`${po.status}` === "FarmerPENDING")).map((item, index) => {
+            {activeFilter === "unpaid" && senderPayments.filter(po=>(`${po.status}` === "FarmerPENDING")).map((item, index) => {
               return (
                 <PaymentSheet index={index} item={item} />
               )
             })}
-            {activeFilter === "review" && ownerDetails.user.paymentSender.filter(po=>(`${po.status}` === "FarmerCONFIRMED")).map((item, index) => {
+            {activeFilter === "review" && senderPayments.filter(po=>(`${po.status}` === "FarmerCONFIRMED")).map((item, index) => {
               return (
                 <PaymentSheet index={index} item={item} />
               )
             })}
-            {activeFilter === "rejected" && ownerDetails.user.paymentSender.filter(po=>(`${po.status}` === "OwnerREJECTED")).map((item, index) => {
+            {activeFilter === "rejected" && senderPayments.filter(po=>(`${po.status}` === "OwnerREJECTED")).map((item, index) => {
               return (
                 <PaymentSheet index={index} item={item} />
               )
             })}
-            {activeFilter === "completed" && ownerDetails.user.paymentSender.filter(po=>(`${po.status}` === "COMPLETED")).map((item, index) => {
+            {activeFilter === "completed" && senderPayments.filter(po=>(`${po.status}` === "COMPLETED")).map((item, index) => {
               return (
                 <PaymentSheet index={index} item={item} />
               )
@@ -482,7 +528,7 @@ const OwnerPayment = () => {
 
 export default OwnerPayment
 
-function BankAccountForm() {
+function BankAccountForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: boolean) => void }) {
 
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -514,7 +560,7 @@ function BankAccountForm() {
       },
     }).then(() => {
       successMessage("Bank account added")
-      window.location.reload()
+      setIsAddModalOpen(false)
     }).catch((err) => {
       errorMessage("Error adding bank account")
     }).finally(() => {
@@ -580,7 +626,7 @@ function BankAccountReadOnly({ bankAccount }: { bankAccount: BankAccount }) {
   )
 }
 
-function PayPalForm() {
+function PayPalForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: boolean) => void }) {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -597,7 +643,7 @@ function PayPalForm() {
       },
     }).then(() => {
       successMessage("paypal account added")
-      window.location.reload()
+      setIsAddModalOpen(false)
     }).catch((err) => {
       errorMessage("Error adding bank account")
     }).finally(() => {
@@ -639,7 +685,7 @@ function PaypalReadOnly({ email }: { email: string; }) {
   )
 }
 
-function UPIForm() {
+function UPIForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: boolean) => void }) {
   const [upiId, setUpiId] = useState('')
   const [qrCode, setQrCode] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -663,7 +709,7 @@ function UPIForm() {
       },
     }).then(() => {
       successMessage("paypal account added")
-      window.location.reload()
+      setIsAddModalOpen(false)
     }).catch((err) => {
       errorMessage("Error adding bank account")
     }).finally(() => {

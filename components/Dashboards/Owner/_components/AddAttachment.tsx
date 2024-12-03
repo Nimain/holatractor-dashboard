@@ -33,7 +33,6 @@ const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentI
   const access_token = cookie.get("access_token");
 
   const { slug } = useParams();
-  const { refresh } = useRouter();
 
   function fetchAllAttachments() {
     if (access_token) {
@@ -83,10 +82,8 @@ const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentI
       })
       .then((res) => {
         successMessage("Attachment added successfully");
-        refresh();
       })
       .catch((err) => {
-        console.log(err);
         errorMessage("Some error occurred");
       })
       .finally(() => {
@@ -127,8 +124,8 @@ const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentI
         </div>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[425px]">
-        <div className="grid gap-4 py-4">
+      <DialogContent className="max-h-[90vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
+        <div className="grid gap-4 py-4 grid-cols-2"> 
           {selectedAttachmentId ? (
             <div className="grid gap-4">
               <Label htmlFor="hourly-price">Hourly Price</Label>

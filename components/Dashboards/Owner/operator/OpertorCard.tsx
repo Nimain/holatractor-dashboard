@@ -140,6 +140,7 @@ function SelectStore({id}:{id: string}) {
 
 function FillAcceptanceForm({id, slug}:{id: string; slug: string;}){
     const [requesting, setRequesting] = useState(false)
+    const [open, setOpen] = useState(false)
     
     const { cookie } = useCookie()
     const access_token = cookie.get("access_token")
@@ -175,7 +176,7 @@ function FillAcceptanceForm({id, slug}:{id: string; slug: string;}){
           }).then((res) => {
               // Logic to fetch all request
               successMessage("Requested")
-              window.location.reload()
+              setOpen(false)
           }).catch((err) => {
               if (err.response && err.response.status === 404 && err.response.data.message === "Store not found") {
                   errorMessage("Store not found")
@@ -194,7 +195,7 @@ function FillAcceptanceForm({id, slug}:{id: string; slug: string;}){
       }
 
     return(
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button className='w-full'>
                     Select
