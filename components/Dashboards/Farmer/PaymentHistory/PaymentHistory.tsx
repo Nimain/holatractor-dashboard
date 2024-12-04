@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Payment, TransactionMethod } from '@/utils/Types/types';
 import { useCookie } from 'next-cookie';
-import { renderInstance } from '@/utils/Axios/RenderInstance';
+import { NestJsBaseURL, renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
 import FarmerShimmer from '../_components/FarmerShrimmer';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
 import { BankAccountForm, PayPalForm, UPIForm } from '../BookingHistory';
 import PaymentDetailsSheet from './PaymentDetailsSheet';
+import { io, Socket } from 'socket.io-client';
 
 interface user {
   userId: string;
@@ -90,6 +91,36 @@ const PaymentHistory = () => {
       fetchPayments()
     }
   }, [])
+
+  useEffect(() => {
+    // Connect to the socket server
+    const newSocket: Socket = io(NestJsBaseURL, {
+        query: {
+            userId: user.userId
+        }
+    });
+
+    // Listen for the 'newFarmerNotification' event
+    newSocket.on('getUpdatedPayment', (payment: Payment) => {
+      setPayments((prevPayments) => {
+        const existingPaymentIndex = prevPayments.findIndex((b) => b.id === payment.id);
+    
+        if (existingPaymentIndex !== -1) {
+          // If payment exists, remove the old one and add the new one at the start
+          const updatedPayments = prevPayments.filter((b) => b.id !== payment.id);
+          return [payment, ...updatedPayments];
+        } else {
+          // If payment doesn't exist, leave the array as it is
+          return [payment, ...prevPayments];
+        }
+      });
+     });
+
+    // Clean up the event listener when the component unmounts
+    return () => {
+        newSocket.disconnect();
+    };
+}, []);
 
   if (fetching) return <FarmerShimmer />
 

@@ -8,13 +8,14 @@ import {
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Booking, BookingHours, BookingStatus, Payment } from '@/utils/Types/types';
-import { renderInstance } from '@/utils/Axios/RenderInstance';
+import { NestJsBaseURL, renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
 import { useCookie } from 'next-cookie';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import BookingConfirmation from './BookingConfirmation';
+import { io, Socket } from 'socket.io-client';
 
 interface user {
   userId: string;
@@ -102,6 +103,34 @@ const NewBookingHistory = () => {
     }
   }, [])
 
+  useEffect(() => {
+    // Connect to the socket server
+    const newSocket: Socket = io(NestJsBaseURL, {
+        query: {
+            userId: user.userId
+        }
+    });
+
+    // Listen for the 'newFarmerNotification' event
+    newSocket.on('newBooking', (booking: Booking) => {
+        setBookings(prevBookings => {
+            const existingBookingIndex = prevBookings.findIndex(b => b.id === booking.id);
+            
+            if (existingBookingIndex !== -1) {
+                const updatedBookings = prevBookings.filter(b => b.id !== booking.id);
+                return [booking, ...updatedBookings];
+            } else {
+                return [booking, ...prevBookings];
+            }
+        });
+     });
+
+    // Clean up the event listener when the component unmounts
+    return () => {
+        newSocket.disconnect();
+    };
+}, []);
+
   return (
     <div className="p-6">
       {/* Header Section */}
@@ -162,13 +191,13 @@ const NewBookingHistory = () => {
             className="pl-10 pr-4 py-2 w-full border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        <Select onValueChange={e=>setActiveFilter(e)} defaultValue='unconfirmed'>
+        <Select onValueChange={e => setActiveFilter(e)} defaultValue='unconfirmed'>
           <SelectTrigger className='w-[180px]'>
             <SelectValue placeholder="Filter by" />
           </SelectTrigger>
           <SelectContent>
             {
-              bookingFilters.map((filer, index)=>{
+              bookingFilters.map((filer, index) => {
                 return (
                   <SelectItem key={index} value={filer.value}>
                     {filer.placeholder}
@@ -209,153 +238,153 @@ const NewBookingHistory = () => {
               {
                 activeFilter === "unconfirmed" &&
                 <TableHead className="text-left p-4 font-medium text-gray-600">
-                Action <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
-              </TableHead>
+                  Action <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+                </TableHead>
               }
             </TableRow>
           </TableHeader>
           <TableBody>
-            {fetching ? <p>Loading...</p> : bookings.length === 0 ? <p>No bookings available</p> : 
-            activeFilter === "unconfirmed" ?
-            bookings.filter(bo=>!bo.confirm).map((booking, index) => (
-              <TableRow key={index} className="border-b hover:bg-gray-50">
-                <TableCell className="p-4 text-sm text-blue-600">{booking.id}</TableCell>
-                <TableCell className="p-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">{booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A"}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="p-4 text-sm text-gray-600">
-                  {booking.bookingType || 'N/A'}
-                </TableCell>
-                <TableCell className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</TableCell>
-                <TableCell className="p-4 text-sm text-gray-600">
-                  {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A'}
-                </TableCell>
-                <TableCell className="p-4 text-sm">${booking.total_cost.toFixed(2)}</TableCell>
-                <TableCell className="p-4 text-sm text-blue-600 font-medium">
-                  {booking.bookingStatus}
-                </TableCell>
-                <TableCell className="p-4 text-sm">
-                  <BookingConfirmation newBooking={booking} />
-                </TableCell>
-              </TableRow>
-            ))
-            :
-            activeFilter === "assigned" ?
-            bookings.filter(bo=>(bo.owner_confirm || bo.bookingStatus === BookingStatus.Accepted)).map((booking, index) => (
-              <TableRow key={index} className="border-b hover:bg-gray-50">
-                <TableCell className="p-4 text-sm text-blue-600">{booking.id}</TableCell>
-                <TableCell className="p-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">{booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A"}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="p-4 text-sm text-gray-600">
-                  {booking.bookingType || 'N/A'}
-                </TableCell>
-                <TableCell className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</TableCell>
-                <TableCell className="p-4 text-sm text-gray-600">
-                  {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A'}
-                </TableCell>
-                <TableCell className="p-4 text-sm">${booking.total_cost.toFixed(2)}</TableCell>
-                <TableCell className="p-4 text-sm text-blue-600 font-medium">
-                  {booking.bookingStatus}
-                </TableCell>
-              </TableRow>
-            ))
-            :
-            activeFilter === "ongoing" ?
-            bookings.filter(bo=>(bo.bookingStatus === BookingStatus.Arriving || bo.bookingStatus === BookingStatus.Arrived || bo.bookingStatus === BookingStatus.Started || bo.bookingStatus === BookingStatus.Stopped)).map((booking, index) => (
-              <TableRow key={index} className="border-b hover:bg-gray-50">
-                <TableCell className="p-4 text-sm text-blue-600">{booking.id}</TableCell>
-                <TableCell className="p-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">{booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A"}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="p-4 text-sm text-gray-600">
-                  {booking.bookingType || 'N/A'}
-                </TableCell>
-                <TableCell className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</TableCell>
-                <TableCell className="p-4 text-sm text-gray-600">
-                  {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A'}
-                </TableCell>
-                <TableCell className="p-4 text-sm">${booking.total_cost.toFixed(2)}</TableCell>
-                <TableCell className="p-4 text-sm text-blue-600 font-medium">
-                  {booking.bookingStatus}
-                </TableCell>
-              </TableRow>
-            ))
-            :
-            activeFilter === "completed" ?
-            bookings.filter(bo=>(bo.bookingStatus === BookingStatus.Finished)).map((booking, index) => (
-              <TableRow key={index} className="border-b hover:bg-gray-50">
-                <TableCell className="p-4 text-sm text-blue-600">{booking.id}</TableCell>
-                <TableCell className="p-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">{booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A"}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="p-4 text-sm text-gray-600">
-                  {booking.bookingType || 'N/A'}
-                </TableCell>
-                <TableCell className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</TableCell>
-                <TableCell className="p-4 text-sm text-gray-600">
-                  {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A'}
-                </TableCell>
-                <TableCell className="p-4 text-sm">${booking.total_cost.toFixed(2)}</TableCell>
-                <TableCell className="p-4 text-sm text-blue-600 font-medium">
-                  {booking.bookingStatus}
-                </TableCell>
-              </TableRow>
-            ))
-            :
-            activeFilter === "rejected" ?
-            bookings.filter(bo=>(bo.bookingStatus === BookingStatus.Rejected)).map((booking, index) => (
-              <TableRow key={index} className="border-b hover:bg-gray-50">
-                <TableCell className="p-4 text-sm text-blue-600">{booking.id}</TableCell>
-                <TableCell className="p-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">{booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A"}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="p-4 text-sm text-gray-600">
-                  {booking.bookingType || 'N/A'}
-                </TableCell>
-                <TableCell className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</TableCell>
-                <TableCell className="p-4 text-sm text-gray-600">
-                  {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A'}
-                </TableCell>
-                <TableCell className="p-4 text-sm">${booking.total_cost.toFixed(2)}</TableCell>
-                <TableCell className="p-4 text-sm text-blue-600 font-medium">
-                  {booking.bookingStatus}
-                </TableCell>
-              </TableRow>
-            ))
-            :
-            bookings.map((booking, index) => (
-              <TableRow key={index} className="border-b hover:bg-gray-50">
-                <TableCell className="p-4 text-sm text-blue-600">{booking.id}</TableCell>
-                <TableCell className="p-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">{booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A"}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="p-4 text-sm text-gray-600">
-                  {booking.bookingType || 'N/A'}
-                </TableCell>
-                <TableCell className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</TableCell>
-                <TableCell className="p-4 text-sm text-gray-600">
-                  {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A'}
-                </TableCell>
-                <TableCell className="p-4 text-sm">${booking.total_cost.toFixed(2)}</TableCell>
-                <TableCell className="p-4 text-sm text-blue-600 font-medium">
-                  {booking.bookingStatus}
-                </TableCell>
-              </TableRow>
-            ))
-          }
+            {fetching ? <PaymentTableLoader bookings={bookings} /> : bookings.length === 0 ? <p>No bookings available</p> :
+              activeFilter === "unconfirmed" ?
+                bookings.filter(bo => !bo.confirm).map((booking, index) => (
+                  <TableRow key={index} className="border-b hover:bg-gray-50">
+                    <TableCell className="p-4 text-sm text-blue-600">{booking.id}</TableCell>
+                    <TableCell className="p-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">{booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A"}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="p-4 text-sm text-gray-600">
+                      {booking.bookingType || 'N/A'}
+                    </TableCell>
+                    <TableCell className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</TableCell>
+                    <TableCell className="p-4 text-sm text-gray-600">
+                      {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A'}
+                    </TableCell>
+                    <TableCell className="p-4 text-sm">${booking.total_cost.toFixed(2)}</TableCell>
+                    <TableCell className="p-4 text-sm text-blue-600 font-medium">
+                      {booking.bookingStatus}
+                    </TableCell>
+                    <TableCell className="p-4 text-sm">
+                      <BookingConfirmation newBooking={booking} />
+                    </TableCell>
+                  </TableRow>
+                ))
+                :
+                activeFilter === "assigned" ?
+                  bookings.filter(bo => (bo.owner_confirm || bo.bookingStatus === BookingStatus.Accepted)).map((booking, index) => (
+                    <TableRow key={index} className="border-b hover:bg-gray-50">
+                      <TableCell className="p-4 text-sm text-blue-600">{booking.id}</TableCell>
+                      <TableCell className="p-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">{booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A"}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="p-4 text-sm text-gray-600">
+                        {booking.bookingType || 'N/A'}
+                      </TableCell>
+                      <TableCell className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</TableCell>
+                      <TableCell className="p-4 text-sm text-gray-600">
+                        {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A'}
+                      </TableCell>
+                      <TableCell className="p-4 text-sm">${booking.total_cost.toFixed(2)}</TableCell>
+                      <TableCell className="p-4 text-sm text-blue-600 font-medium">
+                        {booking.bookingStatus}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                  :
+                  activeFilter === "ongoing" ?
+                    bookings.filter(bo => (bo.bookingStatus === BookingStatus.Arriving || bo.bookingStatus === BookingStatus.Arrived || bo.bookingStatus === BookingStatus.Started || bo.bookingStatus === BookingStatus.Stopped)).map((booking, index) => (
+                      <TableRow key={index} className="border-b hover:bg-gray-50">
+                        <TableCell className="p-4 text-sm text-blue-600">{booking.id}</TableCell>
+                        <TableCell className="p-4">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm">{booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A"}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="p-4 text-sm text-gray-600">
+                          {booking.bookingType || 'N/A'}
+                        </TableCell>
+                        <TableCell className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</TableCell>
+                        <TableCell className="p-4 text-sm text-gray-600">
+                          {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A'}
+                        </TableCell>
+                        <TableCell className="p-4 text-sm">${booking.total_cost.toFixed(2)}</TableCell>
+                        <TableCell className="p-4 text-sm text-blue-600 font-medium">
+                          {booking.bookingStatus}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                    :
+                    activeFilter === "completed" ?
+                      bookings.filter(bo => (bo.bookingStatus === BookingStatus.Finished)).map((booking, index) => (
+                        <TableRow key={index} className="border-b hover:bg-gray-50">
+                          <TableCell className="p-4 text-sm text-blue-600">{booking.id}</TableCell>
+                          <TableCell className="p-4">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm">{booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A"}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="p-4 text-sm text-gray-600">
+                            {booking.bookingType || 'N/A'}
+                          </TableCell>
+                          <TableCell className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</TableCell>
+                          <TableCell className="p-4 text-sm text-gray-600">
+                            {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A'}
+                          </TableCell>
+                          <TableCell className="p-4 text-sm">${booking.total_cost.toFixed(2)}</TableCell>
+                          <TableCell className="p-4 text-sm text-blue-600 font-medium">
+                            {booking.bookingStatus}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                      :
+                      activeFilter === "rejected" ?
+                        bookings.filter(bo => (bo.bookingStatus === BookingStatus.Rejected)).map((booking, index) => (
+                          <TableRow key={index} className="border-b hover:bg-gray-50">
+                            <TableCell className="p-4 text-sm text-blue-600">{booking.id}</TableCell>
+                            <TableCell className="p-4">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm">{booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A"}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="p-4 text-sm text-gray-600">
+                              {booking.bookingType || 'N/A'}
+                            </TableCell>
+                            <TableCell className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</TableCell>
+                            <TableCell className="p-4 text-sm text-gray-600">
+                              {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A'}
+                            </TableCell>
+                            <TableCell className="p-4 text-sm">${booking.total_cost.toFixed(2)}</TableCell>
+                            <TableCell className="p-4 text-sm text-blue-600 font-medium">
+                              {booking.bookingStatus}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                        :
+                        bookings.map((booking, index) => (
+                          <TableRow key={index} className="border-b hover:bg-gray-50">
+                            <TableCell className="p-4 text-sm text-blue-600">{booking.id}</TableCell>
+                            <TableCell className="p-4">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm">{booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A"}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="p-4 text-sm text-gray-600">
+                              {booking.bookingType || 'N/A'}
+                            </TableCell>
+                            <TableCell className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</TableCell>
+                            <TableCell className="p-4 text-sm text-gray-600">
+                              {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A'}
+                            </TableCell>
+                            <TableCell className="p-4 text-sm">${booking.total_cost.toFixed(2)}</TableCell>
+                            <TableCell className="p-4 text-sm text-blue-600 font-medium">
+                              {booking.bookingStatus}
+                            </TableCell>
+                          </TableRow>
+                        ))
+            }
           </TableBody>
         </Table>
       </Card>
@@ -364,3 +393,37 @@ const NewBookingHistory = () => {
 }
 
 export default NewBookingHistory
+
+function PaymentTableLoader({bookings}: {bookings: Booking[]}) {
+  return (
+    <>
+      {Array.from({ length: Math.max(5, bookings.length || 5) }).map((_, index) => (
+        <tr key={`shimmer-${index}`} className="animate-pulse border-b">
+          <td className="p-4">
+            <div className="h-4 w-24 bg-gray-300 rounded"></div>
+          </td>
+          <td className="p-4">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 bg-gray-300 rounded-full"></div>
+              <div className="h-4 w-20 bg-gray-300 rounded"></div>
+            </div>
+          </td>
+          <td className="p-4">
+            <div className="h-4 w-24 bg-gray-300 rounded"></div>
+          </td>
+          <td className="p-4">
+            <div className="h-4 w-16 bg-gray-300 rounded"></div>
+          </td>
+          <td className="p-4">
+            <div className="h-4 w-24 bg-gray-300 rounded"></div>
+          </td>
+          <td className="p-4">
+            <div className="h-4 w-16 bg-gray-300 rounded"></div>
+          </td>
+          <td className="p-4">
+            <div className="h-4 w-20 bg-gray-300 rounded"></div>
+          </td>
+        </tr>
+      ))}</>
+  )
+}

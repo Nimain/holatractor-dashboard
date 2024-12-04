@@ -37,7 +37,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import Sidebar from "./_components/Sidebar"
 import TranslatedText from "@/components/Menubar/TranslatedText"
 import {
   activeBookings,
@@ -414,7 +413,7 @@ const FarmerDashboard = () => {
 
         </div>
 
-        <FarmerBookingHistory />
+        {/* <FarmerBookingHistory /> */}
 
       </div>
   )
