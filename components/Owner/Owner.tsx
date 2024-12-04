@@ -293,7 +293,8 @@ const OwnerSection = () => {
                                             name={name}
                                             updateDate={formatDate(details.updatedAt)}
                                             status={details.status}
-                                            id={details.id} />
+                                            id={details.id}
+                                            screenShots={details.paymentScreenshots} />
                                     </div>
                                 )
                             })
