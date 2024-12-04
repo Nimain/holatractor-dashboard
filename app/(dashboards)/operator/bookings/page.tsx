@@ -1,3 +1,4 @@
+import OwnerShrimmer from '@/components/Dashboards/Owner/_components/OwnerShrimmer'
 import dynamic from 'next/dynamic'
 
 const Bookings = dynamic(
@@ -5,9 +6,7 @@ const Bookings = dynamic(
     {
         ssr: false,
         loading: () => (
-          <div className="w-full h-screen flex items-center justify-center">
-            Loading...
-          </div>
+          <OwnerShrimmer />
         )
       }
   )

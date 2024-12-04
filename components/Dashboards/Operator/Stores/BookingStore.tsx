@@ -6,7 +6,7 @@ import { Booking, Farm, Store } from '@/utils/Types/types'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { CalendarIcon, Clock, Heart, MapPin, Receipt, Share } from 'lucide-react'
+import { CalendarIcon, Clock, CreditCard, Heart, MapPin, Receipt, Share } from 'lucide-react'
 import { FaHotel, FaImage, FaRegCalendarAlt, FaStore } from 'react-icons/fa'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -263,7 +263,21 @@ const BookingStore = () => {
 
                 <div className='w-full grid gap-6 grid-cols-3'>
 
-                    {selectedTab === "Tractor" && store.TractorInStore.map((tractor) => (
+                    {selectedTab === "Tractor" && store.TractorInStore.length === 0 ? (
+            <Card className="w-full max-w-sm mx-auto text-center p-6">
+              <CardContent className="space-y-6">
+                <div className="bg-gray-50 rounded-lg p-4 mx-auto w-20 h-20 flex items-center justify-center">
+                  <CreditCard className="w-10 h-10 text-gray-400" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold">No Tractors available</h3>
+                  <p className="text-muted-foreground">
+                    Sorry this store has no tractors available
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : store.TractorInStore.map((tractor) => (
                         <Card className="w-full max-w-sm hover:drop-shadow-lg hover:scale-105 transition-all duration-300" key={tractor.id}>
                             <CardHeader>
                                 <CardTitle className="flex items-center justify-between gap-2 flex-wrap">
@@ -288,7 +302,21 @@ const BookingStore = () => {
                         </Card>
                     ))}
 
-                    {selectedTab === "Attachment" && store.AttachmentInStore.map((tractor) => (
+                    {selectedTab === "Attachment" && store.TractorInStore.length === 0 ? (
+            <Card className="w-full max-w-sm mx-auto text-center p-6">
+              <CardContent className="space-y-6">
+                <div className="bg-gray-50 rounded-lg p-4 mx-auto w-20 h-20 flex items-center justify-center">
+                  <CreditCard className="w-10 h-10 text-gray-400" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold">No attachments available</h3>
+                  <p className="text-muted-foreground">
+                    Sorry this store has no attachments available
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : store.AttachmentInStore.map((tractor) => (
                         <Card className="w-full max-w-sm hover:drop-shadow-lg hover:scale-105 transition-all duration-300" key={tractor.id}>
                             <CardHeader>
                                 <CardTitle>{tractor.baseAttachment.name}</CardTitle>

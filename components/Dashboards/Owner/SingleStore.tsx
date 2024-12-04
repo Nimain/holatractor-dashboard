@@ -19,6 +19,7 @@ import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
 import { io, Socket } from 'socket.io-client'
 import { useCookie } from 'next-cookie'
+import { Button } from '@/components/ui/button'
 
 interface user {
   userId: string;
@@ -153,42 +154,86 @@ export default function StorePage() {
 
       <div className='mt-4 flex gap-6'>
 
-                <Card className='w-[600px] -mt-24 z-10 ml-4 h-fit'>
-                    <CardContent className='pt-3'>
-                    {
-                  selectedTab === "Overview" && <AlternatingAddForm tractors={store.TractorInStore} attachments={store.AttachmentInStore} />
-                }
-                {
-                  selectedTab === "Tractor" && <AddTractor alreadyTractors={store.TractorInStore} />
-                }
-                {
-                  selectedTab === "Attachment" && <AddAttachment alreadyAttachments={store.AttachmentInStore} />
-                }
-                    </CardContent>
-                </Card>
-                
+        <Card className='w-[600px] -mt-24 z-10 ml-4 h-fit'>
+          <CardContent className='pt-3'>
+            {
+              selectedTab === "Overview" && <AlternatingAddForm tractors={store.TractorInStore} attachments={store.AttachmentInStore} />
+            }
+            {
+              selectedTab === "Tractor" && <AddTractor alreadyTractors={store.TractorInStore} />
+            }
+            {
+              selectedTab === "Attachment" && <AddAttachment alreadyAttachments={store.AttachmentInStore} />
+            }
+          </CardContent>
+        </Card>
 
-                <div className='w-full grid gap-6 grid-cols-3'>
 
-                    {selectedTab === "Overview" && store.TractorInStore.map((tractor) => (
-                          <TractorCard key={tractor.id} tractor={tractor.baseTractor} />
-                    ))}
+        <div className='w-full grid gap-6 grid-cols-3'>
 
-                    {selectedTab === "Overview" && store.AttachmentInStore.map((tractor) => (
-                          <AttachmentCard key={tractor.id} attachment={tractor.baseAttachment} />
-                    ))}
-
-                    {selectedTab === "Tractor" && store.TractorInStore.map((tractor) => (
-                          <TractorCard key={tractor.id} tractor={tractor.baseTractor} />
-                    ))}
-
-                    {selectedTab === "Attachment" && store.AttachmentInStore.map((tractor) => (
-                        <AttachmentCard key={tractor.id} attachment={tractor.baseAttachment} />
-                    ))}
-
+          {selectedTab === "Overview" && (store.TractorInStore.length === 0 && store.AttachmentInStore.length === 0) ? (
+            <Card className="w-full max-w-sm mx-auto text-center p-6">
+              <CardContent className="space-y-6">
+                <div className="bg-gray-50 rounded-lg p-4 mx-auto w-20 h-20 flex items-center justify-center">
+                  <CreditCard className="w-10 h-10 text-gray-400" />
                 </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold">No Equipments available</h3>
+                  <p className="text-muted-foreground">
+                    Sorry this store has no equipments available
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : store.TractorInStore.map((tractor) => (
+            <TractorCard key={tractor.id} tractor={tractor.baseTractor} />
+          ))}
 
-            </div>
+          {selectedTab === "Overview" && store.AttachmentInStore.map((tractor) => (
+            <AttachmentCard key={tractor.id} attachment={tractor.baseAttachment} />
+          ))}
+
+          {selectedTab === "Tractor" && store.TractorInStore.length === 0 ? (
+            <Card className="w-full max-w-sm mx-auto text-center p-6">
+              <CardContent className="space-y-6">
+                <div className="bg-gray-50 rounded-lg p-4 mx-auto w-20 h-20 flex items-center justify-center">
+                  <CreditCard className="w-10 h-10 text-gray-400" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold">No Tractors available</h3>
+                  <p className="text-muted-foreground">
+                    Sorry this store has no tractors available
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )
+            :
+            store.TractorInStore.map((tractor) => (
+              <TractorCard key={tractor.id} tractor={tractor.baseTractor} />
+            ))}
+
+          {selectedTab === "Attachment" && store.TractorInStore.length === 0 ? (
+            <Card className="w-full max-w-sm mx-auto text-center p-6">
+              <CardContent className="space-y-6">
+                <div className="bg-gray-50 rounded-lg p-4 mx-auto w-20 h-20 flex items-center justify-center">
+                  <CreditCard className="w-10 h-10 text-gray-400" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold">No Attachments available</h3>
+                  <p className="text-muted-foreground">
+                    Sorry this store has no attachments available
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : store.AttachmentInStore.map((tractor) => (
+            <AttachmentCard key={tractor.id} attachment={tractor.baseAttachment} />
+          ))}
+
+        </div>
+
+      </div>
 
     </div>
   )

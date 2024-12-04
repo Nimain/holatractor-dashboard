@@ -7,7 +7,7 @@ import Image from 'next/image'
 import { useParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import FarmerShimmer from '../_components/FarmerShrimmer'
-import { CalendarIcon, Clock, Heart, MapPin, Receipt, Share } from 'lucide-react'
+import { CalendarIcon, Clock, CreditCard, Heart, MapPin, Receipt, Share } from 'lucide-react'
 import { FaHotel, FaImage, FaRegCalendarAlt, FaStore } from 'react-icons/fa'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -121,7 +121,7 @@ const BookingStore = () => {
     }
 
     function handleBooking() {
-        if(!slug || !user.userId){
+        if (!slug || !user.userId) {
             errorMessage("Try after some time")
             return
 
@@ -156,7 +156,7 @@ const BookingStore = () => {
         let booking;
         const start_date = BookingHours === "more" ? date?.from : startDate
 
-        if(BookingHours === "more"){
+        if (BookingHours === "more") {
             booking = {
                 farm_id: selectedFarm,
                 user_id: user.userId,
@@ -233,7 +233,7 @@ const BookingStore = () => {
                 } else {
                     errorMessage("Some error occurred. Please try again...")
                 }
-            }).finally(() => { 
+            }).finally(() => {
                 setOpen(false)
                 setLoading(false)
             })
@@ -455,8 +455,8 @@ const BookingStore = () => {
                     </CardContent>
                     <CardFooter>
                         <Button
-                        className='w-full'
-                        onClick={()=>{handleBooking()}}>
+                            className='w-full'
+                            onClick={() => { handleBooking() }}>
                             Book now
                         </Button>
                     </CardFooter>
@@ -464,7 +464,21 @@ const BookingStore = () => {
 
                 <div className='w-full grid gap-6 grid-cols-3'>
 
-                    {selectedTab === "Tractor" && store.TractorInStore.map((tractor) => (
+                    {selectedTab === "Tractor" && store.TractorInStore.length === 0 ? (
+                        <Card className="w-full max-w-sm mx-auto text-center p-6">
+                            <CardContent className="space-y-6">
+                                <div className="bg-gray-50 rounded-lg p-4 mx-auto w-20 h-20 flex items-center justify-center">
+                                    <CreditCard className="w-10 h-10 text-gray-400" />
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="text-xl font-semibold">No Tractors available</h3>
+                                    <p className="text-muted-foreground">
+                                        Sorry this store has no tractors available
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) : store.TractorInStore.map((tractor) => (
                         <Card className="w-full max-w-sm hover:drop-shadow-lg hover:scale-105 transition-all duration-300" key={tractor.id}>
                             <CardHeader>
                                 <CardTitle className="flex items-center justify-between gap-2 flex-wrap">
@@ -500,7 +514,21 @@ const BookingStore = () => {
                         </Card>
                     ))}
 
-                    {selectedTab === "Attachment" && store.AttachmentInStore.map((tractor) => (
+                    {selectedTab === "Attachment" && store.TractorInStore.length === 0 ? (
+                        <Card className="w-full max-w-sm mx-auto text-center p-6">
+                            <CardContent className="space-y-6">
+                                <div className="bg-gray-50 rounded-lg p-4 mx-auto w-20 h-20 flex items-center justify-center">
+                                    <CreditCard className="w-10 h-10 text-gray-400" />
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="text-xl font-semibold">No Attachments available</h3>
+                                    <p className="text-muted-foreground">
+                                        Sorry this store has no attachments available
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) : store.AttachmentInStore.map((tractor) => (
                         <Card className="w-full max-w-sm hover:drop-shadow-lg hover:scale-105 transition-all duration-300" key={tractor.id}>
                             <CardHeader>
                                 <CardTitle>{tractor.baseAttachment.name}</CardTitle>
@@ -537,9 +565,9 @@ const BookingStore = () => {
             </div>
 
             <Dialog open={open} onOpenChange={setOpen}>
-                    <DialogContent>
-                        {
-                            newBooking && <Card className="w-full mx-auto shadow-lg">
+                <DialogContent>
+                    {
+                        newBooking && <Card className="w-full mx-auto shadow-lg">
                             <CardHeader className="text-center border-b">
                                 <CardTitle className="text-2xl font-bold text-primary">Booking Confirmation</CardTitle>
                                 <p className="text-gray-500">Booking ID: {newBooking.id}</p>
@@ -579,13 +607,13 @@ const BookingStore = () => {
                                 {/* Distance Section */}
                                 {
                                     newBooking.distance &&
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2">
-                                        <MapPin className="h-5 w-5 text-primary" />
-                                        <h3 className="font-semibold">Distance Details</h3>
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-2">
+                                            <MapPin className="h-5 w-5 text-primary" />
+                                            <h3 className="font-semibold">Distance Details</h3>
+                                        </div>
+                                        <p className="pl-7">Total Distance: {parseFloat(newBooking.distance).toFixed(2)} km</p>
                                     </div>
-                                    <p className="pl-7">Total Distance: {parseFloat(newBooking.distance).toFixed(2)} km</p>
-                                </div>
                                 }
 
                                 <Separator />
@@ -615,13 +643,13 @@ const BookingStore = () => {
                             </CardContent>
                             <CardFooter className="flex justify-between">
                                 <DialogClose asChild>
-                                <Button>Cancel</Button>
+                                    <Button>Cancel</Button>
                                 </DialogClose>
                                 <Button onClick={() => { userBookingConfirm() }}>Confirm Booking</Button>
                             </CardFooter>
                         </Card>
-                        }
-                    </DialogContent>
+                    }
+                </DialogContent>
             </Dialog>
 
             <Backdrop
