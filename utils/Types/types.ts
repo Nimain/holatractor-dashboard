@@ -592,6 +592,7 @@ export interface Owner {
   payment_id: string;
   createdAt: Date;
   updatedAt: Date;
+  paymentScreenshots: string[];
   user: User; // Relation to the User model as "Owner user"
   role: Role; // Relation to the Role model as "Owner role"
   location: Location; // Relation to the Location model as "location of owner"

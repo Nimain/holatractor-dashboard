@@ -83,6 +83,9 @@ const LogInPage = () => {
             } else if (err.response && err.response.status === 409 && err.response.data.message === "Wrong password") {
                 errorMessage("Wrong password")
                 setPassword("")
+            } else if (err.response && err.response.status === 400 && err.response.data.message === "Acount not active") {
+                errorMessage("Acount not active")
+                setPassword("")
             } else {
                 errorMessage("Some error occured")
             }

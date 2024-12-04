@@ -45,7 +45,7 @@ import { useCookie } from 'next-cookie'
 import { useRouter } from 'next/navigation'
 import { Separator } from '../ui/separator'
 import countryData from './CountryCodeRoles'
-import { Badge } from '../ui/badge'
+import QRCODE from "@/assets/QRcode.jpg"
 
 const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => {
     const [open, setOpen] = useState(false)
@@ -90,6 +90,9 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
     const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
 
     const [purchasing, setPurchasing] = useState(false)
+
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
     const { cookie } = useCookie()
     const access_token = cookie.get("access_token");
@@ -157,6 +160,22 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
         const ageDate = new Date(diff);
         return Math.abs(ageDate.getUTCFullYear() - 1970);
     }
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            setSelectedFile(file);
+
+            // Generate a preview URL for the selected image
+            const preview = URL.createObjectURL(file);
+            setPreviewUrl(preview);
+        }
+    };
+
+    const handleRemoveFile = () => {
+        setSelectedFile(null);
+        setPreviewUrl(null);
+    };
 
     async function ownerRegister() {
         if (!agEmail) {
@@ -236,6 +255,21 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
         ).toString();
 
         setLoading(true)
+
+        if (!selectedFile) {
+            errorMessage("Please upload your payment proof")
+            return
+        }
+
+        let paymentProofLink = ""
+        const buffer = Buffer.from(await selectedFile.arrayBuffer());
+        paymentProofLink = await uploadFileToS3(buffer, selectedFile.name);
+
+        if (!paymentProofLink) {
+            errorMessage("Something went wrong in uploading the image");
+            return;
+        }
+
         const selectedRole = await renderInstance.get('/role/getIdByName/owner')
         if (!selectedRole) {
             errorMessage("Currently not possible to register")
@@ -290,7 +324,8 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
             attachment: attachmentLink,
             document_number,
             expiry_date,
-            payment_id: "test"
+            payment_id: "test",
+            paymentScreenshots: paymentProofLink
         };
 
         inPage ?
@@ -416,14 +451,7 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
 
     const handleSelectPlan = (subscription: Subscriptions) => {
         setSelectedPlan(subscription)
-        // setIsPaymentDialogOpen(true)
-    }
-
-    const handlePayment = (e: React.FormEvent) => {
-        e.preventDefault()
-        // Here you would typically handle the payment processing
-        console.log(`Processing payment for ${selectedPlan?.name}`)
-        setIsPaymentDialogOpen(false)
+        setIsPaymentDialogOpen(true)
     }
 
     useEffect(() => {
@@ -1216,14 +1244,6 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                                     :
                                     <div className="container mx-auto p-4">
                                         <h1 className="text-3xl font-bold mb-6 text-center">Choose Your Subscription Plan</h1>
-                                        <div className='w-full flex justify-end items-center my-4'>
-                                            <Button
-                                                onClick={() => { ownerRegister() }}>
-                                                {
-                                                    selectedPlan ? "Create account" : "Skip subscription"
-                                                }
-                                            </Button>
-                                        </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                             {subscriptions.filter(subs => subs.for_owner === true).length === 0 ?
                                                 <p>No subscriptions present for owners</p>
@@ -1284,44 +1304,81 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                                         </div>
 
                                         <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-                                            <DialogContent>
+                                            <DialogContent className='h-[90vh] overflow-auto' style={{ scrollbarWidth: "none" }}>
                                                 <DialogHeader>
-                                                    <DialogTitle>Complete Your Purchase</DialogTitle>
-                                                    <DialogDescription>
-                                                        You're about to subscribe to the {selectedPlan?.name} for ${selectedPlan?.discount_cost}.
-                                                    </DialogDescription>
+                                                    <DialogTitle className='text-center'>Complete Your payment and update the screen shot</DialogTitle>
                                                 </DialogHeader>
-                                                <form onSubmit={handlePayment}>
-                                                    <div className="grid gap-4 py-4">
-                                                        <div className="grid grid-cols-4 items-center gap-4">
-                                                            <Label htmlFor="name" className="text-right">
-                                                                Name
-                                                            </Label>
-                                                            <Input id="name" className="col-span-3" />
-                                                        </div>
-                                                        <div className="grid grid-cols-4 items-center gap-4">
-                                                            <Label htmlFor="card-number" className="text-right">
-                                                                Card Number
-                                                            </Label>
-                                                            <Input id="card-number" className="col-span-3" />
-                                                        </div>
-                                                        <div className="grid grid-cols-4 items-center gap-4">
-                                                            <Label htmlFor="expiry" className="text-right">
-                                                                Expiry Date
-                                                            </Label>
-                                                            <Input id="expiry" className="col-span-3" placeholder="MM/YY" />
-                                                        </div>
-                                                        <div className="grid grid-cols-4 items-center gap-4">
-                                                            <Label htmlFor="cvv" className="text-right">
-                                                                CVV
-                                                            </Label>
-                                                            <Input id="cvv" className="col-span-3" />
+                                                <div className='grid grid-cols-2 gap-4'>
+                                                    <Image
+                                                        src={QRCODE}
+                                                        alt='QR code image'
+                                                        className='w-full object-contain'
+                                                        unoptimized={true} />
+                                                    <div className="space-y-4 flex flex-col items-center justify-center">
+                                                        <h3 className="text-lg font-medium">Payment Proof</h3>
+                                                        <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg">
+                                                            <label
+                                                                htmlFor="payment-proof"
+                                                                className="relative flex flex-col items-center justify-center gap-1 p-8 text-center cursor-pointer w-full h-[300px]"
+                                                            >
+                                                                {!previewUrl ? (
+                                                                    <>
+                                                                        <div className="size-10 flex items-center justify-center rounded-full bg-primary/10">
+                                                                            <svg
+                                                                                className="size-6 text-primary"
+                                                                                xmlns="http://www.w3.org/2000/svg"
+                                                                                width="24"
+                                                                                height="24"
+                                                                                viewBox="0 0 24 24"
+                                                                                fill="none"
+                                                                                stroke="currentColor"
+                                                                                strokeWidth="2"
+                                                                                strokeLinecap="round"
+                                                                                strokeLinejoin="round"
+                                                                            >
+                                                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                                                <polyline points="17 8 12 3 7 8" />
+                                                                                <line x1="12" x2="12" y1="3" y2="15" />
+                                                                            </svg>
+                                                                        </div>
+                                                                        <p className="text-sm text-muted-foreground mt-2">
+                                                                            Drag & drop or click to choose files
+                                                                        </p>
+                                                                        <input
+                                                                            id="payment-proof"
+                                                                            type="file"
+                                                                            accept="image/*,.pdf"
+                                                                            className="sr-only"
+                                                                            onChange={handleFileChange}
+                                                                        />
+                                                                    </>
+                                                                ) : (
+                                                                    <div className="relative">
+                                                                        <img
+                                                                            src={previewUrl}
+                                                                            alt="Uploaded File Preview"
+                                                                            className="max-h-40 rounded-lg object-cover"
+                                                                        />
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={handleRemoveFile}
+                                                                            className="absolute top-2 right-2 bg-red-500 text-white text-xs rounded-full p-1"
+                                                                        >
+                                                                            ✕
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </label>
+                                                            {
+                                                                selectedFile && <Button className='w-full' disabled={loading || purchasing} onClick={() => { ownerRegister() }}>
+                                                                    {
+                                                                        (loading || purchasing) ? "Creating..." : "Creating account"
+                                                                    }
+                                                                </Button>
+                                                            }
                                                         </div>
                                                     </div>
-                                                    <DialogFooter>
-                                                        <Button type="submit">Pay Now</Button>
-                                                    </DialogFooter>
-                                                </form>
+                                                </div>
                                             </DialogContent>
                                         </Dialog>
                                     </div>

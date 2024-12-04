@@ -392,6 +392,7 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
                 <Button
                     className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto"
                     variant={"default"}
+                    disabled={true}
                     onClick={() => {
                         setOpen(true)
                     }}
