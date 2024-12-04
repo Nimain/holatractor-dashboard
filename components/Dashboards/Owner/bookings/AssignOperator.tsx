@@ -108,7 +108,7 @@ const AssignOperator = ({ selectedRequest, storeId, store }: { selectedRequest: 
                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 max-h-[90vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
                                 {allOperators.map((operator: OperatorInStore) => {
                                     return (
-                                        <Card className="w-full max-w-md">
+                                        <Card className="w-full max-w-md" key={operator.id}>
                                             <CardHeader>
                                                 <div className="flex items-center space-x-4">
                                                     <Avatar className="h-12 w-12">

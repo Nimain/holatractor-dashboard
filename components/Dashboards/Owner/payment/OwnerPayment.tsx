@@ -494,27 +494,27 @@ const OwnerPayment = () => {
           <TableBody>
             {activeFilter === "all" && receiverPayments.map((item, index) => {
               return (
-                <PaymentSheet index={index} item={item} />
+                <PaymentSheet index={index} item={item} key={index} />
               )
             })}
             {activeFilter === "unpaid" && senderPayments.filter(po=>(`${po.status}` === "FarmerPENDING")).map((item, index) => {
               return (
-                <PaymentSheet index={index} item={item} />
+                <PaymentSheet index={index} item={item} key={index} />
               )
             })}
             {activeFilter === "review" && senderPayments.filter(po=>(`${po.status}` === "FarmerCONFIRMED")).map((item, index) => {
               return (
-                <PaymentSheet index={index} item={item} />
+                <PaymentSheet index={index} item={item} key={index} />
               )
             })}
             {activeFilter === "rejected" && senderPayments.filter(po=>(`${po.status}` === "OwnerREJECTED")).map((item, index) => {
               return (
-                <PaymentSheet index={index} item={item} />
+                <PaymentSheet index={index} item={item} key={index} />
               )
             })}
             {activeFilter === "completed" && senderPayments.filter(po=>(`${po.status}` === "COMPLETED")).map((item, index) => {
               return (
-                <PaymentSheet index={index} item={item} />
+                <PaymentSheet index={index} item={item} key={index} />
               )
             })}
           </TableBody>

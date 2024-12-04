@@ -167,6 +167,7 @@ const HomeDashboard = (
                                                                     <div
                                                                         className="w-12 h-12 rounded-full border-2 border-white overflow-hidden relative -mr-6"
                                                                         style={{ zIndex: 3 }}
+                                                                        key={index}
                                                                     >
                                                                         <Image
                                                                             src={(book.user && book.user.image) ? book.user.image : "https://github.com/shadcn.png"}

@@ -375,7 +375,7 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
                                                                 {
                                                                     tractorDetails.tractor.images.map((imageLink) => {
                                                                         return (
-                                                                            <SwiperSlide className="w-full h-full">
+                                                                            <SwiperSlide className="w-full h-full" key={imageLink}>
                                                                                 <Image
                                                                                     alt={tractorDetails.tractor.name}
                                                                                     src={imageLink}
@@ -435,7 +435,7 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
                                                                 {
                                                                     tractorDetails.attachment.images.map((imageLink) => {
                                                                         return (
-                                                                            <SwiperSlide className="w-full h-full">
+                                                                            <SwiperSlide className="w-full h-full" key={imageLink}>
                                                                                 <Image
                                                                                     alt={tractorDetails.attachment.name}
                                                                                     src={imageLink}

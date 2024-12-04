@@ -38,7 +38,7 @@ interface user {
   email: string;
 }
 
-const marketplace = () => {
+const Marketplace = () => {
 
   const [isOpen, setIsOpen] = useState(false);
   const [open, setOpen] = useState(false)
@@ -279,4 +279,4 @@ const marketplace = () => {
   )
 }
 
-export default marketplace
+export default Marketplace
