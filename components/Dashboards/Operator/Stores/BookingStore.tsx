@@ -24,6 +24,7 @@ import { Separator } from '@/components/ui/separator'
 import { Backdrop, CircularProgress } from '@mui/material'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import OwnerShrimmer from '../../Owner/_components/OwnerShrimmer'
 
 interface user {
     userId: string;
@@ -123,7 +124,7 @@ const BookingStore = () => {
         }
     }, [])
 
-    if (fetchingStoreDetails) return <p>Loading...</p>
+    if (fetchingStoreDetails) return <OwnerShrimmer />
 
     if (!store) return <p>Store details not available</p>
 

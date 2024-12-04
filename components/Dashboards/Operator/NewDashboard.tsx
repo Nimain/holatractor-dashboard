@@ -17,6 +17,7 @@ import { errorMessage, successMessage } from '@/utils/Toastify/Messages';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import OwnerShrimmer from '../Owner/_components/OwnerShrimmer';
 
 interface user {
     userId: string;
@@ -98,7 +99,7 @@ const NewDashboard = () => {
       }
     },[])
   
-    if(fetchingOperatorDetails) return <p>Loading operator details</p>
+    if(fetchingOperatorDetails) return <OwnerShrimmer />
     if(!operator) return <p>Operator details not present</p>
 
     const transactions = [

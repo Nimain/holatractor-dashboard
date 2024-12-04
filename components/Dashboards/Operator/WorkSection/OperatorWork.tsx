@@ -22,6 +22,7 @@ import { OperatorInStore } from '@/utils/Types/types';
 import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
 import { useCookie } from 'next-cookie';
+import OwnerShrimmer from '../../Owner/_components/OwnerShrimmer';
 
 interface PageDetails {
     operatorId: string,
@@ -107,7 +108,7 @@ const AttendanceDashboard = () => {
     }, [])
 
     if(isLoading){
-        return <div className="text-center w-full h-full flex items-center justify-center">Loading...</div>
+        return <OwnerShrimmer />
     }
     if (!PageDetails) return
 

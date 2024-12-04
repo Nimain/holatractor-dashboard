@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import OwnerShrimmer from '../../Owner/_components/OwnerShrimmer';
 
 interface Location {
   latitude: number | null;
@@ -63,7 +64,7 @@ const Stores = () => {
     }
   }, []);
 
-  if(fetching) return <p>Loading...</p>
+  if(fetching) return <OwnerShrimmer />
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
