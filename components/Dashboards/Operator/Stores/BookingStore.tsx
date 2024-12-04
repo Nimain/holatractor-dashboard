@@ -92,9 +92,13 @@ const BookingStore = () => {
             }
         }).then(() => {
             successMessage("Congratulations")
-            window.location.reload()
+            setFormData({
+                field1: '',
+                field2: '',
+                field3: '',
+                textArea: ''
+            })
         }).catch((err) => {
-            console.log(err)
             if (err.response && err.response.status === 404 && err.response.data.message === "User is not found") {
                 errorMessage("User not found")
             } else if (err.response && err.response.status === 404 && err.response.data.message === "Request not found") {

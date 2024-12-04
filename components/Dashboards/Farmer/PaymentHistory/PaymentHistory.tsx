@@ -13,12 +13,6 @@ import { errorMessage } from '@/utils/Toastify/Messages';
 import FarmerShimmer from '../_components/FarmerShrimmer';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import Image from 'next/image';
-import { Separator } from '@/components/ui/separator';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
-import { BankAccountForm, PayPalForm, UPIForm } from '../BookingHistory';
 import PaymentDetailsSheet from './PaymentDetailsSheet';
 import { io, Socket } from 'socket.io-client';
 
@@ -33,7 +27,7 @@ const PaymentHistory = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [fetching, setFetching] = useState(false)
-  const [activeFilter, setActiveFilter] = useState("unpaid")
+  const [activeFilter, setActiveFilter] = useState("all")
 
   const { cookie } = useCookie()
   const user: user = cookie.get("user")
@@ -122,8 +116,6 @@ const PaymentHistory = () => {
     };
 }, []);
 
-  if (fetching) return <FarmerShimmer />
-
   return (
     <div className="p-6">
       {/* Header Section */}
@@ -183,7 +175,7 @@ const PaymentHistory = () => {
             className="pl-10"
           />
         </div>
-        <Select onValueChange={e => setActiveFilter(e)} defaultValue='unpaid'>
+        <Select onValueChange={e => setActiveFilter(e)} defaultValue='all'>
           <SelectTrigger className='w-[180px]'>
             <SelectValue placeholder="Filter by" />
           </SelectTrigger>
@@ -239,8 +231,9 @@ const PaymentHistory = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {activeFilter === "unpaid" ?
-              payments.length === 0 ? <p>No payment history available</p> : payments.filter(po=>(`${po.status}` === "FarmerPENDING")).map((payment) => (
+            {fetching ? <PaymentTableShrimmer /> : 
+            activeFilter === "unpaid" ?
+              payments.length === 0 ? <p>No data available</p> : payments.filter(po=>(`${po.status}` === "FarmerPENDING")).map((payment) => (
                 <PaymentDetailsSheet payment={payment} key={payment.id} />
               ))
               :
@@ -270,3 +263,39 @@ const PaymentHistory = () => {
 }
 
 export default PaymentHistory
+
+function PaymentTableShrimmer(){
+  return(
+      Array.from({ length: 5 }).map((_, index) => (
+        <tr key={index} className="animate-pulse border-b">
+          <td className="p-4">
+            <div className="h-4 w-4 bg-gray-300 rounded"></div>
+          </td>
+          <td className="p-4">
+            <div className="h-4 w-32 bg-gray-300 rounded"></div>
+          </td>
+          <td className="p-4">
+            <div className="h-4 w-32 bg-gray-300 rounded"></div>
+          </td>
+          <td className="p-4">
+            <div className="h-4 w-24 bg-gray-300 rounded"></div>
+          </td>
+          <td className="p-4">
+            <div className="h-4 w-16 bg-gray-300 rounded"></div>
+          </td>
+          <td className="p-4">
+            <div className="h-4 w-24 bg-gray-300 rounded"></div>
+          </td>
+          <td className="p-4">
+            <div className="h-4 w-32 bg-gray-300 rounded"></div>
+          </td>
+          <td className="p-4">
+            <div className="h-4 w-36 bg-gray-300 rounded"></div>
+          </td>
+          <td className="p-4">
+            <div className="h-4 w-36 bg-gray-300 rounded"></div>
+          </td>
+        </tr>
+      ))
+    )
+}

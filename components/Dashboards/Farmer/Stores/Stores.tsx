@@ -108,7 +108,7 @@ const Stores = () => {
            <Link
            href={`/farmer/stores/${center.store.id}`}
            key={index}
-           className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+           className="bg-white rounded-lg overflow-hidden shadow-sm cursor-pointer transition-all duration-300 ease-in-out  hover:shadow-xl border border-transparent hover:border-blue-500 hover:scale-105 group"
          >
            <div className="relative">
              <Image
@@ -116,19 +116,19 @@ const Stores = () => {
                alt={center.store.name}
                width={400}
                height={250}
-               className="w-full h-48 object-cover"
+               className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-110"
                placeholder="blur"
-               blurDataURL="https://chehalisfarmstore.com/wp-content/uploads/2023/06/The-Farm-Store-sq.jpg"
+               blurDataURL="https://wallpapercave.com/wp/wp12859144.jpg"
              />
              {/* <div className="absolute top-4 left-4 bg-white px-2 py-1 rounded-lg shadow-sm">
                <span className="font-medium">⬥ {center.rating}</span>
              </div> */}
            </div>
 
-           <div className="p-4">
+           <div className="p-4 transition-all duration-300 group-hover:bg-blue-50/50">
              <div className="flex justify-between items-start mb-2">
                <div>
-                 <h3 className="font-medium text-lg text-gray-900">{center.store.name}</h3>
+                 <h3 className="font-medium text-lg text-gray-900 transition-colors duration-300 group-hover:text-blue-600">{center.store.name}</h3>
                  <div className="flex items-center gap-2 text-gray-500">
                    <div className="text-xl font-semibold text-gray-900">
                ${center.cheapestEquipment ? `${center.cheapestEquipment}` : "0"} - ${center.mostExpensiveEquipment ? center.mostExpensiveEquipment : "0"}

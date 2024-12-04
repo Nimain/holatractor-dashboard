@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react';
 import { ChevronDown, Plus, Calendar, Clock, MapPin, Tractor, Paperclip, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCookie } from 'next-cookie';
-import { renderInstance } from '@/utils/Axios/RenderInstance';
+import { NestJsBaseURL, renderInstance } from '@/utils/Axios/RenderInstance';
 import { BookingHours, BookingStatus, OperatorBookingJob, ownerOperatorRequest } from '@/utils/Types/types';
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages';
 import { Backdrop, CircularProgress } from '@mui/material';
 import SeeFarm from './SeeFarm';
+import { io, Socket } from 'socket.io-client';
 
 interface user {
     userId: string;
@@ -81,7 +82,7 @@ const KanbanBoard = () => {
             },
         }).then(() => {
             successMessage("Job rejected")
-            handleFetchAllRequests()
+            setRequests(pre=> pre.filter(b=> b.id !== jobId))
         }).catch((err) => {
             if (err.response && err.response.status === 404 && err.response.data.message === "Request is not valid") {
                 errorMessage("Request is not valid")
@@ -112,8 +113,7 @@ const KanbanBoard = () => {
             },
         }).then(() => {
             successMessage("Job accepted")
-            handleFetchAllRequests()
-            fetchAllCompletedBookings()
+            setRequests(pre=> pre.filter(b=> b.booking_id !== booking_id))
         }).catch((err) => {
             if (err.response && err.response.status === 404 && err.response.data.message === "Booking not found") {
                 errorMessage("Booking not valid")
@@ -153,7 +153,6 @@ const KanbanBoard = () => {
             },
         }).then((res) => {
             successMessage("Status changed")
-            fetchAllCompletedBookings()
         }).catch((err) => {
             if (err.response && err.response.status === 404 && err.response.data.message === "Booking not found") {
                 errorMessage("Booking not valid")
@@ -179,6 +178,35 @@ const KanbanBoard = () => {
             fetchAllCompletedBookings()
         }
     }, [])
+
+    useEffect(() => {
+        // Connect to the socket server
+        const newSocket: Socket = io(NestJsBaseURL, {
+            query: {
+                userId: user.userId
+            }
+        });
+    
+        // Listen for the 'newFarmerNotification' event
+        newSocket.on('getUpdatedOperatorBookingJob', (bookingJob: OperatorBookingJob) => {
+            console.log(bookingJob)
+            setCompletedJobs(prevBookings => {
+                const existingBookingIndex = prevBookings.findIndex(b => b.id === bookingJob.id);
+                
+                if (existingBookingIndex !== -1) {
+                    const updatedBookings = prevBookings.filter(b => b.id !== bookingJob.id);
+                    return [bookingJob, ...updatedBookings];
+                } else {
+                    return [bookingJob, ...prevBookings];
+                }
+            });
+         });
+    
+        // Clean up the event listener when the component unmounts
+        return () => {
+            newSocket.disconnect();
+        };
+    }, []);
 
     return (
         <div className="min-h-screen bg-gray-50 p-6">
@@ -222,7 +250,63 @@ const KanbanBoard = () => {
                         </h2>
                     </div>
                     {
-                        fetchingRequests ? <p>Fetching for new requests</p> : requests.length === 0 ? <p>Currently no requets is available</p> :
+                        fetchingRequests ? <div className="space-y-4 border-x-lime-200">
+                            {/* Shimmer Effect */}
+                            {[...Array(2)].map((_, index) => (
+                                <div key={index} className="space-y-3">
+                                    <div className="bg-gray-100 rounded-xl p-4 mb-4 shadow-sm animate-pulse">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                                        </div>
+
+                                        <div className="space-y-2 mb-4">
+                                            {/* Date Shimmer */}
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                                                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                                            </div>
+
+                                            {/* Hours Shimmer */}
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                                                <div className="h-4 bg-gray-200 rounded w-1/5"></div>
+                                            </div>
+
+                                            {/* Tractors Shimmer (Multiple) */}
+                                            {[1, 2].map((tractorShimmer) => (
+                                                <div key={tractorShimmer} className="flex items-center gap-2">
+                                                    <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                                                    <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                                                </div>
+                                            ))}
+
+                                            {/* Attachments Shimmer (Multiple) */}
+                                            {[1].map((attachmentShimmer) => (
+                                                <div key={attachmentShimmer} className="flex items-center gap-2">
+                                                    <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                                                    <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div className="flex justify-between items-center">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex items-center gap-1">
+                                                        <div className="w-5 h-5 bg-gray-200 rounded-full"></div>
+                                                        <div className="h-4 bg-gray-200 rounded w-8"></div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <div className="w-5 h-5 bg-gray-200 rounded-full"></div>
+                                                        <div className="h-4 bg-gray-200 rounded w-8"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div> : requests.length === 0 ? <p>Currently no requets is available</p> :
                             requests.map((request, index) => {
                                 return (
                                     <div className="space-y-3" key={index}>
@@ -365,7 +449,63 @@ const KanbanBoard = () => {
                         </h2>
                     </div>
                     {
-                        fetchingCompletedJobs ? <p>Fetching all Accepted jobs</p> : completedJobs.filter(booking => booking.booking.bookingStatus === BookingStatus.Accepted).length === 0 ? <p>Currently you have not accepted any jobs</p> :
+                        fetchingCompletedJobs ? <div className="space-y-4 border-x-lime-200">
+                        {/* Shimmer Effect */}
+                        {[...Array(2)].map((_, index) => (
+                            <div key={index} className="space-y-3">
+                                <div className="bg-gray-100 rounded-xl p-4 mb-4 shadow-sm animate-pulse">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                                    </div>
+
+                                    <div className="space-y-2 mb-4">
+                                        {/* Date Shimmer */}
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                                            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                                        </div>
+
+                                        {/* Hours Shimmer */}
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                                            <div className="h-4 bg-gray-200 rounded w-1/5"></div>
+                                        </div>
+
+                                        {/* Tractors Shimmer (Multiple) */}
+                                        {[1, 2].map((tractorShimmer) => (
+                                            <div key={tractorShimmer} className="flex items-center gap-2">
+                                                <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                                                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                                            </div>
+                                        ))}
+
+                                        {/* Attachments Shimmer (Multiple) */}
+                                        {[1].map((attachmentShimmer) => (
+                                            <div key={attachmentShimmer} className="flex items-center gap-2">
+                                                <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                                                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-1">
+                                                    <div className="w-5 h-5 bg-gray-200 rounded-full"></div>
+                                                    <div className="h-4 bg-gray-200 rounded w-8"></div>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <div className="w-5 h-5 bg-gray-200 rounded-full"></div>
+                                                    <div className="h-4 bg-gray-200 rounded w-8"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div> : completedJobs.filter(booking => booking.booking.bookingStatus === BookingStatus.Accepted).length === 0 ? <p>Currently you have not accepted any jobs</p> :
                             completedJobs.filter(booking => booking.booking.bookingStatus === BookingStatus.Accepted).map((request, index) => {
                                 return (
                                     <div className="space-y-3" key={index}>
@@ -501,7 +641,63 @@ const KanbanBoard = () => {
                         </h2>
                     </div>
                     {
-                        fetchingCompletedJobs ? <p>Fetching all ongoing jobs</p> : completedJobs.filter(booking => (booking.booking.bookingStatus !== BookingStatus.Accepted) && (booking.booking.bookingStatus !== BookingStatus.Finished)).length === 0 ? <p>Currently you have no ongoing bookings</p> :
+                        fetchingCompletedJobs ? <div className="space-y-4 border-x-lime-200">
+                        {/* Shimmer Effect */}
+                        {[...Array(2)].map((_, index) => (
+                            <div key={index} className="space-y-3">
+                                <div className="bg-gray-100 rounded-xl p-4 mb-4 shadow-sm animate-pulse">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                                    </div>
+
+                                    <div className="space-y-2 mb-4">
+                                        {/* Date Shimmer */}
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                                            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                                        </div>
+
+                                        {/* Hours Shimmer */}
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                                            <div className="h-4 bg-gray-200 rounded w-1/5"></div>
+                                        </div>
+
+                                        {/* Tractors Shimmer (Multiple) */}
+                                        {[1, 2].map((tractorShimmer) => (
+                                            <div key={tractorShimmer} className="flex items-center gap-2">
+                                                <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                                                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                                            </div>
+                                        ))}
+
+                                        {/* Attachments Shimmer (Multiple) */}
+                                        {[1].map((attachmentShimmer) => (
+                                            <div key={attachmentShimmer} className="flex items-center gap-2">
+                                                <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                                                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-1">
+                                                    <div className="w-5 h-5 bg-gray-200 rounded-full"></div>
+                                                    <div className="h-4 bg-gray-200 rounded w-8"></div>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <div className="w-5 h-5 bg-gray-200 rounded-full"></div>
+                                                    <div className="h-4 bg-gray-200 rounded w-8"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div> : completedJobs.filter(booking => (booking.booking.bookingStatus !== BookingStatus.Accepted) && (booking.booking.bookingStatus !== BookingStatus.Finished)).length === 0 ? <p>Currently you have no ongoing bookings</p> :
                             completedJobs.filter(booking => (booking.booking.bookingStatus !== BookingStatus.Accepted) && (booking.booking.bookingStatus !== BookingStatus.Finished)).map((request, index) => {
                                 return (
                                     <div className="space-y-3" key={index}>
@@ -654,7 +850,63 @@ const KanbanBoard = () => {
                         </h2>
                     </div>
                     {
-                        fetchingCompletedJobs ? <p>Fetching all Accepted jobs</p> : completedJobs.filter(booking => booking.booking.bookingStatus === BookingStatus.Finished).length === 0 ? <p>Currently you have not accepted any jobs</p> :
+                        fetchingCompletedJobs ? <div className="space-y-4 border-x-lime-200">
+                        {/* Shimmer Effect */}
+                        {[...Array(2)].map((_, index) => (
+                            <div key={index} className="space-y-3">
+                                <div className="bg-gray-100 rounded-xl p-4 mb-4 shadow-sm animate-pulse">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                                    </div>
+
+                                    <div className="space-y-2 mb-4">
+                                        {/* Date Shimmer */}
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                                            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                                        </div>
+
+                                        {/* Hours Shimmer */}
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                                            <div className="h-4 bg-gray-200 rounded w-1/5"></div>
+                                        </div>
+
+                                        {/* Tractors Shimmer (Multiple) */}
+                                        {[1, 2].map((tractorShimmer) => (
+                                            <div key={tractorShimmer} className="flex items-center gap-2">
+                                                <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                                                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                                            </div>
+                                        ))}
+
+                                        {/* Attachments Shimmer (Multiple) */}
+                                        {[1].map((attachmentShimmer) => (
+                                            <div key={attachmentShimmer} className="flex items-center gap-2">
+                                                <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                                                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-1">
+                                                    <div className="w-5 h-5 bg-gray-200 rounded-full"></div>
+                                                    <div className="h-4 bg-gray-200 rounded w-8"></div>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <div className="w-5 h-5 bg-gray-200 rounded-full"></div>
+                                                    <div className="h-4 bg-gray-200 rounded w-8"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div> : completedJobs.filter(booking => booking.booking.bookingStatus === BookingStatus.Finished).length === 0 ? <p>Currently you have not accepted any jobs</p> :
                             completedJobs.filter(booking => booking.booking.bookingStatus === BookingStatus.Finished).map((request, index) => {
                                 return (
                                     <div className="space-y-3" key={index}>

@@ -16,7 +16,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from '../ui/label'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
-import { City, Country, Role, Subscriptions } from '@/utils/Types/types'
+import { City, Country, Role, Subscriptions, SubscriptionType } from '@/utils/Types/types'
 import { renderInstance } from '@/utils/Axios/RenderInstance'
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
 import { Backdrop, CircularProgress } from '@mui/material'
@@ -33,7 +33,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
-import { AtSign, BadgeDollarSign, CalendarIcon, Check, ChevronsUpDown, CircleCheck, DatabaseZap, Eye, EyeOff, MapPinned, VenetianMask } from 'lucide-react'
+import { AtSign, BadgeDollarSign, Building, CalendarIcon, Check, ChevronsUpDown, CircleCheck, DatabaseZap, Eye, EyeOff, MapPinned, Rocket, VenetianMask, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
 import { format, setYear } from 'date-fns'
@@ -224,7 +224,7 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
             return
         }
 
-        if(!selectedPlan){
+        if (!selectedPlan) {
             errorMessage("Please select a plan")
             return
         }
@@ -304,16 +304,16 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                     if (res.status === 201 && res.data.access_token) {
                         successMessage("Created successfully")
                         setPurchasing(true)
-                        renderInstance.post(`/subscription/owner_purchase/${selectedPlan.id}`,{},{
+                        renderInstance.post(`/subscription/owner_purchase/${selectedPlan.id}`, {}, {
                             headers: {
                                 Authorization: `Bearer ${res.data.access_token}`,
                             }
-                        }).then(()=>{
+                        }).then(() => {
                             successMessage("Subscription purchased")
                             router.push("/login")
-                        }).catch(()=>{
+                        }).catch(() => {
                             errorMessage("Failed to purchase subscription")
-                        }).finally(()=>{
+                        }).finally(() => {
                             setPurchasing(false)
                         })
                     }
@@ -357,16 +357,16 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
 
                         successMessage("User sign up successfully");
                         setPurchasing(true)
-                        renderInstance.post(`/subscription/owner_purchase/${selectedPlan.id}`,{},{
+                        renderInstance.post(`/subscription/owner_purchase/${selectedPlan.id}`, {}, {
                             headers: {
                                 Authorization: `Bearer ${res.data.access_token}`,
                             }
-                        }).then(()=>{
+                        }).then(() => {
                             successMessage("Subscription purchased")
                             router.push("/login")
-                        }).catch((err)=>{
+                        }).catch((err) => {
                             errorMessage("Failed to purchase subscription")
-                        }).finally(()=>{
+                        }).finally(() => {
                             setPurchasing(false)
                         })
                     }
@@ -1218,7 +1218,7 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                                         <h1 className="text-3xl font-bold mb-6 text-center">Choose Your Subscription Plan</h1>
                                         <div className='w-full flex justify-end items-center my-4'>
                                             <Button
-                                            onClick={()=>{ ownerRegister() }}>
+                                                onClick={() => { ownerRegister() }}>
                                                 {
                                                     selectedPlan ? "Create account" : "Skip subscription"
                                                 }
@@ -1229,37 +1229,50 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                                                 <p>No subscriptions present for owners</p>
                                                 :
                                                 subscriptions.filter(subs => subs.for_owner === true).map((sub) => (
-                                                    <Card key={sub.id} className={`flex flex-col ${selectedPlan?.id === sub.id ? 'border-primary' : ''}`}>
-                                                        <CardHeader>
-                                                            <CardTitle>{sub.name}</CardTitle>
-                                                            <CardDescription>{sub.type} Plan</CardDescription>
-                                                        </CardHeader>
-                                                        <CardContent className="flex-grow">
-                                                            <div className="mb-4">
-                                                                <span className="text-3xl font-bold">${sub.actual_cost}</span>
-                                                                {sub.discount_cost < sub.actual_cost && (
-                                                                    <span className="text-muted-foreground line-through ml-2">${sub.actual_cost}</span>
-                                                                )}
-                                                            </div>
+                                                    <Card
+                                                        key={sub.id}
+                                                        className="flex flex-col bg-white hover:bg-black hover:text-white transition-colors duration-300 group"
+                                                    >
+                                                        <CardHeader className="flex-1 space-y-4">
                                                             <div className="space-y-2">
-                                                                {sub.focused_features.map((feature, index) => (
-                                                                    <li key={index} className="text-sm font-medium flex gap-2 items-center text-green-500">
-                                                                        <CircleCheck /> <p className="text-green-500">{feature}</p>
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="text-primary group-hover:text-white">
+                                                                        {sub.type === SubscriptionType.Business ? <Building className="w-6 h-6" /> : sub.type === SubscriptionType.Premium ? <Rocket className="w-6 h-6" /> : <Zap className="w-6 h-6" />}
+                                                                    </div>
+                                                                </div>
+                                                                <h3 className="text-2xl font-bold">{sub.name}</h3>
+                                                                <p className={`text-sm text-gray-500 group-hover:text-white`}>
+                                                                    {sub.type}
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex items-baseline text-6xl font-bold">
+                                                                ${sub.actual_cost - sub.discount_cost}
+                                                                <span className={`ml-1 text-sm font-normal text-gray-500 group-hover:text-white`}>
+                                                                    - {sub.total_days} days
+                                                                </span>
+                                                            </div>
+                                                        </CardHeader>
+
+                                                        <Separator className="mb-3" />
+                                                        <CardContent className="flex-1">
+                                                            <ul className="space-y-4">
+                                                                {sub.focused_features.map((feature, i) => (
+                                                                    <li key={i} className="flex items-center text-green-600">
+                                                                        <Check className="h-4 w-4 mr-2" />
+                                                                        <span>{feature}</span>
                                                                     </li>
                                                                 ))}
-                                                                {sub.features.map((feature, index) => (
-                                                                    <li key={index} className="text-sm flex gap-2 items-center">
-                                                                        <CircleCheck />{feature}
+                                                                {sub.features.map((feature, i) => (
+                                                                    <li key={i} className="flex items-center">
+                                                                        <Check className="h-4 w-4 mr-2" />
+                                                                        <span>{feature}</span>
                                                                     </li>
                                                                 ))}
-                                                            </div>
-                                                            <div className="mt-4">
-                                                                <Badge variant="outline">{sub.total_days} days</Badge>
-                                                            </div>
+                                                            </ul>
                                                         </CardContent>
                                                         <CardFooter>
                                                             <Button
-                                                                className="w-full"
+                                                                className="w-full transition-all duration-500 group-hover:bg-white group-hover:text-black"
                                                                 onClick={() => handleSelectPlan(sub)}
                                                                 variant={selectedPlan?.id === sub.id ? "secondary" : "default"}
                                                             >

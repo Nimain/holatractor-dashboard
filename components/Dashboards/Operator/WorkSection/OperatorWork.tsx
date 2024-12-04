@@ -3,7 +3,7 @@
 import { format, addDays, subDays } from 'date-fns';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Calendar, Clock, Filter, Hand, Search } from 'lucide-react';
 import { ChevronLeft, ChevronRight, MoreVertical, FileText, UserPlus, Star, BriefcaseBusiness, Warehouse } from 'lucide-react';
 import { ArrowUpDown } from "lucide-react";
@@ -18,75 +18,43 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import StoreRequest from './StoreRequest';
+import { OperatorInStore } from '@/utils/Types/types';
+import { renderInstance } from '@/utils/Axios/RenderInstance';
+import { errorMessage } from '@/utils/Toastify/Messages';
+import { useCookie } from 'next-cookie';
+
+interface PageDetails {
+    operatorId: string,
+    operatorName: string,
+    pendingOwnerRequests: number,
+    pendingOperatorRequests: number,
+    totalAcceptedJobs: number,
+    totalRejectedJobs: number,
+    totalCompletedJobs: number,
+    stores: {
+        storeName: string,
+        storeId: string,
+        acceptedJobs: number,
+        rejectedJobs: number,
+        totalCompletedBookingsCost: number
+    }[]
+}
+
+interface user {
+    userId: string;
+    image: string;
+    name: string;
+    email: string;
+    email_varified: boolean;
+}
+
 const AttendanceDashboard = () => {
-    const getStatusBadge = (status: "active" | "pending" | "inactive") => {
-        let badgeClasses = "";
+    const [PageDetails, setPageDetails] = useState<PageDetails>()
+    const [isLoading, setIsLoading] = useState(false);
 
-        if (status === "active") {
-            badgeClasses = "bg-green-100 text-green-800";
-        } else if (status === "pending") {
-            badgeClasses = "bg-yellow-100 text-yellow-800";
-        } else if (status === "inactive") {
-            badgeClasses = "bg-red-100 text-red-800";
-        }
-
-        return (
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${badgeClasses}`}>
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-            </span>
-        );
-    };
-
-    const summaryData = {
-        present: [
-            { label: 'On time', value: 265, change: 12 },
-            { label: 'Late clock-in', value: 62, change: -6 },
-            { label: 'Early clock-in', value: 224, change: -6 }
-        ],
-        notPresent: [
-            { label: 'Absent', value: 42, change: 12 },
-            { label: 'No clock-in', value: 36, change: -6 },
-            { label: 'No clock-out', value: 0, change: 0 },
-            { label: 'Invalid', value: 0, change: 0 }
-        ],
-        away: [
-            { label: 'Day off', value: 0, change: -2 },
-            { label: 'Time off', value: 0, change: -6 }
-        ]
-    };
-
-    const data = [
-        {
-            id: "ST001",
-            serialNo: 1,
-            storeName: "Downtown Market",
-            jobCount: 15,
-            accepted: 12,
-            rejected: 3,
-            amount: 2500.00,
-            status: "active"
-        },
-        {
-            id: "ST002",
-            serialNo: 2,
-            storeName: "City Grocers",
-            jobCount: 8,
-            accepted: 6,
-            rejected: 2,
-            amount: 1800.50,
-            status: "pending"
-        },
-        {
-            id: "ST003",
-            serialNo: 3,
-            storeName: "Fresh Foods",
-            jobCount: 20,
-            accepted: 18,
-            rejected: 2,
-            amount: 3200.75,
-            status: "inactive"
-        }
-    ];
+    const { cookie } = useCookie()
+    const user: user = cookie.get("user")
+    const access_token = cookie.get("access_token")
 
     // Add more employee data as needed
     const [dateRange, setDateRange] = useState({
@@ -96,7 +64,7 @@ const AttendanceDashboard = () => {
     const [isPickerOpen, setIsPickerOpen] = useState(false);
 
     // Handler for selecting date range
-    const handleDateRangeSelect = (range) => {
+    const handleDateRangeSelect = (range: any) => {
         setDateRange(range);
         setIsPickerOpen(false);
     };
@@ -111,58 +79,49 @@ const AttendanceDashboard = () => {
 
         return `${format(dateRange.from, 'PPP')} - ${format(dateRange.to, 'PPP')}`;
     };
-    const [currentDate, setCurrentDate] = useState(new Date());
 
-    // Handler to go to the previous day
-    const handlePreviousDay = () => {
-        setCurrentDate(prevDate => subDays(prevDate, 1));
-    };
+    function fetchPageDetails() {
+        setIsLoading(true)
+        renderInstance.get(`/operator/getOperatorWorkPageDetails/${user.userId}`, {
+            headers: {
+                Authorization: `Bearer ${access_token}`,
+            },
+        })
+            .then((res) => {
+                setPageDetails(res.data)
+            }).catch((err) => {
+                if (err.response && err.response.status === 404 && err.response.data.message === "User not found") {
+                    errorMessage("User not found")
+                } else {
+                    errorMessage("Some error occurred while fetching requests")
+                }
+            }).finally(() => {
+                setIsLoading(false)
+            })
+    }
 
-    // Handler to go to the next day
-    const handleNextDay = () => {
-        setCurrentDate(prevDate => addDays(prevDate, 1));
-    };
+    useEffect(() => {
+        if (user) {
+            fetchPageDetails()
+        }
+    }, [])
 
-    // Format the date for display
-    const formattedDate = format(currentDate, 'EEEE, dd MMMM');
+    if(isLoading){
+        return <div className="text-center w-full h-full flex items-center justify-center">Loading...</div>
+    }
+    if (!PageDetails) return
+
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
             <div className="">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-6">
-                    <div className="flex items-center gap-4">
-                        <h1 className="text-2xl font-semibold text-gray-900">Attendance</h1>
-                        <div className="flex items-center bg-white rounded-lg shadow-sm border">
-                            <button
-                                onClick={handlePreviousDay}
-                                className="p-2 hover:bg-gray-100 rounded-l-lg transition-colors"
-                            >
-                                <ChevronLeft className="h-4 w-4 text-gray-500" />
-                            </button>
-                            <span className="px-3 text-sm">{formattedDate}</span>
-                            <button
-                                onClick={handleNextDay}
-                                className="p-2 hover:bg-gray-100 rounded-r-lg transition-colors"
-                            >
-                                <ChevronRight className="h-4 w-4 text-gray-500" />
-                            </button>
-                        </div>
-                    </div>
-                    <div className="flex gap-3">
-                        <button className="px-4 py-2 bg-white border rounded-lg shadow-sm flex items-center gap-2">
-                            <FileText className="h-4 w-4" />
-                            Attendance Report
-                        </button>
-                        <StoreRequest />
-                        <button className="px-4 py-2 bg-teal-600 text-white rounded-lg flex items-center gap-2">
-                            <UserPlus className="h-4 w-4" />
-                            Add Attendance
-                        </button>
-                    </div>
+                    <h1 className="text-2xl font-semibold text-gray-900">Work</h1>
+                    <StoreRequest />
                 </div>
 
                 {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     {/* Present Summary Card */}
                     <div className="bg-white rounded-lg shadow-sm p-4">
                         <div className="flex justify-between items-center mb-4">
@@ -177,15 +136,18 @@ const AttendanceDashboard = () => {
                             </button>
                         </div>
                         <div className="grid grid-cols-3 gap-4">
-                            {summaryData.present.map((item) => (
-                                <div key={item.label} className="text-center">
-                                    <div className="text-2xl font-semibold mb-1">{item.value}</div>
-                                    <div className="text-xs text-gray-500 mb-1">{item.label}</div>
-                                    <div className={`text-xs ${item.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                        {item.change > 0 ? '+' : ''}{item.change} vs yesterday
-                                    </div>
-                                </div>
-                            ))}
+                            <div className="text-center">
+                                <div className="text-2xl font-semibold mb-1">{PageDetails.stores.length}</div>
+                                <div className="text-xs text-gray-500 mb-1">Total stores</div>
+                            </div>
+                            <div className="text-center">
+                                <div className="text-2xl font-semibold mb-1">{PageDetails.pendingOperatorRequests}</div>
+                                <div className="text-xs text-gray-500 mb-1">Request review pending</div>
+                            </div>
+                            <div className="text-center">
+                                <div className="text-2xl font-semibold mb-1">{PageDetails.pendingOwnerRequests}</div>
+                                <div className="text-xs text-gray-500 mb-1">Owner review pending</div>
+                            </div>
                         </div>
                     </div>
 
@@ -203,20 +165,23 @@ const AttendanceDashboard = () => {
                             </button>
                         </div>
                         <div className="grid grid-cols-4 gap-4">
-                            {summaryData.notPresent.map((item) => (
-                                <div key={item.label} className="text-center">
-                                    <div className="text-2xl font-semibold mb-1">{item.value}</div>
-                                    <div className="text-xs text-gray-500 mb-1">{item.label}</div>
-                                    <div className={`text-xs ${item.change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                        {item.change === 0 ? '' : (item.change > 0 ? '+' : '')}{item.change} vs yesterday
-                                    </div>
-                                </div>
-                            ))}
+                            <div className="text-center">
+                                <div className="text-2xl font-semibold mb-1">{PageDetails.totalAcceptedJobs}</div>
+                                <div className="text-xs text-gray-500 mb-1">Jobs accepted</div>
+                            </div>
+                            <div className="text-center">
+                                <div className="text-2xl font-semibold mb-1">{PageDetails.totalRejectedJobs}</div>
+                                <div className="text-xs text-gray-500 mb-1">Jobs rejected</div>
+                            </div>
+                            <div className="text-center">
+                                <div className="text-2xl font-semibold mb-1">{PageDetails.totalCompletedJobs}</div>
+                                <div className="text-xs text-gray-500 mb-1">Jobs completed</div>
+                            </div>
                         </div>
                     </div>
 
                     {/* Away Summary Card */}
-                    <div className="bg-white rounded-lg shadow-sm p-4">
+                    {/* <div className="bg-white rounded-lg shadow-sm p-4">
                         <div className="flex justify-between items-center mb-4">
                             <div className="flex items-center gap-2">
                                 <div className="bg-blue-100 p-1 rounded">
@@ -239,7 +204,7 @@ const AttendanceDashboard = () => {
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </div> */}
                 </div>
 
                 {/* Search and Filters */}
@@ -348,7 +313,7 @@ const AttendanceDashboard = () => {
                                             <ArrowUpDown className="h-4 w-4 text-gray-500" />
                                         </div>
                                     </TableHead>
-                                    <TableHead className="font-semibold text-center">
+                                    {/* <TableHead className="font-semibold text-center">
                                         <div className="flex justify-center items-center space-x-2">
                                             <span>Status</span>
                                             <ArrowUpDown className="h-4 w-4 text-gray-500" />
@@ -356,36 +321,50 @@ const AttendanceDashboard = () => {
                                     </TableHead>
                                     <TableHead className="w-16 text-center">
                                         <span className="sr-only">Actions</span>
-                                    </TableHead>
+                                    </TableHead> */}
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {data.map((store) => (
-                                    <TableRow key={store.id} className="hover:bg-gray-50">
-                                        <TableCell className="font-medium text-center">{store.serialNo}</TableCell>
-                                        <TableCell className="font-medium text-gray-600 text-center">{store.id}</TableCell>
+                                {isLoading ? <div className="animate-pulse">
+                                    {[...Array(5)].map((_, rowIndex) => (
+                                        <div key={`row-${rowIndex}`} className="grid grid-cols-9 gap-4 py-4 px-4 border-t">
+                                            <div className="h-4 bg-gray-200 rounded w-12 justify-self-center items-center" />
+                                            <div className="h-4 bg-gray-200 rounded w-16 justify-self-center items-center" />
+                                            <div className="h-4 bg-gray-200 rounded w-24 justify-self-center items-center" />
+                                            <div className="h-4 bg-gray-200 rounded w-16 justify-self-center items-center" />
+                                            <div className="h-4 bg-gray-200 rounded w-16 justify-self-center items-center" />
+                                            <div className="h-4 bg-gray-200 rounded w-16 justify-self-center items-center" />
+                                            <div className="h-4 bg-gray-200 rounded w-20 justify-self-center items-center" />
+                                            <div className="h-4 bg-gray-200 rounded w-20 justify-self-center items-center" />
+                                            <div className="h-4 bg-gray-200 rounded w-8 justify-self-center items-center" />
+                                        </div>
+                                    ))}
+                                </div> : PageDetails.stores.length === 0 ? <p>No data available</p> : PageDetails.stores.map((store, i) => (
+                                    <TableRow key={i} className="hover:bg-gray-50">
+                                        <TableCell className="font-medium text-center">{i + 1}</TableCell>
+                                        <TableCell className="font-medium text-gray-600 text-center">{store.storeId}</TableCell>
                                         <TableCell className="text-center">
                                             <div className="font-medium">{store.storeName}</div>
                                         </TableCell>
-                                        <TableCell className="font-medium text-center">{store.jobCount}</TableCell>
-                                        <TableCell className=" text-green-600 font-medium text-center">{store.accepted}</TableCell>
-                                        <TableCell className=" text-red-600 font-medium text-center">{store.rejected}</TableCell>
+                                        <TableCell className="font-medium text-center">{store.acceptedJobs + store.rejectedJobs}</TableCell>
+                                        <TableCell className=" text-green-600 font-medium text-center">{store.acceptedJobs}</TableCell>
+                                        <TableCell className=" text-red-600 font-medium text-center">{store.rejectedJobs}</TableCell>
                                         <TableCell className=" font-medium text-center">
-                                            ${store.amount.toFixed(2)}
+                                            ${store.totalCompletedBookingsCost.toFixed(2)}
                                         </TableCell>
-                                        <TableCell className="text-center">{getStatusBadge(store.status)}</TableCell>
+                                        {/* <TableCell className="text-center">{getStatusBadge(store.status)}</TableCell>
                                         <TableCell className="text-center">
                                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                                                 <MoreVertical className="h-4 w-4" />
                                             </Button>
-                                        </TableCell>
+                                        </TableCell> */}
                                     </TableRow>
                                 ))}
                             </TableBody>
                         </Table>
 
                     </div>
-                    <div className="flex items-center justify-between px-2">
+                    {/* <div className="flex items-center justify-between px-2">
                         <div className="text-sm text-gray-500">
                             Showing <span className="font-medium">1</span> to <span className="font-medium">3</span> of{" "}
                             <span className="font-medium">3</span> results
@@ -398,7 +377,7 @@ const AttendanceDashboard = () => {
                                 Next
                             </Button>
                         </div>
-                    </div>
+                    </div> */}
                 </div>
             </div>
         </div>

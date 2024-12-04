@@ -360,10 +360,18 @@ const NewDashboard = () => {
                          </button>
                        </div>
                        <div className="p-4">
-                         <div className="mb-2 flex items-center justify-between">
+                         <div className="mb-2 space-y-2">
                            <div className="flex items-center gap-1">
-                             <span className="text-2xl font-semibold">€80</span>
-                             <span className="text-gray-600">/night</span>
+                             <span className="text-2xl font-semibold">${influencer.cost_per_hour}</span>
+                             <span className="text-gray-600">/per hour</span>
+                           </div>
+                           <div className="flex items-center gap-1">
+                             <span className="text-2xl font-semibold">${influencer.cost_per_job}</span>
+                             <span className="text-gray-600">/per job</span>
+                           </div>
+                           <div className="flex items-center gap-1">
+                             <span className="text-2xl font-semibold">${influencer.cost_per_month}</span>
+                             <span className="text-gray-600">/per momth</span>
                            </div>
                          </div>
                          <p className="mb-3 text-sm text-gray-600">{influencer.store.name}</p>
@@ -382,7 +390,10 @@ const NewDashboard = () => {
                                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
                                />
                              </svg>
-                             <span>{influencer.store.Booking.length}</span>
+                             <div className="flex items-center gap-1">
+                             <span className="text-sm font-semibold">Joined since: </span>
+                             <span className="text-gray-600">{new Date(influencer.createdAt).toLocaleDateString()}</span>
+                           </div>
                            </div>
                          </div>
                        </div>
