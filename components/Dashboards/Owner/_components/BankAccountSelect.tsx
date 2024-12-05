@@ -318,7 +318,17 @@ function BankAccountForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: bool
             successMessage("Bank account added")
             setIsAddModalOpen(false)
         }).catch((err) => {
-            errorMessage("Error adding bank account")
+            if (err.response && err.response.status === 404){
+                if(err.response.data.message === "Log in user not found"){
+                    errorMessage("Log in user not found")
+                } 
+            } else if (err.response && err.response.status === 409){
+                if(err.response.data.message === "You can't add someone else's account"){
+                    errorMessage("You can't add someone else's account")
+                } 
+            } else {
+                errorMessage("Error adding bank account")
+            }
         }).finally(() => {
             setLoading(false)
         })
@@ -372,7 +382,17 @@ function PayPalForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: boolean) 
             successMessage("paypal account added")
             setIsAddModalOpen(false)
         }).catch((err) => {
-            errorMessage("Error adding bank account")
+            if (err.response && err.response.status === 404){
+                if(err.response.data.message === "Log in user not found"){
+                    errorMessage("Log in user not found")
+                } 
+            } else if (err.response && err.response.status === 409){
+                if(err.response.data.message === "You can't add someone else's account"){
+                    errorMessage("You can't add someone else's account")
+                } 
+            } else {
+                errorMessage("Error adding paypal account")
+            }
         }).finally(() => {
             setLoading(false)
         })
@@ -414,7 +434,17 @@ function UPIForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: boolean) => 
             successMessage("paypal account added")
             setIsAddModalOpen(false)
         }).catch((err) => {
-            errorMessage("Error adding bank account")
+            if (err.response && err.response.status === 404){
+                if(err.response.data.message === "Log in user not found"){
+                    errorMessage("Log in user not found")
+                } 
+            } else if (err.response && err.response.status === 409){
+                if(err.response.data.message === "You can't add someone else's account"){
+                    errorMessage("You can't add someone else's account")
+                } 
+            } else {
+                errorMessage("Error adding paypal account")
+            }
         }).finally(() => {
             setLoading(false)
         })

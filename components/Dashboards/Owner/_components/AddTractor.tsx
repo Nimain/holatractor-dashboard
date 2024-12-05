@@ -122,7 +122,29 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
         successMessage("Tractor added successfully");
       })
       .catch((err) => {
-        errorMessage("Some error occurred");
+        if (err.response && err.response.status === 404 && err.response.data.message === "Store not present") {
+          errorMessage("Store not present")
+        } else if (err.response && err.response.status === 404 && err.response.data.message === "Inventory not found") {
+          errorMessage("Inventory not found")
+        } else if (err.response && err.response.status === 404 && err.response.data.message === "User not present") {
+          errorMessage("User not present")
+        } else if (err.response && err.response.status === 400 && err.response.data.message === "No owner is availalable for this store") {
+          errorMessage("No owner is availalable for this store")
+        } else if (err.response && err.response.status === 401 && err.response.data.message === "You are not allowed to modify the store") {
+          errorMessage("You are not allowed to modify the store")
+        } else if (err.response && err.response.status === 409 && err.response.data.message === "No active subscriptions") {
+          errorMessage("No active subscriptions")
+        } else if (err.response && err.response.status === 409 && err.response.data.message === "Maximum tractors reached") {
+          errorMessage("Maximum tractors reached")
+        } else if (err.response && err.response.status === 404 && err.response.data.message === "Tractor not found") {
+          errorMessage("Tractor not found")
+        } else if (err.response && err.response.status === 409 && err.response.data.message === "You have added more price than inventory price") {
+          errorMessage("You have added more price than inventory price")
+        } else if (err.response && err.response.status === 409 && err.response.data.message === "You have entered price less than inventory minimum price") {
+          errorMessage("You have entered price less than inventory minimum price")
+        } else {
+          errorMessage("Some error occurred");
+        }
       })
       .finally(() => {
         setCreating(false);

@@ -84,7 +84,23 @@ const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentI
         successMessage("Attachment added successfully");
       })
       .catch((err) => {
-        errorMessage("Some error occurred");
+        if (err.response && err.response.status === 404 && err.response.data.message === "Store not present") {
+          errorMessage("Store not present")
+        } else if (err.response && err.response.status === 404 && err.response.data.message === "User not present") {
+          errorMessage("User not present")
+        } else if (err.response && err.response.status === 400 && err.response.data.message === "No owner is availalable for this store") {
+          errorMessage("No owner is availalable for this store")
+        } else if (err.response && err.response.status === 401 && err.response.data.message === "You are not allowed to modify the store") {
+          errorMessage("You are not allowed to modify the store")
+        } else if (err.response && err.response.status === 409 && err.response.data.message === "No active subscriptions") {
+          errorMessage("No active subscriptions")
+        } else if (err.response && err.response.status === 409 && err.response.data.message === "Maximum attachments reached") {
+          errorMessage("Maximum attachments reached")
+        } else if (err.response && err.response.status === 404 && err.response.data.message === "Attachment not found") {
+          errorMessage("Attachment not found")
+        } else {
+          errorMessage("Some error occurred");
+        }
       })
       .finally(() => {
         setCreating(false);
@@ -125,7 +141,7 @@ const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentI
       </DialogTrigger>
 
       <DialogContent className="max-h-[90vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
-        <div className="grid gap-4 py-4 grid-cols-2"> 
+        <div className="grid gap-4 py-4 grid-cols-2">
           {selectedAttachmentId ? (
             <div className="grid gap-4">
               <Label htmlFor="hourly-price">Hourly Price</Label>

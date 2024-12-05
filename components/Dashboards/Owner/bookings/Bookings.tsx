@@ -213,8 +213,6 @@ const Bookings = () => {
         }
     }, []);
 
-    if (fetchingBookings) return <OwnerShrimmer />
-
     return (
         <div className="flex flex-col h-screen bg-gray-50">
             {/* Header */}
@@ -263,6 +261,22 @@ const Bookings = () => {
                     </div>
 
                     {/* Train List */}
+                    {
+                        fetchingBookings ? 
+                        <div className="space-y-4">
+<div className="animate-pulse w-full h-[160px] bg-gray-300 rounded"/>
+<div className="animate-pulse w-full h-[160px] bg-gray-300 rounded"/>
+<div className="animate-pulse w-full h-[160px] bg-gray-300 rounded"/>
+<div className="animate-pulse w-full h-[160px] bg-gray-300 rounded"/>
+<div className="animate-pulse w-full h-[160px] bg-gray-300 rounded"/>
+<div className="animate-pulse w-full h-[160px] bg-gray-300 rounded"/>
+<div className="animate-pulse w-full h-[160px] bg-gray-300 rounded"/>
+<div className="animate-pulse w-full h-[160px] bg-gray-300 rounded"/>
+<div className="animate-pulse w-full h-[160px] bg-gray-300 rounded"/>
+<div className="animate-pulse w-full h-[160px] bg-gray-300 rounded"/>
+<div className="animate-pulse w-full h-[160px] bg-gray-300 rounded"/>
+                        </div>
+                        :
                     <div className="space-y-4">
                         {
                             selectedFilter === "all" && allBookings.filter(bo => bo.confirm).map((ticket, i) => (
@@ -2543,6 +2557,7 @@ const Bookings = () => {
                             ))
                         }
                     </div>
+                    }
                 </div>
 
                 {/* Right Section - Map & Statistics */}

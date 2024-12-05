@@ -192,13 +192,13 @@ export default function PaymentMethods({ bookingId, storeId }: { bookingId: stri
                                                 <TabsTrigger value="upi">UPI</TabsTrigger>
                                             </TabsList>
                                             <TabsContent value="bank">
-                                                <BankAccountForm />
+                                                <BankAccountForm setIsAddModalOpen={setIsAddModalOpen} />
                                             </TabsContent>
                                             <TabsContent value="paypal">
-                                                <PayPalForm />
+                                                <PayPalForm setIsAddModalOpen={setIsAddModalOpen} />
                                             </TabsContent>
                                             <TabsContent value="upi">
-                                                <UPIForm />
+                                                <UPIForm setIsAddModalOpen={setIsAddModalOpen} />
                                             </TabsContent>
                                         </Tabs>
                                     </DialogContent>
@@ -284,7 +284,7 @@ export default function PaymentMethods({ bookingId, storeId }: { bookingId: stri
     )
 }
 
-function BankAccountForm() {
+function BankAccountForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: boolean) => void }) {
 
     const [loading, setLoading] = useState(false)
     const [formData, setFormData] = useState({
@@ -316,9 +316,19 @@ function BankAccountForm() {
             },
         }).then(() => {
             successMessage("Bank account added")
-            window.location.reload()
+            setIsAddModalOpen(false)
         }).catch((err) => {
-            errorMessage("Error adding bank account")
+            if (err.response && err.response.status === 404){
+                if(err.response.data.message === "Log in user not found"){
+                    errorMessage("Log in user not found")
+                } 
+            } else if (err.response && err.response.status === 409){
+                if(err.response.data.message === "You can't add someone else's account"){
+                    errorMessage("You can't add someone else's account")
+                } 
+            } else {
+                errorMessage("Error adding bank account")
+            }
         }).finally(() => {
             setLoading(false)
         })
@@ -353,7 +363,7 @@ function BankAccountForm() {
     )
 }
 
-function PayPalForm() {
+function PayPalForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: boolean) => void }) {
     const [email, setEmail] = useState('')
     const [loading, setLoading] = useState(false)
 
@@ -370,9 +380,19 @@ function PayPalForm() {
             },
         }).then(() => {
             successMessage("paypal account added")
-            window.location.reload()
+            setIsAddModalOpen(false)
         }).catch((err) => {
-            errorMessage("Error adding bank account")
+            if (err.response && err.response.status === 404){
+                if(err.response.data.message === "Log in user not found"){
+                    errorMessage("Log in user not found")
+                } 
+            } else if (err.response && err.response.status === 409){
+                if(err.response.data.message === "You can't add someone else's account"){
+                    errorMessage("You can't add someone else's account")
+                } 
+            } else {
+                errorMessage("Error adding paypal account")
+            }
         }).finally(() => {
             setLoading(false)
         })
@@ -388,7 +408,7 @@ function PayPalForm() {
     )
 }
 
-function UPIForm() {
+function UPIForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: boolean) => void }) {
     const [upiId, setUpiId] = useState('')
     const [qrCode, setQrCode] = useState<File | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -412,9 +432,19 @@ function UPIForm() {
             },
         }).then(() => {
             successMessage("paypal account added")
-            window.location.reload()
+            setIsAddModalOpen(false)
         }).catch((err) => {
-            errorMessage("Error adding bank account")
+            if (err.response && err.response.status === 404){
+                if(err.response.data.message === "Log in user not found"){
+                    errorMessage("Log in user not found")
+                } 
+            } else if (err.response && err.response.status === 409){
+                if(err.response.data.message === "You can't add someone else's account"){
+                    errorMessage("You can't add someone else's account")
+                } 
+            } else {
+                errorMessage("Error adding UPI account")
+            }
         }).finally(() => {
             setLoading(false)
         })

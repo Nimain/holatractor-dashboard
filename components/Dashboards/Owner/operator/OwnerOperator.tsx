@@ -399,7 +399,7 @@ const OwnerOperator = () => {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {fetchingOperatorDetails ? <p>Loading operator lists</p>
+                        {fetchingOperatorDetails ? <OperatorTableShrimmer />
                             :
                             allOperators.length === 0 ? <p>No operators available</p>
                                 :
@@ -641,3 +641,36 @@ const OwnerOperator = () => {
 }
 
 export default OwnerOperator
+
+function OperatorTableShrimmer(){
+    return(
+        Array.from({ length: 5 }).map((_, index) => (
+          <tr key={index} className="animate-pulse border-b">
+            <td className="p-4">
+              <div className="h-4 w-4 bg-gray-300 rounded"></div>
+            </td>
+            <td className="p-4">
+              <div className="h-4 w-32 bg-gray-300 rounded"></div>
+            </td>
+            <td className="p-4">
+              <div className="h-4 w-32 bg-gray-300 rounded"></div>
+            </td>
+            <td className="p-4">
+              <div className="h-4 w-24 bg-gray-300 rounded"></div>
+            </td>
+            <td className="p-4">
+              <div className="h-4 w-16 bg-gray-300 rounded"></div>
+            </td>
+            <td className="p-4">
+              <div className="h-4 w-16 bg-gray-300 rounded"></div>
+            </td>
+            <td className="p-4">
+              <div className="h-4 w-16 bg-gray-300 rounded"></div>
+            </td>
+            <td className="p-4">
+              <div className="h-4 w-16 bg-gray-300 rounded"></div>
+            </td>
+          </tr>
+        ))
+      )
+  }

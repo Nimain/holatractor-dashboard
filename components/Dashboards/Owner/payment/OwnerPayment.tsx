@@ -139,16 +139,16 @@ const OwnerPayment = () => {
   useEffect(() => {
     // Connect to the socket server
     const newSocket: Socket = io(NestJsBaseURL, {
-        query: {
-            userId: user.userId
-        }
+      query: {
+        userId: user.userId
+      }
     });
 
     // Listen for the 'newFarmerNotification' event
     newSocket.on('getUpdatedPayment', (payment: Payment) => {
       setSenderPayments((prevPayments) => {
         const existingPaymentIndex = prevPayments.findIndex((b) => b.id === payment.id);
-    
+
         if (existingPaymentIndex !== -1) {
           // If payment exists, remove the old one and add the new one at the start
           const updatedPayments = prevPayments.filter((b) => b.id !== payment.id);
@@ -160,7 +160,7 @@ const OwnerPayment = () => {
       });
       setReceiverPayments((prevPayments) => {
         const existingPaymentIndex = prevPayments.findIndex((b) => b.id === payment.id);
-    
+
         if (existingPaymentIndex !== -1) {
           // If payment exists, remove the old one and add the new one at the start
           const updatedPayments = prevPayments.filter((b) => b.id !== payment.id);
@@ -170,23 +170,19 @@ const OwnerPayment = () => {
           return prevPayments;
         }
       });
-     });
+    });
 
     // Clean up the event listener when the component unmounts
     return () => {
-        newSocket.disconnect();
+      newSocket.disconnect();
     };
-}, []);
+  }, []);
 
   useEffect(() => {
     if (user) {
       fetchPageDetails()
     }
   }, [])
-
-  if (isFetching) return <OwnerShrimmer />
-
-  if (!ownerDetails) return <p>Owner details not present</p>
 
   return (
     <div>
@@ -330,124 +326,130 @@ const OwnerPayment = () => {
         }
 
         {/* Payment Method Section */}
-        <Card className="w-full">
-          <CardContent className="p-6 flex flex-col gap-3 max-h-[300px] overflow-auto" style={{ scrollbarWidth: "none" }}>
-            <div className="w-full flex items-center justify-between gap-4 flex-wrap">
-              <h2 className="text-xl font-semibold mb-4">Payment Method</h2>
+        {
+          ownerDetails &&
+          <Card className="w-full">
+            <CardContent className="p-6 flex flex-col gap-3 max-h-[300px] overflow-auto" style={{ scrollbarWidth: "none" }}>
+              <div className="w-full flex items-center justify-between gap-4 flex-wrap">
+                <h2 className="text-xl font-semibold mb-4">Payment Method</h2>
+                {
+                  ((ownerDetails.user.BankAccount.length === 0) && (ownerDetails.user.PayPal.length === 0) && (ownerDetails.user.UPI.length === 0)) &&
+                  <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Payment Method
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-h-[80vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
+                      <DialogHeader>
+                        <DialogTitle>Add Payment Method</DialogTitle>
+                      </DialogHeader>
+                      <Tabs defaultValue="bank">
+                        <TabsList className="grid w-full grid-cols-3">
+                          <TabsTrigger value="bank">Bank Account</TabsTrigger>
+                          <TabsTrigger value="paypal">PayPal</TabsTrigger>
+                          <TabsTrigger value="upi">UPI</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="bank">
+                          <BankAccountForm setIsAddModalOpen={setIsAddModalOpen} />
+                        </TabsContent>
+                        <TabsContent value="paypal">
+                          <PayPalForm setIsAddModalOpen={setIsAddModalOpen} />
+                        </TabsContent>
+                        <TabsContent value="upi">
+                          <UPIForm setIsAddModalOpen={setIsAddModalOpen} />
+                        </TabsContent>
+                      </Tabs>
+                    </DialogContent>
+                  </Dialog>
+                }
+              </div>
               {
-                ((ownerDetails.user.BankAccount.length === 0) && (ownerDetails.user.PayPal.length === 0) && (ownerDetails.user.UPI.length === 0)) &&
-                <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Add Payment Method
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-h-[80vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
-                    <DialogHeader>
-                      <DialogTitle>Add Payment Method</DialogTitle>
-                    </DialogHeader>
-                    <Tabs defaultValue="bank">
-                      <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="bank">Bank Account</TabsTrigger>
-                        <TabsTrigger value="paypal">PayPal</TabsTrigger>
-                        <TabsTrigger value="upi">UPI</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="bank">
-                        <BankAccountForm setIsAddModalOpen={setIsAddModalOpen} />
-                      </TabsContent>
-                      <TabsContent value="paypal">
-                        <PayPalForm setIsAddModalOpen={setIsAddModalOpen} />
-                      </TabsContent>
-                      <TabsContent value="upi">
-                        <UPIForm setIsAddModalOpen={setIsAddModalOpen} />
-                      </TabsContent>
-                    </Tabs>
-                  </DialogContent>
-                </Dialog>
-              }
-            </div>
-            {
-              ownerDetails.user.PayPal.map((paypal, i) => {
-                return (
-                  <div className="flex items-center justify-between flex-wrap gap-4 border p-4 rounded-lg" key={i}>
-                    <div className="flex items-center flex-wrap gap-4">
-                      <PayPalIcon className="h-6 w-6 text-blue-600" />
-                      <p>{paypal.email}</p>
-                    </div>
-                    <PaypalReadOnly email={paypal.email} />
-                  </div>
-                )
-              })
-            }
-            {
-              ownerDetails.user.UPI.map((upi, i) => {
-                return (
-                  <div className="flex items-center justify-between flex-wrap gap-4 border p-4 rounded-lg" key={i}>
-                    <div className="flex items-center flex-wrap gap-4">
-                      <PayPalIcon className="h-6 w-6 text-blue-600" />
-                      <p>{upi.upi_id}</p>
-                    </div>
-                    <UPIReadonly upi={upi} />
-                  </div>
-                )
-              })
-            }
-            {
-              ownerDetails.user.BankAccount.map((bankAccount, i) => {
-                return (
-                  <div className="flex items-center justify-between flex-wrap gap-4 border p-4 rounded-lg" key={i}>
-                    <div className="flex items-center flex-wrap gap-4">
-                      <PayPalIcon className="h-6 w-6 text-blue-600" />
-                      <div>
-                        <p>{bankAccount.accountNumber}</p>
-                        <p className="text-sm text-gray-500">{bankAccount.bankName}</p>
+                ownerDetails.user.PayPal.map((paypal, i) => {
+                  return (
+                    <div className="flex items-center justify-between flex-wrap gap-4 border p-4 rounded-lg" key={i}>
+                      <div className="flex items-center flex-wrap gap-4">
+                        <PayPalIcon className="h-6 w-6 text-blue-600" />
+                        <p>{paypal.email}</p>
                       </div>
+                      <PaypalReadOnly email={paypal.email} />
                     </div>
-                    <BankAccountReadOnly bankAccount={bankAccount} />
-                  </div>
-                )
-              })
-            }
-          </CardContent>
-        </Card>
+                  )
+                })
+              }
+              {
+                ownerDetails.user.UPI.map((upi, i) => {
+                  return (
+                    <div className="flex items-center justify-between flex-wrap gap-4 border p-4 rounded-lg" key={i}>
+                      <div className="flex items-center flex-wrap gap-4">
+                        <PayPalIcon className="h-6 w-6 text-blue-600" />
+                        <p>{upi.upi_id}</p>
+                      </div>
+                      <UPIReadonly upi={upi} />
+                    </div>
+                  )
+                })
+              }
+              {
+                ownerDetails.user.BankAccount.map((bankAccount, i) => {
+                  return (
+                    <div className="flex items-center justify-between flex-wrap gap-4 border p-4 rounded-lg" key={i}>
+                      <div className="flex items-center flex-wrap gap-4">
+                        <PayPalIcon className="h-6 w-6 text-blue-600" />
+                        <div>
+                          <p>{bankAccount.accountNumber}</p>
+                          <p className="text-sm text-gray-500">{bankAccount.bankName}</p>
+                        </div>
+                      </div>
+                      <BankAccountReadOnly bankAccount={bankAccount} />
+                    </div>
+                  )
+                })
+              }
+            </CardContent>
+          </Card>
+        }
       </div>
 
       {/* Payment History Section */}
 
-      <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
-        <div>
-          <h2 className="text-xl font-semibold">Payment History ({ownerDetails.user.paymentReciever.length + ownerDetails.user.paymentSender.length})</h2>
-          <p className="text-gray-600">See history of your payment plan invoice</p>
-        </div>
-        <div className="flex items-center gap-2">
-        <Select onValueChange={e => setActiveFilter(e)} defaultValue='all'>
-          <SelectTrigger className='w-[180px]'>
-            <SelectValue placeholder="Filter by" />
-          </SelectTrigger>
-          <SelectContent>
-            {
-              bookingFilters.map((filer, index) => {
-                return (
-                  <SelectItem key={index} value={filer.value}>
-                    {filer.placeholder}
-                  </SelectItem>
-                )
-              })
-            }
-          </SelectContent>
-        </Select>
-        <DownloadPDFButton
-          payments={[...ownerDetails.user.paymentReciever, ...ownerDetails.user.paymentSender]}
-          bookings={[...ownerDetails.user.paymentReciever, ...ownerDetails.user.paymentSender]
-            .map(payment =>
-              ownerDetails.user.Booking.find(booking => booking.id === payment.booking_id)
-            ).filter(Boolean) as Booking[]
-          }
-          fileName="all_payments.pdf"
-          />
+      {
+        ownerDetails &&
+        <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+          <div>
+            <h2 className="text-xl font-semibold">Payment History ({ownerDetails.user.paymentReciever.length + ownerDetails.user.paymentSender.length})</h2>
+            <p className="text-gray-600">See history of your payment plan invoice</p>
           </div>
-      </div>
+          <div className="flex items-center gap-2">
+            <Select onValueChange={e => setActiveFilter(e)} defaultValue='all'>
+              <SelectTrigger className='w-[180px]'>
+                <SelectValue placeholder="Filter by" />
+              </SelectTrigger>
+              <SelectContent>
+                {
+                  bookingFilters.map((filer, index) => {
+                    return (
+                      <SelectItem key={index} value={filer.value}>
+                        {filer.placeholder}
+                      </SelectItem>
+                    )
+                  })
+                }
+              </SelectContent>
+            </Select>
+            <DownloadPDFButton
+              payments={[...ownerDetails.user.paymentReciever, ...ownerDetails.user.paymentSender]}
+              bookings={[...ownerDetails.user.paymentReciever, ...ownerDetails.user.paymentSender]
+                .map(payment =>
+                  ownerDetails.user.Booking.find(booking => booking.id === payment.booking_id)
+                ).filter(Boolean) as Booking[]
+              }
+              fileName="all_payments.pdf"
+            />
+          </div>
+        </div>
+      }
 
       <div className="overflow-x-auto">
         <Table className="border border-gray-200 rounded-lg">
@@ -492,31 +494,38 @@ const OwnerPayment = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {activeFilter === "all" && receiverPayments.map((item, index) => {
-              return (
-                <PaymentSheet index={index} item={item} key={index} />
-              )
-            })}
-            {activeFilter === "unpaid" && senderPayments.filter(po=>(`${po.status}` === "FarmerPENDING")).map((item, index) => {
-              return (
-                <PaymentSheet index={index} item={item} key={index} />
-              )
-            })}
-            {activeFilter === "review" && senderPayments.filter(po=>(`${po.status}` === "FarmerCONFIRMED")).map((item, index) => {
-              return (
-                <PaymentSheet index={index} item={item} key={index} />
-              )
-            })}
-            {activeFilter === "rejected" && senderPayments.filter(po=>(`${po.status}` === "OwnerREJECTED")).map((item, index) => {
-              return (
-                <PaymentSheet index={index} item={item} key={index} />
-              )
-            })}
-            {activeFilter === "completed" && senderPayments.filter(po=>(`${po.status}` === "COMPLETED")).map((item, index) => {
-              return (
-                <PaymentSheet index={index} item={item} key={index} />
-              )
-            })}
+            {
+              isFetching ? <PaymentTableShrimmer /> :
+                activeFilter === "all" ? receiverPayments.map((item, index) => {
+                  return (
+                    <PaymentSheet index={index} item={item} key={index} />
+                  )
+                })
+                  :
+                  activeFilter === "unpaid" ? senderPayments.filter(po => (`${po.status}` === "FarmerPENDING")).map((item, index) => {
+                    return (
+                      <PaymentSheet index={index} item={item} key={index} />
+                    )
+                  })
+                    :
+                    activeFilter === "review" ? senderPayments.filter(po => (`${po.status}` === "FarmerCONFIRMED")).map((item, index) => {
+                      return (
+                        <PaymentSheet index={index} item={item} key={index} />
+                      )
+                    })
+                      :
+                      activeFilter === "rejected" ? senderPayments.filter(po => (`${po.status}` === "OwnerREJECTED")).map((item, index) => {
+                        return (
+                          <PaymentSheet index={index} item={item} key={index} />
+                        )
+                      })
+                        :
+                        activeFilter === "completed" && senderPayments.filter(po => (`${po.status}` === "COMPLETED")).map((item, index) => {
+                          return (
+                            <PaymentSheet index={index} item={item} key={index} />
+                          )
+                        })
+            }
           </TableBody>
         </Table>
       </div>
@@ -527,6 +536,30 @@ const OwnerPayment = () => {
 }
 
 export default OwnerPayment
+
+function PaymentTableShrimmer() {
+  return (
+    Array.from({ length: 5 }).map((_, index) => (
+      <tr key={index} className="animate-pulse border-b">
+        <td className="p-4">
+          <div className="h-4 w-4 bg-gray-300 rounded"></div>
+        </td>
+        <td className="p-4">
+          <div className="h-4 w-32 bg-gray-300 rounded"></div>
+        </td>
+        <td className="p-4">
+          <div className="h-4 w-32 bg-gray-300 rounded"></div>
+        </td>
+        <td className="p-4">
+          <div className="h-4 w-24 bg-gray-300 rounded"></div>
+        </td>
+        <td className="p-4">
+          <div className="h-4 w-16 bg-gray-300 rounded"></div>
+        </td>
+      </tr>
+    ))
+  )
+}
 
 function BankAccountForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: boolean) => void }) {
 

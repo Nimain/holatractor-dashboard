@@ -110,10 +110,6 @@ const OwnerCustomer = () => {
         return () => clearInterval(intervalId); // Cleanup on component unmount
     }, []);
 
-    if (fetchingPageDetails) return <OwnerShrimmer />
-
-    if (!user) return <p>user not found</p>
-
     return (
         <div>
             {/* Header */}
@@ -332,7 +328,12 @@ const OwnerCustomer = () => {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {customers.map((customer) => (
+                        {fetchingPageDetails ? <CustomerTableShrimmer />
+                        :
+                        customers.length === 0 ?
+                        <p>No customers available</p>
+                        :
+                        customers.map((customer) => (
                             <TableRow key={customer.id} className="border-t">
                                 <TableCell className="p-4">
                                     <Input type="checkbox" className="rounded w-4 h-4 accent-primaryColor" />
@@ -372,3 +373,27 @@ const OwnerCustomer = () => {
 }
 
 export default OwnerCustomer
+
+function CustomerTableShrimmer(){
+    return(
+        Array.from({ length: 5 }).map((_, index) => (
+          <tr key={index} className="animate-pulse border-b">
+            <td className="p-4">
+              <div className="h-4 w-4 bg-gray-300 rounded"></div>
+            </td>
+            <td className="p-4">
+              <div className="h-4 w-32 bg-gray-300 rounded"></div>
+            </td>
+            <td className="p-4">
+              <div className="h-4 w-32 bg-gray-300 rounded"></div>
+            </td>
+            <td className="p-4">
+              <div className="h-4 w-24 bg-gray-300 rounded"></div>
+            </td>
+            <td className="p-4">
+              <div className="h-4 w-16 bg-gray-300 rounded"></div>
+            </td>
+          </tr>
+        ))
+      )
+  }

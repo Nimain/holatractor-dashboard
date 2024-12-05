@@ -10,7 +10,7 @@ import {
     SheetTrigger,
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button";
-import { ChevronRight, ChevronsUpDown, Mail, MessageCircle, MoreHorizontal, NotepadText, Phone, Plus } from "lucide-react";
+import { ChevronRight, ChevronsUpDown, House, Mail, MessageCircle, MoreHorizontal, NotepadText, Phone, Plus, Tractor, Truck } from "lucide-react";
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
@@ -147,69 +147,6 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
                             <ChevronRight className="h-4 w-4" />
                             <span className="text-lg font-semibold">Lead Preview</span>
                         </div>
-                        <Collapsible>
-                            <CollapsibleTrigger>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="flex items-center space-x-2 border border-gray-300 px-4 py-2 rounded-md"
-                                >
-                                    {
-                                        checkingAvailability ? <span className="text-sm">
-                                            Checking availability
-                                        </span>
-                                            :
-                                            <span className="text-sm">
-                                                Available stores {availableStores.length}
-                                            </span>
-                                    }
-                                    {
-                                        !checkingAvailability &&
-                                        <ChevronsUpDown className="h-4 w-4 text-gray-600" />
-                                    }
-                                </Button>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent>
-                                {
-                                    availableStores.map((storeDetails, i) => {
-                                        return (
-                                            <Dialog key={i}>
-                                                <DialogTrigger asChild>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="flex items-center space-x-2 border border-gray-300 px-4 py-2 rounded-md"
-                                                    >
-                                                        <span className="text-sm">
-                                                            {storeDetails.storeName}
-                                                        </span>
-                                                        <ChevronRight className="h-4 w-4 text-gray-600" />
-                                                    </Button>
-                                                </DialogTrigger>
-                                                <DialogContent className="max-w-xl">
-                                                    <DialogHeader>
-                                                        <DialogTitle className="text-xl font-semibold">
-                                                            Confirm this booking lead for the store {storeDetails.storeName}
-                                                        </DialogTitle>
-                                                        <DialogDescription>
-                                                            Are you sure you want to book this lead? This action cannot be undone.
-                                                        </DialogDescription>
-                                                    </DialogHeader>
-                                                    <DialogFooter className="sm:justify-start">
-                                                        <DialogClose asChild>
-                                                            <Button variant="outline">
-                                                                Don't book
-                                                            </Button>
-                                                        </DialogClose>
-                                                        <PaymentMethods bookingId={booking.id} storeId={storeDetails.storeId} />
-                                                    </DialogFooter>
-                                                </DialogContent>
-                                            </Dialog>
-                                        )
-                                    })
-                                }
-                            </CollapsibleContent>
-                        </Collapsible>
                     </SheetTitle>
                 </SheetHeader>
 
@@ -319,13 +256,14 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
                             }}
                             className="text-xl text-blue-500" />
                     </div>
+                    <div className="w-full flex items-center justify-around gap-2 flex-wrap">
                     {
                         booking.farm &&
                         <div className="mt-6">
                             <Dialog>
                                 <DialogTrigger asChild>
-                                    <Button className="w-full">
-                                        See farm location
+                                    <Button>
+                                        <House />
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent>
@@ -349,12 +287,12 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
                         <div className="mt-6">
                             <Dialog>
                                 <DialogTrigger asChild>
-                                    <Button className="w-full">
-                                        Total tractors {booking.standaloneTractors.length}
+                                    <Button>
+                                        <Tractor className="mr-2" /> {booking.standaloneTractors.length}
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent>
-                                    <div>
+                                <DialogContent className="max-h-[90vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
+                                    <div className="w-full grid grid-cols-2 gap-5">
                                         {
                                             booking.standaloneTractors.map((tractorDetails, i) => {
                                                 return (
@@ -409,12 +347,12 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
                         <div className="mt-6">
                             <Dialog>
                                 <DialogTrigger asChild>
-                                    <Button className="w-full">
-                                        Total tractors {booking.standaloneAttachments.length}
+                                    <Button>
+                                        <Truck className="mr-2"/> {booking.standaloneAttachments.length}
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent>
-                                    <div>
+                                <DialogContent className="max-h-[90vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
+                                    <div className="w-full grid grid-cols-2 gap-5">
                                         {
                                             booking.standaloneAttachments.map((tractorDetails, i) => {
                                                 return (
@@ -461,6 +399,70 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
                             </Dialog>
                         </div>
                     }
+                    </div>
+                        <Collapsible className="mt-4 mx-auto">
+                            <CollapsibleTrigger>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex items-center space-x-2 border border-gray-300 px-4 py-2 rounded-md"
+                                >
+                                    {
+                                        checkingAvailability ? <span className="text-sm">
+                                            Checking availability
+                                        </span>
+                                            :
+                                            <span className="text-sm">
+                                                Available stores {availableStores.length}
+                                            </span>
+                                    }
+                                    {
+                                        !checkingAvailability &&
+                                        <ChevronsUpDown className="h-4 w-4 text-gray-600" />
+                                    }
+                                </Button>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                                {
+                                    availableStores.map((storeDetails, i) => {
+                                        return (
+                                            <Dialog key={i}>
+                                                <DialogTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="flex items-center space-x-2 border border-gray-300 px-4 py-2 rounded-md"
+                                                    >
+                                                        <span className="text-sm">
+                                                            {storeDetails.storeName}
+                                                        </span>
+                                                        <ChevronRight className="h-4 w-4 text-gray-600" />
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent className="max-w-xl">
+                                                    <DialogHeader>
+                                                        <DialogTitle className="text-xl font-semibold">
+                                                            Confirm this booking lead for the store {storeDetails.storeName}
+                                                        </DialogTitle>
+                                                        <DialogDescription>
+                                                            Are you sure you want to book this lead? This action cannot be undone.
+                                                        </DialogDescription>
+                                                    </DialogHeader>
+                                                    <DialogFooter className="sm:justify-start">
+                                                        <DialogClose asChild>
+                                                            <Button variant="outline">
+                                                                Don't book
+                                                            </Button>
+                                                        </DialogClose>
+                                                        <PaymentMethods bookingId={booking.id} storeId={storeDetails.storeId} />
+                                                    </DialogFooter>
+                                                </DialogContent>
+                                            </Dialog>
+                                        )
+                                    })
+                                }
+                            </CollapsibleContent>
+                        </Collapsible>
                 </div>
 
                 <Backdrop

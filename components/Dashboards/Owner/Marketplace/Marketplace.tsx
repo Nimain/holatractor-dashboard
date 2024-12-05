@@ -140,13 +140,9 @@ const Marketplace = () => {
     }
   }, [])
 
-  useEffect(()=>{
+  useEffect(() => {
     fetchNewBookings()
-  },[])
-
-  if (fetchingPageDetails) return <OwnerShrimmer />
-
-  if (!user) return <p>user not found</p>
+  }, [])
 
   return (
     <>
@@ -211,7 +207,10 @@ const Marketplace = () => {
                   </span>
                 </CardHeader>
               </Card>
-              {newBookings.length === 0 ? <p>No open bookings available</p> : newBookings.map((lead) => (
+              {fetchingPageDetails ?
+              <LeadShrimmer />
+              : 
+              newBookings.length === 0 ? <p>No open bookings available</p> : newBookings.map((lead) => (
                 <NewBookings booking={lead} key={lead.id} />
               ))}
             </div>
@@ -229,7 +228,10 @@ const Marketplace = () => {
                   </span>
                 </CardHeader>
               </Card>
-              {openBookings.length === 0 ? <p>No open bookings available</p> : openBookings.map((lead) => (
+              {fetchingPageDetails ?
+              <LeadShrimmer />
+              :
+              openBookings.length === 0 ? <p>No open bookings available</p> : openBookings.map((lead) => (
                 <SeeBooking booking={lead} />
               ))}
             </div>
@@ -247,7 +249,11 @@ const Marketplace = () => {
                   </span>
                 </CardHeader>
               </Card>
-              {inProgressBookings.length === 0 ? <p>No open bookings available</p> :inProgressBookings.map((lead) => (
+              {
+              fetchingPageDetails ?
+              <LeadShrimmer />
+              :
+              inProgressBookings.length === 0 ? <p>No open bookings available</p> : inProgressBookings.map((lead) => (
                 <SeeBooking booking={lead} />
               ))}
             </div>
@@ -265,7 +271,11 @@ const Marketplace = () => {
                   </span>
                 </CardHeader>
               </Card>
-              {completedBookings.length === 0 ? <p>No open bookings available</p> :completedBookings.map((lead) => (
+              {
+              fetchingPageDetails ?
+              <LeadShrimmer />
+              :
+              completedBookings.length === 0 ? <p>No open bookings available</p> : completedBookings.map((lead) => (
                 <SeeBooking booking={lead} />
               ))}
             </div>
@@ -280,3 +290,15 @@ const Marketplace = () => {
 }
 
 export default Marketplace
+
+function LeadShrimmer() {
+  return (
+    <div className="space-y-4">
+      {
+        Array.from({ length: 2 }).map((_, index) => (
+          <div className="animate-pulse w-full h-32 bg-white shadow-sm rounded-md" key={index} />
+        ))
+      }
+    </div>
+  )
+}

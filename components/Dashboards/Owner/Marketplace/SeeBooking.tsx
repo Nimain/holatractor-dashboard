@@ -1,6 +1,6 @@
 "use client"
 
-import { Booking, BookingHours, BookingStatus, PaymentStatus, Store } from "@/utils/Types/types"
+import { Booking, BookingHours, BookingStatus, PaymentStatus } from "@/utils/Types/types"
 import {
     Sheet,
     SheetClose,
@@ -9,18 +9,10 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet"
-import { Button } from "@/components/ui/button";
-import { ChevronRight, ChevronsUpDown, Mail, MessageCircle, MoreHorizontal, NotepadText, Phone, Plus } from "lucide-react";
-import { Label } from '@/components/ui/label';
+import { ChevronRight, Mail } from "lucide-react";
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { renderInstance } from "@/utils/Axios/RenderInstance";
-import { useCookie } from "next-cookie";
-import { useEffect, useState } from "react";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
-import { Backdrop, CircularProgress } from "@mui/material";
 import AssignOperator from "../bookings/AssignOperator";
 import PaymentReview from "../_components/PaymentProofAction";
 

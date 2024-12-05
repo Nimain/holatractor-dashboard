@@ -134,7 +134,6 @@ const SingleFarm = () => {
       .then((res) => {
         setFarm(res.data)
       }).catch(() => {
-        console.log(error)
         errorMessage("Error fetching farm details")
       }).finally(() => {
         setFetching(false)
@@ -297,7 +296,7 @@ const SingleFarm = () => {
                     >
                       <span className="text-lg font-medium">Wheat</span>
                       <span className="text-zinc-400">
-                        {farm.cropYields.wheat?.toFixed(2)} <span className="text-sm">per/acer</span>
+                        0 <span className="text-sm">per/acer</span>
                       </span>
                     </div>
                     <div
@@ -305,7 +304,7 @@ const SingleFarm = () => {
                     >
                       <span className="text-lg font-medium">Corn</span>
                       <span className="text-zinc-400">
-                        {farm.cropYields.corn?.toFixed(2)} <span className="text-sm">per/acer</span>
+                        0 <span className="text-sm">per/acer</span>
                       </span>
                     </div>
                     <div
@@ -313,7 +312,7 @@ const SingleFarm = () => {
                     >
                       <span className="text-lg font-medium">Soyabean</span>
                       <span className="text-zinc-400">
-                        {farm.cropYields.soybean?.toFixed(2)} <span className="text-sm">per/acer</span>
+                        0 <span className="text-sm">per/acer</span>
                       </span>
                     </div>
                     <div
@@ -321,7 +320,7 @@ const SingleFarm = () => {
                     >
                       <span className="text-lg font-medium">Rice</span>
                       <span className="text-zinc-400">
-                        {farm.cropYields.rice?.toFixed(2)} <span className="text-sm">per/acer</span>
+                        0 <span className="text-sm">per/acer</span>
                       </span>
                     </div>
                   </div>
