@@ -19,6 +19,8 @@ import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
 import { uploadFileToS3 } from '@/utils/AWS/FileUpload'
 import { renderInstance } from '@/utils/Axios/RenderInstance'
 import { useCookie } from 'next-cookie'
+import { paymentHistoryTranslations } from './PaymentHistoryTranslations'
+import TranslatedText from '@/components/Menubar/TranslatedText'
 
 const PaymentDetailsSheet = ({ payment }: { payment: Payment; }) => {
 
@@ -102,17 +104,17 @@ const PaymentDetailsSheet = ({ payment }: { payment: Payment; }) => {
                     <TableCell className="p-4 text-sm font-medium">${payment.amount.toFixed(2)}</TableCell>
                     <TableCell className="p-4 text-sm">
                         <Badge className={`bg-gray-100 text-gray-800'} capitalize`}>
-                            {`${payment.status}` === "FarmerPENDING" ? "Pending" : `${payment.status}` === "FarmerCONFIRMED" ? "Owner review" : `${payment.status}` === "OwnerREJECTED" ? "Rejected" : "Paid"}
+                            {`${payment.status}` === "FarmerPENDING" ? <TranslatedText greetings={paymentHistoryTranslations.pending} /> : `${payment.status}` === "FarmerCONFIRMED" ? <TranslatedText greetings={paymentHistoryTranslations.ownerReview} /> : `${payment.status}` === "OwnerREJECTED" ? <TranslatedText greetings={paymentHistoryTranslations.rejected} /> : <TranslatedText greetings={paymentHistoryTranslations.paid} />}
                         </Badge>
                     </TableCell>
                     <TableCell className="p-4 text-sm">{payment.transactionMethod}</TableCell>
                     <TableCell className="p-4 text-sm text-gray-600">{`${payment.reciever.first_name} ${payment.reciever.middle_name ?? ""} ${payment.reciever.last_name}`}</TableCell>
                     <TableCell className="p-4 text-sm text-gray-600">
-                        {`${payment.status}` === "COMPLETED" ? new Date(payment.createdAt).toLocaleDateString() : "Payment not settled yed"}
+                        {`${payment.status}` === "COMPLETED" ? new Date(payment.createdAt).toLocaleDateString() : <TranslatedText greetings={paymentHistoryTranslations.paymentNotSettledYet} />}
                     </TableCell>
                     {
                         `${payment.status}` === "FarmerPENDING" && <TableCell className="p-4">
-                            <Button className="bg-primaryColor">Action</Button>
+                            <Button className="bg-primaryColor"><TranslatedText greetings={paymentHistoryTranslations.action} /></Button>
                         </TableCell>
                     }
                 </TableRow>
@@ -124,11 +126,11 @@ const PaymentDetailsSheet = ({ payment }: { payment: Payment; }) => {
                         <div className="flex items-center gap-2 mt-8">
                             <Button variant="outline" className='bg-black text-white'>
                                 <Download className="h-4 w-4 mr-2" />
-                                Export
+                                <TranslatedText greetings={paymentHistoryTranslations.export} />
                             </Button>
                             <Button variant="outline" size="sm">
                                 <Printer className="h-4 w-4 mr-2" />
-                                Print
+                                <TranslatedText greetings={paymentHistoryTranslations.print} />
                             </Button>
 
                         </div>
@@ -139,7 +141,7 @@ const PaymentDetailsSheet = ({ payment }: { payment: Payment; }) => {
                     {/* Order Items Section */}
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-medium">Order items</h3>
+                            <h3 className="text-lg font-medium"><TranslatedText greetings={paymentHistoryTranslations.orderItems} /></h3>
                             <span className="text-sm text-muted-foreground">{payment.booking.tractors.length + payment.booking.attachments.length}</span>
                         </div>
 
@@ -192,7 +194,7 @@ const PaymentDetailsSheet = ({ payment }: { payment: Payment; }) => {
                         </div>
 
                         <div className="flex items-center justify-between pt-4 font-medium">
-                            <div>Total</div>
+                            <div><TranslatedText greetings={paymentHistoryTranslations.total} /></div>
                             <div>${payment.booking.total_cost}</div>
                         </div>
                     </div>
@@ -201,19 +203,19 @@ const PaymentDetailsSheet = ({ payment }: { payment: Payment; }) => {
 
                     {/* Contact Section */}
                     <div className="space-y-4 w-[60%]">
-                        <h3 className="text-lg font-medium">Contact Information</h3>
+                        <h3 className="text-lg font-medium"><TranslatedText greetings={paymentHistoryTranslations.contactInformation} /></h3>
                         <div className="space-y-3">
                             <div className="space-y-2">
-                                <Label htmlFor="name">Name</Label>
+                                <Label htmlFor="name"><TranslatedText greetings={paymentHistoryTranslations.name} /></Label>
                                 <Input id="name" value={`${payment.booking.store?.owner.user.first_name} ${payment.booking.store?.owner.user.middle_name ?? ""} ${payment.booking.store?.owner.user.last_name}`} readOnly={true} />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="email">Email</Label>
+                                <Label htmlFor="email"><TranslatedText greetings={paymentHistoryTranslations.email} /></Label>
                                 <Input id="email" value={payment.booking.store?.owner.user.email} />
                             </div>
                             {
                                 `${payment.status} === "OwnerREJECTED` && <div className="space-y-2">
-                                <Label>Rejection reason</Label>
+                                <Label><TranslatedText greetings={paymentHistoryTranslations.rejectionReason} /></Label>
                                 <Textarea value={payment.rejecting_reasons[payment.rejecting_reasons.length -1]} />
                             </div>
                             }
@@ -226,7 +228,7 @@ const PaymentDetailsSheet = ({ payment }: { payment: Payment; }) => {
 
                     <Card className="w-full max-w-2xl">
                         <CardContent className="p-6">
-                            <h2 className="text-lg font-semibold mb-4">Payment Methods</h2>
+                            <h2 className="text-lg font-semibold mb-4"><TranslatedText greetings={paymentHistoryTranslations.paymentMethods} /></h2>
                             <div className="space-y-4">
                                 {/* Payment method */}
 
@@ -236,7 +238,7 @@ const PaymentDetailsSheet = ({ payment }: { payment: Payment; }) => {
                                             <Wallet className="h-5 w-5 text-purple-600" />
                                         </div>
                                         <div>
-                                            <p className="font-medium">{payment.transactionMethod} Payment</p>
+                                            <p className="font-medium">{payment.transactionMethod} <TranslatedText greetings={paymentHistoryTranslations.payment} /></p>
                                             <p className="text-sm text-muted-foreground">{new Date(payment.updatedAt).toLocaleDateString()}</p>
                                         </div>
                                     </div>
@@ -245,7 +247,7 @@ const PaymentDetailsSheet = ({ payment }: { payment: Payment; }) => {
                                             <DialogTrigger asChild>
                                                 <Button variant="ghost" size="sm">
                                                     <Eye className="h-4 w-4 mr-1" />
-                                                    View
+                                                    <TranslatedText greetings={paymentHistoryTranslations.view} />
                                                 </Button>
                                             </DialogTrigger>
                                             <DialogContent className="w-fit">
@@ -275,7 +277,7 @@ const PaymentDetailsSheet = ({ payment }: { payment: Payment; }) => {
                                         </Dialog>
                                         <Button variant="ghost" size="sm">
                                             <Download className="h-4 w-4 mr-1" />
-                                            Download
+                                            <TranslatedText greetings={paymentHistoryTranslations.download} />
                                         </Button>
                                     </div>
                                 </div>
@@ -289,7 +291,7 @@ const PaymentDetailsSheet = ({ payment }: { payment: Payment; }) => {
                     {
                         (`${payment.status}` === "FarmerPENDING" || `${payment.status}` === "OwnerREJECTED") &&
                         <div className="space-y-4">
-                            <h3 className="text-lg font-medium">Payment Proof</h3>
+                            <h3 className="text-lg font-medium"><TranslatedText greetings={paymentHistoryTranslations.paymentProof} /></h3>
                             <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg">
                                 <label
                                     htmlFor="payment-proof"
@@ -316,7 +318,7 @@ const PaymentDetailsSheet = ({ payment }: { payment: Payment; }) => {
                                                 </svg>
                                             </div>
                                             <p className="text-sm text-muted-foreground mt-2">
-                                                Drag & drop or click to choose files
+                                            <TranslatedText greetings={paymentHistoryTranslations.dragAndDrop} />
                                             </p>
                                             <input
                                                 id="payment-proof"
@@ -346,7 +348,7 @@ const PaymentDetailsSheet = ({ payment }: { payment: Payment; }) => {
                             </div>
                             {selectedFile && (
                                 <p className="text-sm text-muted-foreground">
-                                    Uploaded file: <span className="font-medium">{selectedFile.name}</span>
+                                    <TranslatedText greetings={paymentHistoryTranslations.uploadedFile} />: <span className="font-medium">{selectedFile.name}</span>
                                 </p>
                             )}
                         </div>
@@ -355,7 +357,7 @@ const PaymentDetailsSheet = ({ payment }: { payment: Payment; }) => {
                         (`${payment.status}` === "FarmerPENDING" || `${payment.status}` === "OwnerREJECTED") &&
                         <Button className="w-full" disabled={loading || !selectedFile} onClick={()=>{handleSubmit()}}>
                             {
-                                loading ? "Submitting" : "Submit Payment Details"
+                                loading ? <TranslatedText greetings={paymentHistoryTranslations.submitting} /> : <TranslatedText greetings={paymentHistoryTranslations.submitPaymentDetails} />
                             }
                         </Button>
                     }

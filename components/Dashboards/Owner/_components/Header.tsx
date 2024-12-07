@@ -40,7 +40,7 @@ const Header = () => {
 
     const deleteNotification = (id: string) => {
         setNotifications(prev => prev.filter(notification => notification.id !== id))
-        renderInstance.delete(`/farmer/deleteNotification/${id}`, {
+        renderInstance.delete(`/owner/deleteNotification/${id}`, {
             headers: {
                 Authorization: `Bearer ${access_token}`,
             },

@@ -16,6 +16,9 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import BookingConfirmation from './BookingConfirmation';
 import { io, Socket } from 'socket.io-client';
+import TranslatedText from '@/components/Menubar/TranslatedText';
+import { bookingHistoryTranslations } from './BookingHistoryTranslations';
+import { newBookingTranslations } from '../FarmerTranslation';
 
 interface user {
   userId: string;
@@ -47,40 +50,40 @@ const NewBookingHistory = () => {
   };
 
   const filterBookingHours = (val: string) => {
-    let hours = "1 hour"
-    if (val === BookingHours.EIGHT_HOURS) hours = "8 hours"
-    else if (val === BookingHours.SEVEN_HOURS) hours = "7 hours"
-    else if (val === BookingHours.SIX_HOURS) hours = "6 hours"
-    else if (val === BookingHours.FIVE_HOURS) hours = "5 hours"
-    else if (val === BookingHours.FOUR_HOURS) hours = "4 hours"
-    else if (val === BookingHours.THREE_HOURS) hours = "3 hours"
-    else if (val === BookingHours.TWO_HOURS) hours = "2 hours"
+    let hours = <TranslatedText greetings={newBookingTranslations.hours['1h']} />
+    if (val === BookingHours.EIGHT_HOURS) hours = <TranslatedText greetings={newBookingTranslations.hours['8h']} />
+    else if (val === BookingHours.SEVEN_HOURS) hours = <TranslatedText greetings={newBookingTranslations.hours['7h']} />
+    else if (val === BookingHours.SIX_HOURS) hours = <TranslatedText greetings={newBookingTranslations.hours['6h']} />
+    else if (val === BookingHours.FIVE_HOURS) hours = <TranslatedText greetings={newBookingTranslations.hours['5h']} />
+    else if (val === BookingHours.FOUR_HOURS) hours = <TranslatedText greetings={newBookingTranslations.hours['4h']} />
+    else if (val === BookingHours.THREE_HOURS) hours = <TranslatedText greetings={newBookingTranslations.hours['3h']} />
+    else if (val === BookingHours.TWO_HOURS) hours = <TranslatedText greetings={newBookingTranslations.hours['2h']} />
     return hours
   }
 
   const bookingFilters = [
     {
-      placeholder: "All",
+      placeholder: <TranslatedText greetings={bookingHistoryTranslations.all} />,
       value: "all",
     },
     {
-      placeholder: "Un confirmed",
+      placeholder: <TranslatedText greetings={bookingHistoryTranslations.unConfirmed} />,
       value: "unconfirmed",
     },
     {
-      placeholder: "Accepted",
+      placeholder: <TranslatedText greetings={bookingHistoryTranslations.assigned} />,
       value: "assigned",
     },
     {
-      placeholder: "Ongoing",
+      placeholder: <TranslatedText greetings={bookingHistoryTranslations.ongoing} />,
       value: "ongoing",
     },
     {
-      placeholder: "Completed",
+      placeholder: <TranslatedText greetings={bookingHistoryTranslations.completed} />,
       value: "completed",
     },
     {
-      placeholder: "Rejected",
+      placeholder: <TranslatedText greetings={bookingHistoryTranslations.rejected} />,
       value: "rejected",
     }
   ]
@@ -136,8 +139,8 @@ const NewBookingHistory = () => {
       {/* Header Section */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-2xl font-bold mb-1">Booking History</h1>
-          <p className="text-gray-500 text-sm">All of your booking history in one place.</p>
+          <h1 className="text-2xl font-bold mb-1"><TranslatedText greetings={bookingHistoryTranslations.bookingHistory} /></h1>
+          <p className="text-gray-500 text-sm"><TranslatedText greetings={bookingHistoryTranslations.allBookingHistoryInOnePlace} /></p>
         </div>
         <Button
           className="bg-primaryColor text-white px-4 py-2 rounded-lg flex items-center gap-2"
@@ -193,7 +196,7 @@ const NewBookingHistory = () => {
         </div>
         <Select onValueChange={e => setActiveFilter(e)} defaultValue='unconfirmed'>
           <SelectTrigger className='w-[180px]'>
-            <SelectValue placeholder="Filter by" />
+            <SelectValue placeholder={<TranslatedText greetings={bookingHistoryTranslations.filterBy} />} />
           </SelectTrigger>
           <SelectContent>
             {
@@ -215,30 +218,30 @@ const NewBookingHistory = () => {
           <TableHeader>
             <TableRow className="border-b">
               <TableHead className="text-left p-4 font-medium text-gray-600">
-                Booking No. <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+              <TranslatedText greetings={bookingHistoryTranslations.bookingNo} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
               <TableHead className="text-left p-4 font-medium text-gray-600">
-                Owner Name <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+              <TranslatedText greetings={bookingHistoryTranslations.ownerName} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
               <TableHead className="text-left p-4 font-medium text-gray-600">
-                Booking Type <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+              <TranslatedText greetings={bookingHistoryTranslations.bookingType} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
               <TableHead className="text-left p-4 font-medium text-gray-600">
-                Start Date <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+              <TranslatedText greetings={bookingHistoryTranslations.startDate} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
               <TableHead className="text-left p-4 font-medium text-gray-600">
-                Duration <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+              <TranslatedText greetings={bookingHistoryTranslations.duration} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
               <TableHead className="text-left p-4 font-medium text-gray-600">
-                Total Price <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+              <TranslatedText greetings={bookingHistoryTranslations.totalPrice} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
               <TableHead className="text-left p-4 font-medium text-gray-600">
-                Status <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+              <TranslatedText greetings={bookingHistoryTranslations.status} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
               {
                 activeFilter === "unconfirmed" &&
                 <TableHead className="text-left p-4 font-medium text-gray-600">
-                  Action <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+                  <TranslatedText greetings={bookingHistoryTranslations.action} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
                 </TableHead>
               }
             </TableRow>

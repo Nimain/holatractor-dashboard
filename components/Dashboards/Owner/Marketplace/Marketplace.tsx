@@ -38,6 +38,16 @@ interface user {
   email: string;
 }
 
+interface NewBookings {
+  booking: Booking;
+  minDistance: number | null
+}
+
+interface Location {
+  latitude: number | null;
+  longitude: number | null;
+}
+
 const Marketplace = () => {
 
   const [isOpen, setIsOpen] = useState(false);
@@ -49,9 +59,12 @@ const Marketplace = () => {
   const [totalStandAloneBookimgs, setTotalStandAloneBookimgs] = useState(0)
   const [customers, setCustomers] = useState(0)
   const [openBookings, setOpenBookings] = useState<Booking[]>([])
-  const [newBookings, setNewBookings] = useState<Booking[]>([])
+  const [newBookings, setNewBookings] = useState<NewBookings[]>([])
   const [inProgressBookings, setInProgressBookings] = useState<Booking[]>([])
   const [completedBookings, setCompletedBookings] = useState<Booking[]>([])
+
+  const [location, setLocation] = useState<Location>({ latitude: null, longitude: null });
+  const [error, setError] = useState<string | null>(null);
 
   const { cookie } = useCookie()
   const user: user = cookie.get("user")
@@ -124,7 +137,7 @@ const Marketplace = () => {
   function fetchNewBookings() {
     setFetchingPageDetails(true)
 
-    renderInstance.get(`/booking/get/stand-alone/bookings`)
+    renderInstance.get(`/booking/get/stand-alone/bookings?lat=${location.latitude}&lng=${location.longitude}&radius=80`)
       .then((res) => {
         setNewBookings(res.data)
       }).catch((err) => {
@@ -141,8 +154,28 @@ const Marketplace = () => {
   }, [])
 
   useEffect(() => {
-    fetchNewBookings()
+    if(location.latitude && location.longitude) {
+      fetchNewBookings()
+    }
   }, [])
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position: GeolocationPosition) => {
+          setLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error: GeolocationPositionError) => {
+          setError(error.message);
+        }
+      );
+    } else {
+      setError("Geolocation is not supported by this browser.");
+    }
+  }, []);
 
   return (
     <>
@@ -211,7 +244,7 @@ const Marketplace = () => {
               <LeadShrimmer />
               : 
               newBookings.length === 0 ? <p>No open bookings available</p> : newBookings.map((lead) => (
-                <NewBookings booking={lead} key={lead.id} />
+                <NewBookings booking={lead.booking} key={lead.booking.id} minDistance={lead.minDistance} />
               ))}
             </div>
 

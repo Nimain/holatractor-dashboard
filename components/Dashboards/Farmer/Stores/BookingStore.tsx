@@ -23,6 +23,9 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogClose, DialogContent } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 import { Backdrop, CircularProgress } from '@mui/material'
+import { storePageTranslations } from './StoreTranslations'
+import TranslatedText from '@/components/Menubar/TranslatedText'
+import { newBookingTranslations } from '../FarmerTranslation'
 
 interface user {
     userId: string;
@@ -256,7 +259,7 @@ const BookingStore = () => {
 
     if (fetchingStoreDetails) return <FarmerShimmer />
 
-    if (!store) return <p>Store details not available</p>
+    if (!store) return <p><TranslatedText greetings={storePageTranslations.storeDetailsUnavailable} /></p>
 
     return (
         <div className="min-h-screen w-full bg-white overflow-auto" style={{ scrollbarWidth: "none" }}>
@@ -327,18 +330,18 @@ const BookingStore = () => {
                 <Card className='w-[600px] -mt-24 z-10 ml-4'>
                     <CardHeader>
                         <CardTitle className='text-center'>
-                            Wan to book from this store?
+                        <TranslatedText greetings={storePageTranslations.wantToBook} />
                         </CardTitle>
                         <CardDescription className='text-center'>
-                            Please fill the form to book from this store
+                        <TranslatedText greetings={storePageTranslations.fillFormToBook} />
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-6">
                             <div className="space-y-4">
-                                <Label>Select Farm</Label>
+                                <Label><TranslatedText greetings={storePageTranslations.selectFarms} /></Label>
                                 {
-                                    fetchingFarms ? <p>Loading farm lists</p>
+                                    fetchingFarms ? <p><TranslatedText greetings={storePageTranslations.loadingFarmLists} /></p>
                                         :
                                         <Select onValueChange={(value) => { setSelectedFarm(value) }}>
                                             <SelectTrigger>
@@ -356,25 +359,43 @@ const BookingStore = () => {
                             </div>
                             <div className="space-y-4 mb-2">
                                 <Label>
-                                    Booking hours
+                                <TranslatedText greetings={newBookingTranslations.bookingHours} />
                                 </Label>
 
                                 <Select
                                     onValueChange={(value) => { setBookingHours(value) }}
                                 >
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select booking hours" />
+                                        <SelectValue placeholder={<TranslatedText greetings={newBookingTranslations.bookingHours} />} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="One_Hour">1 hour</SelectItem>
-                                        <SelectItem value="Two_Hours">2 hour</SelectItem>
-                                        <SelectItem value="Three_Hours">3 hour</SelectItem>
-                                        <SelectItem value="Four_Hours">4 hour</SelectItem>
-                                        <SelectItem value="Five_Hours">5 hour</SelectItem>
-                                        <SelectItem value="Six_Hours">6 hour</SelectItem>
-                                        <SelectItem value="Seven_Hours">7 hour</SelectItem>
-                                        <SelectItem value="Eight_Hours">8 hour</SelectItem>
-                                        <SelectItem value="more">More than 8 hours</SelectItem>
+                                        <SelectItem value="One_Hour">
+                                        <TranslatedText greetings={newBookingTranslations.hours['1h']} />
+                                        </SelectItem>
+                                        <SelectItem value="Two_Hours">
+                                        <TranslatedText greetings={newBookingTranslations.hours['2h']} />
+                                        </SelectItem>
+                                        <SelectItem value="Three_Hours">
+                                        <TranslatedText greetings={newBookingTranslations.hours['3h']} />
+                                        </SelectItem>
+                                        <SelectItem value="Four_Hours">
+                                        <TranslatedText greetings={newBookingTranslations.hours['4h']} />
+                                        </SelectItem>
+                                        <SelectItem value="Five_Hours">
+                                        <TranslatedText greetings={newBookingTranslations.hours['5h']} />
+                                        </SelectItem>
+                                        <SelectItem value="Six_Hours">
+                                        <TranslatedText greetings={newBookingTranslations.hours['6h']} />
+                                        </SelectItem>
+                                        <SelectItem value="Seven_Hours">
+                                        <TranslatedText greetings={newBookingTranslations.hours['7h']} />
+                                        </SelectItem>
+                                        <SelectItem value="Eight_Hours">
+                                        <TranslatedText greetings={newBookingTranslations.hours['8h']} />
+                                        </SelectItem>
+                                        <SelectItem value="more">
+                                        <TranslatedText greetings={newBookingTranslations.moreThan8Hours} />
+                                        </SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -403,7 +424,7 @@ const BookingStore = () => {
                                                             format(date.from, "LLL dd, y")
                                                         )
                                                     ) : (
-                                                        <span>Pick a date</span>
+                                                        <TranslatedText greetings={newBookingTranslations.pickADate} />
                                                     )}
                                                 </Button>
                                             </PopoverTrigger>
@@ -431,7 +452,7 @@ const BookingStore = () => {
                                                     )}
                                                 >
                                                     <CalendarIcon className="mr-2 h-4 w-4" />
-                                                    {startDate ? format(startDate, "PPP") : <span>Pick a start date</span>}
+                                                    {startDate ? format(startDate, "PPP") : <TranslatedText greetings={newBookingTranslations.pickAStartDate} />}
                                                 </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0">
@@ -446,10 +467,10 @@ const BookingStore = () => {
                                     </>
                             }
                             <p>
-                                Total tractors selected: {selectedTractorIds.length}
+                            <TranslatedText greetings={newBookingTranslations.selectedTractors} />: {selectedTractorIds.length}
                             </p>
                             <p>
-                                Total Attachments selected: {selectedAttachmentIds.length}
+                            <TranslatedText greetings={newBookingTranslations.selectedAttachments} />: {selectedAttachmentIds.length}
                             </p>
                         </div>
                     </CardContent>
@@ -457,7 +478,7 @@ const BookingStore = () => {
                         <Button
                             className='w-full'
                             onClick={() => { handleBooking() }}>
-                            Book now
+                            <TranslatedText greetings={newBookingTranslations.bookEquipment} />
                         </Button>
                     </CardFooter>
                 </Card>
@@ -471,9 +492,11 @@ const BookingStore = () => {
                                     <CreditCard className="w-10 h-10 text-gray-400" />
                                 </div>
                                 <div className="space-y-2">
-                                    <h3 className="text-xl font-semibold">No Tractors available</h3>
+                                    <h3 className="text-xl font-semibold">
+                                    <TranslatedText greetings={storePageTranslations.noTractorsAvailable} />
+                                    </h3>
                                     <p className="text-muted-foreground">
-                                        Sorry this store has no tractors available
+                                    <TranslatedText greetings={storePageTranslations.sorryNoTractors} />
                                     </p>
                                 </div>
                             </CardContent>
@@ -496,8 +519,8 @@ const BookingStore = () => {
                                     className="object-cover w-full h-48 rounded-md"
                                 />
                                 <p className="text-muted-foreground my-2">{tractor.baseTractor.description}</p>
-                                {tractor.baseTractor.model && <p>Model: {tractor.baseTractor.model}</p>}
-                                <p>Hourly price: ${tractor.hourly_price}</p>
+                                {tractor.baseTractor.model && <p><TranslatedText greetings={storePageTranslations.model} />: {tractor.baseTractor.model}</p>}
+                                <p><TranslatedText greetings={storePageTranslations.hourlyPrice} />: ${tractor.hourly_price}</p>
                                 {/* {tractor.year && <p className="text-sm">Year: {tractor.year.getFullYear()}</p>} */}
                             </CardContent>
                             <CardFooter>
@@ -507,8 +530,8 @@ const BookingStore = () => {
                                         handleBookClick(tractor.id);
                                     }}>
                                     {selectedTractorIds.includes(tractor.id)
-                                        ? "Selected"
-                                        : "Select"}
+                                        ? <TranslatedText greetings={storePageTranslations.selected} />
+                                        : <TranslatedText greetings={storePageTranslations.select} />}
                                 </Button>
                             </CardFooter>
                         </Card>
@@ -521,9 +544,9 @@ const BookingStore = () => {
                                     <CreditCard className="w-10 h-10 text-gray-400" />
                                 </div>
                                 <div className="space-y-2">
-                                    <h3 className="text-xl font-semibold">No Attachments available</h3>
+                                    <h3 className="text-xl font-semibold"><TranslatedText greetings={storePageTranslations.noTractorsAvailable} /></h3>
                                     <p className="text-muted-foreground">
-                                        Sorry this store has no attachments available
+                                    <TranslatedText greetings={storePageTranslations.sorryNoAttachments} />
                                     </p>
                                 </div>
                             </CardContent>
@@ -542,9 +565,8 @@ const BookingStore = () => {
                                     unoptimized={true}
                                     className="object-cover w-full h-48 rounded-md"
                                 />
-                                <p>Hourly price: ${tractor.hourly_price}</p>
+                                <p><TranslatedText greetings={storePageTranslations.hourlyPrice} />: ${tractor.hourly_price}</p>
                                 <p className="text-muted-foreground my-2">{tractor.baseAttachment.description}</p>
-                                <p>Compatible with: {tractor.baseAttachment.tractorId.length} tractor(s)</p>
                             </CardContent>
                             <CardFooter>
                                 <Button
@@ -553,8 +575,8 @@ const BookingStore = () => {
                                         handleBookAttachmentClick(tractor.id);
                                     }}>
                                     {selectedAttachmentIds.includes(tractor.id)
-                                        ? "Selected"
-                                        : "Select"}
+                                        ? <TranslatedText greetings={storePageTranslations.selected} />
+                                        : <TranslatedText greetings={storePageTranslations.select} />}
                                 </Button>
                             </CardFooter>
                         </Card>
@@ -569,8 +591,10 @@ const BookingStore = () => {
                     {
                         newBooking && <Card className="w-full mx-auto shadow-lg">
                             <CardHeader className="text-center border-b">
-                                <CardTitle className="text-2xl font-bold text-primary">Booking Confirmation</CardTitle>
-                                <p className="text-gray-500">Booking ID: {newBooking.id}</p>
+                                <CardTitle className="text-2xl font-bold text-primary">
+                                <TranslatedText greetings={newBookingTranslations.bookingConfirmation} />
+                                </CardTitle>
+                                <p className="text-gray-500"><TranslatedText greetings={newBookingTranslations.bookingId} />: {newBooking.id}</p>
                             </CardHeader>
 
                             <CardContent className="space-y-6 pt-6">
@@ -578,17 +602,17 @@ const BookingStore = () => {
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-2">
                                         <CalendarIcon className="h-5 w-5 text-primary" />
-                                        <h3 className="font-semibold">Booking Period</h3>
+                                        <h3 className="font-semibold"><TranslatedText greetings={newBookingTranslations.bookingPeriod} /></h3>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4 pl-7">
                                         <div>
-                                            <p className="text-gray-600">From</p>
+                                            <p className="text-gray-600"><TranslatedText greetings={newBookingTranslations.from} /></p>
                                             <p className="font-medium">{new Date(newBooking.start_date).toLocaleDateString()}</p>
                                         </div>
                                         {newBooking.end_date && (
                                             <div>
-                                                <p className="text-gray-600">To</p>
+                                                <p className="text-gray-600"><TranslatedText greetings={newBookingTranslations.to} /></p>
                                                 <p className="font-medium">{new Date(newBooking.end_date).toLocaleDateString()}</p>
                                             </div>
                                         )}
@@ -597,7 +621,7 @@ const BookingStore = () => {
                                     {!newBooking.end_date && (
                                         <div className="flex items-center gap-2 pl-7">
                                             <Clock className="h-4 w-4 text-gray-500" />
-                                            <p>Duration: {newBooking.booking_hours === BookingHoursTypes.EIGHT_HOURS ? "8 hours" : newBooking.booking_hours === BookingHoursTypes.SEVEN_HOURS ? "7 hours" : newBooking.booking_hours === BookingHoursTypes.SIX_HOURS ? "6 hours" : newBooking.booking_hours === BookingHoursTypes.FIVE_HOURS ? "5 hours" : newBooking.booking_hours === BookingHoursTypes.FOUR_HOURS ? "4 hours" : newBooking.booking_hours === BookingHoursTypes.THREE_HOURS ? "3 hours" : newBooking.booking_hours === BookingHoursTypes.TWO_HOURS ? "2 hours" : "1 hour"}</p>
+                                            <p><TranslatedText greetings={newBookingTranslations.duration} />: {newBooking.booking_hours === BookingHoursTypes.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : newBooking.booking_hours === BookingHoursTypes.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : newBooking.booking_hours === BookingHoursTypes.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : newBooking.booking_hours === BookingHoursTypes.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : newBooking.booking_hours === BookingHoursTypes.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : newBooking.booking_hours === BookingHoursTypes.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : newBooking.booking_hours === BookingHoursTypes.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}</p>
                                         </div>
                                     )}
                                 </div>
@@ -610,9 +634,9 @@ const BookingStore = () => {
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-2">
                                             <MapPin className="h-5 w-5 text-primary" />
-                                            <h3 className="font-semibold">Distance Details</h3>
+                                            <h3 className="font-semibold"><TranslatedText greetings={newBookingTranslations.distanceDetails} /></h3>
                                         </div>
-                                        <p className="pl-7">Total Distance: {parseFloat(newBooking.distance).toFixed(2)} km</p>
+                                        <p className="pl-7"><TranslatedText greetings={newBookingTranslations.totalDistance} />: {parseFloat(newBooking.distance).toFixed(2)} km</p>
                                     </div>
                                 }
 
@@ -622,18 +646,18 @@ const BookingStore = () => {
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-2">
                                         <Receipt className="h-5 w-5 text-primary" />
-                                        <h3 className="font-semibold">Cost Breakdown</h3>
+                                        <h3 className="font-semibold"><TranslatedText greetings={newBookingTranslations.costBreakdown} /></h3>
                                     </div>
 
                                     <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                                        <CostItem label="Attachment Cost" value={newBooking.total_attachment_cost?.toFixed(2)} />
-                                        <CostItem label="Tractor Cost" value={newBooking.total_tractor_cost?.toFixed(2)} />
-                                        <CostItem label="Service Charge" value={newBooking.total_service_charge?.toFixed(2)} />
-                                        <CostItem label="Distance Cost" value={newBooking.total_distance_cost?.toFixed(2)} />
-                                        <CostItem label="Tax" value={newBooking.total_tax?.toFixed(2)} />
+                                    <CostItem label={<TranslatedText greetings={newBookingTranslations.attachmentCost} />} value={newBooking.total_attachment_cost?.toFixed(2)} />
+                                        <CostItem label={<TranslatedText greetings={newBookingTranslations.tractorCost} />} value={newBooking.total_tractor_cost?.toFixed(2)} />
+                                        <CostItem label={<TranslatedText greetings={newBookingTranslations.serviceCharge} />} value={newBooking.total_service_charge?.toFixed(2)} />
+                                        <CostItem label={<TranslatedText greetings={newBookingTranslations.distanceCost} />} value={newBooking.total_distance_cost?.toFixed(2)} />
+                                        <CostItem label={<TranslatedText greetings={newBookingTranslations.tax} />} value={newBooking.total_tax?.toFixed(2)} />
                                         <Separator className="my-2" />
                                         <div className="flex justify-between items-center pt-2 font-bold">
-                                            <span>Total Amount</span>
+                                            <span><TranslatedText greetings={newBookingTranslations.totalAmount} /></span>
                                             <span className="text-primary text-lg">
                                                 {formatCurrency(newBooking.total_cost.toFixed(2))}
                                             </span>
@@ -643,9 +667,9 @@ const BookingStore = () => {
                             </CardContent>
                             <CardFooter className="flex justify-between">
                                 <DialogClose asChild>
-                                    <Button>Cancel</Button>
+                                    <Button><TranslatedText greetings={newBookingTranslations.cancel} /></Button>
                                 </DialogClose>
-                                <Button onClick={() => { userBookingConfirm() }}>Confirm Booking</Button>
+                                <Button onClick={() => { userBookingConfirm() }}><TranslatedText greetings={newBookingTranslations.confirmBooking} /></Button>
                             </CardFooter>
                         </Card>
                     }

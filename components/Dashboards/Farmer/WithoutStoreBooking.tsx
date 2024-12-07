@@ -23,6 +23,8 @@ import Image from 'next/image';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Backdrop, CircularProgress } from '@mui/material';
 import { Separator } from '@/components/ui/separator';
+import TranslatedText from '@/components/Menubar/TranslatedText';
+import { newBookingTranslations } from './FarmerTranslation';
 
 interface user {
     userId: string;
@@ -288,7 +290,7 @@ const WithoutStoreBooking = () => {
                         setOpen(true);
                     }}
                 >
-                    <span>New Booking</span>
+                    <TranslatedText greetings={newBookingTranslations.newBooking} />
                 </Button>
             </DialogTrigger>
 
@@ -298,8 +300,10 @@ const WithoutStoreBooking = () => {
                     newBooking ?
                         <Card className="w-full mx-auto shadow-lg">
                             <CardHeader className="text-center border-b">
-                                <CardTitle className="text-2xl font-bold text-primary">Booking Confirmation</CardTitle>
-                                <p className="text-gray-500">Booking ID: {newBooking.id}</p>
+                                <CardTitle className="text-2xl font-bold text-primary">
+                                    <TranslatedText greetings={newBookingTranslations.bookingConfirmation} />
+                                </CardTitle>
+                                <p className="text-gray-500"><TranslatedText greetings={newBookingTranslations.bookingId} />: {newBooking.id}</p>
                             </CardHeader>
 
                             <CardContent className="space-y-6 pt-6">
@@ -307,17 +311,17 @@ const WithoutStoreBooking = () => {
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-2">
                                         <CalendarIcon className="h-5 w-5 text-primary" />
-                                        <h3 className="font-semibold">Booking Period</h3>
+                                        <h3 className="font-semibold"><TranslatedText greetings={newBookingTranslations.bookingPeriod} /></h3>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4 pl-7">
                                         <div>
-                                            <p className="text-gray-600">From</p>
+                                            <p className="text-gray-600"><TranslatedText greetings={newBookingTranslations.from} /></p>
                                             <p className="font-medium">{new Date(newBooking.start_date).toLocaleDateString()}</p>
                                         </div>
                                         {newBooking.end_date && (
                                             <div>
-                                                <p className="text-gray-600">To</p>
+                                                <p className="text-gray-600"><TranslatedText greetings={newBookingTranslations.to} /></p>
                                                 <p className="font-medium">{new Date(newBooking.end_date).toLocaleDateString()}</p>
                                             </div>
                                         )}
@@ -326,7 +330,7 @@ const WithoutStoreBooking = () => {
                                     {!newBooking.end_date && (
                                         <div className="flex items-center gap-2 pl-7">
                                             <Clock className="h-4 w-4 text-gray-500" />
-                                            <p>Duration: {newBooking.booking_hours === BookingHoursTypes.EIGHT_HOURS ? "8 hours" : newBooking.booking_hours === BookingHoursTypes.SEVEN_HOURS ? "7 hours" : newBooking.booking_hours === BookingHoursTypes.SIX_HOURS ? "6 hours" : newBooking.booking_hours === BookingHoursTypes.FIVE_HOURS ? "5 hours" : newBooking.booking_hours === BookingHoursTypes.FOUR_HOURS ? "4 hours" : newBooking.booking_hours === BookingHoursTypes.THREE_HOURS ? "3 hours" : newBooking.booking_hours === BookingHoursTypes.TWO_HOURS ? "2 hours" : "1 hour"}</p>
+                                            <p><TranslatedText greetings={newBookingTranslations.duration} />: {newBooking.booking_hours === BookingHoursTypes.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : newBooking.booking_hours === BookingHoursTypes.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : newBooking.booking_hours === BookingHoursTypes.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : newBooking.booking_hours === BookingHoursTypes.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : newBooking.booking_hours === BookingHoursTypes.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : newBooking.booking_hours === BookingHoursTypes.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : newBooking.booking_hours === BookingHoursTypes.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}</p>
                                         </div>
                                     )}
                                 </div>
@@ -339,9 +343,9 @@ const WithoutStoreBooking = () => {
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-2">
                                         <MapPin className="h-5 w-5 text-primary" />
-                                        <h3 className="font-semibold">Distance Details</h3>
+                                        <h3 className="font-semibold"><TranslatedText greetings={newBookingTranslations.distanceDetails} /></h3>
                                     </div>
-                                    <p className="pl-7">Total Distance: {parseFloat(newBooking.distance).toFixed(2)} km</p>
+                                    <p className="pl-7"><TranslatedText greetings={newBookingTranslations.totalDistance} />: {parseFloat(newBooking.distance).toFixed(2)} km</p>
                                 </div>
                                 }
 
@@ -351,18 +355,18 @@ const WithoutStoreBooking = () => {
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-2">
                                         <Receipt className="h-5 w-5 text-primary" />
-                                        <h3 className="font-semibold">Cost Breakdown</h3>
+                                        <h3 className="font-semibold"><TranslatedText greetings={newBookingTranslations.costBreakdown} /></h3>
                                     </div>
 
                                     <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                                        <CostItem label="Attachment Cost" value={newBooking.total_attachment_cost?.toFixed(2)} />
-                                        <CostItem label="Tractor Cost" value={newBooking.total_tractor_cost?.toFixed(2)} />
-                                        <CostItem label="Service Charge" value={newBooking.total_service_charge?.toFixed(2)} />
-                                        <CostItem label="Distance Cost" value={newBooking.total_distance_cost?.toFixed(2)} />
-                                        <CostItem label="Tax" value={newBooking.total_tax?.toFixed(2)} />
+                                        <CostItem label={<TranslatedText greetings={newBookingTranslations.attachmentCost} />} value={newBooking.total_attachment_cost?.toFixed(2)} />
+                                        <CostItem label={<TranslatedText greetings={newBookingTranslations.tractorCost} />} value={newBooking.total_tractor_cost?.toFixed(2)} />
+                                        <CostItem label={<TranslatedText greetings={newBookingTranslations.serviceCharge} />} value={newBooking.total_service_charge?.toFixed(2)} />
+                                        <CostItem label={<TranslatedText greetings={newBookingTranslations.distanceCost} />} value={newBooking.total_distance_cost?.toFixed(2)} />
+                                        <CostItem label={<TranslatedText greetings={newBookingTranslations.tax} />} value={newBooking.total_tax?.toFixed(2)} />
                                         <Separator className="my-2" />
                                         <div className="flex justify-between items-center pt-2 font-bold">
-                                            <span>Total Amount</span>
+                                            <span><TranslatedText greetings={newBookingTranslations.totalAmount} /></span>
                                             <span className="text-primary text-lg">
                                                 {formatCurrency(newBooking.total_cost.toFixed(2))}
                                             </span>
@@ -371,8 +375,8 @@ const WithoutStoreBooking = () => {
                                 </div>
                             </CardContent>
                             <CardFooter className="flex justify-between">
-                                <Button>Cancel</Button>
-                                <Button onClick={() => { userBookingConfirm() }}>Confirm Booking</Button>
+                                <Button><TranslatedText greetings={newBookingTranslations.cancel} /></Button>
+                                <Button onClick={() => { userBookingConfirm() }}><TranslatedText greetings={newBookingTranslations.confirmBooking} /></Button>
                             </CardFooter>
                         </Card>
                         :
@@ -386,18 +390,18 @@ const WithoutStoreBooking = () => {
 
                                     <div className="p-6 space-y-6">
 
-                                        <h2 className="text-2xl font-bold text-center">Booking form</h2>
+                                        <h2 className="text-2xl font-bold text-center"><TranslatedText greetings={newBookingTranslations.bookingForm} /></h2>
 
                                         <div className="space-y-6">
 
                                             <div className="space-y-4">
-                                                <Label>Select Farm</Label>
+                                                <Label><TranslatedText greetings={newBookingTranslations.selectFarm} /></Label>
                                                 {
-                                                    fetchingFarms ? <p>Loading farm lists</p>
+                                                    fetchingFarms ? <p><TranslatedText greetings={newBookingTranslations.loadingFarmList} /></p>
                                                         :
                                                         <Select onValueChange={(value) => { setSelectedFarm(value) }}>
                                                             <SelectTrigger>
-                                                                <SelectValue placeholder="Choose a farm" />
+                                                                <SelectValue placeholder={<TranslatedText greetings={newBookingTranslations.chooseAFarm} />} />
                                                             </SelectTrigger>
                                                             <SelectContent>
                                                                 {farms.map(farm => (
@@ -412,25 +416,41 @@ const WithoutStoreBooking = () => {
 
                                             <div className="space-y-4">
                                                 <Label className="mb-3">
-                                                    Booking hours
+                                                <TranslatedText greetings={newBookingTranslations.bookingHours} />
                                                 </Label>
 
                                                 <Select
                                                     onValueChange={(value) => { setBookingHours(value) }}
                                                 >
                                                     <SelectTrigger>
-                                                        <SelectValue placeholder="Select booking hours" />
+                                                        <SelectValue placeholder={<TranslatedText greetings={newBookingTranslations.bookingHours} />} />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="One_Hour">1 hour</SelectItem>
-                                                        <SelectItem value="Two_Hours">2 hour</SelectItem>
-                                                        <SelectItem value="Three_Hours">3 hour</SelectItem>
-                                                        <SelectItem value="Four_Hours">4 hour</SelectItem>
-                                                        <SelectItem value="Five_Hours">5 hour</SelectItem>
-                                                        <SelectItem value="Six_Hours">6 hour</SelectItem>
-                                                        <SelectItem value="Seven_Hours">7 hour</SelectItem>
-                                                        <SelectItem value="Eight_Hours">8 hour</SelectItem>
-                                                        <SelectItem value="more">More than 8 hours</SelectItem>
+                                                        <SelectItem value="One_Hour">
+                                                            <TranslatedText greetings={newBookingTranslations.hours['1h']} />
+                                                        </SelectItem>
+                                                        <SelectItem value="Two_Hours">
+                                                            <TranslatedText greetings={newBookingTranslations.hours['2h']} />
+                                                        </SelectItem>
+                                                        <SelectItem value="Three_Hours">
+                                                            <TranslatedText greetings={newBookingTranslations.hours['3h']} />
+                                                        </SelectItem>
+                                                        <SelectItem value="Four_Hours">
+                                                            <TranslatedText greetings={newBookingTranslations.hours['4h']} />
+                                                        </SelectItem>
+                                                        <SelectItem value="Five_Hours">
+                                                            <TranslatedText greetings={newBookingTranslations.hours['5h']} />
+                                                        </SelectItem>
+                                                        <SelectItem value="Six_Hours">
+                                                            <TranslatedText greetings={newBookingTranslations.hours['6h']} />
+                                                        </SelectItem>
+                                                        <SelectItem value="Seven_Hours">
+                                                            <TranslatedText greetings={newBookingTranslations.hours['7h']} />
+                                                        </SelectItem>
+                                                        <SelectItem value="Eight_Hours">
+                                                            <TranslatedText greetings={newBookingTranslations.hours['8h']} />
+                                                        </SelectItem>
+                                                        <SelectItem value="more"><TranslatedText greetings={newBookingTranslations.moreThan8Hours} /></SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -459,7 +479,7 @@ const WithoutStoreBooking = () => {
                                                                             format(date.from, "LLL dd, y")
                                                                         )
                                                                     ) : (
-                                                                        <span>Pick a date</span>
+                                                                        <TranslatedText greetings={newBookingTranslations.pickADate} />
                                                                     )}
                                                                 </Button>
                                                             </PopoverTrigger>
@@ -487,7 +507,7 @@ const WithoutStoreBooking = () => {
                                                                     )}
                                                                 >
                                                                     <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                    {startDate ? format(startDate, "PPP") : <span>Pick a start date</span>}
+                                                                    {startDate ? format(startDate, "PPP") : <TranslatedText greetings={newBookingTranslations.pickAStartDate} />}
                                                                 </Button>
                                                             </PopoverTrigger>
                                                             <PopoverContent className="w-auto p-0">
@@ -504,7 +524,7 @@ const WithoutStoreBooking = () => {
 
                                             {selectedTractors.length > 0 && (
                                                 <div className="space-y-4">
-                                                    <h3 className="font-medium">Selected Tractors {selectedTractors.length}</h3>
+                                                    <h3 className="font-medium"><TranslatedText greetings={newBookingTranslations.selectedTractors} /> {selectedTractors.length}</h3>
                                                     <AnimatePresence>
                                                         {selectedTractors.map(tractor => {
                                                             return (
@@ -515,7 +535,7 @@ const WithoutStoreBooking = () => {
                                                                     exit={{ opacity: 0, height: 0 }}
                                                                     className="flex items-center justify-between bg-muted rounded-lg p-2"
                                                                 >
-                                                                    <span>Tractor ID: {tractor.id}</span>
+                                                                    <span><TranslatedText greetings={newBookingTranslations.tractorId} />: {tractor.id}</span>
                                                                     <div className="flex items-center gap-2">
                                                                         <Button
                                                                             type="button"
@@ -552,7 +572,7 @@ const WithoutStoreBooking = () => {
 
                                             {selectedAttachments.length > 0 && (
                                                 <div className="space-y-4">
-                                                    <h3 className="font-medium">Selected Tractors {selectedAttachments.length}</h3>
+                                                    <h3 className="font-medium"><TranslatedText greetings={newBookingTranslations.selectedAttachments} /> {selectedAttachments.length}</h3>
                                                     <AnimatePresence>
                                                         {selectedAttachments.map(attachment => {
                                                             return (
@@ -563,7 +583,7 @@ const WithoutStoreBooking = () => {
                                                                     exit={{ opacity: 0, height: 0 }}
                                                                     className="flex items-center justify-between bg-muted rounded-lg p-2"
                                                                 >
-                                                                    <span>Attachment ID: {attachment.id}</span>
+                                                                    <span><TranslatedText greetings={newBookingTranslations.attachmentId} />: {attachment.id}</span>
                                                                     <div className="flex items-center gap-2">
                                                                         <Button
                                                                             type="button"
@@ -605,7 +625,7 @@ const WithoutStoreBooking = () => {
                                             size="lg"
                                             onClick={() => { handleBooking() }}
                                         >
-                                            Book Equipment
+                                            <TranslatedText greetings={newBookingTranslations.bookEquipment} />
                                         </Button>
 
                                     </div>
@@ -621,7 +641,6 @@ const WithoutStoreBooking = () => {
                                         <div className="mb-6">
                                             <SearchInput
                                                 type="text"
-                                                placeholder="Search tractors or attachments..."
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
                                                 className="w-full pl-10"  // Added left padding for the icon
@@ -632,17 +651,17 @@ const WithoutStoreBooking = () => {
                                             <TabsList className="grid w-full grid-cols-2">
                                                 <TabsTrigger value="tractors">
                                                     <TractorIcon className="mr-2 h-4 w-4" />
-                                                    Tractors
+                                                    <TranslatedText greetings={newBookingTranslations.tractors} />
                                                 </TabsTrigger>
                                                 <TabsTrigger value="attachments">
                                                     <Truck className="mr-2 h-4 w-4" />
-                                                    Attachments
+                                                    <TranslatedText greetings={newBookingTranslations.attachments} />
                                                 </TabsTrigger>
                                             </TabsList>
                                             <TabsContent value="tractors" className="mt-6">
                                                 {
                                                     fetchingTractors ?
-                                                        <p>Loading all tractor lists</p>
+                                                        <p><TranslatedText greetings={newBookingTranslations.loadingAllTractorLists} /></p>
                                                         :
                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                             {filteredTractors.map(tractor => (
@@ -663,7 +682,7 @@ const WithoutStoreBooking = () => {
                                                                                 alt={tractor.name}
                                                                                 width={300}
                                                                                 height={200}
-                                                                                className="rounded-md object-cover"
+                                                                                className="rounded-md object-cover aspect-square"
                                                                             />
                                                                             <div>
                                                                                 <h4 className="font-medium">{tractor.name}</h4>
@@ -684,7 +703,7 @@ const WithoutStoreBooking = () => {
                                             <TabsContent value="attachments" className="mt-6">
                                                 {
                                                     fetchingAttachments ?
-                                                        <p>Loading all attachment lists</p>
+                                                        <p><TranslatedText greetings={newBookingTranslations.loadingAllTractorLists} /></p>
                                                         :
                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                             {filteredAttachments.map(attachment => (
@@ -705,7 +724,7 @@ const WithoutStoreBooking = () => {
                                                                                 alt={attachment.name}
                                                                                 width={300}
                                                                                 height={200}
-                                                                                className="rounded-md object-cover"
+                                                                                className="rounded-md object-cover aspect-square"
                                                                             />
                                                                             <div>
                                                                                 <h4 className="font-medium">{attachment.name}</h4>

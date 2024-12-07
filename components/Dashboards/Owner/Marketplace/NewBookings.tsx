@@ -33,6 +33,7 @@ import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/scrollbar';
 import PaymentMethods from "./BankAccountSelect";
+import { RiDirectionLine } from "react-icons/ri";
 
 interface AvailStore {
     storeId: string;
@@ -47,7 +48,7 @@ interface AvailStore {
     }[];
 }
 
-const NewBookings = ({ booking }: { booking: Booking }) => {
+const NewBookings = ({ booking, minDistance }: { booking: Booking; minDistance: number | null }) => {
 
     const [availableStores, setAvailableStores] = useState<AvailStore[]>([])
     const [checkingAvailability, setCheckingAvailability] = useState(false)
@@ -134,6 +135,12 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
                                 <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
                                 <span className="text-sm">
                                     {`${booking.user?.email.split('@')[0].slice(0, 3)}...@${booking.user?.email.split('@')[1]}`}
+                                </span>
+                            </div>
+                            <div className="flex items-center pt-2">
+                                <RiDirectionLine className="h-4 w-4 mr-2 text-muted-foreground" />
+                                <span className="text-sm">
+                                    Distance: {minDistance ?? 0}km
                                 </span>
                             </div>
                         </div>

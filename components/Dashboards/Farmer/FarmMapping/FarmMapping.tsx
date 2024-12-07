@@ -18,6 +18,8 @@ import { Button } from '@/components/ui/button';
 import { useCookie } from 'next-cookie';
 import { area, polygon } from "@turf/turf";
 import { useRouter } from 'next/navigation';
+import TranslatedText from '@/components/Menubar/TranslatedText';
+import { farmDetailsTranslations } from '../SingleFarm/FarmTranslations';
 
 interface Location {
   latitude: number | null;
@@ -133,7 +135,7 @@ const FarmBooking = () => {
   return (
     <>
       {error ? (
-        <p>Error: {error}</p>
+        <p><TranslatedText greetings={farmDetailsTranslations.error} />: {error}</p>
       ) : (location.latitude && location.longitude) ? (
         <MapContainer
           center={[location.latitude, location.longitude]}
@@ -161,7 +163,7 @@ const FarmBooking = () => {
           </FeatureGroup>
         </MapContainer>
       ) : (
-        <p>Latitude and longitude not available</p>
+        <p><TranslatedText greetings={farmDetailsTranslations.latLongNotAvailable} /></p>
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -169,18 +171,18 @@ const FarmBooking = () => {
 
           <Card className="w-sm">
             <CardHeader>
-              Give ffarm details
+            <TranslatedText greetings={farmDetailsTranslations.giveFarmDetails} />
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-4">
-                <Label>Farm name</Label>
+                <Label><TranslatedText greetings={farmDetailsTranslations.farmName} /></Label>
                 <Input
                   value={farmName}
                   onChange={e => { setFarmName(e.target.value) }}
                   required={true} />
               </div>
               <div className="space-y-4">
-                <Label>Farm descriiption</Label>
+                <Label><TranslatedText greetings={farmDetailsTranslations.farmDescription} /></Label>
                 <Textarea
                   value={farmDescription}
                   onChange={e => { setFarmDescription(e.target.value) }}
@@ -191,7 +193,7 @@ const FarmBooking = () => {
             <CardFooter>
               <Button onClick={() => { handleAddFarm() }}>
                 {adding && <CircularProgress />}
-                Save
+                <TranslatedText greetings={farmDetailsTranslations.addFarm} />
               </Button>
             </CardFooter>
           </Card>

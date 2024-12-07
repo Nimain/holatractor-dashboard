@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/card";
 import FarmerShimmer from '../_components/FarmerShrimmer'
 import BookingCard from './BookingCard'
+import TranslatedText from '@/components/Menubar/TranslatedText'
+import { farmPageTranslations } from './FarmTranslations'
 
 const chartData = [
   { month: "January", desktop: 186, mobile: 80 },
@@ -228,7 +230,7 @@ const SingleFarm = () => {
             </div>
             <div>
               <span className="text-black/50 flex items-center">
-                <Map className="mr-2" /> available
+                <Map className="mr-2" /> <TranslatedText greetings={farmPageTranslations.available} />
               </span>
             </div>
           </div>
@@ -250,7 +252,7 @@ const SingleFarm = () => {
               </MapContainer>
             ) : (
               <div className="flex items-center justify-center h-full">
-                <p>Please enable location details</p>
+                <p><TranslatedText greetings={farmPageTranslations.enableLocation} /></p>
               </div>
             )}
           </div>
@@ -260,7 +262,7 @@ const SingleFarm = () => {
               <Navigation2 className="h-5 w-5" />
             </button>
             <button className="rounded-full bg-black/50 p-3 backdrop-blur-sm hover:bg-black/70">
-              <span className="sr-only">Location</span>
+              <span className="sr-only"><TranslatedText greetings={farmPageTranslations.location} /></span>
               <div className="h-5 w-5 rounded-full border-2 border-current" />
             </button>
           </div>
@@ -271,9 +273,9 @@ const SingleFarm = () => {
           {/* Latest Update Card */}
           <Card className="bg-zinc-400/50 text-black rounded-xl">
             <div className="flex justify-between border-b border-none px-6 py-4 bg-white">
-              <span className="text-lg">Latest update</span>
+              <span className="text-lg"><TranslatedText greetings={farmPageTranslations.latestUpdate} /></span>
               <div className="flex rounded-full p-2 hover:bg-white/10">
-                <span>Bookings</span>
+                <span><TranslatedText greetings={farmPageTranslations.bookings} /></span>
               </div>
             </div>
 
@@ -283,7 +285,7 @@ const SingleFarm = () => {
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 shrink-0">
                   <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
                     <Leaf className="h-5 w-5 text-green-500" />
-                    Crops
+                    <TranslatedText greetings={farmPageTranslations.crops} />
                   </CardTitle>
                   <button className="rounded-full hover:bg-zinc-800 p-2">
                     <MoreHorizontal className="h-5 w-5 text-zinc-400" />
@@ -294,33 +296,33 @@ const SingleFarm = () => {
                     <div
                       className="flex justify-between items-center py-3 px-2 border-b border-zinc-800 last:border-b-0 hover:bg-zinc-800/50 transition-colors rounded-lg"
                     >
-                      <span className="text-lg font-medium">Wheat</span>
+                      <span className="text-lg font-medium"><TranslatedText greetings={farmPageTranslations.wheat} /></span>
                       <span className="text-zinc-400">
-                        0 <span className="text-sm">per/acer</span>
+                        0 <span className="text-sm"><TranslatedText greetings={farmPageTranslations.perAcer} /></span>
                       </span>
                     </div>
                     <div
                       className="flex justify-between items-center py-3 px-2 border-b border-zinc-800 last:border-b-0 hover:bg-zinc-800/50 transition-colors rounded-lg"
                     >
-                      <span className="text-lg font-medium">Corn</span>
+                      <span className="text-lg font-medium"><TranslatedText greetings={farmPageTranslations.corn} /></span>
                       <span className="text-zinc-400">
-                        0 <span className="text-sm">per/acer</span>
+                        0 <span className="text-sm"><TranslatedText greetings={farmPageTranslations.perAcer} /></span>
                       </span>
                     </div>
                     <div
                       className="flex justify-between items-center py-3 px-2 border-b border-zinc-800 last:border-b-0 hover:bg-zinc-800/50 transition-colors rounded-lg"
                     >
-                      <span className="text-lg font-medium">Soyabean</span>
+                      <span className="text-lg font-medium"><TranslatedText greetings={farmPageTranslations.soyabean} /></span>
                       <span className="text-zinc-400">
-                        0 <span className="text-sm">per/acer</span>
+                        0 <span className="text-sm"><TranslatedText greetings={farmPageTranslations.perAcer} /></span>
                       </span>
                     </div>
                     <div
                       className="flex justify-between items-center py-3 px-2 border-b border-zinc-800 last:border-b-0 hover:bg-zinc-800/50 transition-colors rounded-lg"
                     >
-                      <span className="text-lg font-medium">Rice</span>
+                      <span className="text-lg font-medium"><TranslatedText greetings={farmPageTranslations.rice} /></span>
                       <span className="text-zinc-400">
-                        0 <span className="text-sm">per/acer</span>
+                        0 <span className="text-sm"><TranslatedText greetings={farmPageTranslations.perAcer} /></span>
                       </span>
                     </div>
                   </div>
@@ -331,7 +333,7 @@ const SingleFarm = () => {
               <Card className="w-full h-[400px] overflow-hidden">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                    Bookings
+                  <TranslatedText greetings={farmPageTranslations.bookings} />
                   </CardTitle>
                   <button className="rounded-full hover:bg-zinc-800 p-2">
                     <MoreHorizontal className="h-5 w-5 text-zinc-400" />
@@ -351,7 +353,7 @@ const SingleFarm = () => {
           {/* Moisture Chart Card */}
           <Card className="bg-zinc-900/50 p-4">
             <div className="mb-6 flex items-center justify-between">
-              <CardTitle className="text-lg">Moisture</CardTitle>
+              <CardTitle className="text-lg"><TranslatedText greetings={farmPageTranslations.moisture} /></CardTitle>
               <button className="rounded-full p-2 hover:bg-white/10">
                 <MoreHorizontal className="h-5 w-5" />
               </button>
@@ -407,7 +409,7 @@ const SingleFarm = () => {
               <div className="text-center flex-grow flex flex-col justify-center">
                 <div className="text-6xl font-light text-white">6.5</div>
                 <div className="mt-2 text-sm text-black/50">
-                  The pH of the soil decreased
+                <TranslatedText greetings={farmPageTranslations.decreasedSoilpH} />
                 </div>
               </div>
             </Card>
@@ -415,7 +417,7 @@ const SingleFarm = () => {
           <div className="p-2 h-full">
             <Card className="bg-zinc-800/50 p-4 h-full flex flex-col transition-colors hover:bg-zinc-700/60">
               <div className="mb-4 flex items-center justify-between">
-                <div className="text-lg text-white">Acidity</div>
+                <div className="text-lg text-white"><TranslatedText greetings={farmPageTranslations.acidity} /></div>
                 <button className="rounded-full p-2 hover:bg-white/10">
                   <MoreHorizontal className="h-5 w-5 text-white" />
                 </button>
@@ -423,7 +425,7 @@ const SingleFarm = () => {
               <div className="text-center flex-grow flex flex-col justify-center">
                 <div className="text-6xl font-light text-white">5.8</div>
                 <div className="mt-2 text-sm text-black/50">
-                  Soil acidity is changing
+                <TranslatedText greetings={farmPageTranslations.soilAcidity} />
                 </div>
               </div>
             </Card>
@@ -437,7 +439,7 @@ const SingleFarm = () => {
           <div className="p-2 h-full">
             <Card className="relative overflow-hidden bg-[#1A1600] p-4 h-full flex flex-col transition-colors hover:bg-[#2A2600]">
               <div className="mb-4 flex items-center justify-between">
-                <div className="text-lg text-amber-500">Temperature</div>
+                <div className="text-lg text-amber-500"><TranslatedText greetings={farmPageTranslations.temperature} /></div>
                 <button className="rounded-full p-2 hover:bg-white/10">
                   <MoreHorizontal className="h-5 w-5 text-amber-500" />
                 </button>
@@ -445,7 +447,7 @@ const SingleFarm = () => {
               <div className="text-center flex-grow flex flex-col justify-center">
                 <div className="text-6xl font-light text-amber-500">23°</div>
                 <div className="mt-2 text-sm text-amber-500">
-                  Soil temperature in degrees Celsius
+                <TranslatedText greetings={farmPageTranslations.soilTemperature} />
                 </div>
               </div>
             </Card>
@@ -453,7 +455,7 @@ const SingleFarm = () => {
           <div className="p-2 h-full">
             <Card className="relative overflow-hidden bg-[#2A2600] p-4 h-full flex flex-col transition-colors hover:bg-[#3A3600]">
               <div className="mb-4 flex items-center justify-between">
-                <div className="text-lg text-amber-600">Heat Index</div>
+                <div className="text-lg text-amber-600"><TranslatedText greetings={farmPageTranslations.heatIndex} /></div>
                 <button className="rounded-full p-2 hover:bg-white/10">
                   <MoreHorizontal className="h-5 w-5 text-amber-600" />
                 </button>
@@ -461,7 +463,7 @@ const SingleFarm = () => {
               <div className="text-center flex-grow flex flex-col justify-center">
                 <div className="text-6xl font-light text-amber-600">26°</div>
                 <div className="mt-2 text-sm text-amber-600">
-                  Feels like temperature
+                <TranslatedText greetings={farmPageTranslations.feelsLike} />
                 </div>
               </div>
             </Card>

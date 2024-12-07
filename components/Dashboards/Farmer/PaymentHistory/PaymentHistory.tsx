@@ -15,6 +15,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PaymentDetailsSheet from './PaymentDetailsSheet';
 import { io, Socket } from 'socket.io-client';
+import TranslatedText from '@/components/Menubar/TranslatedText';
+import { paymentHistoryTranslations } from './PaymentHistoryTranslations';
 
 interface user {
   userId: string;
@@ -121,8 +123,8 @@ const PaymentHistory = () => {
       {/* Header Section */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-2xl font-bold mb-1">Payment History</h1>
-          <p className="text-gray-500 text-sm">View and manage your payment transactions</p>
+          <h1 className="text-2xl font-bold mb-1"><TranslatedText greetings={paymentHistoryTranslations.paymentHistory} /></h1>
+          <p className="text-gray-500 text-sm"><TranslatedText greetings={paymentHistoryTranslations.viewAndManage} /></p>
         </div>
         <Button
           onClick={() => {
@@ -159,7 +161,7 @@ const PaymentHistory = () => {
           }}
           className="bg-primaryColor text-primary-foreground"
         >
-          Export
+          <TranslatedText greetings={paymentHistoryTranslations.export} />
         </Button>
       </div>
 
@@ -169,7 +171,6 @@ const PaymentHistory = () => {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
             type="text"
-            placeholder="Search by ID, booking, method, or status"
             value={searchTerm}
             onChange={handleSearch}
             className="pl-10"
@@ -177,7 +178,7 @@ const PaymentHistory = () => {
         </div>
         <Select onValueChange={e => setActiveFilter(e)} defaultValue='all'>
           <SelectTrigger className='w-[180px]'>
-            <SelectValue placeholder="Filter by" />
+            <SelectValue placeholder={<TranslatedText greetings={paymentHistoryTranslations.filterBy} />} />
           </SelectTrigger>
           <SelectContent>
             {
@@ -202,30 +203,30 @@ const PaymentHistory = () => {
                 <Input type="checkbox" className="rounded w-4 h-4 accent-primaryColor" />
               </TableHead>
               <TableHead className="text-left p-4 font-medium text-gray-600">
-                Payment ID <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+              <TranslatedText greetings={paymentHistoryTranslations.paymentId} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
               <TableHead className="text-left p-4 font-medium text-gray-600">
-                Booking ID <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+              <TranslatedText greetings={paymentHistoryTranslations.bookingId} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
               <TableHead className="text-left p-4 font-medium text-gray-600">
-                Amount <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+              <TranslatedText greetings={paymentHistoryTranslations.amount} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
               <TableHead className="text-left p-4 font-medium text-gray-600">
-                Status <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+              <TranslatedText greetings={paymentHistoryTranslations.status} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
               <TableHead className="text-left p-4 font-medium text-gray-600">
-                Payment Method <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+              <TranslatedText greetings={paymentHistoryTranslations.paymentMethod} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
               <TableHead className="text-left p-4 font-medium text-gray-600">
-                Receiver <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+              <TranslatedText greetings={paymentHistoryTranslations.receiver} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
               <TableHead className="text-left p-4 font-medium text-gray-600">
-                Date <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+              <TranslatedText greetings={paymentHistoryTranslations.date} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
               {
                 activeFilter === "unpaid" &&
                 <TableHead className="text-left p-4 font-medium text-gray-600">
-                  Action <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+                  <TranslatedText greetings={paymentHistoryTranslations.action} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
                 </TableHead>
               }
             </TableRow>
@@ -233,7 +234,7 @@ const PaymentHistory = () => {
           <TableBody>
             {fetching ? <PaymentTableShrimmer /> : 
             activeFilter === "unpaid" ?
-              payments.length === 0 ? <p>No data available</p> : payments.filter(po=>(`${po.status}` === "FarmerPENDING")).map((payment) => (
+              payments.length === 0 ? <p><TranslatedText greetings={paymentHistoryTranslations.noData} /></p> : payments.filter(po=>(`${po.status}` === "FarmerPENDING")).map((payment) => (
                 <PaymentDetailsSheet payment={payment} key={payment.id} />
               ))
               :

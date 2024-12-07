@@ -2,6 +2,9 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Badge } from "@/components/ui/badge"
 import { CalendarIcon, ClockIcon, MapPinIcon, StoreIcon, TagIcon, TractorIcon } from "lucide-react"
 import { Booking, BookingHours, BookingStatus } from "@/utils/Types/types"
+import TranslatedText from "@/components/Menubar/TranslatedText";
+import { farmPageTranslations } from "./FarmTranslations";
+import { newBookingTranslations } from "../FarmerTranslation";
 
 export default function BookingCard({ booking }: { booking: Booking; }) {
     const formatDate = (date: Date) => {
@@ -16,9 +19,9 @@ export default function BookingCard({ booking }: { booking: Booking; }) {
         <Card className="w-full max-w-sm border-0">
             <CardContent className="space-y-2">
                 <div className="flex justify-between items-center py-2 border-0">
-                    <span>Booking #{booking.id.slice(-4)}</span>
+                    <span><TranslatedText greetings={farmPageTranslations.bookings} /> #{booking.id.slice(-4)}</span>
                     <Badge variant={booking.bookingStatus === "Confirmed" ? "default" : "secondary"}>
-                        {booking.booking_hours === BookingHours.EIGHT_HOURS ? "8 hours" : booking.booking_hours === BookingHours.SEVEN_HOURS ? "7 hours" : booking.booking_hours === BookingHours.SIX_HOURS ? "6 hours" : booking.booking_hours === BookingHours.FIVE_HOURS ? "5 hours" : booking.booking_hours === BookingHours.FOUR_HOURS ? "4 hours" : booking.booking_hours === BookingHours.THREE_HOURS ? "3 hours" : booking.booking_hours === BookingHours.TWO_HOURS ? "2 hours" : "1 hour"}
+                    {booking.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : booking.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : booking.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : booking.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : booking.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : booking.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : booking.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}
                     </Badge>
                 </div>
                 <div className="flex items-center">
@@ -33,33 +36,33 @@ export default function BookingCard({ booking }: { booking: Booking; }) {
                 )}
                 <div className="flex items-center">
                     <TractorIcon className="mr-2 h-4 w-4" />
-                    <span>{booking.tractors.length} Tractor(s)</span>
+                    <span>{booking.tractors.length} <TranslatedText greetings={farmPageTranslations.tractors} /></span>
                 </div>
                 {booking.store ? (
                     <div className="flex items-center">
                         <StoreIcon className="mr-2 h-4 w-4" />
-                        <span>1 Store: {booking.store.name}</span>
+                        <span><TranslatedText greetings={farmPageTranslations.store} />: {booking.store.name}</span>
                     </div>
                 ) : (
                     <div className="flex items-center">
                         <StoreIcon className="mr-2 h-4 w-4" />
-                        <span>No Store (Standalone)</span>
+                        <span><TranslatedText greetings={farmPageTranslations.noStore} /></span>
                     </div>
                 )}
                 <div className="flex items-center">
                     <TagIcon className="mr-2 h-4 w-4" />
-                    <span>Type: {booking.bookingType || "N/A"}</span>
+                    <span><TranslatedText greetings={farmPageTranslations.type} />: {booking.bookingType || "N/A"}</span>
                 </div>
             </CardContent>
             <CardFooter className="justify-between">
                 <div className="flex items-center">
                     <ClockIcon className="mr-2 h-4 w-4" />
-                    <span>Duration: {booking.end_date ?
+                    <span><TranslatedText greetings={farmPageTranslations.duration} />: {booking.end_date ?
                         Math.ceil((new Date(booking.end_date).getTime() - new Date(booking.start_date).getTime()) / (1000 * 3600 * 24)) :
-                        'Ongoing'} days
+                        'Ongoing'} <TranslatedText greetings={farmPageTranslations.days} />
                     </span>
                 </div>
-                <span className="font-bold">Total: ${booking.total_cost.toFixed(2)}</span>
+                <span className="font-bold"><TranslatedText greetings={farmPageTranslations.total} />: ${booking.total_cost.toFixed(2)}</span>
             </CardFooter>
         </Card>
     )

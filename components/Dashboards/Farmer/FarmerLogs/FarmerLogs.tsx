@@ -20,6 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { bookingHistoryTranslations } from '../Booking/BookingHistoryTranslations';
 
 interface user {
   userId: string;
@@ -92,8 +93,7 @@ const FarmerLogs = () => {
         {/* Header Section */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-2xl font-bold mb-1">Logs</h1>
-            <p className="text-gray-500 text-sm">View and manage your farmer Logs</p>
+            <h1 className="text-2xl font-bold mb-1"><TranslatedText greetings={logTranslations.logsLoading} /></h1>
           </div>
           <Button 
             onClick={() => {
@@ -144,7 +144,7 @@ const FarmerLogs = () => {
             />
           </div>
           <Button variant="outline" className="ml-4">
-            Filter by <ChevronDown className="ml-2 h-4 w-4" />
+            <TranslatedText greetings={bookingHistoryTranslations.filterBy} /> <ChevronDown className="ml-2 h-4 w-4" />
           </Button>
         </div>
   
