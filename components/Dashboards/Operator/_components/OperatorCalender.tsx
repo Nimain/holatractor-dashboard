@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Booking, BookingStatus } from "@/utils/Types/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import TranslatedText from "@/components/Menubar/TranslatedText";
+import { operatorDashboardTranslations } from "../OperatorDashboardTranslations";
 
 const getDaysInMonth = (month: number, year: number) => {
     return new Array(new Date(year, month + 1, 0).getDate())
@@ -20,14 +22,23 @@ interface BookingDate {
 export const CalendarOne = ({ booking }: { booking: Booking[]; }) => {
     const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
     const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-    const [bookingDates, setBookingDates] = useState<Booking[]>([]);
     const [error, setError] = useState<string | null>(null);
 
     const daysInMonth = getDaysInMonth(currentMonth, currentYear);
 
     const monthNames = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
+        <TranslatedText greetings={operatorDashboardTranslations.january} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.february} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.march} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.april} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.may} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.june} />,
+        <TranslatedText greetings={operatorDashboardTranslations.july} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.august} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.september} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.october} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.november} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.december} />
     ];
 
     // Handlers for navigation
@@ -74,14 +85,14 @@ export const CalendarOne = ({ booking }: { booking: Booking[]; }) => {
     const getBookingStatusStringClass = (status: BookingStatus | null) => {
         switch (status) {
             case BookingStatus.Accepted: // Upcoming bookings
-                return "Upcoming";
+                return <TranslatedText greetings={operatorDashboardTranslations.upcoming} />;
             case BookingStatus.Arriving:
             case BookingStatus.Arrived:
             case BookingStatus.Started:
             case BookingStatus.Stopped: // Ongoing bookings
-                return "Ongoing";
+                return <TranslatedText greetings={operatorDashboardTranslations.ongoing} />;
             case BookingStatus.Finished: // Completed bookings
-                return "Completed";
+                return <TranslatedText greetings={operatorDashboardTranslations.completed} />;
             default:
                 return "";
         }
@@ -108,7 +119,7 @@ export const CalendarOne = ({ booking }: { booking: Booking[]; }) => {
                             <span className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200">
                                 <Calu className="w-4 h-4 text-gray-600" /> {/* Icon inside a rounded box */}
                             </span>
-                            <span>Calendar</span>
+                            <span><TranslatedText greetings={operatorDashboardTranslations.calendar} /></span>
                         </CardTitle>            <div className="flex items-center gap-4">
                             <Button variant="ghost" onClick={handlePreviousMonth}>
                                 &lt;

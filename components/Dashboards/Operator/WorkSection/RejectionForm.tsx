@@ -10,6 +10,8 @@ import { renderInstance } from '@/utils/Axios/RenderInstance'
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
 import { useCookie } from "next-cookie"
 import { OperatorAddStoreReuests } from '@/utils/Types/types'
+import { operatorWorkPageTranslations } from './WorkPageTranslations'
+import TranslatedText from '@/components/Menubar/TranslatedText'
 
 const RejectionForm = ({ request }: { request: OperatorAddStoreReuests; }) => {
   const [open, setOpen] = useState(false)
@@ -66,15 +68,15 @@ const RejectionForm = ({ request }: { request: OperatorAddStoreReuests; }) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">Reject</Button>
+        <Button variant="outline"><TranslatedText greetings={operatorWorkPageTranslations.reject} /></Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Acceptance Form</DialogTitle>
+          <DialogTitle><TranslatedText greetings={operatorWorkPageTranslations.acceptanceForm} /></DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="field1">Cost per job</Label>
+            <Label htmlFor="field1"><TranslatedText greetings={operatorWorkPageTranslations.costPerJob} /></Label>
             <Input
               id="field1"
               name="field1"
@@ -86,7 +88,7 @@ const RejectionForm = ({ request }: { request: OperatorAddStoreReuests; }) => {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="field2">Cost per hour</Label>
+            <Label htmlFor="field2"><TranslatedText greetings={operatorWorkPageTranslations.costPerHour} /></Label>
             <Input
               id="field2"
               name="field2"
@@ -98,7 +100,7 @@ const RejectionForm = ({ request }: { request: OperatorAddStoreReuests; }) => {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="field3">Cost per month</Label>
+            <Label htmlFor="field3"><TranslatedText greetings={operatorWorkPageTranslations.costPerMonth} /></Label>
             <Input
               id="field3"
               name="field3"
@@ -110,7 +112,7 @@ const RejectionForm = ({ request }: { request: OperatorAddStoreReuests; }) => {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="textArea">Message</Label>
+            <Label htmlFor="textArea"><TranslatedText greetings={operatorWorkPageTranslations.message} /></Label>
             <Textarea
               id="textArea"
               name="textArea"
@@ -121,7 +123,7 @@ const RejectionForm = ({ request }: { request: OperatorAddStoreReuests; }) => {
             />
           </div>
           <Button onClick={() => { handleSubmit(request.id) }} className="w-full" disabled={loading}>
-            {loading ? "Submitting..." : "Submit"}
+            {loading ? <TranslatedText greetings={operatorWorkPageTranslations.submitting} /> : <TranslatedText greetings={operatorWorkPageTranslations.submit} />}
           </Button>
         </div>
       </DialogContent>

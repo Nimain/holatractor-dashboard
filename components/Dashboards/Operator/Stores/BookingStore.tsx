@@ -25,6 +25,9 @@ import { Backdrop, CircularProgress } from '@mui/material'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import OwnerShrimmer from '../../Owner/_components/OwnerShrimmer'
+import TranslatedText from '@/components/Menubar/TranslatedText'
+import { storePageTranslations } from '../../Farmer/Stores/StoreTranslations'
+import { operatorWorkPageTranslations } from '../WorkSection/WorkPageTranslations'
 
 interface user {
     userId: string;
@@ -197,16 +200,16 @@ const BookingStore = () => {
                 <Card className='w-[600px] -mt-24 z-10 ml-4'>
                     <CardHeader>
                         <CardTitle className='text-center'>
-                            Wan to join this store?
+                        <TranslatedText greetings={operatorWorkPageTranslations.wantToJoinStore} />
                         </CardTitle>
                         <CardDescription className='text-center'>
-                            Please fill the form to request this owner
+                        <TranslatedText greetings={operatorWorkPageTranslations.pleaseFillForm} />
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="field1">Cost per job</Label>
+                                <Label htmlFor="field1"><TranslatedText greetings={operatorWorkPageTranslations.costPerJob} /></Label>
                                 <Input
                                     id="field1"
                                     name="field1"
@@ -218,7 +221,7 @@ const BookingStore = () => {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="field2">Cost per hour</Label>
+                                <Label htmlFor="field2"><TranslatedText greetings={operatorWorkPageTranslations.costPerHour} /></Label>
                                 <Input
                                     id="field2"
                                     name="field2"
@@ -230,7 +233,7 @@ const BookingStore = () => {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="field3">Cost per month</Label>
+                                <Label htmlFor="field3"><TranslatedText greetings={operatorWorkPageTranslations.costPerMonth} /></Label>
                                 <Input
                                     id="field3"
                                     name="field3"
@@ -242,7 +245,7 @@ const BookingStore = () => {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="textArea">Message</Label>
+                                <Label htmlFor="textArea"><TranslatedText greetings={operatorWorkPageTranslations.message} /></Label>
                                 <Textarea
                                     id="textArea"
                                     name="textArea"
@@ -257,7 +260,7 @@ const BookingStore = () => {
                     <CardFooter>
                         <Button
                             className='w-full' onClick={() => { handleSubmit() }}>
-                            Request
+                            <TranslatedText greetings={operatorWorkPageTranslations.request} />
                         </Button>
                     </CardFooter>
                 </Card>
@@ -271,9 +274,9 @@ const BookingStore = () => {
                   <CreditCard className="w-10 h-10 text-gray-400" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-xl font-semibold">No Tractors available</h3>
+                  <h3 className="text-xl font-semibold"><TranslatedText greetings={storePageTranslations.noTractorsAvailable} /></h3>
                   <p className="text-muted-foreground">
-                    Sorry this store has no tractors available
+                  <TranslatedText greetings={storePageTranslations.sorryNoTractors} />
                   </p>
                 </div>
               </CardContent>
@@ -296,8 +299,8 @@ const BookingStore = () => {
                                     className="object-cover w-full h-48 rounded-md"
                                 />
                                 <p className="text-muted-foreground my-2">{tractor.baseTractor.description}</p>
-                                {tractor.baseTractor.model && <p>Model: {tractor.baseTractor.model}</p>}
-                                <p>Hourly price: ${tractor.hourly_price}</p>
+                                {tractor.baseTractor.model && <p><TranslatedText greetings={storePageTranslations.model} />: {tractor.baseTractor.model}</p>}
+                                <p><TranslatedText greetings={storePageTranslations.hourlyPrice} />: ${tractor.hourly_price}</p>
                                 {/* {tractor.year && <p className="text-sm">Year: {tractor.year.getFullYear()}</p>} */}
                             </CardContent>
                         </Card>
@@ -310,9 +313,9 @@ const BookingStore = () => {
                   <CreditCard className="w-10 h-10 text-gray-400" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-xl font-semibold">No attachments available</h3>
+                  <h3 className="text-xl font-semibold"><TranslatedText greetings={storePageTranslations.noAttachmentsAvailable} /></h3>
                   <p className="text-muted-foreground">
-                    Sorry this store has no attachments available
+                  <TranslatedText greetings={storePageTranslations.sorryNoAttachments} />
                   </p>
                 </div>
               </CardContent>
@@ -331,9 +334,8 @@ const BookingStore = () => {
                                     unoptimized={true}
                                     className="object-cover w-full h-48 rounded-md"
                                 />
-                                <p>Hourly price: ${tractor.hourly_price}</p>
+                                <p><TranslatedText greetings={storePageTranslations.hourlyPrice} />: ${tractor.hourly_price}</p>
                                 <p className="text-muted-foreground my-2">{tractor.baseAttachment.description}</p>
-                                <p>Compatible with: {tractor.baseAttachment.tractorId.length} tractor(s)</p>
                             </CardContent>
                         </Card>
                     ))}

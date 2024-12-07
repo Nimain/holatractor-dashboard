@@ -12,6 +12,8 @@ import { useCookie } from 'next-cookie'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import RejectionForm from './RejectionForm'
+import TranslatedText from '@/components/Menubar/TranslatedText'
+import { operatorWorkPageTranslations } from './WorkPageTranslations'
 
 interface user {
     userId: string;
@@ -96,7 +98,7 @@ const StoreRequest = () => {
 
                 <div className='w-full grid grid-cols-2'>
                     {
-                        fetchingRequests ? <div>Loading...</div> : allRequests.length === 0 ? <div>No request are available now</div> : allRequests.map((request, index) => {
+                        fetchingRequests ? <div><TranslatedText greetings={operatorWorkPageTranslations.loading} />...</div> : allRequests.length === 0 ? <div><TranslatedText greetings={operatorWorkPageTranslations.noRequestsAvailable} /></div> : allRequests.map((request, index) => {
                             const storeOwnerName = `${request.store.owner.user.first_name} ${request.store.owner.user.middle_name ?? ""} ${request.store.owner.user.last_name}`
                             return (
                                 <Card key={request.id}>
@@ -107,25 +109,25 @@ const StoreRequest = () => {
                                         <div className="space-y-2">
                                             <div className="flex items-center text-sm">
                                                 <User className="h-4 w-4 mr-2 text-muted-foreground" />
-                                                <span>Owner: {storeOwnerName}</span>
+                                                <span><TranslatedText greetings={operatorWorkPageTranslations.owner} />: {storeOwnerName}</span>
                                             </div>
                                             <div className="flex items-center text-sm">
                                                 <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
-                                                <span>Cost per hour: {request.cost_per_hour} payment</span>
+                                                <span><TranslatedText greetings={operatorWorkPageTranslations.costPerHour} />: ${request.cost_per_hour}</span>
                                             </div>
                                             <div className="flex items-center text-sm">
                                                 <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
-                                                <span>Cost per job: {request.cost_per_job} payment</span>
+                                                <span><TranslatedText greetings={operatorWorkPageTranslations.costPerJob} />: ${request.cost_per_job}</span>
                                             </div>
                                             <div className="flex items-center text-sm">
                                                 <DollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
-                                                <span>Cost per month: {request.cost_per_month} payment</span>
+                                                <span><TranslatedText greetings={operatorWorkPageTranslations.costPerMonth} />: ${request.cost_per_month}</span>
                                             </div>
                                             {
                                                 request.note &&
                                                 <div className="flex items-center text-sm">
                                                     <MessageCircle className="h-4 w-4 mr-2 text-muted-foreground" />
-                                                    <span>Message: {request.note} payment</span>
+                                                    <span><TranslatedText greetings={operatorWorkPageTranslations.message} />: {request.note}</span>
                                                 </div>
                                             }
                                         </div>
@@ -133,11 +135,13 @@ const StoreRequest = () => {
                                     <CardFooter className="flex justify-between">
                                         <Dialog>
                                             <DialogTrigger asChild>
-                                                <Button variant="outline" onClick={() => setSelectedRequest(request)}>View Details</Button>
+                                                <Button variant="outline" onClick={() => setSelectedRequest(request)}>
+                                                    <TranslatedText greetings={operatorWorkPageTranslations.viewDetails} />
+                                                </Button>
                                             </DialogTrigger>
                                             <DialogContent className="sm:max-w-[425px]">
                                                 <DialogHeader>
-                                                    <DialogTitle>Request Details</DialogTitle>
+                                                    <DialogTitle><TranslatedText greetings={operatorWorkPageTranslations.requestDetails} /></DialogTitle>
                                                 </DialogHeader>
                                                 {selectedRequest && (
                                                     <div className="mt-4 space-y-4">
@@ -166,13 +170,13 @@ const StoreRequest = () => {
                                                             <div className="flex items-center">
                                                                 <User className="h-4 w-4 mr-2 text-muted-foreground" />
                                                                 <span>
-                                                                    Total operators: {selectedRequest.store.OperatorInStore.length}
+                                                                <TranslatedText greetings={operatorWorkPageTranslations.totalOperators} />: {selectedRequest.store.OperatorInStore.length}
                                                                 </span>
                                                             </div>
                                                             <div className="flex items-center">
                                                                 <Store className="h-4 w-4 mr-2 text-muted-foreground" />
                                                                 <span>
-                                                                    Total bookings: {selectedRequest.store.Booking.length}
+                                                                <TranslatedText greetings={operatorWorkPageTranslations.totalBookings} />: {selectedRequest.store.Booking.length}
                                                                 </span>
                                                             </div>
                                                             {
@@ -180,7 +184,7 @@ const StoreRequest = () => {
                                                                 <div className="flex items-center">
                                                                     <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
                                                                     <span>
-                                                                        Closes on - {selectedRequest.store.closing_days.map((day) => (<span key={day}>{day}</span>))}
+                                                                    <TranslatedText greetings={operatorWorkPageTranslations.closesOn} /> - {selectedRequest.store.closing_days.map((day) => (<span key={day}>{day}</span>))}
                                                                     </span>
                                                                 </div>
                                                             }
@@ -189,7 +193,7 @@ const StoreRequest = () => {
                                                             <RejectionForm request={selectedRequest} />
                                                             <Button onClick={() => handleAccept(selectedRequest)} disabled={loading}>
                                                                 {
-                                                                    loading ? "Accepting" : "Accept"
+                                                                    loading ? <TranslatedText greetings={operatorWorkPageTranslations.accepting} /> : <TranslatedText greetings={operatorWorkPageTranslations.accept} />
                                                                 }
                                                             </Button>
                                                         </div>

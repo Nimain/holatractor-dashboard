@@ -18,6 +18,9 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import OwnerShrimmer from '../Owner/_components/OwnerShrimmer';
+import TranslatedText, { TranslatedTaskText } from '@/components/Menubar/TranslatedText';
+import { operatorDashboardTranslations } from './OperatorDashboardTranslations';
+import { newBookingTranslations } from '../Farmer/FarmerTranslation';
 
 interface user {
     userId: string;
@@ -55,7 +58,7 @@ const NewDashboard = () => {
           headers: {
               Authorization: `Bearer ${access_token}`,
           },
-      }).then((res) => {
+      }).then(() => {
           successMessage("Status changed")
       }).catch((err) => {
           if (err.response && err.response.status === 404 && err.response.data.message === "Booking not found") {
@@ -98,9 +101,6 @@ const NewDashboard = () => {
         fetchOperator()
       }
     },[])
-  
-    if(fetchingOperatorDetails) return <OwnerShrimmer />
-    if(!operator) return <p>Operator details not present</p>
 
     const transactions = [
         {
@@ -140,13 +140,16 @@ const NewDashboard = () => {
                         <span className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200">
                           <BookOpen className="w-4 h-4 text-gray-600" /> {/* Icon inside a rounded box */}
                         </span>
-                        <span>Bookings</span>
+                        <span><TranslatedText greetings={operatorDashboardTranslations.bookings} /></span>
                       </h2>
-                      <button className="text-sm text-gray-600 hover:text-gray-800">See All</button>
+                      <Link href={"/operator/bookings"} className="text-sm text-gray-600 hover:text-gray-800">See All</Link>
                     </div>
     
                     <div className="flex gap-6">
                       {
+                        fetchingOperatorDetails ? 
+                        <div className='w-full bg-gray-300 animate-pulse rounded-xl h-80' />
+                        :
                         latestBookings.map((booking, index)=>{
                           const user_name = `${booking.user?.first_name} ${booking.user?.middle_name ?? ""} ${booking.user?.last_name}`
                           return(
@@ -164,12 +167,12 @@ const NewDashboard = () => {
                                 <div className="flex items-center space-x-2">
                                   <Calendar className="h-5 w-5 text-muted-foreground" />
                                   <span>
-                                    {format(new Date(booking.start_date), 'PPP')} - {booking.end_date && format(new Date(booking.end_date), 'PPP')} - {booking.booking_hours && (booking.booking_hours === BookingHours.EIGHT_HOURS ? "8 hours" : booking.booking_hours === BookingHours.SEVEN_HOURS ? "7 hours" : booking.booking_hours === BookingHours.SIX_HOURS ? "6 hours" : booking.booking_hours === BookingHours.FIVE_HOURS ? " 5 hours" : booking.booking_hours === BookingHours.FOUR_HOURS ? "4 hours" : booking.booking_hours === BookingHours.THREE_HOURS ? "3 hours" : booking.booking_hours === BookingHours.TWO_HOURS ? "2 hours" : "1 hour")}
+                                    {format(new Date(booking.start_date), 'PPP')} - {booking.end_date && format(new Date(booking.end_date), 'PPP')} - {booking.booking_hours && (booking.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : booking.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : booking.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : booking.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : booking.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : booking.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : booking.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />)}
                                   </span>
                                 </div>
                                 <div className="flex items-center space-x-2">
                                   <User className="h-5 w-5 text-muted-foreground" />
-                                  <span>{user_name || 'Unknown User'}</span>
+                                  <span>{user_name || <TranslatedText greetings={operatorDashboardTranslations.unknownUser} />}</span>
                                 </div>
                                 {booking.store && (
                                   <div className="flex items-center space-x-2">
@@ -195,42 +198,42 @@ const NewDashboard = () => {
                               <div className="space-y-2">
                                 <div className="flex items-center space-x-2">
                                   <Tractor className="h-5 w-5 text-muted-foreground" />
-                                  <span>{booking.tractors.length + booking.standaloneTractors.length} Tractors</span>
+                                  <span>{booking.tractors.length + booking.standaloneTractors.length} <TranslatedText greetings={operatorDashboardTranslations.tractors} /></span>
                                 </div>
                                 <div className="flex items-center space-x-2">
                                   <Paperclip className="h-5 w-5 text-muted-foreground" />
-                                  <span>{booking.attachments.length + booking.standaloneAttachments.length} Attachments</span>
+                                  <span>{booking.attachments.length + booking.standaloneAttachments.length} <TranslatedText greetings={operatorDashboardTranslations.attachments} /></span>
                                 </div>
                                 <div className="flex items-center space-x-2">
                                   <DollarSign className="h-5 w-5 text-muted-foreground" />
-                                  <span>Total Cost: ${booking.total_cost.toFixed(2)}</span>
+                                  <span><TranslatedText greetings={operatorDashboardTranslations.totalCost} />: ${booking.total_cost.toFixed(2)}</span>
                                 </div>
                               </div>
                             </CardContent>
                             <CardFooter className="flex justify-between items-center flex-wrap gap-3">
                               <div className="text-sm">
-                                Created: {format(new Date(booking.createdAt), 'PPP')}
+                              <TranslatedText greetings={operatorDashboardTranslations.created} />: {format(new Date(booking.createdAt), 'PPP')}
                               </div>
                               {
                                 booking.bookingStatus && (
                                   booking.bookingStatus === BookingStatus.Accepted ?
                                   <Button className="bg-primaryColor text-white hover:bg-primaryColor" onClick={()=>{handleStatusChange(booking.id, BookingStatus.Arriving)}}>
-                                    Arriving
+                                    <TranslatedText greetings={operatorDashboardTranslations.arriving} />
                                   </Button>
                                   : booking.bookingStatus === BookingStatus.Arriving ? 
                                   <Button className="bg-primaryColor text-white hover:bg-primaryColor" onClick={()=>{handleStatusChange(booking.id, BookingStatus.Arrived)}}>
-                                    Arrived
+                                    <TranslatedText greetings={operatorDashboardTranslations.arrived} />
                                   </Button>
                                   : (booking.bookingStatus === BookingStatus.Arrived || booking.bookingStatus === BookingStatus.Stopped) ?
                                   <Button className="bg-primaryColor text-white hover:bg-primaryColor" onClick={()=>{handleStatusChange(booking.id, BookingStatus.Started)}}>
-                                    Starting
+                                    <TranslatedText greetings={operatorDashboardTranslations.starting} />
                                   </Button>
                                   : (booking.bookingStatus === BookingStatus.Started) && <div className='space-x-2'>
                                   <Button className="bg-primaryColor text-white hover:bg-primaryColor" onClick={()=>{handleStatusChange(booking.id, BookingStatus.Stopped)}}>
-                                    Pause
+                                  <TranslatedText greetings={operatorDashboardTranslations.pause} />
                                   </Button>
                                   <Button className="bg-primaryColor text-white hover:bg-primaryColor" onClick={()=>{handleStatusChange(booking.id, BookingStatus.Finished)}}>
-                                    Complete
+                                  <TranslatedText greetings={operatorDashboardTranslations.complete} />
                                   </Button>
                                   </div>
                                 )
@@ -247,9 +250,9 @@ const NewDashboard = () => {
                       <div className="flex items-center gap-2">
                         {
                             todayBookings === 0 ?
-                        <span>You have 0 task for today</span>
+                        <span><TranslatedText greetings={operatorDashboardTranslations.zeroTasks} /></span>
                         :
-                        <span>You have {todayBookings} {todayBookings === 1 ? "task" : "tasks"} today. Keep it up! 💪</span>
+                        <span><TranslatedTaskText greetings={todayBookings} /></span>
                         }
                       </div>
                     </div>
@@ -267,9 +270,9 @@ const NewDashboard = () => {
             <div className="space-y-6">
               <div className="rounded-lg bg-white p-6 shadow">
                 <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-xl font-semibold">Last Transaction</h2>
+                  <h2 className="text-xl font-semibold"><TranslatedText greetings={operatorDashboardTranslations.lastTransaction} /></h2>
                   <Link href={'#'} className="text-sm text-blue-600 hover:underline">
-                    See Details
+                  <TranslatedText greetings={operatorDashboardTranslations.seeAll} />
                   </Link>
                 </div>
     
@@ -279,7 +282,7 @@ const NewDashboard = () => {
                       <div className="rounded-full bg-red-100 p-2">
                         <ArrowUpRight className="h-4 w-4 text-red-600" />
                       </div>
-                      <span className="text-sm text-muted-foreground">Income</span>
+                      <span className="text-sm text-muted-foreground"><TranslatedText greetings={operatorDashboardTranslations.income} /></span>
                     </div>
                     <p className="mt-2 text-2xl font-semibold">$0</p>
                   </div>
@@ -288,7 +291,7 @@ const NewDashboard = () => {
                       <div className="rounded-full bg-green-100 p-2">
                         <ArrowDownRight className="h-4 w-4 text-green-600" />
                       </div>
-                      <span className="text-sm text-muted-foreground">Pending</span>
+                      <span className="text-sm text-muted-foreground"><TranslatedText greetings={operatorDashboardTranslations.pending} /></span>
                     </div>
                     <p className="mt-2 text-2xl font-semibold">$0</p>
                   </div>
@@ -297,7 +300,7 @@ const NewDashboard = () => {
                       <div className="rounded-full bg-blue-100 p-2">
                         <Repeat className="h-4 w-4 text-blue-600" />
                       </div>
-                      <span className="text-sm text-muted-foreground">Jobs</span>
+                      <span className="text-sm text-muted-foreground"><TranslatedText greetings={operatorDashboardTranslations.jobs} /></span>
                     </div>
                     <p className="mt-2 text-2xl font-semibold">
                       {bookings.length}
@@ -308,8 +311,8 @@ const NewDashboard = () => {
     
               <div className="rounded-lg border bg-card">
                 <div className="flex items-center justify-between border-b p-4">
-                  <div className="text-sm text-muted-foreground">TRANSACTION</div>
-                  <div className="text-sm text-muted-foreground">AMOUNT</div>
+                  <div className="text-sm text-muted-foreground"><TranslatedText greetings={operatorDashboardTranslations.transaction} /></div>
+                  <div className="text-sm text-muted-foreground"><TranslatedText greetings={operatorDashboardTranslations.amount} /></div>
                 </div>
                 <div className="divide-y">
                   {/* {transactions.map((transaction, i) => (
@@ -328,7 +331,7 @@ const NewDashboard = () => {
                       <div className="font-medium">${transaction.amount}</div>
                     </div>
                   ))} */}
-                  <p className='ml-2 my-4'>No transactions have done so far</p>
+                  <p className='ml-2 my-4'><TranslatedText greetings={operatorDashboardTranslations.noTransactions} /></p>
                 </div>
               </div>
             </div>
@@ -336,14 +339,20 @@ const NewDashboard = () => {
             <div className="space-y-6">
               <div className="rounded-lg bg-white p-6 shadow">
                 <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-xl font-semibold">Store</h2>
-                  <Link href={'/farmer/allstores'} className="text-sm text-blue-600 hover:underline">
-                    See All Stores
+                  <h2 className="text-xl font-semibold"><TranslatedText greetings={operatorDashboardTranslations.store} /></h2>
+                  <Link href={'/operator/stores'} className="text-sm text-blue-600 hover:underline">
+                  <TranslatedText greetings={operatorDashboardTranslations.seeAll} />
                   </Link>
                 </div>
     
                 <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-                  {stores.map((influencer, i) => (
+                  {
+                  fetchingOperatorDetails ?
+                  Array.from({ length: 3 }).map((_, index) => (
+                    <div key={index} className="animate-pulse bg-gray-300 rounded-lg shadow-sm w-full h-64" />
+                  ))
+                  :
+                  stores.map((influencer, i) => (
                     <Card 
                     key={i} 
                     className="w-64 flex-shrink-0 rounded-xl bg-white shadow-md transition-all duration-300 hover:scale-55 hover:shadow-xl hover:bg-green-100 hover:ring-2 hover:ring-green-300"
@@ -364,15 +373,15 @@ const NewDashboard = () => {
                          <div className="mb-2 space-y-2">
                            <div className="flex items-center gap-1">
                              <span className="text-2xl font-semibold">${influencer.cost_per_hour}</span>
-                             <span className="text-gray-600">/per hour</span>
+                             <span className="text-gray-600">/<TranslatedText greetings={operatorDashboardTranslations.perHour} /></span>
                            </div>
                            <div className="flex items-center gap-1">
                              <span className="text-2xl font-semibold">${influencer.cost_per_job}</span>
-                             <span className="text-gray-600">/per job</span>
+                             <span className="text-gray-600">/<TranslatedText greetings={operatorDashboardTranslations.perJob} /></span>
                            </div>
                            <div className="flex items-center gap-1">
                              <span className="text-2xl font-semibold">${influencer.cost_per_month}</span>
-                             <span className="text-gray-600">/per momth</span>
+                             <span className="text-gray-600">/<TranslatedText greetings={operatorDashboardTranslations.perMonth} /></span>
                            </div>
                          </div>
                          <p className="mb-3 text-sm text-gray-600">{influencer.store.name}</p>
@@ -392,7 +401,7 @@ const NewDashboard = () => {
                                />
                              </svg>
                              <div className="flex items-center gap-1">
-                             <span className="text-sm font-semibold">Joined since: </span>
+                             <span className="text-sm font-semibold"><TranslatedText greetings={operatorDashboardTranslations.joinedSince} />: </span>
                              <span className="text-gray-600">{new Date(influencer.createdAt).toLocaleDateString()}</span>
                            </div>
                            </div>

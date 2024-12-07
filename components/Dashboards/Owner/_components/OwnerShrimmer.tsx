@@ -6,29 +6,6 @@ const OwnerShrimmer = () => {
 
             {/* Main Content Shimmer */}
             <div className="flex-1 ">
-                {/* Header Shimmer */}
-                <div className="bg-white-600 text-white p-4 flex items-center justify-between shadow-md">
-                    {/* Placeholder for the text section */}
-                    <div className="flex flex-col space-y-2 w-1/3">
-                        <div className="h-6 bg-gray-300 rounded w-3/4 animate-pulse"></div>
-                        <div className="h-4 bg-gray-300 rounded w-1/2 animate-pulse"></div>
-                    </div>
-
-                    {/* Placeholder for the middle section */}
-
-                    {/* Placeholder for the right section (search and button) */}
-                    <div className="flex items-center space-x-6">
-                        {/* Shimmer for search input */}
-                        <div className="relative w-72">
-                            <div className="h-10 bg-gray-300 rounded-full animate-pulse"></div>
-                            {/* Search icon shimmer */}
-                            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 bg-gray-300 rounded-full animate-pulse"></div>
-                        </div>
-
-                        {/* Shimmer for the button */}
-                        <div className="w-36 h-10 bg-gray-300 rounded-full animate-pulse"></div>
-                    </div>
-                </div>
 
                 {/* Content Shimmer */}
                 <div className="p-6">

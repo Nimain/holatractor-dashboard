@@ -10,6 +10,10 @@ import { errorMessage, successMessage } from '@/utils/Toastify/Messages';
 import { Backdrop, CircularProgress } from '@mui/material';
 import SeeFarm from './SeeFarm';
 import { io, Socket } from 'socket.io-client';
+import { newBookingTranslations } from '../../Farmer/FarmerTranslation';
+import TranslatedText from '@/components/Menubar/TranslatedText';
+import { operatorBookingsTranslations } from './OperatorBookingTranslation';
+import { operatorDashboardTranslations } from '../OperatorDashboardTranslations';
 
 interface user {
     userId: string;
@@ -20,10 +24,29 @@ interface user {
 
 const KanbanBoard = () => {
     const today = new Date()
-    const monthNames = ["January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
+    const monthNames = [
+        <TranslatedText greetings={operatorDashboardTranslations.january} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.february} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.march} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.april} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.may} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.june} />,
+        <TranslatedText greetings={operatorDashboardTranslations.july} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.august} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.september} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.october} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.november} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.december} />
     ]
-    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    const dayNames = [
+        <TranslatedText greetings={operatorDashboardTranslations.sunday} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.monday} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.tuesday} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.wednesday} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.thursday} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.friday} />, 
+        <TranslatedText greetings={operatorDashboardTranslations.saturday} />
+    ]
 
     const [fetchingRequests, setFetchingRequests] = useState(false)
     const [requests, setRequests] = useState<ownerOperatorRequest[]>([])
@@ -223,7 +246,7 @@ const KanbanBoard = () => {
                     </div>
                     <div className="h-6 w-px bg-gray-200" />
                     <div className="flex items-center gap-2">
-                        <h2 className="text-xl font-semibold">Booking</h2>
+                        <h2 className="text-xl font-semibold"><TranslatedText greetings={operatorBookingsTranslations.booking} /></h2>
                         <ChevronDown size={20} className="text-gray-400" />
                     </div>
                 </div>
@@ -238,7 +261,7 @@ const KanbanBoard = () => {
                         ))}
                     </div>
                     <button className="bg-black text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-800 transition-colors">
-                        Apply
+                    <TranslatedText greetings={operatorBookingsTranslations.apply} />
                     </button>
                 </div>
             </div>
@@ -249,7 +272,7 @@ const KanbanBoard = () => {
                     <div className="flex items-center justify-between">
                         <h2 className="font-medium text-gray-900 flex items-center gap-2">
                             <span className="text-gray-400">▸</span>
-                            New bookings
+                            <TranslatedText greetings={operatorBookingsTranslations.newBookings} />
                         </h2>
                     </div>
                     {
@@ -309,7 +332,7 @@ const KanbanBoard = () => {
                                     </div>
                                 </div>
                             ))}
-                        </div> : requests.filter(job => job.operator_response !== ownerOperatorResponse.Reject).length === 0 ? <p>Currently no requets is available</p> :
+                        </div> : requests.filter(job => job.operator_response !== ownerOperatorResponse.Reject).length === 0 ? <p><TranslatedText greetings={operatorBookingsTranslations.noRequestAvailable} /></p> :
                             requests.filter(job => job.operator_response !== ownerOperatorResponse.Reject).map((request, index) => {
                                 console.log(request)
                                 return (
@@ -324,7 +347,7 @@ const KanbanBoard = () => {
                                                             disabled={rejectingRequests}
                                                             onClick={() => { handleAccept(request.booking_id, request.operator_id) }}
                                                         >
-                                                            Accept
+                                                            <TranslatedText greetings={operatorBookingsTranslations.accept} />
                                                         </Button>
                                                         <Button
                                                             variant="destructive"
@@ -332,7 +355,7 @@ const KanbanBoard = () => {
                                                             disabled={rejectingRequests}
                                                             onClick={() => { handleReject(request.id) }}
                                                         >
-                                                            Decline
+                                                            <TranslatedText greetings={operatorBookingsTranslations.decline} />
                                                         </Button>
                                                     </div>
                                                     <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -356,7 +379,7 @@ const KanbanBoard = () => {
                                                     </div>
                                                     <span>
                                                         {
-                                                            request.booking.booking_hours ? request.booking.booking_hours === BookingHours.EIGHT_HOURS ? "8 hours" : request.booking.booking_hours === BookingHours.SEVEN_HOURS ? "7 hours" : request.booking.booking_hours === BookingHours.SIX_HOURS ? "6 hours" : request.booking.booking_hours === BookingHours.FIVE_HOURS ? "5 hours" : request.booking.booking_hours === BookingHours.FOUR_HOURS ? "4 hours" : request.booking.booking_hours === BookingHours.THREE_HOURS ? "3 hours" : request.booking.booking_hours === BookingHours.TWO_HOURS ? "2 hours" : "1 hour" : request.booking.end_date && new Date(request.booking.end_date).toLocaleDateString()
+                                                            request.booking.booking_hours ? request.booking.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : request.booking.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : request.booking.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : request.booking.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : request.booking.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : request.booking.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : request.booking.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} /> : request.booking.end_date && new Date(request.booking.end_date).toLocaleDateString()
                                                         }
                                                     </span>
                                                 </div>
@@ -451,7 +474,7 @@ const KanbanBoard = () => {
                     <div className="flex items-center justify-between">
                         <h2 className="font-medium text-gray-900 flex items-center gap-2">
                             <span className="text-gray-400">▸</span>
-                            Accepted
+                            <TranslatedText greetings={operatorBookingsTranslations.accepted} />
                         </h2>
                     </div>
                     {
@@ -525,7 +548,7 @@ const KanbanBoard = () => {
                                                             disabled={rejectingRequests}
                                                             onClick={() => { handleStatusChange(request.booking_id, BookingStatus.Arriving) }}
                                                         >
-                                                            Arriving
+                                                            <TranslatedText greetings={operatorBookingsTranslations.arriving} />
                                                         </Button>
                                                     </div>
                                                     <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -549,7 +572,7 @@ const KanbanBoard = () => {
                                                     </div>
                                                     <span>
                                                         {
-                                                            request.booking.booking_hours ? request.booking.booking_hours === BookingHours.EIGHT_HOURS ? "8 hours" : request.booking.booking_hours === BookingHours.SEVEN_HOURS ? "7 hours" : request.booking.booking_hours === BookingHours.SIX_HOURS ? "6 hours" : request.booking.booking_hours === BookingHours.FIVE_HOURS ? "5 hours" : request.booking.booking_hours === BookingHours.FOUR_HOURS ? "4 hours" : request.booking.booking_hours === BookingHours.THREE_HOURS ? "3 hours" : request.booking.booking_hours === BookingHours.TWO_HOURS ? "2 hours" : "1 hour" : request.booking.end_date && new Date(request.booking.end_date).toLocaleDateString()
+                                                            request.booking.booking_hours ? request.booking.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : request.booking.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : request.booking.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : request.booking.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : request.booking.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : request.booking.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : request.booking.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} /> : request.booking.end_date && new Date(request.booking.end_date).toLocaleDateString()
                                                         }
                                                     </span>
                                                 </div>
@@ -644,7 +667,7 @@ const KanbanBoard = () => {
                     <div className="flex items-center justify-between">
                         <h2 className="font-medium text-gray-900 flex items-center gap-2">
                             <span className="text-gray-400">▸</span>
-                            Ongoing
+                            <TranslatedText greetings={operatorBookingsTranslations.ongoing} />
                         </h2>
                     </div>
                     {
@@ -704,7 +727,7 @@ const KanbanBoard = () => {
                                     </div>
                                 </div>
                             ))}
-                        </div> : completedJobs.filter(booking => (booking.booking.bookingStatus !== BookingStatus.Accepted) && (booking.booking.bookingStatus !== BookingStatus.Finished)).length === 0 ? <p>Currently you have no ongoing bookings</p> :
+                        </div> : completedJobs.filter(booking => (booking.booking.bookingStatus !== BookingStatus.Accepted) && (booking.booking.bookingStatus !== BookingStatus.Finished)).length === 0 ? <p><TranslatedText greetings={operatorBookingsTranslations.noOngoingBookings} /></p> :
                             completedJobs.filter(booking => (booking.booking.bookingStatus !== BookingStatus.Accepted) && (booking.booking.bookingStatus !== BookingStatus.Finished)).map((request, index) => {
                                 return (
                                     <div className="space-y-3" key={index}>
@@ -718,31 +741,31 @@ const KanbanBoard = () => {
                                                                     <Button
                                                                     disabled={rejectingRequests}
                                                                         onClick={() => { handleStatusChange(request.booking.id, BookingStatus.Arrived) }}>
-                                                                        Arrived
+                                                                        <TranslatedText greetings={operatorBookingsTranslations.arrived} />
                                                                     </Button>
                                                                     : (request.booking.bookingStatus === BookingStatus.Arrived || request.booking.bookingStatus === BookingStatus.Stopped) ?
                                                                         <Button
                                                                         disabled={rejectingRequests}
                                                                             onClick={() => { handleStatusChange(request.booking.id, BookingStatus.Started) }}>
-                                                                            Starting
+                                                                            <TranslatedText greetings={operatorBookingsTranslations.starting} />
                                                                         </Button>
                                                                         : (request.booking.bookingStatus === BookingStatus.Started) && <div className='space-x-2'>
                                                                             <Button
                                                                             disabled={rejectingRequests}
                                                                                 onClick={() => { handleStatusChange(request.booking.id, BookingStatus.Stopped) }}>
-                                                                                Pause
+                                                                                <TranslatedText greetings={operatorBookingsTranslations.pause} />
                                                                             </Button>
                                                                             <Button
                                                                             disabled={rejectingRequests}
                                                                                 onClick={() => { handleStatusChange(request.booking.id, BookingStatus.Finished) }}>
-                                                                                Complete
+                                                                                <TranslatedText greetings={operatorBookingsTranslations.complete} />
                                                                             </Button>
                                                                         </div>
                                                             )
                                                         }
                                                     </div>
                                                     <div className="flex items-center gap-2 text-sm text-gray-600">
-                                                        <span className="font-medium">Booking ID: #holabook{request.booking_id.slice(-4)} </span>
+                                                        <span className="font-medium"><TranslatedText greetings={operatorBookingsTranslations.bookingID} />: #holabook{request.booking_id.slice(-4)} </span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -762,7 +785,7 @@ const KanbanBoard = () => {
                                                     </div>
                                                     <span>
                                                         {
-                                                            request.booking.booking_hours ? request.booking.booking_hours === BookingHours.EIGHT_HOURS ? "8 hours" : request.booking.booking_hours === BookingHours.SEVEN_HOURS ? "7 hours" : request.booking.booking_hours === BookingHours.SIX_HOURS ? "6 hours" : request.booking.booking_hours === BookingHours.FIVE_HOURS ? "5 hours" : request.booking.booking_hours === BookingHours.FOUR_HOURS ? "4 hours" : request.booking.booking_hours === BookingHours.THREE_HOURS ? "3 hours" : request.booking.booking_hours === BookingHours.TWO_HOURS ? "2 hours" : "1 hour" : request.booking.end_date && new Date(request.booking.end_date).toLocaleDateString()
+                                                            request.booking.booking_hours ? request.booking.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : request.booking.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : request.booking.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : request.booking.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : request.booking.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : request.booking.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : request.booking.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} /> : request.booking.end_date && new Date(request.booking.end_date).toLocaleDateString()
                                                         }
                                                     </span>
                                                 </div>
@@ -857,7 +880,7 @@ const KanbanBoard = () => {
                     <div className="flex items-center justify-between">
                         <h2 className="font-medium text-gray-900 flex items-center gap-2">
                             <span className="text-gray-400">▸</span>
-                            Completed
+                            <TranslatedText greetings={operatorBookingsTranslations.completed} />
                         </h2>
                     </div>
                     {
@@ -917,14 +940,14 @@ const KanbanBoard = () => {
                                     </div>
                                 </div>
                             ))}
-                        </div> : completedJobs.filter(booking => booking.booking.bookingStatus === BookingStatus.Finished).length === 0 ? <p>Currently you have not accepted any jobs</p> :
+                        </div> : completedJobs.filter(booking => booking.booking.bookingStatus === BookingStatus.Finished).length === 0 ? <p><TranslatedText greetings={operatorBookingsTranslations.noAcceptedJobs} /></p> :
                             completedJobs.filter(booking => booking.booking.bookingStatus === BookingStatus.Finished).map((request, index) => {
                                 return (
                                     <div className="space-y-3" key={index}>
                                         <div className={`bg-green-200 rounded-xl p-4 mb-4 shadow-sm`}>
                                             <div className="flex justify-between items-start mb-3">
                                                 <div className="flex items-center gap-2 text-sm text-gray-600">
-                                                    <span className="font-medium">Booking ID: #holabook{request.booking_id.slice(-4)} </span>
+                                                    <span className="font-medium"><TranslatedText greetings={operatorBookingsTranslations.bookingID} />: #holabook{request.booking_id.slice(-4)} </span>
                                                 </div>
                                             </div>
 
@@ -943,7 +966,7 @@ const KanbanBoard = () => {
                                                     </div>
                                                     <span>
                                                         {
-                                                            request.booking.booking_hours ? request.booking.booking_hours === BookingHours.EIGHT_HOURS ? "8 hours" : request.booking.booking_hours === BookingHours.SEVEN_HOURS ? "7 hours" : request.booking.booking_hours === BookingHours.SIX_HOURS ? "6 hours" : request.booking.booking_hours === BookingHours.FIVE_HOURS ? "5 hours" : request.booking.booking_hours === BookingHours.FOUR_HOURS ? "4 hours" : request.booking.booking_hours === BookingHours.THREE_HOURS ? "3 hours" : request.booking.booking_hours === BookingHours.TWO_HOURS ? "2 hours" : "1 hour" : request.booking.end_date && new Date(request.booking.end_date).toLocaleDateString()
+                                                            request.booking.booking_hours ? request.booking.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : request.booking.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : request.booking.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : request.booking.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : request.booking.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : request.booking.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : request.booking.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} /> : request.booking.end_date && new Date(request.booking.end_date).toLocaleDateString()
                                                         }
                                                     </span>
                                                 </div>

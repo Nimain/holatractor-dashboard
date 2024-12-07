@@ -8,6 +8,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import OwnerShrimmer from '../../Owner/_components/OwnerShrimmer';
+import TranslatedText from '@/components/Menubar/TranslatedText';
+import { storePageTranslations } from '../../Farmer/Stores/StoreTranslations';
 
 interface Location {
   latitude: number | null;
@@ -64,14 +66,14 @@ const Stores = () => {
     }
   }, []);
 
-  if(fetching) return <OwnerShrimmer />
-
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-semibold text-gray-900">Farm store</h1>
+          <h1 className="text-3xl font-semibold text-gray-900">
+          <TranslatedText greetings={storePageTranslations.farmStore} />
+          </h1>
           <span className="text-2xl text-gray-500">
             {stores.length}
           </span>
@@ -79,10 +81,7 @@ const Stores = () => {
 
         <div className="flex gap-4">
           <div className="flex items-center">
-            <span className="text-gray-600">All store</span>
-            <button className="ml-2 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-sm font-medium">
-              All
-            </button>
+            <span className="text-gray-600"><TranslatedText greetings={storePageTranslations.allStores} /></span>
           </div>
           <button className="p-2 bg-green-50 rounded-full">
             <svg
@@ -104,7 +103,12 @@ const Stores = () => {
 
       {/* Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stores.map((center, index) => (
+        {
+        fetching ? Array.from({ length: 8 }).map((_, index) => (
+          <div key={index} className="animate-pulse bg-gray-300 rounded-lg shadow-sm w-full h-48" />
+        ))
+        :
+        stores.map((center, index) => (
            <Link
            href={`/operator/stores/${center.store.id}`}
            key={index}

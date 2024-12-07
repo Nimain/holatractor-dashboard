@@ -4,6 +4,8 @@ import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { MapContainer, Polygon, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapPin } from 'lucide-react';
+import TranslatedText from '@/components/Menubar/TranslatedText';
+import { operatorBookingsTranslations } from './OperatorBookingTranslation';
 
 const SeeFarm = ({ farm }: { farm: Farm }) => {
 
@@ -17,7 +19,7 @@ const SeeFarm = ({ farm }: { farm: Farm }) => {
                         <MapPin size={14} />
                     </div>
                     <span>
-                        Click to see farm Location
+                        <TranslatedText greetings={operatorBookingsTranslations.seeFarmLocation} />
                     </span>
                 </div>
             </DialogTrigger>
