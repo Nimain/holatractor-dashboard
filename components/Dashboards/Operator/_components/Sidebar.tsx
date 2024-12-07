@@ -10,6 +10,9 @@ import StyleIcon from '@mui/icons-material/Style';
 import { Separator } from "@/components/ui/separator"
 import { useRouter } from "next/navigation"
 import { Tooltip } from "@mui/material"
+import TranslatedText from "@/components/Menubar/TranslatedText"
+import { sidebarTranslations } from "../../Farmer/FarmerTranslation"
+import { operatorWorkPageTranslations } from "../WorkSection/WorkPageTranslations"
 
 const Sidebar = () => {
     const [isExpanded, setIsExpanded] = useState(false)
@@ -41,7 +44,7 @@ const Sidebar = () => {
                 {isExpanded && <h1 className="text-xl md:text-2xl font-medium md:font-bold">Holatractor</h1>}
             </Link>
             <div className="px-4 flex justify-between items-center">
-                {isExpanded && <h1 className="text-xl md:text-2xl font-medium md:font-bold">Dashboard</h1>}
+                {isExpanded && <h1 className="text-xl md:text-2xl font-medium md:font-bold"><TranslatedText greetings={sidebarTranslations.dashboard} /></h1>}
                 <Button size="icon" onClick={() => setIsExpanded(!isExpanded)} className="bg-transparent hover:bg-white/20">
                     {isExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                 </Button>
@@ -51,30 +54,30 @@ const Sidebar = () => {
                     <Button
                         className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
                     >
-                        <Tooltip title={"Bookings"} placement="right">
+                        <Tooltip title={<TranslatedText greetings={sidebarTranslations.booking} />} placement="right">
                             <StyleIcon className="h-6 w-6" />
                         </Tooltip>
-                        {isExpanded && "Bookings"}
+                        {isExpanded && <TranslatedText greetings={sidebarTranslations.booking} />}
                     </Button>
                 </Link>
                 <Link href={"/operator/works"}>
                     <Button
                         className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
                     >
-                        <Tooltip title={"Works"} placement="right">
+                        <Tooltip title={<TranslatedText greetings={operatorWorkPageTranslations.work} />} placement="right">
                             <NotebookPen className="h-6 w-6" />
                         </Tooltip>
-                        {isExpanded && "Works"}
+                        {isExpanded && <TranslatedText greetings={operatorWorkPageTranslations.work} />}
                     </Button>
                 </Link>
                 <Link href={"/operator/stores"}>
                     <Button
                         className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
                     >
-                        <Tooltip title={"Stores"} placement="right">
+                        <Tooltip title={<TranslatedText greetings={sidebarTranslations.stores} />} placement="right">
                             <Store className="h-6 w-6" />
                         </Tooltip>
-                        {isExpanded && "Stores"}
+                        {isExpanded && <TranslatedText greetings={sidebarTranslations.stores} />}
                     </Button>
                 </Link>
                 <Separator className={`mt-4 ${isExpanded ? "w-[90%]" : "w-[75%]"} mx-auto`} />
@@ -82,10 +85,10 @@ const Sidebar = () => {
                     className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
                     onClick={() => { handleLogOut() }}
                 >
-                    <Tooltip title={"Log out"} placement="right">
+                    <Tooltip title={<TranslatedText greetings={sidebarTranslations.logout} />} placement="right">
                         <Settings className="h-6 w-6" />
                     </Tooltip>
-                    {isExpanded && "Log out"}
+                    {isExpanded && <TranslatedText greetings={sidebarTranslations.logout} />}
                 </Button>
             </nav>
         </aside>
