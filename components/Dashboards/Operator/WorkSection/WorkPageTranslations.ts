@@ -265,5 +265,18 @@ export const operatorWorkPageTranslations = {
         qu: "Llank’ankuy formata kasuy huk rantiqpaq",
         gn: "Eñembohape poyhuha ko járape g̃uarã"
     },
-
+    newRequests: {
+        en: "New requests",
+        es: "Nuevas solicitudes",
+        ay: "Mä machaq mayiñanakax",
+        qu: "Ñawpaq mañaykuna",
+        gn: "Tembiapo pyahu ñemimendu"
+    },
+    operator: {
+        en: "Operator",
+        es: "Operador",
+        ay: "Uraqpiri",
+        qu: "Uraqpiriy",
+        gn: "Operadór"
+    },
 }

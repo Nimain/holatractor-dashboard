@@ -75,8 +75,6 @@ const OwnerDashboardPage = () => {
 
   if (fetchingOwnerDetails) return <OwnerShrimmer />
 
-  if (!user) return <p>user not found</p>
-
   return (
     <div className="flex flex-col w-full overflow-y-auto" >
 

@@ -20,6 +20,8 @@ import { Backdrop } from "@mui/material";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import TranslatedText from "@/components/Menubar/TranslatedText";
+import { singleStoreOwnerTranslations } from "../SingleStoreTranslation";
 
 const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentInStore[] }) => {
   const [open, setOpen] = useState(false);
@@ -123,9 +125,9 @@ const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentI
                 unoptimized={true}
               />
             </div>
-            <h3 className="text-2xl font-bold text-center">Add New Attachment</h3>
+            <h3 className="text-2xl font-bold text-center"><TranslatedText greetings={singleStoreOwnerTranslations.addNewAttachment} /></h3>
             <p className="text-gray-600 text-center">
-              Click to add a new attachment to your inventory
+            <TranslatedText greetings={singleStoreOwnerTranslations.clickAddNewAttachment} />
             </p>
             <Button
               className="mt-4"
@@ -134,7 +136,7 @@ const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentI
               }}
             >
               <AddIcon className="mr-2" />
-              Add Attachment
+              <TranslatedText greetings={singleStoreOwnerTranslations.addAttachment} />
             </Button>
           </div>
         </div>
@@ -144,17 +146,17 @@ const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentI
         <div className="grid gap-4 py-4 grid-cols-2">
           {selectedAttachmentId ? (
             <div className="grid gap-4">
-              <Label htmlFor="hourly-price">Hourly Price</Label>
+              <Label htmlFor="hourly-price"><TranslatedText greetings={singleStoreOwnerTranslations.hourlyPrice} /></Label>
               <Input
                 id="hourly-price"
                 type="number"
                 value={hourlyPrice}
                 onChange={(e) => setHourlyPrice(Number(e.target.value))}
               />
-              <Button onClick={saveAttachment}>Save Attachment</Button>
+              <Button onClick={saveAttachment}><TranslatedText greetings={singleStoreOwnerTranslations.saveAttachment} /></Button>
             </div>
           ) : fetchingAttachments ? (
-            <p>Loading attachments...</p>
+            <p><TranslatedText greetings={singleStoreOwnerTranslations.loadingTractors} />...</p>
           ) : (
             allAttachments.map((attachment) => (
               <div key={attachment.id} className="border p-4 rounded-md">
@@ -184,14 +186,14 @@ const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentI
                   className="mt-2 w-full"
                   onClick={() => setSelectedAttachmentId(attachment.id)}
                 >
-                  Select
+                  <TranslatedText greetings={singleStoreOwnerTranslations.select} />
                 </Button>
               </div>
             ))
           )}
         </div>
         <Backdrop open={creating}>
-          <p>Adding attachment to store...</p>
+          <p><TranslatedText greetings={singleStoreOwnerTranslations.addingAttachmentToStore} />...</p>
         </Backdrop>
       </DialogContent>
     </Dialog>

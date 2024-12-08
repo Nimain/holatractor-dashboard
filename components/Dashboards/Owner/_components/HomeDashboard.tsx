@@ -35,6 +35,9 @@ import { Avatar, AvatarImage } from "@/components/ui/avatar"
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
+import TranslatedText from '@/components/Menubar/TranslatedText';
+import { OwnerDashboardTranslation } from '../OwnerDashboardTranslation';
+import { operatorWorkPageTranslations } from '../../Operator/WorkSection/WorkPageTranslations';
 
 // Register components with Chart.js
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -156,7 +159,7 @@ const HomeDashboard = (
                                             {
                                                 bookings.length === 0 ?
                                                     <span className="hidden 768px:block text-white text-lg font-bold ml-4 text-center mt-3">
-                                                        No bookings have completed till now
+                                                        <TranslatedText greetings={OwnerDashboardTranslation.noBookingsCompleted} />
                                                     </span>
                                                     :
                                                     <div className="hidden 768px:flex pointer-events-auto">
@@ -182,7 +185,7 @@ const HomeDashboard = (
                                                             })
                                                         }
                                                         <span className="text-white text-lg font-bold ml-8 text-center mt-3">
-                                                            + {bookings.length - 3} has booked
+                                                            + {bookings.length - 3} <TranslatedText greetings={OwnerDashboardTranslation.hasBooked} />
                                                         </span>
                                                     </div>
                                             }
@@ -191,7 +194,7 @@ const HomeDashboard = (
                                             <Link href={`/owner/stores/${details.id}`} className="mx-auto 768px:mx-0">
                                                 <Button
                                                     className="inline-flex items-center px-6 py-3 text-white font-bold bg-black rounded-full shadow-lg border-2 border-transparent transition-all duration-300 transform hover:scale-105 group pointer-events-auto">
-                                                    Open Store
+                                                    <TranslatedText greetings={OwnerDashboardTranslation.openStore} />
                                                     <svg
                                                         fill="currentColor"
                                                         viewBox="0 0 24 24"
@@ -231,7 +234,7 @@ const HomeDashboard = (
                                 />
                             </MapContainer>
                             :
-                            <p>Please enable location details</p>
+                            <p><TranslatedText greetings={OwnerDashboardTranslation.enableLocationDetails} /></p>
                     }
                 </div>
 
@@ -262,20 +265,20 @@ const HomeDashboard = (
                             <div className="relative my-2 mb-0 bottom-7">
                                 <hr className="absolute top-0 left-0 w-full h-0.3 bg-black" />
                                 <Button variant="default" size="sm" className="flex absolute top-1/2 left-14 transform -translate-x-1/2 -translate-y-1/2 rounded-full">
-                                    <span>See profile</span>
+                                    <span><TranslatedText greetings={OwnerDashboardTranslation.seeProfile} /></span>
                                 </Button>
                             </div>
                             <div className="mt-10 mb-6 space-y-4">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-sm font-medium">Per Job Price:</span>
+                                    <span className="text-sm font-medium"><TranslatedText greetings={operatorWorkPageTranslations.costPerJob} />:</span>
                                     <span className="text-sm font-bold">${operators[slideIndex].cost_per_job ?? 'N/A'}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-sm font-medium">Per Hour Price:</span>
+                                    <span className="text-sm font-medium"><TranslatedText greetings={operatorWorkPageTranslations.costPerHour} />:</span>
                                     <span className="text-sm font-bold">${operators[slideIndex].cost_per_hour ?? 'N/A'}/hr</span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-sm font-medium">Per Month Price:</span>
+                                    <span className="text-sm font-medium"><TranslatedText greetings={operatorWorkPageTranslations.costPerMonth} />:</span>
                                     <span className="text-sm font-bold">${operators[slideIndex].cost_per_month ?? 'N/A'}/day</span>
                                 </div>
                             </div>
@@ -306,19 +309,19 @@ const HomeDashboard = (
                                 <span className="flex justify-center items-center w-8 h-8 rounded-full bg-primaryColor text-primary-foreground">
                                     <TractorIcon className="h-4 w-4" />
                                 </span>
-                                Tractors
+                                <TranslatedText greetings={OwnerDashboardTranslation.tractors} />
                             </div>
                         </CardTitle>
-                        <span className="text-sm text-muted-foreground">{tractorsInUse} use</span>
+                        <span className="text-sm text-muted-foreground">{tractorsInUse} <TranslatedText greetings={OwnerDashboardTranslation.inUse} /></span>
                     </CardHeader>
                     <CardContent>
                         <p className="text-sm text-muted-foreground">Lack of physical activity</p>
                         <div className="mt-4 text-3xl font-bold">
-                            {tractors.length} <span className="text-xl font-normal">Total Tractors</span>
+                            {tractors.length} <span className="text-xl font-normal"><TranslatedText greetings={OwnerDashboardTranslation.totalTractors} /></span>
                         </div>
                         <div className="mt-4 text-sm text-muted-foreground flex justify-between">
                             <span>0</span>
-                            <span>{tractorsInUse} Tractors in use</span>
+                            <span>{tractorsInUse} <TranslatedText greetings={OwnerDashboardTranslation.tractorsInUse} /></span>
                         </div>
                         <div className="mt-2 flex items-center gap-x-1">
                             <Progress value={tractorProgress} className="h-10 [&>div]:bg-primaryColor" />
@@ -335,18 +338,18 @@ const HomeDashboard = (
                                     <span className="flex justify-center items-center w-8 h-8 rounded-full bg-primaryColor  text-white">
                                         <Wrench className="h-4 w-4" />
                                     </span>
-                                    Attachments
+                                    <TranslatedText greetings={OwnerDashboardTranslation.attachments} />
                                 </div>
                             </CardTitle>
-                            <span className="text-sm text-muted-foreground">{attachmentsInUse} in use</span>
+                            <span className="text-sm text-muted-foreground">{attachmentsInUse} <TranslatedText greetings={OwnerDashboardTranslation.inUse} /></span>
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">Various implements for tractors</p>
                         <div className="mt-4 text-2xl font-bold">
-                            {attachments.length} <span className="text-lg font-normal">Total Attachments</span>
+                            {attachments.length} <span className="text-lg font-normal"><TranslatedText greetings={OwnerDashboardTranslation.totalAttachments} /></span>
                         </div>
                         <div className="mt-4 text-sm text-muted-foreground flex justify-between">
                             <span>0</span>
-                            <span>{attachmentsInUse} Attachments in use</span>
+                            <span>{attachmentsInUse} <TranslatedText greetings={OwnerDashboardTranslation.attachmentsInUse} /></span>
                         </div>
                         <div className="mt-2 flex items-center gap-x-1">
                             <Progress value={attachmentProgress} className="h-10 [&>div]:bg-primaryColor" />
@@ -364,13 +367,13 @@ const HomeDashboard = (
                                 <span className="flex justify-center items-center w-8 h-8 rounded-full bg-[#13b8a7] text-white">
                                     <Smartphone className="h-4 w-4" />
                                 </span>
-                                Devices (coming soon)
+                                <TranslatedText greetings={OwnerDashboardTranslation.devicesComingSoon} />
                             </div>
                         </CardTitle>
-                        <span className="text-sm text-muted-foreground">{activeDevices} Active</span>
+                        <span className="text-sm text-muted-foreground">{activeDevices} <TranslatedText greetings={OwnerDashboardTranslation.active} /></span>
                     </CardHeader>
                     <CardContent className="p-0">
-                        <p className="text-sm text-muted-foreground px-6 pb-4">Monitoring all devices</p>
+                        <p className="text-sm text-muted-foreground px-6 pb-4"><TranslatedText greetings={OwnerDashboardTranslation.monitoringAllDevices} /></p>
                         <ChartContainer config={chartConfig} className="w-full h-[250px]">
                             <PieChart>
                                 <Pie

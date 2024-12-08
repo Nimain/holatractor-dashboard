@@ -20,6 +20,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { io, Socket } from 'socket.io-client'
 import { useCookie } from 'next-cookie'
 import { Button } from '@/components/ui/button'
+import { singleStoreOwnerTranslations } from './SingleStoreTranslation'
+import TranslatedText from '@/components/Menubar/TranslatedText'
 
 interface user {
   userId: string;
@@ -178,9 +180,9 @@ export default function StorePage() {
                   <CreditCard className="w-10 h-10 text-gray-400" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-xl font-semibold">No Equipments available</h3>
+                  <h3 className="text-xl font-semibold"><TranslatedText greetings={singleStoreOwnerTranslations.noEquipmentsAvailable} /></h3>
                   <p className="text-muted-foreground">
-                    Sorry this store has no equipments available
+                  <TranslatedText greetings={singleStoreOwnerTranslations.noEquipmentsAvailableStore} />
                   </p>
                 </div>
               </CardContent>
@@ -200,9 +202,9 @@ export default function StorePage() {
                   <CreditCard className="w-10 h-10 text-gray-400" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-xl font-semibold">No Tractors available</h3>
+                  <h3 className="text-xl font-semibold"><TranslatedText greetings={singleStoreOwnerTranslations.noTractorsAvailable} /></h3>
                   <p className="text-muted-foreground">
-                    Sorry this store has no tractors available
+                  <TranslatedText greetings={singleStoreOwnerTranslations.noTractorsAvailableStore} />
                   </p>
                 </div>
               </CardContent>
@@ -220,9 +222,9 @@ export default function StorePage() {
                   <CreditCard className="w-10 h-10 text-gray-400" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="text-xl font-semibold">No Attachments available</h3>
+                  <h3 className="text-xl font-semibold"><TranslatedText greetings={singleStoreOwnerTranslations.noAttachmentsAvailable} /></h3>
                   <p className="text-muted-foreground">
-                    Sorry this store has no attachments available
+                  <TranslatedText greetings={singleStoreOwnerTranslations.noAttachmentsAvailableStore} />
                   </p>
                 </div>
               </CardContent>

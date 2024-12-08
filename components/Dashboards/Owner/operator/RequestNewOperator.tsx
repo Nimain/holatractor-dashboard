@@ -13,6 +13,8 @@ import { CircleAlert, Plus, Watch, X } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { requestNewOperatorTranslations } from './RequestNewOperatorTranslations'
+import TranslatedText from '@/components/Menubar/TranslatedText'
 
 interface user {
     userId: string;
@@ -58,9 +60,11 @@ const RequestNewOperator = () => {
           setPriceTypes([...priceTypes, { type: '', value: '' }]);
         }
       };
+
       const removePriceType = (indexToRemove: number) => {
         setPriceTypes(priceTypes.filter((_, index) => index !== indexToRemove));
       };
+      
       const updatePriceType = (index: number, field: 'type' | 'value', value: string) => {
         const newPriceTypes = [...priceTypes];
         newPriceTypes[index][field] = value;
@@ -145,32 +149,32 @@ const RequestNewOperator = () => {
         <Dialog>
             <DialogTrigger asChild>
                 <Button>
-                    New operator
+                <TranslatedText greetings={requestNewOperatorTranslations.newOperator} />
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
                     <DialogHeader>
-                        <DialogTitle>Add Operator</DialogTitle>
-                        <DialogDescription>Nearby Operator</DialogDescription>
+                        <DialogTitle><TranslatedText greetings={requestNewOperatorTranslations.addOperator} /></DialogTitle>
+                        <DialogDescription><TranslatedText greetings={requestNewOperatorTranslations.nearbyOperator} /></DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
                             <div className="flex justify-between">
-                                <Label htmlFor="operator">Send Request to</Label>
+                                <Label htmlFor="operator"><TranslatedText greetings={requestNewOperatorTranslations.sendRequestTo} /></Label>
                                 <CircleAlert size={10} />
                             </div>
                             <Select onValueChange={e=>{setSelectedOperator(e)}}>
                                 <SelectTrigger id="operator">
-                                    <SelectValue placeholder="Select operator" />
+                                    <SelectValue placeholder={<TranslatedText greetings={requestNewOperatorTranslations.selectOperator} />} />
                                 </SelectTrigger>
                                 {
                                     fetching ?
-                                    <p>Loading operators...</p>
+                                    <p><TranslatedText greetings={requestNewOperatorTranslations.loadingOperators} /></p>
                                     :
                                 <SelectContent>
                                     {
                                         operators.length === 0 ?
-                                        <p>No operators available</p>
+                                        <p><TranslatedText greetings={requestNewOperatorTranslations.noOperatorsAvailable} /></p>
                                         :
                                         operators.map((operator, index)=>{
                                             return(
@@ -187,13 +191,13 @@ const RequestNewOperator = () => {
                         {priceTypes.map((priceType, index) => (
                             <div key={index} className="flex gap-4 items-end">
                                 <div className="flex-1">
-                                    <Label>Price Type</Label>
+                                    <Label><TranslatedText greetings={requestNewOperatorTranslations.priceType} /></Label>
                                     <Select
                                         value={priceType.type}
                                         onValueChange={(value) => updatePriceType(index, 'type', value)}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Select type" />
+                                            <SelectValue placeholder={<TranslatedText greetings={requestNewOperatorTranslations.selectType} />} />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {priceTypeOptions.map((option) => (
@@ -209,7 +213,7 @@ const RequestNewOperator = () => {
                                     </Select>
                                 </div>
                                 <div className="flex-1">
-                                    <Label>Value ($)</Label>
+                                    <Label><TranslatedText greetings={requestNewOperatorTranslations.value} /> ($)</Label>
                                     <div className="flex items-center">
                                         <Input
                                             type="number"
@@ -239,22 +243,22 @@ const RequestNewOperator = () => {
                                 onClick={addPriceType}
                                 className="w-full mt-2"
                             >
-                                <Plus size={16} className="mr-2" /> Add Price Type
+                                <Plus size={16} className="mr-2" /> <TranslatedText greetings={requestNewOperatorTranslations.addPriceType} />
                             </Button>
                         )}
                         <div className="grid gap-2">
-                            <Label htmlFor="store">Store</Label>
+                            <Label htmlFor="store"><TranslatedText greetings={requestNewOperatorTranslations.store} /></Label>
                             <Select onValueChange={e=>{setSelectedStore(e)}}>
                                 <SelectTrigger id="store">
-                                    <SelectValue placeholder="Select store" />
+                                    <SelectValue placeholder={<TranslatedText greetings={requestNewOperatorTranslations.newStore} />} />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {
                                         fetchingStore ?
-                                        <p>Loading stores...</p>
+                                        <p><TranslatedText greetings={requestNewOperatorTranslations.loadingStores} /></p>
                                         :
                                         stores.length === 0 ?
-                                        <p>No stores created</p>
+                                        <p><TranslatedText greetings={requestNewOperatorTranslations.noStoresCreated} /></p>
                                         :
                                         stores.map((store, index) => (
                                             <SelectItem key={index} value={store.id}>
@@ -266,7 +270,7 @@ const RequestNewOperator = () => {
                             </Select>
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="description">Message</Label>
+                            <Label htmlFor="description"><TranslatedText greetings={requestNewOperatorTranslations.message} /></Label>
                             <Textarea
                                 id="description"
                                 placeholder="Add details about the payment request"
@@ -277,7 +281,7 @@ const RequestNewOperator = () => {
                         <div className="bg-gray-100 p-2 rounded-md flex items-center gap-2">
                             <Watch size={16} className="text-gray-600" />
                             <p className="text-sm text-muted-foreground">
-                                Request link expires in 7 days
+                            <TranslatedText greetings={requestNewOperatorTranslations.requestLinkExpires} />
                             </p>
                         </div>
                     </div>
@@ -285,12 +289,12 @@ const RequestNewOperator = () => {
                         <div className="flex gap-4 w-full justify-center">
                             <DialogClose asChild>
                             <Button variant="outline" className="flex-1">
-                                Cancel
+                            <TranslatedText greetings={requestNewOperatorTranslations.cancel} />
                             </Button>
                             </DialogClose>
                             <Button className="flex-1" disabled={requesting} onClick={()=>{ handleRequest() }}>
                                 {
-                                    requesting ? "Requesting..." : "Request"
+                                    requesting ? <TranslatedText greetings={requestNewOperatorTranslations.requesting} /> : <TranslatedText greetings={requestNewOperatorTranslations.request} />
                                 }
                             </Button>
                         </div>

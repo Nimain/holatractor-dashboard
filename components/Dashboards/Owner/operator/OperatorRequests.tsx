@@ -1,5 +1,6 @@
 "use client"
 
+import TranslatedText from '@/components/Menubar/TranslatedText'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,6 +15,7 @@ import { OperatorAddStoreReuests } from '@/utils/Types/types'
 import { CheckCircle, Clock, DollarSign, MessageCircle } from 'lucide-react'
 import { useCookie } from 'next-cookie'
 import React, { useState } from 'react'
+import { operatorWorkPageTranslations } from '../../Operator/WorkSection/WorkPageTranslations'
 
 const OperatorRequests = ({ requests }: { requests: OperatorAddStoreReuests[]; }) => {
     const [loading, setLoading] = useState(false)
@@ -62,7 +64,7 @@ const OperatorRequests = ({ requests }: { requests: OperatorAddStoreReuests[]; }
         <Dialog>
             <DialogTrigger asChild>
                 <Button>
-                    New Requests {requests.length}
+                <TranslatedText greetings={operatorWorkPageTranslations.newRequests} /> {requests.length}
                 </Button>
             </DialogTrigger>
             <DialogContent className='max-h-[90vh] overflow-auto' style={{ scrollbarWidth: "none" }}>
@@ -78,30 +80,30 @@ const OperatorRequests = ({ requests }: { requests: OperatorAddStoreReuests[]; }
                                         </Avatar>
                                         <div>
                                             <CardTitle>{requset.operator.user.first_name} {requset.operator.user.last_name}</CardTitle>
-                                            <p className="text-sm text-muted-foreground">Operator ID: {requset.operator_id}</p>
+                                            <p className="text-sm text-muted-foreground"><TranslatedText greetings={operatorWorkPageTranslations.operator} /> ID: {requset.operator_id}</p>
                                         </div>
-                                        <p>Store name: {requset.store.name}</p>
+                                        <p><TranslatedText greetings={operatorWorkPageTranslations.storeName} />: {requset.store.name}</p>
                                     </CardHeader>
                                     <CardContent>
                                         <div className="flex items-center gap-2 mb-2">
                                             <CheckCircle className="text-green-500" />
-                                            <span className="font-semibold">{requset.operator.OperatorBookingJob.length} Completed Bookings</span>
+                                            <span className="font-semibold">{requset.operator.OperatorBookingJob.length} <TranslatedText greetings={operatorWorkPageTranslations.jobsCompleted} /></span>
                                         </div>
                                         <div className="flex items-center gap-2 mb-2">
                                             <DollarSign className="text-green-500" />
-                                            <span className="font-semibold">Cost per hour: {requset.cost_per_hour}</span>
+                                            <span className="font-semibold"><TranslatedText greetings={operatorWorkPageTranslations.costPerHour} />: {requset.cost_per_hour}</span>
                                         </div>
                                         <div className="flex items-center gap-2 mb-2">
                                             <DollarSign className="text-green-500" />
-                                            <span className="font-semibold">Cost per job: {requset.cost_per_job}</span>
+                                            <span className="font-semibold"><TranslatedText greetings={operatorWorkPageTranslations.costPerJob} />: {requset.cost_per_job}</span>
                                         </div>
                                         <div className="flex items-center gap-2 mb-2">
                                             <DollarSign className="text-green-500" />
-                                            <span className="font-semibold">Cost per month: {requset.cost_per_month}</span>
+                                            <span className="font-semibold"><TranslatedText greetings={operatorWorkPageTranslations.costPerMonth} />: {requset.cost_per_month}</span>
                                         </div>
                                         <div className="flex items-center gap-2 mb-4">
                                             <MessageCircle className="text-green-500" />
-                                            <span className="font-semibold">Message: {requset.note}</span>
+                                            <span className="font-semibold"><TranslatedText greetings={operatorWorkPageTranslations.message} />: {requset.note}</span>
                                         </div>
                                         <div className="space-y-2">
                                             {requset.operator.OperatorBookingJob.slice(0, 3).map((job) => (
@@ -120,7 +122,7 @@ const OperatorRequests = ({ requests }: { requests: OperatorAddStoreReuests[]; }
                                     <CardFooter className="flex justify-end space-x-2 mt-4">
                                         <FillAcceptanceForm id={requset.id} />
                                         <Button onClick={() => {handleAccept(requset)}} disabled={loading}>
-                                            {loading ? "Accepting..." : "Accept"}
+                                            {loading ? <TranslatedText greetings={operatorWorkPageTranslations.accepting} /> : <TranslatedText greetings={operatorWorkPageTranslations.accept} />}
                                         </Button>
                                     </CardFooter>
                                 </Card>
@@ -195,7 +197,7 @@ function FillAcceptanceForm({id}:{id: string;}){
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button variant={"outline"}>
-                    Reject
+                <TranslatedText greetings={operatorWorkPageTranslations.reject} />
                 </Button>
             </DialogTrigger>
             <DialogContent className='max-h-[90vh] overflow-auto w-fit h-fit' style={{ scrollbarWidth: "none" }}>
@@ -203,7 +205,7 @@ function FillAcceptanceForm({id}:{id: string;}){
                     <CardContent>
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="field1">Cost per job</Label>
+                                <Label htmlFor="field1"><TranslatedText greetings={operatorWorkPageTranslations.costPerJob} /></Label>
                                 <Input
                                     id="field1"
                                     name="field1"
@@ -215,7 +217,7 @@ function FillAcceptanceForm({id}:{id: string;}){
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="field2">Cost per hour</Label>
+                                <Label htmlFor="field2"><TranslatedText greetings={operatorWorkPageTranslations.costPerHour} /></Label>
                                 <Input
                                     id="field2"
                                     name="field2"
@@ -227,7 +229,7 @@ function FillAcceptanceForm({id}:{id: string;}){
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="field3">Cost per month</Label>
+                                <Label htmlFor="field3"><TranslatedText greetings={operatorWorkPageTranslations.costPerMonth} /></Label>
                                 <Input
                                     id="field3"
                                     name="field3"
@@ -239,7 +241,7 @@ function FillAcceptanceForm({id}:{id: string;}){
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="textArea">Message</Label>
+                                <Label htmlFor="textArea"><TranslatedText greetings={operatorWorkPageTranslations.message} /></Label>
                                 <Textarea
                                     id="textArea"
                                     name="textArea"
@@ -256,7 +258,7 @@ function FillAcceptanceForm({id}:{id: string;}){
                         disabled={requesting}
                             className='w-full' onClick={()=>{handleRequest(id)}}>
                             {
-                                requesting ? "Submitting..." : "Submit"
+                                requesting ? <TranslatedText greetings={operatorWorkPageTranslations.submitting} /> : <TranslatedText greetings={operatorWorkPageTranslations.submit} />
                             }
                         </Button>
                     </CardFooter>

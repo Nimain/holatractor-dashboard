@@ -34,6 +34,8 @@ import { useCookie } from 'next-cookie';
 import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
 import OwnerShrimmer from '../_components/OwnerShrimmer';
+import TranslatedText from '@/components/Menubar/TranslatedText';
+import { ownerCustomerPageTranslations } from './OwnerCustomerTranslations';
 
 
 interface Customer {
@@ -117,11 +119,11 @@ const OwnerCustomer = () => {
                 <Breadcrumb>
                     <BreadcrumbList>
                         <BreadcrumbItem>
-                            <BreadcrumbLink href="/owner">Dashboard</BreadcrumbLink>
+                            <BreadcrumbLink href="/owner"><TranslatedText greetings={ownerCustomerPageTranslations.dashboard} /></BreadcrumbLink>
                         </BreadcrumbItem>
                         <BreadcrumbSeparator />
                         <BreadcrumbItem>
-                            <BreadcrumbLink href="/owner/customer">Customers</BreadcrumbLink>
+                            <BreadcrumbLink href="/owner/customer"><TranslatedText greetings={ownerCustomerPageTranslations.customer} /></BreadcrumbLink>
                         </BreadcrumbItem>
                     </BreadcrumbList>
                 </Breadcrumb>
@@ -140,7 +142,7 @@ const OwnerCustomer = () => {
                 {/* Total Estimate Card */}
                 <div className="grid-cols-1 900px:col-span-2 bg-white rounded-lg border shadow-sm p-6">
                     <div className="flex justify-between items-center">
-                        <h3 className="text-gray-600 text-sm font-medium">Total Estimate</h3>
+                        <h3 className="text-gray-600 text-sm font-medium"><TranslatedText greetings={ownerCustomerPageTranslations.totalEstimate} /></h3>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                             <MoreHorizontal className="h-4 w-4" />
                         </Button>
@@ -151,7 +153,7 @@ const OwnerCustomer = () => {
                             <div className="text-3xl font-semibold mb-1">$ {totalReceived.toFixed(2)}</div>
                             <div className="flex items-center gap-1">
                                 <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                <span className="text-green-500 text-sm">Accepted</span>
+                                <span className="text-green-500 text-sm"><TranslatedText greetings={ownerCustomerPageTranslations.accepted} /></span>
                             </div>
                         </div>
 
@@ -161,7 +163,7 @@ const OwnerCustomer = () => {
                             <div className="text-3xl font-semibold mb-1 text-left 500px:text-right 768px:text-left">$ {pendingCustomers.toFixed(2)}</div>
                             <div className="flex items-center gap-1">
                                 <div className="w-2 h-2 rounded-full bg-orange-400 ml-0 500px:ml-auto 768px:ml-0"></div>
-                                <span className="text-orange-400 text-sm">Pending</span>
+                                <span className="text-orange-400 text-sm"><TranslatedText greetings={ownerCustomerPageTranslations.pending} /></span>
                             </div>
                         </div>
 
@@ -171,7 +173,7 @@ const OwnerCustomer = () => {
                             <div className="text-3xl font-semibold mb-1">$ {rejectedCustomers.toFixed(2)}</div>
                             <div className="flex items-center gap-1">
                                 <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                                <span className="text-red-500 text-sm">Cancelled</span>
+                                <span className="text-red-500 text-sm"><TranslatedText greetings={ownerCustomerPageTranslations.cancelled} /></span>
                             </div>
                         </div>
                         <div className="items-center mt-4 col-span-1 768px:col-span-3">
@@ -190,7 +192,7 @@ const OwnerCustomer = () => {
                 {/* Total Customers Card */}
                 <div className="col-span-1 bg-white rounded-lg border shadow-sm p-6">
                     <div className="flex justify-between items-center">
-                        <h3 className="text-gray-600 text-sm font-medium">Active Customers</h3>
+                        <h3 className="text-gray-600 text-sm font-medium"><TranslatedText greetings={ownerCustomerPageTranslations.activeCustomers} /></h3>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                             <MoreHorizontal className="h-4 w-4" />
                         </Button>
@@ -207,7 +209,7 @@ const OwnerCustomer = () => {
                 {/* Total Member Card */}
                 <div className="col-span-1 bg-white rounded-lg border shadow-sm p-6">
                     <div className="flex justify-between items-center">
-                        <h3 className="text-gray-600 text-sm font-medium">Total Customers</h3>
+                        <h3 className="text-gray-600 text-sm font-medium"><TranslatedText greetings={ownerCustomerPageTranslations.totalCustomers} /></h3>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                             <MoreHorizontal className="h-4 w-4" />
                         </Button>
@@ -268,8 +270,6 @@ const OwnerCustomer = () => {
                         <Plus className="w-4 h-4" />
                     </Button>
                 </div>
-
-
             </div>
 
             {/* Action Bar */}
@@ -288,13 +288,13 @@ const OwnerCustomer = () => {
                     variant={"outline"} 
                     className="flex items-center gap-2 px-4 py-2 border rounded-lg">
                         <Import className="w-4 h-4" />
-                        Import
+                        <TranslatedText greetings={ownerCustomerPageTranslations.import} />
                     </Button>
                     <Button
                     variant={"outline"} 
                     className="flex items-center gap-2 px-4 py-2 border rounded-lg">
                         <Filter className="w-4 h-4" />
-                        Filter
+                        <TranslatedText greetings={ownerCustomerPageTranslations.filter} />
                     </Button>
                     <Button
                     variant={"outline"} 
@@ -307,7 +307,7 @@ const OwnerCustomer = () => {
                     <Button
                     variant={"outline"} 
                     className="flex items-center gap-2 px-4 py-2 border rounded-lg">
-                        Short by
+                        <TranslatedText greetings={ownerCustomerPageTranslations.sortBy} />
                         <ChevronDown className="w-4 h-4" />
                     </Button>
                 </div>
@@ -321,17 +321,17 @@ const OwnerCustomer = () => {
                             <TableHead className="w-8 p-4">
                                 <Input type="checkbox" className="rounded w-4 h-4 accent-primaryColor" />
                             </TableHead>
-                            <TableHead className="text-left p-4 font-bold text-lg">Profile</TableHead>
-                            <TableHead className="text-left p-4 font-bold text-lg">Contact</TableHead>
-                            <TableHead className="text-left p-4 font-bold text-lg">Store</TableHead>
-                            <TableHead className="text-left p-4 font-bold text-lg">Estimate Value</TableHead>
+                            <TableHead className="text-left p-4 font-bold text-lg"><TranslatedText greetings={ownerCustomerPageTranslations.profile} /></TableHead>
+                            <TableHead className="text-left p-4 font-bold text-lg"><TranslatedText greetings={ownerCustomerPageTranslations.contact} /></TableHead>
+                            <TableHead className="text-left p-4 font-bold text-lg"><TranslatedText greetings={ownerCustomerPageTranslations.store} /></TableHead>
+                            <TableHead className="text-left p-4 font-bold text-lg"><TranslatedText greetings={ownerCustomerPageTranslations.estimateValue} /></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {fetchingPageDetails ? <CustomerTableShrimmer />
                         :
                         customers.length === 0 ?
-                        <p>No customers available</p>
+                        <p><TranslatedText greetings={ownerCustomerPageTranslations.noCustomersAvailable} /></p>
                         :
                         customers.map((customer) => (
                             <TableRow key={customer.id} className="border-t">

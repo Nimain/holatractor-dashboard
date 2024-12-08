@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tractor, TractorType } from "@/utils/Types/types"
 import Image from "next/image"
+import { singleStoreOwnerTranslations } from "../SingleStoreTranslation"
+import TranslatedText from "@/components/Menubar/TranslatedText"
 
 interface TractorCardProps {
   tractor: Tractor
@@ -29,11 +31,11 @@ export function TractorCard({ tractor }: TractorCardProps) {
             className="object-cover w-full h-48 rounded-md"
           />
         <p className="text-muted-foreground my-2">{tractor.description}</p>
-        {tractor.model && <p>Model: {tractor.model}</p>}
+        {tractor.model && <p><TranslatedText greetings={singleStoreOwnerTranslations.model} />: {tractor.model}</p>}
         {/* {tractor.year && <p className="text-sm">Year: {tractor.year.getFullYear()}</p>} */}
       </CardContent>
       <CardFooter>
-        <Button className="w-full">View Details</Button>
+        <Button className="w-full"><TranslatedText greetings={singleStoreOwnerTranslations.viewDetails} /></Button>
       </CardFooter>
     </Card>
   )

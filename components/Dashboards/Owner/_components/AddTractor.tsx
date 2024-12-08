@@ -27,6 +27,8 @@ import { format, setYear } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { uploadFileToS3 } from "@/utils/AWS/FileUpload";
+import { singleStoreOwnerTranslations } from "../SingleStoreTranslation";
+import TranslatedText from "@/components/Menubar/TranslatedText";
 
 const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) => {
   const [open, setOpen] = useState(false);
@@ -167,9 +169,9 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
                 unoptimized={true}
               />
             </div>
-            <h3 className="text-2xl font-bold text-center">Add New Tractor</h3>
+            <h3 className="text-2xl font-bold text-center"><TranslatedText greetings={singleStoreOwnerTranslations.addNewTractor} /></h3>
             <p className="text-gray-600 text-center">
-              Click to add a new tractor to your inventory
+            <TranslatedText greetings={singleStoreOwnerTranslations.clickAddNewTractor} />
             </p>
             <Button
               className="mt-4"
@@ -178,7 +180,7 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
               }}
             >
               <AddIcon className="mr-2" />
-              Add Tractor
+              <TranslatedText greetings={singleStoreOwnerTranslations.addTractor} />
             </Button>
           </div>
         </div>
@@ -188,7 +190,7 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
         <div className="grid gap-4 py-4 grid-cols-2"> 
           {selectedTractorId ? (
             <div className="grid gap-4">
-              <Label htmlFor="hourly-price">Hourly Price</Label>
+              <Label htmlFor="hourly-price"><TranslatedText greetings={singleStoreOwnerTranslations.hourlyPrice} /></Label>
               <Input
                 id="hourly-price"
                 type="number"
@@ -263,7 +265,7 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
                     onClick={() => { set_expiry_date_false(true) }}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {expiry_date ? format(expiry_date, "PPP") : <span>Expiry date</span>}
+                    {expiry_date ? format(expiry_date, "PPP") : <span><TranslatedText greetings={singleStoreOwnerTranslations.expiryDate} /></span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="flex w-fit flex-col space-y-2 p-2">
@@ -294,7 +296,7 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
                 </PopoverContent>
               </Popover>
               <div className="space-y-1">
-                <Label htmlFor="liscenceNumber">Liscence ID</Label>
+                <Label htmlFor="liscenceNumber"><TranslatedText greetings={singleStoreOwnerTranslations.licenseID} /></Label>
                 <Input
                   id="liscenceNumber"
                   placeholder='e.g - es0012390'
@@ -304,10 +306,10 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
                   spellCheck='false'
                   onChange={e => { set_document_number(e.target.value) }} />
               </div>
-              <Button onClick={saveTractor}>Save Tractor</Button>
+              <Button onClick={saveTractor}><TranslatedText greetings={singleStoreOwnerTranslations.saveTractor} /></Button>
             </div>
           ) : fetchingTractors ? (
-            <p>Loading tractors...</p>
+            <p><TranslatedText greetings={singleStoreOwnerTranslations.loadingTractors} />...</p>
           ) : (
             allTractors.map((tractor) => (
               <div key={tractor.id} className="border p-4 rounded-md">
@@ -340,14 +342,14 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
                     setSelectedInventoryId(tractor.id)
                   }}
                 >
-                  Select
+                  <TranslatedText greetings={singleStoreOwnerTranslations.select} />
                 </Button>
               </div>
             ))
           )}
         </div>
         <Backdrop open={creating}>
-          <p>Adding tractor to store...</p>
+          <p><TranslatedText greetings={singleStoreOwnerTranslations.addingTractorToStore} />...</p>
         </Backdrop>
       </DialogContent>
     </Dialog>

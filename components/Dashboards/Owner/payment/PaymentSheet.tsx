@@ -22,6 +22,8 @@ import { useState } from "react"
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import TranslatedText from "@/components/Menubar/TranslatedText"
+import { ownerPaymentHistoryTranslations } from "./PaymentHistoryTrnslation"
 
 const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
     
@@ -102,27 +104,27 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                     <TableCell>
                         <span className="inline-flex items-center">
                             <span className="h-2 w-2 bg-green-400 rounded-full mr-2"></span>
-                            {`${item.status}` === "FarmerPENDING" ? "Pending" : `${item.status}` === "FarmerCONFIRMED" ? "Farmer paid" : `${item.status}` === "OwnerREJECTED" ? "Rejected" : "Completed"}
+                            {`${item.status}` === "FarmerPENDING" ? "Pending" : `${item.status}` === "FarmerCONFIRMED" ? <TranslatedText greetings={ownerPaymentHistoryTranslations.farmerPaid} /> : `${item.status}` === "OwnerREJECTED" ? <TranslatedText greetings={ownerPaymentHistoryTranslations.rejected} /> : <TranslatedText greetings={ownerPaymentHistoryTranslations.completed} />}
                         </span>
                     </TableCell>
                     <TableCell>
                         <Button variant="ghost" size="sm">
-                            Download
+                        <TranslatedText greetings={ownerPaymentHistoryTranslations.download} />
                         </Button>
                     </TableCell>
                 </TableRow>
             </SheetTrigger>
             <SheetContent>
                 <SheetHeader>
-                    <SheetTitle>Payment Link Details</SheetTitle>
+                    <SheetTitle><TranslatedText greetings={ownerPaymentHistoryTranslations.paymentLinkDetails} /></SheetTitle>
                     <SheetDescription>
-                        Complete description of your payment
+                    <TranslatedText greetings={ownerPaymentHistoryTranslations.paymentDescription} />
                     </SheetDescription>
                 </SheetHeader>
                 <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-140px)]">
                     {/* Amount Section */}
                     <div className="space-y-2">
-                        <p className="text-sm text-muted-foreground">Amount</p>
+                        <p className="text-sm text-muted-foreground"><TranslatedText greetings={ownerPaymentHistoryTranslations.amount} /></p>
                         <div className="flex items-center gap-3">
                             <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
                                 <svg
@@ -153,7 +155,7 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                             <a href={item.screenshots[item.screenshots.length - 1]} target="_blank">
                             <Button variant="ghost" size="sm" className="h-8">
                                 <ExternalLink className="h-4 w-4" />
-                                <span className="ml-2">Visit Link</span>
+                                <span className="ml-2"><TranslatedText greetings={ownerPaymentHistoryTranslations.visitLink} /></span>
                             </Button>
                             </a>
                         </div>
@@ -162,19 +164,19 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                     {/* Transaction Details */}
                     <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-y-3">
-                            <span className="text-muted-foreground">Status</span>
+                            <span className="text-muted-foreground"><TranslatedText greetings={ownerPaymentHistoryTranslations.status} /></span>
                             <Badge className="justify-self-end w-fit">
-                                {`${item.status}` === "FarmerPENDING" ? "Pending" : `${item.status}` === "FarmerCONFIRMED" ? "Farmer paid" : `${item.status}` === "OwnerREJECTED" ? "Rejected" : "Completed"}
+                                {`${item.status}` === "FarmerPENDING" ? "Pending" : `${item.status}` === "FarmerCONFIRMED" ? <TranslatedText greetings={ownerPaymentHistoryTranslations.farmerPaid} /> : `${item.status}` === "OwnerREJECTED" ? <TranslatedText greetings={ownerPaymentHistoryTranslations.rejected} /> : <TranslatedText greetings={ownerPaymentHistoryTranslations.completed} />}
                             </Badge>
 
-                            <span className="text-muted-foreground">Created on</span>
+                            <span className="text-muted-foreground"><TranslatedText greetings={ownerPaymentHistoryTranslations.createdOn} /></span>
                             <span className="text-right">
                                 {new Date(item.createdAt).toLocaleDateString()}
                             </span>
 
                             {
                                 item.transaction_reference &&
-                                <span className="text-muted-foreground">Reference</span>
+                                <span className="text-muted-foreground"><TranslatedText greetings={ownerPaymentHistoryTranslations.reference} /></span>
                             }
                             <span className="text-right">
                                 {item.transaction_reference}
@@ -184,12 +186,12 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
 
                     {/* Timeline */}
                     <div className="space-y-4">
-                        <h3 className="text-lg font-semibold">Timeline</h3>
+                        <h3 className="text-lg font-semibold"><TranslatedText greetings={ownerPaymentHistoryTranslations.timeline} /></h3>
                         <div className="space-y-4">
                             <div className="relative pl-6 border-l-2 border-green-500 pb-4">
                                 <div className="absolute -left-[5px] h-2.5 w-2.5 rounded-full bg-green-500" />
                                 <div>
-                                    <p className="font-medium">Created Payment Link</p>
+                                    <p className="font-medium"><TranslatedText greetings={ownerPaymentHistoryTranslations.createdPaymentLink} /></p>
                                     <p className="text-sm text-muted-foreground">
                                         {new Date(item.createdAt).toLocaleDateString()}
                                     </p>
@@ -198,18 +200,18 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                             <div className={`relative pl-6 border-l-2 ${(`${item.status}` === "FarmerCONFIRMED") || (`${item.status} === "COMPLETED`) ? "border-green-500" : "border-blue-500"} pb-4`}>
                                 <div className={`absolute -left-[5px] h-2.5 w-2.5 rounded-full ${(`${item.status}` === "FarmerCONFIRMED") || (`${item.status} === "COMPLETED`) ? "bg-blue-500" : "bg-green-500"}`} />
                                 <div>
-                                    <p className="font-medium">Awaiting Payment</p>
+                                    <p className="font-medium"><TranslatedText greetings={ownerPaymentHistoryTranslations.awaitingPayment} /></p>
                                     <p className="text-sm text-muted-foreground">
-                                        Waiting for the recipient to make the payment.
+                                    <TranslatedText greetings={ownerPaymentHistoryTranslations.waitingForRecipient} />
                                     </p>
                                 </div>
                             </div>
                             <div className="relative pl-6">
                                 <div className={`absolute -left-[5px] h-2.5 w-2.5 rounded-full ${`${item.status}` === "COMPLETED" ? "bg-green-500" : "bg-blue-500"}`} />
                                 <div>
-                                    <p className="font-medium">Payment Complete</p>
+                                    <p className="font-medium"><TranslatedText greetings={ownerPaymentHistoryTranslations.paymentComplete} /></p>
                                     <p className="text-sm text-muted-foreground">
-                                        You have received a payment of {item.amount.toFixed(2)} USD.
+                                    <TranslatedText greetings={ownerPaymentHistoryTranslations.paymentReceived} /> {item.amount.toFixed(2)} USD.
                                     </p>
                                 </div>
                             </div>
@@ -218,7 +220,7 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
 
                     {isRejecting && (
               <div className="space-y-2">
-                <Label htmlFor="rejectionReason">Reason for Rejection</Label>
+                <Label htmlFor="rejectionReason"><TranslatedText greetings={ownerPaymentHistoryTranslations.reasonForRejection} /></Label>
                 <Textarea
                   id="rejectionReason"
                   value={rejectionReason}
@@ -236,15 +238,15 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                                 isRejecting ? 
                                 <Button variant="outline" onClick={()=>{handleReject()}} disabled={Rejecting}>
                                     {
-                                        Rejecting ? "Rejecting" : "Confirm reject"
+                                        Rejecting ? <TranslatedText greetings={ownerPaymentHistoryTranslations.rejecting} /> : <TranslatedText greetings={ownerPaymentHistoryTranslations.confirmReject} />
                                     }
                                 </Button>
                                 :
-                                <Button variant="outline" onClick={()=>{setIsRejecting(true)}}>Reject</Button>
+                                <Button variant="outline" onClick={()=>{setIsRejecting(true)}}><TranslatedText greetings={ownerPaymentHistoryTranslations.reject} /></Button>
 
                             }
                             <Button disabled={loading} onClick={()=>{handleAccept()}}>
-                                {loading ? "Accepting" : "Accept"}
+                                {loading ? <TranslatedText greetings={ownerPaymentHistoryTranslations.accepting} /> : <TranslatedText greetings={ownerPaymentHistoryTranslations.accept} />}
                             </Button>
                         </div>
                     }

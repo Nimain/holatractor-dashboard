@@ -2,6 +2,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button"
 import { Attachment } from "@/utils/Types/types"
 import Image from "next/image"
+import TranslatedText from "@/components/Menubar/TranslatedText"
+import { singleStoreOwnerTranslations } from "../SingleStoreTranslation"
 
 interface AttachmentCardProps {
   attachment: Attachment
@@ -23,10 +25,9 @@ export function AttachmentCard({ attachment }: AttachmentCardProps) {
             className="object-cover w-full h-48 rounded-md"
           />
         <p className="text-muted-foreground my-2">{attachment.description}</p>
-        <p>Compatible with: {attachment.tractorId.length} tractor(s)</p>
       </CardContent>
       <CardFooter>
-        <Button className="w-full">View Details</Button>
+        <Button className="w-full"><TranslatedText greetings={singleStoreOwnerTranslations.viewDetails} /></Button>
       </CardFooter>
     </Card>
   )
