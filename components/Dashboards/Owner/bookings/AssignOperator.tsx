@@ -13,6 +13,8 @@ import React, { useEffect, useState } from 'react'
 import RequestOperators from '../_components/RequestOperators';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Briefcase, FileText, Mail, Phone } from 'lucide-react';
+import TranslatedText from '@/components/Menubar/TranslatedText';
+import { ownerBookingsTranslation } from './OwnerBookingsTranslations';
 
 const AssignOperator = ({ selectedRequest, storeId, store }: { selectedRequest: string; storeId?: string | null; store?: Store | null; }) => {
 
@@ -87,21 +89,21 @@ const AssignOperator = ({ selectedRequest, storeId, store }: { selectedRequest: 
                         setIsAssignOpen(true)
                     }}
                 >
-                    Assign Operator
+                    <TranslatedText greetings={ownerBookingsTranslation.assignOperator} />
                 </Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Assign Operator</DialogTitle>
+                    <DialogTitle><TranslatedText greetings={ownerBookingsTranslation.assignOperator} /></DialogTitle>
                 </DialogHeader>
                 {
                     fetchingOperators ?
-                        <p>Fetching all Operators</p>
+                        <p><TranslatedText greetings={ownerBookingsTranslation.fetchingOperators} /></p>
                         :
                         allOperators.length === 0 ?
                             <div
                                 className="w-fill h-[50vh] flex items-center justify-center flex-col gap-5">
-                                <p>No operators available</p>
+                                <p><TranslatedText greetings={ownerBookingsTranslation.noOperatorsAvailable} /></p>
                                 {/* <RequestOperators store={store} /> */}
                             </div>
                             :
@@ -132,14 +134,14 @@ const AssignOperator = ({ selectedRequest, storeId, store }: { selectedRequest: 
                                                 {operator.operator.OperatorBookingJob.length > 0 && (
                                                     <div className="flex items-center">
                                                         <Briefcase className="mr-2 h-4 w-4" />
-                                                        <span className="text-sm">Stores: {operator.operator.OperatorBookingJob.length}</span>
+                                                        <span className="text-sm"><TranslatedText greetings={ownerBookingsTranslation.stores} />: {operator.operator.OperatorBookingJob.length}</span>
                                                     </div>
                                                 )}
                                             </CardContent>
                                             <CardFooter>
                                                 <Button className="w-full" disabled={assigning} onClick={() => { handleAssign(operator.operator_id) }}>
                                                     {
-                                                        assigning ? "Assigning..." : "Assign"
+                                                        assigning ? <TranslatedText greetings={ownerBookingsTranslation.assigning} /> : <TranslatedText greetings={ownerBookingsTranslation.assign} />
                                                     }
                                                 </Button>
                                             </CardFooter>
