@@ -34,6 +34,9 @@ import 'swiper/css/pagination';
 import 'swiper/css/scrollbar';
 import PaymentMethods from "./BankAccountSelect";
 import { RiDirectionLine } from "react-icons/ri";
+import TranslatedText from "@/components/Menubar/TranslatedText";
+import { ownerMarketPlaceTranslations } from "./OwnerMarketPlaceTranslations";
+import { newBookingTranslations } from "../../Farmer/FarmerTranslation";
 
 interface AvailStore {
     storeId: string;
@@ -140,7 +143,7 @@ const NewBookings = ({ booking, minDistance }: { booking: Booking; minDistance: 
                             <div className="flex items-center pt-2">
                                 <RiDirectionLine className="h-4 w-4 mr-2 text-muted-foreground" />
                                 <span className="text-sm">
-                                    Distance: {minDistance ?? 0}km
+                                <TranslatedText greetings={ownerMarketPlaceTranslations.distance} />: {minDistance ?? 0}km
                                 </span>
                             </div>
                         </div>
@@ -152,7 +155,7 @@ const NewBookings = ({ booking, minDistance }: { booking: Booking; minDistance: 
                     <SheetTitle className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                             <ChevronRight className="h-4 w-4" />
-                            <span className="text-lg font-semibold">Lead Preview</span>
+                            <span className="text-lg font-semibold"><TranslatedText greetings={ownerMarketPlaceTranslations.leadPreview} /></span>
                         </div>
                     </SheetTitle>
                 </SheetHeader>
@@ -236,7 +239,7 @@ const NewBookings = ({ booking, minDistance }: { booking: Booking; minDistance: 
                                     <i className="fas fa-check-circle"></i>
                                 </span>
                                 <span className="text-sm text-muted-foreground">
-                                    Duration: <span className="font-medium">{booking.booking_hours === BookingHours.EIGHT_HOURS ? "8 hours" : booking.booking_hours === BookingHours.SEVEN_HOURS ? "7 hours" : booking.booking_hours === BookingHours.SIX_HOURS ? "6 hours" : booking.booking_hours === BookingHours.FIVE_HOURS ? "5 hours" : booking.booking_hours === BookingHours.FOUR_HOURS ? "4 hours" : booking.booking_hours === BookingHours.THREE_HOURS ? "3 hours" : booking.booking_hours === BookingHours.TWO_HOURS ? "2 hours" : "1 hour"}</span>
+                                <TranslatedText greetings={ownerMarketPlaceTranslations.duration} />: <span className="font-medium">{booking.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : booking.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : booking.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : booking.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : booking.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : booking.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : booking.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}</span>
                                 </span>
                             </div>
                         }
@@ -245,7 +248,7 @@ const NewBookings = ({ booking, minDistance }: { booking: Booking; minDistance: 
                                 <i className="fas fa-check-circle"></i>
                             </span>
                             <span className="text-sm text-muted-foreground">
-                                Created: <span className="font-medium">{new Date(booking.createdAt).toLocaleDateString()}</span>
+                            <TranslatedText greetings={ownerMarketPlaceTranslations.created} />: <span className="font-medium">{new Date(booking.createdAt).toLocaleDateString()}</span>
                             </span>
                         </div>
                     </div>
@@ -334,10 +337,10 @@ const NewBookings = ({ booking, minDistance }: { booking: Booking; minDistance: 
                                                                 }
                                                             </Swiper>
                                                             <p>
-                                                                TractorType: {tractorDetails.tractor.type}
+                                                            <TranslatedText greetings={ownerMarketPlaceTranslations.tractorType} />: {tractorDetails.tractor.type}
                                                             </p>
                                                             <p>
-                                                                Quantity: {tractorDetails.count}
+                                                            <TranslatedText greetings={ownerMarketPlaceTranslations.quantity} />: {tractorDetails.count}
                                                             </p>
                                                         </CardContent>
                                                     </Card>
@@ -394,7 +397,7 @@ const NewBookings = ({ booking, minDistance }: { booking: Booking; minDistance: 
                                                                 }
                                                             </Swiper>
                                                             <p>
-                                                                Quantity: {tractorDetails.count}
+                                                            <TranslatedText greetings={ownerMarketPlaceTranslations.quantity} />: {tractorDetails.count}
                                                             </p>
                                                         </CardContent>
                                                     </Card>
@@ -416,11 +419,11 @@ const NewBookings = ({ booking, minDistance }: { booking: Booking; minDistance: 
                                 >
                                     {
                                         checkingAvailability ? <span className="text-sm">
-                                            Checking availability
+                                            <TranslatedText greetings={ownerMarketPlaceTranslations.checkingAvailability} />
                                         </span>
                                             :
                                             <span className="text-sm">
-                                                Available stores {availableStores.length}
+                                                <TranslatedText greetings={ownerMarketPlaceTranslations.availableStores} /> {availableStores.length}
                                             </span>
                                     }
                                     {
@@ -449,16 +452,16 @@ const NewBookings = ({ booking, minDistance }: { booking: Booking; minDistance: 
                                                 <DialogContent className="max-w-xl">
                                                     <DialogHeader>
                                                         <DialogTitle className="text-xl font-semibold">
-                                                            Confirm this booking lead for the store {storeDetails.storeName}
+                                                        <TranslatedText greetings={ownerMarketPlaceTranslations.confirmBookingLeadForStore} /> {storeDetails.storeName}
                                                         </DialogTitle>
                                                         <DialogDescription>
-                                                            Are you sure you want to book this lead? This action cannot be undone.
+                                                        <TranslatedText greetings={ownerMarketPlaceTranslations.confirmBookingAction} />
                                                         </DialogDescription>
                                                     </DialogHeader>
                                                     <DialogFooter className="sm:justify-start">
                                                         <DialogClose asChild>
                                                             <Button variant="outline">
-                                                                Don't book
+                                                            <TranslatedText greetings={ownerMarketPlaceTranslations.dontBook} />
                                                             </Button>
                                                         </DialogClose>
                                                         <PaymentMethods bookingId={booking.id} storeId={storeDetails.storeId} />

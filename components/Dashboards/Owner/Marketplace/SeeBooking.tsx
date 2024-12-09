@@ -15,6 +15,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AssignOperator from "../bookings/AssignOperator";
 import PaymentReview from "../_components/PaymentProofAction";
+import { ownerMarketPlaceTranslations } from "./OwnerMarketPlaceTranslations";
+import TranslatedText from "@/components/Menubar/TranslatedText";
+import { newBookingTranslations } from "../../Farmer/FarmerTranslation";
 
 const SeeBooking = ({ booking }: { booking: Booking }) => {
     return (
@@ -49,7 +52,7 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
                     <SheetTitle className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                             <ChevronRight className="h-4 w-4" />
-                            <span className="text-lg font-semibold">Lead Preview</span>
+                            <span className="text-lg font-semibold"><TranslatedText greetings={ownerMarketPlaceTranslations.leadPreview} /></span>
                         </div>
                     </SheetTitle>
                 </SheetHeader>
@@ -133,7 +136,7 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
                                     <i className="fas fa-check-circle"></i>
                                 </span>
                                 <span className="text-sm text-muted-foreground">
-                                    Duration: <span className="font-medium">{booking.booking_hours === BookingHours.EIGHT_HOURS ? "8 hours" : booking.booking_hours === BookingHours.SEVEN_HOURS ? "7 hours" : booking.booking_hours === BookingHours.SIX_HOURS ? "6 hours" : booking.booking_hours === BookingHours.FIVE_HOURS ? "5 hours" : booking.booking_hours === BookingHours.FOUR_HOURS ? "4 hours" : booking.booking_hours === BookingHours.THREE_HOURS ? "3 hours" : booking.booking_hours === BookingHours.TWO_HOURS ? "2 hours" : "1 hour"}</span>
+                                <TranslatedText greetings={ownerMarketPlaceTranslations.duration} />: <span className="font-medium">{booking.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : booking.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : booking.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : booking.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : booking.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : booking.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : booking.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}</span>
                                 </span>
                             </div>
                         }
@@ -142,7 +145,7 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
                                 <i className="fas fa-check-circle"></i>
                             </span>
                             <span className="text-sm text-muted-foreground">
-                                Created: <span className="font-medium">{new Date(booking.createdAt).toLocaleDateString()}</span>
+                            <TranslatedText greetings={ownerMarketPlaceTranslations.created} />: <span className="font-medium">{new Date(booking.createdAt).toLocaleDateString()}</span>
                             </span>
                         </div>
                     </div>
@@ -165,7 +168,7 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
                         booking.owner_confirm &&
                         <div className="mt-6">
                             <h3 className="text-lg font-semibold">
-                                Booking timeline:
+                            <TranslatedText greetings={ownerMarketPlaceTranslations.bookingTimeline} />:
                             </h3>
                             <div className="space-y-6">
                                 <div className="flex gap-3">
@@ -178,7 +181,7 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
 
                                     <div className="flex-1 pb-6">
                                         <div className="flex justify-between">
-                                            <p className="font-medium">You just confirmed the booking</p>
+                                            <p className="font-medium"><TranslatedText greetings={ownerMarketPlaceTranslations.justConfirmedBooking} /></p>
                                         </div>
                                     </div>
                                 </div>
@@ -197,7 +200,7 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
                                     <div className="flex-1 pb-6">
                                         <div className="flex justify-between">
                                             <p className="font-medium">
-                                                Operator has accepted this booking.
+                                            <TranslatedText greetings={ownerMarketPlaceTranslations.operatorAcceptedBooking} />
                                             </p>
                                         </div>
                                     </div>
@@ -213,7 +216,7 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
                                     <div className="flex-1 pb-6">
                                         <div className="flex justify-between">
                                             <p className="font-medium">
-                                                The booking has left for it's destination.
+                                            <TranslatedText greetings={ownerMarketPlaceTranslations.bookingLeftDestination} />
                                             </p>
                                         </div>
                                     </div>
@@ -229,7 +232,7 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
                                     <div className="flex-1 pb-6">
                                         <div className="flex justify-between">
                                             <p className="font-medium">
-                                                The booking has arrived at it's destination.
+                                            <TranslatedText greetings={ownerMarketPlaceTranslations.bookingArrivedDestination} />
                                             </p>
                                         </div>
                                     </div>
@@ -245,7 +248,7 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
                                     <div className="flex-1 pb-6">
                                         <div className="flex justify-between">
                                             <p className="font-medium">
-                                                The booking has started it's work.
+                                            <TranslatedText greetings={ownerMarketPlaceTranslations.bookingStartedWork} />
                                             </p>
                                         </div>
                                     </div>
@@ -261,7 +264,7 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
                                     <div className="flex-1 pb-6">
                                         <div className="flex justify-between">
                                             <p className="font-medium">
-                                                The booking has completed. Wailting for farmer to pay.
+                                            <TranslatedText greetings={ownerMarketPlaceTranslations.bookingCompletedWaitingPayment} />
                                             </p>
                                         </div>
                                     </div>
@@ -277,7 +280,7 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
                                     <div className="flex-1 pb-6">
                                         <div className="flex justify-between">
                                             <p className="font-medium">
-                                                FArmer has submitted payment details
+                                            <TranslatedText greetings={ownerMarketPlaceTranslations.farmerSubmittedPayment} />
                                             </p>
                                         </div>
                                     </div>
@@ -293,7 +296,7 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
                                     <div className="flex-1 pb-6">
                                         <div className="flex justify-between">
                                             <p className="font-medium">
-                                                You have rejected the booking payment details.
+                                            <TranslatedText greetings={ownerMarketPlaceTranslations.rejectedPaymentDetails} />
                                             </p>
                                         </div>
                                     </div>
@@ -309,7 +312,7 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
                                     <div className="flex-1 pb-6">
                                         <div className="flex justify-between">
                                             <p className="font-medium">
-                                                The booking job has completed and you have accepted the payment.
+                                            <TranslatedText greetings={ownerMarketPlaceTranslations.jobCompletedPaymentAccepted} />
                                             </p>
                                         </div>
                                     </div>

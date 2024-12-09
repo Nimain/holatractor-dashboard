@@ -13,6 +13,8 @@ import { errorMessage } from '@/utils/Toastify/Messages';
 import { useCookie } from 'next-cookie';
 import NewBookings from './NewBookings'
 import SeeBooking from './SeeBooking'
+import TranslatedText from '@/components/Menubar/TranslatedText'
+import { ownerMarketPlaceTranslations } from './OwnerMarketPlaceTranslations'
 
 
 interface Lead {
@@ -75,32 +77,32 @@ const Marketplace = () => {
 
   const stats = [
     {
-      title: "INCOME",
+      title: <TranslatedText greetings={ownerMarketPlaceTranslations.income} />,
       value: `$${totalReceived}`,
       change: "10.5%",
       isPositive: true,
-      description: "vs last month",
+      description: <TranslatedText greetings={ownerMarketPlaceTranslations.vsLastMonth} />,
     },
     {
-      title: "AVG. SALES",
+      title: <TranslatedText greetings={ownerMarketPlaceTranslations.avgSales} />,
       value: `$${totalReceived}`,
       change: "6.2%",
       isPositive: true,
-      description: "vs last month",
+      description: <TranslatedText greetings={ownerMarketPlaceTranslations.vsLastMonth} />,
     },
     {
-      title: "BOOKINGS",
+      title: <TranslatedText greetings={ownerMarketPlaceTranslations.bookings} />,
       value: totalStandAloneBookimgs,
       change: "0.7%",
       isPositive: false,
-      description: "vs last month",
+      description: <TranslatedText greetings={ownerMarketPlaceTranslations.vsLastMonth} />,
     },
     {
-      title: "LEADS",
+      title: <TranslatedText greetings={ownerMarketPlaceTranslations.leads} />,
       value: customers,
       change: "15.2%",
       isPositive: false,
-      description: "vs last month",
+      description: <TranslatedText greetings={ownerMarketPlaceTranslations.vsLastMonth} />,
     },
   ];
 
@@ -183,11 +185,11 @@ const Marketplace = () => {
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink href="/owner">Dashboard</BreadcrumbLink>
+              <BreadcrumbLink href="/owner"><TranslatedText greetings={ownerMarketPlaceTranslations.dashboard} /></BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbLink href="/owner/marketplace">Marketplace</BreadcrumbLink>
+              <BreadcrumbLink href="/owner/marketplace"><TranslatedText greetings={ownerMarketPlaceTranslations.marketplace} /></BreadcrumbLink>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
@@ -208,7 +210,7 @@ const Marketplace = () => {
                       <Info className="h-4 w-4 text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Click for more details</p>
+                      <p><TranslatedText greetings={ownerMarketPlaceTranslations.clickForMoreDetails} /></p>
                     </TooltipContent>
                   </Tooltip>
                 </CardHeader>
@@ -233,17 +235,17 @@ const Marketplace = () => {
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-white p-7 rounded-md">
                   <CardTitle className="text-lg font-semibold flex items-center space-x-2">
                     <span className="h-3 w-3 rounded-full bg-blue-500"></span>
-                    <span>New</span>
+                    <span><TranslatedText greetings={ownerMarketPlaceTranslations.new} /></span>
                   </CardTitle>
                   <span className="text-sm text-muted-foreground">
-                    {newBookings.length} Leads
+                    {newBookings.length} <TranslatedText greetings={ownerMarketPlaceTranslations.leads} />
                   </span>
                 </CardHeader>
               </Card>
               {fetchingPageDetails ?
               <LeadShrimmer />
               : 
-              newBookings.length === 0 ? <p>No open bookings available</p> : newBookings.map((lead) => (
+              newBookings.length === 0 ? <p><TranslatedText greetings={ownerMarketPlaceTranslations.noOpenBookingsAvailable} /></p> : newBookings.map((lead) => (
                 <NewBookings booking={lead.booking} key={lead.booking.id} minDistance={lead.minDistance} />
               ))}
             </div>
@@ -254,17 +256,17 @@ const Marketplace = () => {
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-white p-7 rounded-md">
                   <CardTitle className="text-lg font-semibold flex items-center space-x-2">
                     <span className="h-3 w-3 rounded-full bg-purple-500"></span>
-                    <span>Open</span>
+                    <span><TranslatedText greetings={ownerMarketPlaceTranslations.open} /></span>
                   </CardTitle>
                   <span className="text-sm text-muted-foreground">
-                    {openBookings.length} Leads
+                    {openBookings.length} <TranslatedText greetings={ownerMarketPlaceTranslations.leads} />
                   </span>
                 </CardHeader>
               </Card>
               {fetchingPageDetails ?
               <LeadShrimmer />
               :
-              openBookings.length === 0 ? <p>No open bookings available</p> : openBookings.map((lead) => (
+              openBookings.length === 0 ? <p><TranslatedText greetings={ownerMarketPlaceTranslations.noOpenBookingsAvailable} /></p> : openBookings.map((lead) => (
                 <SeeBooking booking={lead} />
               ))}
             </div>
@@ -275,10 +277,10 @@ const Marketplace = () => {
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-white p-7 rounded-md">
                   <CardTitle className="text-lg font-semibold flex items-center space-x-2">
                     <span className="h-3 w-3 rounded-full bg-green-500"></span>
-                    <span>In Progress</span>
+                    <span><TranslatedText greetings={ownerMarketPlaceTranslations.inProgress} /></span>
                   </CardTitle>
                   <span className="text-sm text-muted-foreground">
-                    {inProgressBookings.length} Leads
+                    {inProgressBookings.length} <TranslatedText greetings={ownerMarketPlaceTranslations.leads} />
                   </span>
                 </CardHeader>
               </Card>
@@ -286,7 +288,7 @@ const Marketplace = () => {
               fetchingPageDetails ?
               <LeadShrimmer />
               :
-              inProgressBookings.length === 0 ? <p>No open bookings available</p> : inProgressBookings.map((lead) => (
+              inProgressBookings.length === 0 ? <p><TranslatedText greetings={ownerMarketPlaceTranslations.noOpenBookingsAvailable} /></p> : inProgressBookings.map((lead) => (
                 <SeeBooking booking={lead} />
               ))}
             </div>
@@ -297,10 +299,10 @@ const Marketplace = () => {
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-white p-7 rounded-md">
                   <CardTitle className="text-lg font-semibold flex items-center space-x-2">
                     <span className="h-3 w-3 rounded-full bg-red-500"></span>
-                    <span>Closed</span>
+                    <span><TranslatedText greetings={ownerMarketPlaceTranslations.closed} /></span>
                   </CardTitle>
                   <span className="text-sm text-muted-foreground">
-                    {completedBookings.length} Leads
+                    {completedBookings.length} <TranslatedText greetings={ownerMarketPlaceTranslations.leads} />
                   </span>
                 </CardHeader>
               </Card>
@@ -308,7 +310,7 @@ const Marketplace = () => {
               fetchingPageDetails ?
               <LeadShrimmer />
               :
-              completedBookings.length === 0 ? <p>No open bookings available</p> : completedBookings.map((lead) => (
+              completedBookings.length === 0 ? <p><TranslatedText greetings={ownerMarketPlaceTranslations.noOpenBookingsAvailable} /></p> : completedBookings.map((lead) => (
                 <SeeBooking booking={lead} />
               ))}
             </div>

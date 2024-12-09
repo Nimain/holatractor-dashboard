@@ -12,6 +12,8 @@ import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
 import { renderInstance } from '@/utils/Axios/RenderInstance'
 import { useCookie } from 'next-cookie'
 import { CircularProgress } from '@mui/material'
+import TranslatedText from '@/components/Menubar/TranslatedText'
+import { ownerMarketPlacePaymentTranslations } from '../Marketplace/OwnerMarketplaceBookingTranslations'
 
 type PaymentReviewProps = {
   screenshotUrl: string
@@ -84,13 +86,13 @@ export default function PaymentReview({ screenshotUrl, referenceNumber, paymentI
     <Dialog>
       <DialogTrigger asChild>
         <Button>
-          Review
+        <TranslatedText greetings={ownerMarketPlacePaymentTranslations.review} />
         </Button>
       </DialogTrigger>
       <DialogContent className='max-h-[90vh] overflow-auto' style={{ scrollbarWidth: "none" }}>
         <Card>
           <CardHeader>
-            <CardTitle>Review Payment Proof</CardTitle>
+            <CardTitle><TranslatedText greetings={ownerMarketPlacePaymentTranslations.reviewPaymentProof} /></CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <Dialog open={isFullScreenOpen} onOpenChange={setIsFullScreenOpen}>
@@ -123,12 +125,12 @@ export default function PaymentReview({ screenshotUrl, referenceNumber, paymentI
             </Dialog>
             {referenceNumber && (
               <p className="text-sm text-muted-foreground">
-                Reference Number: {referenceNumber}
+                <TranslatedText greetings={ownerMarketPlacePaymentTranslations.referenceNumber} />: {referenceNumber}
               </p>
             )}
             {isRejecting && (
               <div className="space-y-2">
-                <Label htmlFor="rejectionReason">Reason for Rejection</Label>
+                <Label htmlFor="rejectionReason"><TranslatedText greetings={ownerMarketPlacePaymentTranslations.reasonForRejection} /></Label>
                 <Textarea
                   id="rejectionReason"
                   value={rejectionReason}
@@ -140,23 +142,22 @@ export default function PaymentReview({ screenshotUrl, referenceNumber, paymentI
             )}
           </CardContent>
           <CardFooter className="flex justify-between">
-            {loading ? <CircularProgress /> :
-              isRejecting ? (
+            {isRejecting ? (
                 <>
                   <Button variant="outline" onClick={() => setIsRejecting(false)}>
-                    Cancel
+                  <TranslatedText greetings={ownerMarketPlacePaymentTranslations.cancel} />
                   </Button>
-                  <Button variant="destructive" onClick={handleReject}>
-                    Confirm Rejection
+                  <Button variant="destructive" onClick={handleReject} disabled={loading}>
+                  <TranslatedText greetings={ownerMarketPlacePaymentTranslations.confirmRejection} />
                   </Button>
                 </>
               ) : (
                 <>
                   <Button variant="destructive" onClick={() => setIsRejecting(true)}>
-                    Reject
+                  <TranslatedText greetings={ownerMarketPlacePaymentTranslations.reject} />
                   </Button>
-                  <Button variant="default" onClick={handleAccept}>
-                    Accept
+                  <Button variant="default" onClick={handleAccept} disabled={loading}>
+                  <TranslatedText greetings={ownerMarketPlacePaymentTranslations.accept} />
                   </Button>
                 </>
               )}

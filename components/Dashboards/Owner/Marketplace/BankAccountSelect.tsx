@@ -16,6 +16,8 @@ import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
 import { BankAccount, PayPal, TransactionMethod, UPI } from '@/utils/Types/types'
 import { uploadFileToS3 } from '@/utils/AWS/FileUpload'
 import { CircularProgress } from '@mui/material'
+import TranslatedText from '@/components/Menubar/TranslatedText'
+import { ownerMarketPlacePaymentTranslations } from './OwnerMarketplaceBookingTranslations'
 
 const currencies = [
     { code: 'USD', symbol: '$', name: 'US Dollar' },
@@ -130,21 +132,21 @@ export default function PaymentMethods({ bookingId, storeId }: { bookingId: stri
             window.location.reload()
         }).catch((err) => {
             if (err.response && err.response.status === 404) {
-                if(err.response.data.message === "Booking is not valid"){
+                if (err.response.data.message === "Booking is not valid") {
                     errorMessage("Booking is not valid")
-                } else if(err.response.data.message === "Bank account not found"){
+                } else if (err.response.data.message === "Bank account not found") {
                     errorMessage("Bank account not found")
-                } else if(err.response.data.message === "Paypal details not found"){
+                } else if (err.response.data.message === "Paypal details not found") {
                     errorMessage("Paypal details not found")
-                } else if(err.response.data.message === "UPI details not found"){
+                } else if (err.response.data.message === "UPI details not found") {
                     errorMessage("UPI details not found")
                 }
             } else if (err.response && err.response.status === 400) {
-                if(err.response.data.message === "User has not confirmed the booking. Wait till user booked"){
+                if (err.response.data.message === "User has not confirmed the booking. Wait till user booked") {
                     errorMessage("User has not confirmed the booking. Wait till user booked")
-                } else if(err.response.data.message === "You are not allowed to perform this task"){
+                } else if (err.response.data.message === "You are not allowed to perform this task") {
                     errorMessage("You are not allowed to perform this task")
-                } else if(err.response.data.message === "Bank details not found"){
+                } else if (err.response.data.message === "Bank details not found") {
                     errorMessage("Bank details not found")
                 }
             } else {
@@ -165,31 +167,31 @@ export default function PaymentMethods({ bookingId, storeId }: { bookingId: stri
         <Dialog>
             <DialogTrigger asChild>
                 <Button>
-                    Yes book
+                <TranslatedText greetings={ownerMarketPlacePaymentTranslations.yesBook} />
                 </Button>
             </DialogTrigger>
             <DialogContent>
                 {
-                    fetchingBankAccounts ? <p>Fetching bank accounts</p> :
+                    fetchingBankAccounts ? <p><TranslatedText greetings={ownerMarketPlacePaymentTranslations.fetchingBankAccounts} /></p> :
                         <div className="space-y-6">
                             <div className="flex justify-between items-center">
-                                <h2 className="text-2xl font-bold">Payment Methods</h2>
+                                <h2 className="text-2xl font-bold"><TranslatedText greetings={ownerMarketPlacePaymentTranslations.paymentMethods} /></h2>
                                 <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
                                     <DialogTrigger asChild>
                                         <Button>
                                             <PlusCircle className="mr-2 h-4 w-4" />
-                                            Add Payment Method
+                                            <TranslatedText greetings={ownerMarketPlacePaymentTranslations.addPaymentMethod} />
                                         </Button>
                                     </DialogTrigger>
                                     <DialogContent>
                                         <DialogHeader>
-                                            <DialogTitle>Add Payment Method</DialogTitle>
+                                            <DialogTitle><TranslatedText greetings={ownerMarketPlacePaymentTranslations.addPaymentMethod} /></DialogTitle>
                                         </DialogHeader>
                                         <Tabs defaultValue="bank">
                                             <TabsList className="grid w-full grid-cols-3">
-                                                <TabsTrigger value="bank">Bank Account</TabsTrigger>
-                                                <TabsTrigger value="paypal">PayPal</TabsTrigger>
-                                                <TabsTrigger value="upi">UPI</TabsTrigger>
+                                                <TabsTrigger value="bank"><TranslatedText greetings={ownerMarketPlacePaymentTranslations.bankAccount} /></TabsTrigger>
+                                                <TabsTrigger value="paypal"><TranslatedText greetings={ownerMarketPlacePaymentTranslations.paypal} /></TabsTrigger>
+                                                <TabsTrigger value="upi"><TranslatedText greetings={ownerMarketPlacePaymentTranslations.upi} /></TabsTrigger>
                                             </TabsList>
                                             <TabsContent value="bank">
                                                 <BankAccountForm setIsAddModalOpen={setIsAddModalOpen} />
@@ -208,49 +210,49 @@ export default function PaymentMethods({ bookingId, storeId }: { bookingId: stri
                             {(bankAccounts.length === 0 && paypalAccounts.length === 0 && UPIAccounts.length === 0) ? (
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle>No Payment Methods</CardTitle>
-                                        <CardDescription>You haven't added any payment methods yet.</CardDescription>
+                                        <CardTitle><TranslatedText greetings={ownerMarketPlacePaymentTranslations.noPaymentMethods} /></CardTitle>
+                                        <CardDescription><TranslatedText greetings={ownerMarketPlacePaymentTranslations.noPaymentMethodsYet} /></CardDescription>
                                     </CardHeader>
                                     <CardContent>
-                                        <p className="text-sm text-muted-foreground">Click the "Add Payment Method" button above to get started.</p>
+                                        <p className="text-sm text-muted-foreground"><TranslatedText greetings={ownerMarketPlacePaymentTranslations.addPaymentMethodHint} /></p>
                                     </CardContent>
                                 </Card>
                             ) : (
                                 <Card>
                                     <CardHeader>
-                                        <CardTitle>Select Payment Method</CardTitle>
-                                        <CardDescription>Choose how you want to receive payments</CardDescription>
+                                        <CardTitle><TranslatedText greetings={ownerMarketPlacePaymentTranslations.selectPaymentMethod} /></CardTitle>
+                                        <CardDescription><TranslatedText greetings={ownerMarketPlacePaymentTranslations.choosePaymentMethod} /></CardDescription>
                                     </CardHeader>
                                     <CardContent>
                                         <RadioGroup value={selectedMethod || ''} onValueChange={setSelectedMethod}>
                                             {
-                                                fetchingBankAccounts ? <p>Fetching bank accounts</p>
+                                                fetchingBankAccounts ? <p><TranslatedText greetings={ownerMarketPlacePaymentTranslations.fetchingBankAccounts} /></p>
                                                     :
                                                     bankAccounts.map((method) => (
                                                         <div key={method.id} className="flex items-center space-x-2 mb-4">
                                                             <RadioGroupItem value={method.id} id={method.id} />
                                                             <Label htmlFor={method.id} className="flex items-center">
                                                                 <Currency className="w-4 h-4 mr-2" />
-                                                                <span className="capitalize">Bank account: xxxxx{method.accountNumber.slice(-6)}</span>
+                                                                <span className="capitalize"><TranslatedText greetings={ownerMarketPlacePaymentTranslations.bankAccount} />: xxxxx{method.accountNumber.slice(-6)}</span>
                                                             </Label>
                                                         </div>
                                                     ))
                                             }
                                             {
-                                                fetchingPaypalAccounts ? <p>Fetching paypal account</p>
+                                                fetchingPaypalAccounts ? <p><TranslatedText greetings={ownerMarketPlacePaymentTranslations.fetchingPaypalAccounts} /></p>
                                                     :
                                                     paypalAccounts.map((method) => (
                                                         <div key={method.id} className="flex items-center space-x-2 mb-4">
                                                             <RadioGroupItem value={method.id} id={method.id} />
                                                             <Label htmlFor={method.id} className="flex items-center">
                                                                 <CreditCard className="w-4 h-4 mr-2" />
-                                                                <span className="capitalize">Paypal account: xxxxx{method.email.slice(-6)}</span>
+                                                                <span className="capitalize"><TranslatedText greetings={ownerMarketPlacePaymentTranslations.paypal} />: xxxxx{method.email.slice(-6)}</span>
                                                             </Label>
                                                         </div>
                                                     ))
                                             }
                                             {
-                                                fetchingUPIAccounts ? <p>Fetching UPI accounts</p>
+                                                fetchingUPIAccounts ? <p><TranslatedText greetings={ownerMarketPlacePaymentTranslations.fetchingUPIAccounts} /></p>
                                                     :
                                                     UPIAccounts.map((method) => (
                                                         <div key={method.id} className="flex items-center space-x-2 mb-4">
@@ -258,7 +260,7 @@ export default function PaymentMethods({ bookingId, storeId }: { bookingId: stri
                                                             <Label htmlFor={method.id} className="flex items-center">
                                                                 {/* {method.type === 'paypal' && <CreditCard className="w-4 h-4 mr-2" />} */}
                                                                 <QrCode className="w-4 h-4 mr-2" />
-                                                                <span className="capitalize">UPI account: xxxxx{method.upi_id.slice(-6)}</span>
+                                                                <span className="capitalize"><TranslatedText greetings={ownerMarketPlacePaymentTranslations.upi} />: xxxxx{method.upi_id.slice(-6)}</span>
                                                             </Label>
                                                         </div>
                                                     ))
@@ -269,9 +271,9 @@ export default function PaymentMethods({ bookingId, storeId }: { bookingId: stri
                                         <Button onClick={() => { handleAccept() }} disabled={confirming}>
                                             {
                                                 confirming ?
-                                                    "Accepting"
+                                                    <TranslatedText greetings={ownerMarketPlacePaymentTranslations.accepting} />
                                                     :
-                                                    "Accept booking"
+                                                    <TranslatedText greetings={ownerMarketPlacePaymentTranslations.acceptBooking} />
                                             }
                                         </Button>
                                     </CardFooter>
@@ -318,14 +320,14 @@ function BankAccountForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: bool
             successMessage("Bank account added")
             setIsAddModalOpen(false)
         }).catch((err) => {
-            if (err.response && err.response.status === 404){
-                if(err.response.data.message === "Log in user not found"){
+            if (err.response && err.response.status === 404) {
+                if (err.response.data.message === "Log in user not found") {
                     errorMessage("Log in user not found")
-                } 
-            } else if (err.response && err.response.status === 409){
-                if(err.response.data.message === "You can't add someone else's account"){
+                }
+            } else if (err.response && err.response.status === 409) {
+                if (err.response.data.message === "You can't add someone else's account") {
                     errorMessage("You can't add someone else's account")
-                } 
+                }
             } else {
                 errorMessage("Error adding bank account")
             }
@@ -333,8 +335,6 @@ function BankAccountForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: bool
             setLoading(false)
         })
     }
-
-    if (loading) return <p>Adding your details</p>
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -358,7 +358,14 @@ function BankAccountForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: bool
                 </SelectContent>
             </Select>
             <Input name="country" placeholder="Country" onChange={handleChange} required />
-            <Button type="submit">Add Bank Account</Button>
+            <Button type="submit" disabled={loading}>
+                {
+                    loading ?
+                        <TranslatedText greetings={ownerMarketPlacePaymentTranslations.accepting} />
+                        :
+                        <TranslatedText greetings={ownerMarketPlacePaymentTranslations.addBankAccount} />
+                }
+            </Button>
         </form>
     )
 }
@@ -382,14 +389,14 @@ function PayPalForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: boolean) 
             successMessage("paypal account added")
             setIsAddModalOpen(false)
         }).catch((err) => {
-            if (err.response && err.response.status === 404){
-                if(err.response.data.message === "Log in user not found"){
+            if (err.response && err.response.status === 404) {
+                if (err.response.data.message === "Log in user not found") {
                     errorMessage("Log in user not found")
-                } 
-            } else if (err.response && err.response.status === 409){
-                if(err.response.data.message === "You can't add someone else's account"){
+                }
+            } else if (err.response && err.response.status === 409) {
+                if (err.response.data.message === "You can't add someone else's account") {
                     errorMessage("You can't add someone else's account")
-                } 
+                }
             } else {
                 errorMessage("Error adding paypal account")
             }
@@ -398,12 +405,17 @@ function PayPalForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: boolean) 
         })
     }
 
-    if (loading) return <p>Adding your details</p>
-
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <Input type="email" placeholder="PayPal Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            <Button type="submit">Add PayPal</Button>
+            <Button type="submit" disabled={loading}>
+                {
+                    loading ?
+                        <TranslatedText greetings={ownerMarketPlacePaymentTranslations.accepting} />
+                        :
+                        <TranslatedText greetings={ownerMarketPlacePaymentTranslations.addPaypal} />
+                }
+            </Button>
         </form>
     )
 }
@@ -434,14 +446,14 @@ function UPIForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: boolean) => 
             successMessage("paypal account added")
             setIsAddModalOpen(false)
         }).catch((err) => {
-            if (err.response && err.response.status === 404){
-                if(err.response.data.message === "Log in user not found"){
+            if (err.response && err.response.status === 404) {
+                if (err.response.data.message === "Log in user not found") {
                     errorMessage("Log in user not found")
-                } 
-            } else if (err.response && err.response.status === 409){
-                if(err.response.data.message === "You can't add someone else's account"){
+                }
+            } else if (err.response && err.response.status === 409) {
+                if (err.response.data.message === "You can't add someone else's account") {
                     errorMessage("You can't add someone else's account")
-                } 
+                }
             } else {
                 errorMessage("Error adding UPI account")
             }
@@ -455,8 +467,6 @@ function UPIForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: boolean) => 
             setQrCode(e.target.files[0])
         }
     }
-
-    if (loading) return <p>Adding your details</p>
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -474,8 +484,15 @@ function UPIForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: boolean) => 
                     {qrCode ? 'Change QR Code' : 'Upload QR Code'}
                 </Button>
             </div>
-            {qrCode && <p className="text-sm text-muted-foreground">File selected: {qrCode.name}</p>}
-            <Button type="submit">Add UPI</Button>
+            {qrCode && <p className="text-sm text-muted-foreground"><TranslatedText greetings={ownerMarketPlacePaymentTranslations.fileSelected} />: {qrCode.name}</p>}
+            <Button type="submit" disabled={loading}>
+                {
+                    loading ?
+                        <TranslatedText greetings={ownerMarketPlacePaymentTranslations.accepting} />
+                        :
+                        <TranslatedText greetings={ownerMarketPlacePaymentTranslations.addQR} />
+                }
+            </Button>
         </form>
     )
 }
