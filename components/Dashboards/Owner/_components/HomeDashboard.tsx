@@ -168,7 +168,7 @@ const HomeDashboard = (
                                                                 if (index >= 3) return null
                                                                 return (
                                                                     <div
-                                                                        className="w-12 h-12 rounded-full border-2 border-white overflow-hidden relative -mr-6"
+                                                                        className="w-12 h-12 overflow-hidden relative -mr-6"
                                                                         style={{ zIndex: 3 }}
                                                                         key={index}
                                                                     >
@@ -184,7 +184,7 @@ const HomeDashboard = (
                                                             })
                                                         }
                                                         <span className="text-white text-lg font-bold ml-8 text-center mt-3">
-                                                            + {bookings.length - 3} <TranslatedText greetings={OwnerDashboardTranslation.hasBooked} />
+                                                            {bookings.length > 3 && "+"} {bookings.length - 3} <TranslatedText greetings={OwnerDashboardTranslation.hasBooked} />
                                                         </span>
                                                     </div>
                                             }
