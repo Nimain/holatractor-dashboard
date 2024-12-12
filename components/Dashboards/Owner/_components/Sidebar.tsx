@@ -2,12 +2,12 @@
 
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Boxes, ChevronDown, ChevronLeft, ChevronRight, Home, MapPin, Plus, Settings, Store as StoreIcon, Trash2, Upload, UserSearch, Wallet } from "lucide-react"
+import { Boxes, ChevronDown, ChevronLeft, ChevronRight, Plus, Settings, Store as StoreIcon, UserSearch, Wallet } from "lucide-react"
 import { useCookie } from "next-cookie"
 import Image from "next/image"
 import Link from "next/link"
-import { useState, useEffect, useRef, ChangeEvent } from "react"
-import { Backdrop, CircularProgress, Tooltip } from "@mui/material"
+import { useState, useEffect } from "react"
+import { Tooltip } from "@mui/material"
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import StyleIcon from '@mui/icons-material/Style';
 import { Separator } from "@/components/ui/separator"
@@ -16,10 +16,11 @@ import { Store } from "@/utils/Types/types"
 import { errorMessage } from "@/utils/Toastify/Messages"
 import "leaflet/dist/leaflet.css";
 import "leaflet-draw/dist/leaflet.draw.css";
-import NewStore from "./NewStore"
 import { useDispatch } from "react-redux"
 import { changeNewStoreShow } from "@/redux/NewStoreShow/NewStoreShow"
 import { useRouter } from "next/navigation"
+import TranslatedText from "@/components/Menubar/TranslatedText"
+import { ownerSidebar } from "./OwnerSidebarTranslations"
 
 interface user {
     userId: string;
@@ -81,7 +82,7 @@ const Sidebar = () => {
                 {isExpanded && <h1 className="text-xl md:text-2xl font-medium md:font-bold">Holatractor</h1>}
             </Link>
             <div className="px-4 flex justify-between items-center">
-                {isExpanded && <h1 className="text-xl md:text-2xl font-medium md:font-bold">Dashboard</h1>}
+                {isExpanded && <h1 className="text-xl md:text-2xl font-medium md:font-bold"><TranslatedText greetings={ownerSidebar.dashboard} /></h1>}
                 <Button size="icon" onClick={() => setIsExpanded(!isExpanded)} className="bg-transparent hover:bg-white/20">
                     {isExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                 </Button>
@@ -92,12 +93,12 @@ const Sidebar = () => {
                         <Button
                             className={`flex gap-2 items-center bg-transparent hover:bg-white/20 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
                         >
-                            <Tooltip title={"Store"} placement="right">
+                            <Tooltip title={<TranslatedText greetings={ownerSidebar.store} />} placement="right">
                                 <StoreIcon className="h-6 w-6" />
                             </Tooltip>
                             {isExpanded && (
                                 <>
-                                    {`Store ${stores.length}`}
+                                    <TranslatedText greetings={ownerSidebar.store} /> {stores.length}
                                     <ChevronDown className="h-4 w-4 ml-auto" />
                                 </>
                             )}
@@ -110,7 +111,7 @@ const Sidebar = () => {
                                 onClick={()=>{dispatch(changeNewStoreShow())}}
                             >
                                 <Plus className="h-6 w-6" />
-                                New store
+                                <TranslatedText greetings={ownerSidebar.newStore} />
                             </Button>
                         </Link>}
                     </CollapsibleContent>
@@ -119,50 +120,50 @@ const Sidebar = () => {
                     <Button
                         className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
                     >
-                        <Tooltip title={"Bookings"} placement="right">
+                        <Tooltip title={<TranslatedText greetings={ownerSidebar.bookings} />} placement="right">
                             <StyleIcon className="h-6 w-6" />
                         </Tooltip>
-                        {isExpanded && "Bookings"}
+                        {isExpanded && <TranslatedText greetings={ownerSidebar.bookings} />}
                     </Button>
                 </Link>
                 <Link href={"/owner/operator"}>
                     <Button
                         className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
                     >
-                        <Tooltip title={"Operator"} placement="right">
+                        <Tooltip title={<TranslatedText greetings={ownerSidebar.operator} />} placement="right">
                             <UserSearch className="h-6 w-6" />
                         </Tooltip>
-                        {isExpanded && "Operator"}
+                        {isExpanded && <TranslatedText greetings={ownerSidebar.operator} />}
                     </Button>
                 </Link>
                 <Link href={"/owner/marketplace"}>
                     <Button
                         className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
                     >
-                        <Tooltip title={"Marketplace"} placement="right">
+                        <Tooltip title={<TranslatedText greetings={ownerSidebar.marketplace} />} placement="right">
                             <Boxes className="h-6 w-6" />
                         </Tooltip>
-                        {isExpanded && "Marketplace"}
+                        {isExpanded && <TranslatedText greetings={ownerSidebar.marketplace} />}
                     </Button>
                 </Link>
                 <Link href={"/owner/payment"}>
                     <Button
                         className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
                     >
-                        <Tooltip title={"Payment"} placement="right">
+                        <Tooltip title={<TranslatedText greetings={ownerSidebar.payment} />} placement="right">
                             <Wallet className="h-6 w-6" />
                         </Tooltip>
-                        {isExpanded && "Payment"}
+                        {isExpanded && <TranslatedText greetings={ownerSidebar.payment} />}
                     </Button>
                 </Link>
                 <Link href={"/owner/customer"}>
                     <Button
                         className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
                     >
-                        <Tooltip title={"Customers"} placement="right">
+                        <Tooltip title={<TranslatedText greetings={ownerSidebar.customers} />} placement="right">
                             <SupportAgentIcon className="h-6 w-6" />
                         </Tooltip>
-                        {isExpanded && "Customers"}
+                        {isExpanded && <TranslatedText greetings={ownerSidebar.customers} />}
                     </Button>
                 </Link>
                 <Separator className={`mt-4 ${isExpanded ? "w-[90%]" : "w-[75%]"} mx-auto`} />
@@ -170,10 +171,10 @@ const Sidebar = () => {
                     className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
                     onClick={() => { handleLogOut() }}
                 >
-                    <Tooltip title={"Log out"} placement="right">
+                    <Tooltip title={<TranslatedText greetings={ownerSidebar.logOut} />} placement="right">
                         <Settings className="h-6 w-6" />
                     </Tooltip>
-                    {isExpanded && "Log out"}
+                    {isExpanded && <TranslatedText greetings={ownerSidebar.logOut} />}
                 </Button>
             </nav>
         </aside>

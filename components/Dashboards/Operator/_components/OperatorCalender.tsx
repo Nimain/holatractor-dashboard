@@ -111,16 +111,17 @@ export const CalendarOne = ({ booking }: { booking: Booking[]; }) => {
     }
 
     return (
-        <div className="w-[600px]">
+        <div className="w-full 1200px:w-[600px]">
             <Card className="h-full">
                 <CardHeader>
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center flex-col 1200px:flex-row">
                         <CardTitle className="text-lg font-semibold flex items-center space-x-2">
                             <span className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200">
                                 <Calu className="w-4 h-4 text-gray-600" /> {/* Icon inside a rounded box */}
                             </span>
                             <span><TranslatedText greetings={operatorDashboardTranslations.calendar} /></span>
-                        </CardTitle>            <div className="flex items-center gap-4">
+                        </CardTitle>            
+                        <div className="flex items-center gap-4">
                             <Button variant="ghost" onClick={handlePreviousMonth}>
                                 &lt;
                             </Button>
@@ -156,7 +157,7 @@ export const CalendarOne = ({ booking }: { booking: Booking[]; }) => {
                                             <Button
                                                 variant="ghost"
                                                 className={`
-                                            w-12 h-12 rounded-full text-sm
+                                            w-5 h-5 md:w-12 md:h-12 rounded-full text-sm
                                             transition-colors duration-200
                                             ${bookingStatus && getBookingStatusClass(bookingStatus)}
                                             ${isToday && !bookingStatus ? "bg-gray-800 text-white hover:bg-gray-700" : ""}

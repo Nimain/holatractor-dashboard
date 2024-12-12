@@ -117,9 +117,6 @@ export default function StorePage() {
 
           <div className="flex items-center gap-2 -mt-36">
             <div className="flex items-center gap-2 rounded-[40px] bg-white/60 px-4 py-4 backdrop-blur-sm">
-              <Heart className="h-4 w-4 text-black" />
-            </div>
-            <div className="flex items-center gap-2 rounded-[40px] bg-white/60 px-4 py-4 backdrop-blur-sm">
               <Share className="h-4 w-4 text-black" />
             </div>
           </div>
@@ -173,7 +170,7 @@ export default function StorePage() {
 
         <div className='w-full grid gap-6 grid-cols-3'>
 
-          {selectedTab === "Overview" && (store.TractorInStore.length === 0 && store.AttachmentInStore.length === 0) ? (
+          {selectedTab === "Overview" && (store.TractorInStore.length === 0 && store.AttachmentInStore.length === 0) && (
             <Card className="w-full max-w-sm mx-auto text-center p-6">
               <CardContent className="space-y-6">
                 <div className="bg-gray-50 rounded-lg p-4 mx-auto w-20 h-20 flex items-center justify-center">
@@ -187,7 +184,9 @@ export default function StorePage() {
                 </div>
               </CardContent>
             </Card>
-          ) : store.TractorInStore.map((tractor) => (
+          )}
+
+          {selectedTab === "Overview" && store.TractorInStore.map((tractor) => (
             <TractorCard key={tractor.id} tractor={tractor.baseTractor} />
           ))}
 
@@ -195,7 +194,8 @@ export default function StorePage() {
             <AttachmentCard key={tractor.id} attachment={tractor.baseAttachment} />
           ))}
 
-          {selectedTab === "Tractor" && store.TractorInStore.length === 0 ? (
+          {selectedTab === "Tractor" ? 
+          store.TractorInStore.length === 0 && (
             <Card className="w-full max-w-sm mx-auto text-center p-6">
               <CardContent className="space-y-6">
                 <div className="bg-gray-50 rounded-lg p-4 mx-auto w-20 h-20 flex items-center justify-center">
@@ -211,11 +211,11 @@ export default function StorePage() {
             </Card>
           )
             :
-            store.TractorInStore.map((tractor) => (
+            selectedTab === "Tractor" && store.TractorInStore.map((tractor) => (
               <TractorCard key={tractor.id} tractor={tractor.baseTractor} />
             ))}
 
-          {selectedTab === "Attachment" && store.TractorInStore.length === 0 ? (
+          {selectedTab === "Attachment" ? store.TractorInStore.length === 0 && (
             <Card className="w-full max-w-sm mx-auto text-center p-6">
               <CardContent className="space-y-6">
                 <div className="bg-gray-50 rounded-lg p-4 mx-auto w-20 h-20 flex items-center justify-center">
@@ -229,7 +229,7 @@ export default function StorePage() {
                 </div>
               </CardContent>
             </Card>
-          ) : store.AttachmentInStore.map((tractor) => (
+          ) : selectedTab === "Attachment" && store.AttachmentInStore.map((tractor) => (
             <AttachmentCard key={tractor.id} attachment={tractor.baseAttachment} />
           ))}
 

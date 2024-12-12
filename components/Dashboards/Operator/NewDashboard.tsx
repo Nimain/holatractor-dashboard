@@ -128,14 +128,14 @@ const NewDashboard = () => {
 
       return (
         <div>
-          <div className="flex flex-col p-6 ">
+          <div className="flex flex-col">
             {/* Tasks Section */}
-            <div className="flex gap-8 p-6 bg-gray-50">
+            <div className="flex gap-8 p-0 md:p-6 flex-col 1200px:flex-row bg-gray-50">
               {/* Tasks Section */}
               <div className="flex-1">
                 <div className="bg-white h-full flex flex-col rounded-xl">
-                  <div className="p-6 flex-grow">
-                    <div className="flex justify-between items-center mb-6">
+                  <div className="1200px:p-6 flex-grow">
+                    <div className="flex justify-between items-center mb-6 p-4 md:p-0">
                       <h2 className="text-lg font-semibold flex items-center space-x-2">
                         <span className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200">
                           <BookOpen className="w-4 h-4 text-gray-600" /> {/* Icon inside a rounded box */}
@@ -145,7 +145,7 @@ const NewDashboard = () => {
                       <Link href={"/operator/bookings"} className="text-sm text-gray-600 hover:text-gray-800">See All</Link>
                     </div>
     
-                    <div className="flex gap-6">
+                    <div className="flex gap-6 flex-col 1400px:flex-row">
                       {
                         fetchingOperatorDetails ? 
                         <div className='w-full bg-gray-300 animate-pulse rounded-xl h-80' />
@@ -153,7 +153,7 @@ const NewDashboard = () => {
                         latestBookings.map((booking, index)=>{
                           const user_name = `${booking.user?.first_name} ${booking.user?.middle_name ?? ""} ${booking.user?.last_name}`
                           return(
-                            <Card className="w-full max-w-3xl bg-zinc-900 text-white shadow-lg" key={index}>
+                            <Card className="w-full 1200px:max-w-3xl bg-zinc-900 text-white shadow-lg" key={index}>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                               <CardTitle className="text-lg font-bold">#holabook{booking.id.slice(-4)}</CardTitle>
                               <Badge 
@@ -266,7 +266,7 @@ const NewDashboard = () => {
     
             </div>
           </div>
-          <div className="grid gap-6 p-10 lg:grid-cols-2">
+          <div className="grid gap-6 grid-cols-1 1200px:grid-cols-2 mt-2">
             <div className="space-y-6">
               <div className="rounded-lg bg-white p-6 shadow">
                 <div className="mb-4 flex items-center justify-between">
@@ -345,7 +345,7 @@ const NewDashboard = () => {
                   </Link>
                 </div>
     
-                <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-8 grid-cols-1 md:grid-cols-2 1800px:grid-cols-3">
                   {
                   fetchingOperatorDetails ?
                   Array.from({ length: 3 }).map((_, index) => (
@@ -355,7 +355,7 @@ const NewDashboard = () => {
                   stores.map((influencer, i) => (
                     <Card 
                     key={i} 
-                    className="w-64 flex-shrink-0 rounded-xl bg-white shadow-md transition-all duration-300 hover:scale-55 hover:shadow-xl hover:bg-green-100 hover:ring-2 hover:ring-green-300"
+                    className="w-full flex-shrink-0 rounded-xl bg-white shadow-md transition-all duration-300 hover:scale-55 hover:shadow-xl hover:bg-green-100 hover:ring-2 hover:ring-green-300"
                   >
                        <div className="relative">
                          <Image
@@ -372,15 +372,15 @@ const NewDashboard = () => {
                        <div className="p-4">
                          <div className="mb-2 space-y-2">
                            <div className="flex items-center gap-1">
-                             <span className="text-2xl font-semibold">${influencer.cost_per_hour}</span>
+                             <span className="text-lg md:text-2xl font-semibold">${influencer.cost_per_hour}</span>
                              <span className="text-gray-600">/<TranslatedText greetings={operatorDashboardTranslations.perHour} /></span>
                            </div>
                            <div className="flex items-center gap-1">
-                             <span className="text-2xl font-semibold">${influencer.cost_per_job}</span>
+                             <span className="text-lg md:text-2xl font-semibold">${influencer.cost_per_job}</span>
                              <span className="text-gray-600">/<TranslatedText greetings={operatorDashboardTranslations.perJob} /></span>
                            </div>
                            <div className="flex items-center gap-1">
-                             <span className="text-2xl font-semibold">${influencer.cost_per_month}</span>
+                             <span className="text-lg md:text-2xl font-semibold">${influencer.cost_per_month}</span>
                              <span className="text-gray-600">/<TranslatedText greetings={operatorDashboardTranslations.perMonth} /></span>
                            </div>
                          </div>

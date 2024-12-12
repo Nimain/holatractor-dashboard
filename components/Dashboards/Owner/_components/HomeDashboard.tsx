@@ -31,7 +31,7 @@ import {
 import {
     ChartContainer,
 } from "@/components/ui/chart"
-import { Avatar, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
@@ -172,14 +172,13 @@ const HomeDashboard = (
                                                                         style={{ zIndex: 3 }}
                                                                         key={index}
                                                                     >
-                                                                        <Image
-                                                                            src={(book.user && book.user.image) ? book.user.image : "https://github.com/shadcn.png"}
-                                                                            alt={book.user ? book.user.first_name : "farmer"}
-                                                                            className="w-full h-full object-cover"
-                                                                            width={50}
-                                                                            height={50}
-                                                                            unoptimized={true}
-                                                                        />
+                                                                        <Avatar>
+                                                                            {
+                                                                                book.user && book.user.image &&
+                                                                                <AvatarImage src={book.user.image} alt={`${book.user.image}`} />
+                                                                            }
+                                                                            <AvatarFallback className="bg-white drop-shadow-md">{book.user?.first_name[0]}{book.user?.last_name[1]}</AvatarFallback>
+                                                                        </Avatar>
                                                                     </div>
                                                                 )
                                                             })
@@ -250,10 +249,9 @@ const HomeDashboard = (
                             <div className="flex items-center mb-4">
                                 <div className="flex">
                                     <Avatar>
-                                        <AvatarImage
-                                            src={operators[slideIndex].operator.user.image ? operators[slideIndex].operator.user.image : "https://github.com/shadcn.png"}
-                                            alt={`${operators[slideIndex].operator.user.first_name}`}
-                                            className="w-24 h-24 object-cover" />
+                                            <AvatarFallback className="bg-white drop-shadow-md">
+                                                {operators[slideIndex].operator.user.first_name[0]}{operators[slideIndex].operator.user.last_name[0]}
+                                            </AvatarFallback>
                                     </Avatar>
                                 </div>
                             </div>
