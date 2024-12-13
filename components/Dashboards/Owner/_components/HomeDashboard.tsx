@@ -184,7 +184,7 @@ const HomeDashboard = (
                                                             })
                                                         }
                                                         <span className="text-white text-lg font-bold ml-8 text-center mt-3">
-                                                            {bookings.length > 3 && "+"} {bookings.length - 3} <TranslatedText greetings={OwnerDashboardTranslation.hasBooked} />
+                                                            {bookings.length > 3 && "+"} {bookings.length > 3 ? bookings.length - 3 : bookings.length} <TranslatedText greetings={OwnerDashboardTranslation.hasBooked} />
                                                         </span>
                                                     </div>
                                             }
@@ -313,7 +313,7 @@ const HomeDashboard = (
                         <span className="text-sm text-muted-foreground">{tractorsInUse} <TranslatedText greetings={OwnerDashboardTranslation.inUse} /></span>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-sm text-muted-foreground">Lack of physical activity</p>
+                        <p className="text-sm text-muted-foreground"><TranslatedText greetings={OwnerDashboardTranslation.tractorOperations} /></p>
                         <div className="mt-4 text-3xl font-bold">
                             {tractors.length} <span className="text-xl font-normal"><TranslatedText greetings={OwnerDashboardTranslation.totalTractors} /></span>
                         </div>
@@ -341,7 +341,7 @@ const HomeDashboard = (
                             </CardTitle>
                             <span className="text-sm text-muted-foreground">{attachmentsInUse} <TranslatedText greetings={OwnerDashboardTranslation.inUse} /></span>
                         </div>
-                        <p className="text-sm text-muted-foreground mt-1">Various implements for tractors</p>
+                        <p className="text-sm text-muted-foreground mt-1"><TranslatedText greetings={OwnerDashboardTranslation.variousImplements} /></p>
                         <div className="mt-4 text-2xl font-bold">
                             {attachments.length} <span className="text-lg font-normal"><TranslatedText greetings={OwnerDashboardTranslation.totalAttachments} /></span>
                         </div>

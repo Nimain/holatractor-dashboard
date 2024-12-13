@@ -190,7 +190,7 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
         <div className="grid gap-4 py-4 grid-cols-2"> 
           {selectedTractorId ? (
             <div className="grid gap-4">
-              <Label htmlFor="hourly-price"><TranslatedText greetings={singleStoreOwnerTranslations.hourlyPrice} /></Label>
+              <Label htmlFor="hourly-price"><TranslatedText greetings={singleStoreOwnerTranslations.hourlyPrice} /> ($)</Label>
               <Input
                 id="hourly-price"
                 type="number"

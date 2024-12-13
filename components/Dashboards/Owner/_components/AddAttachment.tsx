@@ -146,7 +146,7 @@ const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentI
         <div className="grid gap-4 py-4 grid-cols-2">
           {selectedAttachmentId ? (
             <div className="grid gap-4">
-              <Label htmlFor="hourly-price"><TranslatedText greetings={singleStoreOwnerTranslations.hourlyPrice} /></Label>
+              <Label htmlFor="hourly-price"><TranslatedText greetings={singleStoreOwnerTranslations.hourlyPrice} /> ($)</Label>
               <Input
                 id="hourly-price"
                 type="number"
