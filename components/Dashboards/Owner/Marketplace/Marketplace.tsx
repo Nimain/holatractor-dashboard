@@ -138,7 +138,7 @@ const Marketplace = () => {
 
   function fetchNewBookings() {
     setFetchingPageDetails(true)
-
+    
     renderInstance.get(`/booking/get/stand-alone/bookings?lat=${location.latitude}&lng=${location.longitude}&radius=80`)
       .then((res) => {
         setNewBookings(res.data)
@@ -159,7 +159,7 @@ const Marketplace = () => {
     if(location.latitude && location.longitude) {
       fetchNewBookings()
     }
-  }, [])
+  }, [location])
 
   useEffect(() => {
     if (navigator.geolocation) {

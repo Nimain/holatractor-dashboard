@@ -112,29 +112,6 @@ const WithoutStoreBooking = () => {
         })
     }
 
-    const handleEquipmentChange = (id: string, type: 'tractor' | 'attachment', increment: boolean) => {
-        const setFunction = type === 'tractor' ? setSelectedTractors : setSelectedAttachments
-        setFunction(prev => {
-            const existingItem = prev.find(item => item.id === id)
-            if (existingItem) {
-                if (increment) {
-                    return prev.map(item => item.id === id ? { ...item, count: item.count + 1 } : item)
-                } else {
-                    return prev.map(item => item.id === id ? { ...item, count: Math.max(0, item.count - 1) } : item)
-                        .filter(item => item.count > 0)
-                }
-            } else if (increment) {
-                return [...prev, { id, count: 1 }]
-            }
-            return prev
-        })
-    }
-
-    const handleRemoveEquipment = (id: string, type: 'tractor' | 'attachment') => {
-        const setFunction = type === 'tractor' ? setSelectedTractors : setSelectedAttachments
-        setFunction(prev => prev.filter(item => item.id !== id))
-    }
-
     const filteredTractors = tractors.filter(tractor =>
         tractor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         tractor.description.toLowerCase().includes(searchQuery.toLowerCase())
@@ -533,36 +510,9 @@ const WithoutStoreBooking = () => {
                                                                     initial={{ opacity: 0, height: 0 }}
                                                                     animate={{ opacity: 1, height: 'auto' }}
                                                                     exit={{ opacity: 0, height: 0 }}
-                                                                    className="flex items-center justify-between bg-muted rounded-lg p-2"
+                                                                    className="flex items-center bg-muted rounded-lg p-2"
                                                                 >
                                                                     <span><TranslatedText greetings={newBookingTranslations.tractorId} />: {tractor.id}</span>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <Button
-                                                                            type="button"
-                                                                            variant="outline"
-                                                                            size="icon"
-                                                                            onClick={() => handleEquipmentChange(tractor.id, 'tractor', false)}
-                                                                        >
-                                                                            <Minus className="h-4 w-4" />
-                                                                        </Button>
-                                                                        <span className="w-8 text-center">{tractor.count}</span>
-                                                                        <Button
-                                                                            type="button"
-                                                                            variant="outline"
-                                                                            size="icon"
-                                                                            onClick={() => handleEquipmentChange(tractor.id, 'tractor', true)}
-                                                                        >
-                                                                            <Plus className="h-4 w-4" />
-                                                                        </Button>
-                                                                        <Button
-                                                                            type="button"
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            onClick={() => handleRemoveEquipment(tractor.id, 'tractor')}
-                                                                        >
-                                                                            <X className="h-4 w-4" />
-                                                                        </Button>
-                                                                    </div>
                                                                 </motion.div>
                                                             )
                                                         })}
@@ -581,36 +531,9 @@ const WithoutStoreBooking = () => {
                                                                     initial={{ opacity: 0, height: 0 }}
                                                                     animate={{ opacity: 1, height: 'auto' }}
                                                                     exit={{ opacity: 0, height: 0 }}
-                                                                    className="flex items-center justify-between bg-muted rounded-lg p-2"
+                                                                    className="flex items-center bg-muted rounded-lg p-2"
                                                                 >
                                                                     <span><TranslatedText greetings={newBookingTranslations.attachmentId} />: {attachment.id}</span>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <Button
-                                                                            type="button"
-                                                                            variant="outline"
-                                                                            size="icon"
-                                                                            onClick={() => handleEquipmentChange(attachment.id, 'tractor', false)}
-                                                                        >
-                                                                            <Minus className="h-4 w-4" />
-                                                                        </Button>
-                                                                        <span className="w-8 text-center">{attachment.count}</span>
-                                                                        <Button
-                                                                            type="button"
-                                                                            variant="outline"
-                                                                            size="icon"
-                                                                            onClick={() => handleEquipmentChange(attachment.id, 'tractor', true)}
-                                                                        >
-                                                                            <Plus className="h-4 w-4" />
-                                                                        </Button>
-                                                                        <Button
-                                                                            type="button"
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            onClick={() => handleRemoveEquipment(attachment.id, 'tractor')}
-                                                                        >
-                                                                            <X className="h-4 w-4" />
-                                                                        </Button>
-                                                                    </div>
                                                                 </motion.div>
                                                             )
                                                         })}

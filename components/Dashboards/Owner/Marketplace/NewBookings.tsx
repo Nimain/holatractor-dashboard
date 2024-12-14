@@ -143,7 +143,7 @@ const NewBookings = ({ booking, minDistance }: { booking: Booking; minDistance: 
                             <div className="flex items-center pt-2">
                                 <RiDirectionLine className="h-4 w-4 mr-2 text-muted-foreground" />
                                 <span className="text-sm">
-                                <TranslatedText greetings={ownerMarketPlaceTranslations.distance} />: {minDistance ?? 0}km
+                                <TranslatedText greetings={ownerMarketPlaceTranslations.distance} />: {minDistance?.toFixed(2) ?? 0}km
                                 </span>
                             </div>
                         </div>
