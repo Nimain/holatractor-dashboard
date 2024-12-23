@@ -25,28 +25,29 @@ interface user {
 const KanbanBoard = () => {
     const today = new Date()
     const monthNames = [
-        <TranslatedText greetings={operatorDashboardTranslations.january} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.february} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.march} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.april} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.may} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.june} />,
-        <TranslatedText greetings={operatorDashboardTranslations.july} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.august} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.september} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.october} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.november} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.december} />
-    ]
-    const dayNames = [
-        <TranslatedText greetings={operatorDashboardTranslations.sunday} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.monday} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.tuesday} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.wednesday} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.thursday} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.friday} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.saturday} />
-    ]
+        <TranslatedText key="jan" greetings={operatorDashboardTranslations.january} />,
+        <TranslatedText key="feb" greetings={operatorDashboardTranslations.february} />,
+        <TranslatedText key="mar" greetings={operatorDashboardTranslations.march} />,
+        <TranslatedText key="apr" greetings={operatorDashboardTranslations.april} />,
+        <TranslatedText key="may" greetings={operatorDashboardTranslations.may} />,
+        <TranslatedText key="jun" greetings={operatorDashboardTranslations.june} />,
+        <TranslatedText key="jul" greetings={operatorDashboardTranslations.july} />,
+        <TranslatedText key="aug" greetings={operatorDashboardTranslations.august} />,
+        <TranslatedText key="sep" greetings={operatorDashboardTranslations.september} />,
+        <TranslatedText key="oct" greetings={operatorDashboardTranslations.october} />,
+        <TranslatedText key="nov" greetings={operatorDashboardTranslations.november} />,
+        <TranslatedText key="dec" greetings={operatorDashboardTranslations.december} />
+      ];
+      
+      const dayNames = [
+        <TranslatedText key="sun" greetings={operatorDashboardTranslations.sunday} />,
+        <TranslatedText key="mon" greetings={operatorDashboardTranslations.monday} />,
+        <TranslatedText key="tue" greetings={operatorDashboardTranslations.tuesday} />,
+        <TranslatedText key="wed" greetings={operatorDashboardTranslations.wednesday} />,
+        <TranslatedText key="thu" greetings={operatorDashboardTranslations.thursday} />,
+        <TranslatedText key="fri" greetings={operatorDashboardTranslations.friday} />,
+        <TranslatedText key="sat" greetings={operatorDashboardTranslations.saturday} />
+      ];
 
     const [fetchingRequests, setFetchingRequests] = useState(false)
     const [requests, setRequests] = useState<ownerOperatorRequest[]>([])
