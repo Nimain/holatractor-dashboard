@@ -2,39 +2,35 @@
 
 import { useEffect, useState, FC } from 'react'
 import { useParams } from 'next/navigation'
-import Image from 'next/image'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, MapPin, Hotel, List, Heart, Share, Zap, Maximize2, CreditCard, MessageCircleQuestion, Sun, Mic, Map } from 'lucide-react'
-import OwnerModule from './_components/OwnerModule'
-import { renderInstance } from '@/utils/Axios/RenderInstance'
+import { NestJsBaseURL, renderInstance } from '@/utils/Axios/RenderInstance'
 import { errorMessage } from '@/utils/Toastify/Messages'
 import { Store } from '@/utils/Types/types'
 import "leaflet/dist/leaflet.css";
 import { FaImage, FaStore } from 'react-icons/fa'; // Importing Image and Store icons
-import { FaRegChartBar, FaHotel, FaRegCalendarAlt, FaPlane } from "react-icons/fa";
-import { Button } from '@/components/ui/button'
-import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet'
+import { FaRegChartBar, FaHotel, FaRegCalendarAlt } from "react-icons/fa";
 import OwnerShrimmer from './_components/OwnerShrimmer'
 import { TractorCard } from './_components/TractorCard'
 import AddTractor from './_components/AddTractor'
 import AddAttachment from './_components/AddAttachment'
 import { AttachmentCard } from './_components/AttachmentCard'
 import AlternatingAddForm from './_components/AlternatingAddform'
+import Image from 'next/image'
+import { Card, CardContent } from '@/components/ui/card'
+import { io, Socket } from 'socket.io-client'
+import { useCookie } from 'next-cookie'
+import { Button } from '@/components/ui/button'
+import { singleStoreOwnerTranslations } from './SingleStoreTranslation'
+import TranslatedText from '@/components/Menubar/TranslatedText'
 
-export default function StorePage({
-  location = 'Greece',
-  temperature = 28,
-  priceRange = { min: 1581, max: 3162 },
-}: {
-  storeImages: string[];
-  location?: string;
-  temperature?: number;
-  priceRange?: {
-    min: number;
-    max: number;
-  };
-}) {
+interface user {
+  userId: string;
+  image: string;
+  name: string;
+  email: string;
+}
+
+export default function StorePage() {
   const [store, setStore] = useState<Store | null>(null)
   const [fetchingStoreDetails, setFetchingStoreDetails] = useState(false)
 
@@ -46,7 +42,9 @@ export default function StorePage({
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT243T7YIOkC6yRwBVPQ6wPFXfo_Ssl1aYlcQ&s",
     "https://thumbs.dreamstime.com/b/tractor-modern-agriculture-equipment-14081589.jpg",
   ];
-  const [mainImage, setMainImage] = useState(images[0]);
+
+  const { cookie } = useCookie()
+  const user: user = cookie.get("user")
 
   const { slug } = useParams()
 
@@ -55,13 +53,31 @@ export default function StorePage({
     renderInstance.get(`/store/${slug}`)
       .then((res) => {
         setStore(res.data)
-        console.log(res.data)
       }).catch((err) => {
         errorMessage("Error fetching store details")
       }).finally(() => {
         setFetchingStoreDetails(false)
       })
   }
+
+  useEffect(() => {
+    // Connect to the socket server
+    const newSocket: Socket = io(NestJsBaseURL, {
+      query: {
+        userId: user.userId
+      }
+    });
+
+    // Listen for the 'newFarmerNotification' event
+    newSocket.on('newOwnerStore', (addedStore: Store) => {
+      setStore(addedStore)
+    });
+
+    // Clean up the event listener when the component unmounts
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     if (slug) {
@@ -74,104 +90,154 @@ export default function StorePage({
   if (!store) return <p>Store details not available</p>
 
   return (
-    <div className="bg-gray-50 min-h-screen p-2 sm:p-4 md:p-6 flex-1 overflow-y-auto overflow-x-hidden">
-    {/* Hero Section */}
-    <main className="mt-2 sm:mt-4">
-      <div className="rounded-xl text-white p-2 sm:p-3 mb-4 sm:mb-6 bg-cover bg-center" style={{ backgroundImage: `url(${mainImage})` }}>
-        <div className="flex flex-col min-h-[40vh] sm:min-h-[50vh] md:min-h-[65vh] justify-between">
-          {/* Top Section */}
-          <div className="flex justify-between items-start p-2 sm:p-4 md:p-6">
-            <div className="flex space-x-1 sm:space-x-2 items-center">
-              {/* Commented out image thumbnails section remains the same */}
-            </div>
-          </div>
-  
-          {/* Center Section */}
-          <div className="flex flex-col items-center justify-center text-center rounded-lg p-3 sm:p-6 mx-2 sm:mx-6">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1 sm:mb-2">
-              {store.name}
-            </h1>
-            <p className="text-sm sm:text-base md:text-lg text-white max-w-xs sm:max-w-md">
-              {store.description}
-            </p>
-          </div>
-  
-          <div className="flex items-center gap-1 sm:gap-2">
-            <div className="flex items-center gap-1 sm:gap-2 rounded-[40px] bg-white/60 px-2 sm:px-4 py-2 sm:py-4 backdrop-blur-sm">
-              <Heart className="h-3 w-3 sm:h-4 sm:w-4 text-black" />
-            </div>
-            <div className="flex items-center gap-1 sm:gap-2 rounded-[40px] bg-white/60 px-2 sm:px-4 py-2 sm:py-4 backdrop-blur-sm">
-              <Share className="h-3 w-3 sm:h-4 sm:w-4 text-black" />
-            </div>
-          </div>
-  
-          {/* Bottom Section */}
-          <div className="flex items-center justify-between p-2 sm:p-4 md:p-6">
-            <div></div>
-            <div className="flex items-center gap-2 sm:gap-4 ml-auto bottom-0">
-              <div className="flex items-center gap-1 sm:gap-2 rounded-[40px] bg-white/60 px-2 sm:px-4 py-2 sm:py-4 backdrop-blur-sm">
-                <FaImage className="h-3 w-3 sm:h-4 sm:w-4 text-black" />
-              </div>
-              <div className="flex items-center gap-1 sm:gap-2 rounded-[40px] bg-white/60 px-2 sm:px-4 py-2 sm:py-4 backdrop-blur-sm">
-                <FaStore className="h-3 w-3 sm:h-4 sm:w-4 text-black" />
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen w-full bg-white overflow-auto" style={{ scrollbarWidth: "none" }}>
+
+      <div className='w-full relative h-[60vh] rounded-xl overflow-hidden'>
+
+        <Image
+          alt={store.name}
+          src={store.image}
+          width={400}
+          height={400}
+          unoptimized={true}
+          className='w-full h-full object-cover z-0 absolute top-0 left-0' />
+
+        <div className='z-0 w-full h-full absolute top-0 left-0 bg-black/20' />
+
+        <div className="flex flex-col items-center justify-center text-center w-full h-full rounded-lg p-6 mx-6">
+          <h1 className="text-4xl font-bold text-white mb-2 z-10">
+            {store.name}
+          </h1>
+          <p className="text-lg text-white max-w-md z-10">
+            {store.description}
+          </p>
         </div>
+
+        <div className='w-full absolute bottom-0 p-4 flex items-center justify-between'>
+
+          <div className="flex items-center gap-2 -mt-36">
+            <div className="flex items-center gap-2 rounded-[40px] bg-white/60 px-4 py-4 backdrop-blur-sm">
+              <Share className="h-4 w-4 text-black" />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center absolute left-1/2 -translate-x-1/2 rounded-xl bg-white/40 text-black">
+            {[
+              { name: "Overview", icon: <FaRegChartBar /> },
+              { name: "Tractor", icon: <FaHotel /> },
+              { name: "Attachment", icon: <FaRegCalendarAlt /> },
+            ].map((tab) => (
+              <button
+                key={tab.name}
+                onClick={() => setSelectedTab(tab.name)}
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg transition-all duration-300 font-medium text-sm ${selectedTab === tab.name ? "bg-white shadow-sm transform scale-105" : "text-white hover:text-gray-600 hover:bg-gray-100"}`}
+              >
+                {tab.icon}
+                {tab.name}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-4 ml-auto bottom-0">
+            <div className="flex items-center gap-2 rounded-[40px] bg-white/60 px-4 py-4 backdrop-blur-sm">
+              <FaImage className="h-4 w-4 text-black" />
+            </div>
+            <div className="flex items-center gap-2 rounded-[40px] bg-white/60 px-4 py-4 backdrop-blur-sm">
+              <FaStore className="h-4 w-4 text-black" />
+            </div>
+          </div>
+
+        </div>
+
       </div>
-    </main>
-  
-    <div className="-mt-4 sm:-mt-8 md:-mt-[6rem]" style={{ overflow: 'hidden' }}>
-      {/* Tabs */}
-      <div className="flex justify-center mb-4 sm:mb-6 md:mb-8">
-        <div className="flex gap-1 sm:gap-2 p-1 sm:p-2 bg-white backdrop-blur-lg rounded-xl shadow-lg">
-          {[
-            { name: "Overview", icon: <FaRegChartBar /> },
-            { name: "Tractor", icon: <FaHotel /> },
-            { name: "Attachment", icon: <FaRegCalendarAlt /> },
-          ].map((tab) => (
-            <button
-              key={tab.name}
-              onClick={() => setSelectedTab(tab.name)}
-              className={`
-                flex items-center gap-1 sm:gap-2 px-2 sm:px-4 md:px-6 py-1.5 sm:py-2 md:py-2.5
-                rounded-lg transition-all duration-300 
-                font-medium text-xs sm:text-sm 
-                ${selectedTab === tab.name
-                  ? "bg-primary text-primary-foreground shadow-sm transform scale-105"
-                  : "text-gray-600 hover:bg-gray-100"
-                }
-              `}
-            >
-              {tab.icon}
-              <span className="hidden sm:inline">{tab.name}</span>
-            </button>
+
+      <div className='mt-4 flex gap-6'>
+
+        <Card className='w-[600px] -mt-24 z-10 ml-4 h-fit'>
+          <CardContent className='pt-3'>
+            {
+              selectedTab === "Overview" && <AlternatingAddForm tractors={store.TractorInStore} attachments={store.AttachmentInStore} />
+            }
+            {
+              selectedTab === "Tractor" && <AddTractor alreadyTractors={store.TractorInStore} />
+            }
+            {
+              selectedTab === "Attachment" && <AddAttachment alreadyAttachments={store.AttachmentInStore} />
+            }
+          </CardContent>
+        </Card>
+
+
+        <div className='w-full grid gap-6 grid-cols-3'>
+
+          {selectedTab === "Overview" && (store.TractorInStore.length === 0 && store.AttachmentInStore.length === 0) && (
+            <Card className="w-full max-w-sm mx-auto text-center p-6">
+              <CardContent className="space-y-6">
+                <div className="bg-gray-50 rounded-lg p-4 mx-auto w-20 h-20 flex items-center justify-center">
+                  <CreditCard className="w-10 h-10 text-gray-400" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold"><TranslatedText greetings={singleStoreOwnerTranslations.noEquipmentsAvailable} /></h3>
+                  <p className="text-muted-foreground">
+                  <TranslatedText greetings={singleStoreOwnerTranslations.noEquipmentsAvailableStore} />
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {selectedTab === "Overview" && store.TractorInStore.map((tractor) => (
+            <TractorCard key={tractor.id} tractor={tractor.baseTractor} />
           ))}
+
+          {selectedTab === "Overview" && store.AttachmentInStore.map((tractor) => (
+            <AttachmentCard key={tractor.id} attachment={tractor.baseAttachment} />
+          ))}
+
+          {selectedTab === "Tractor" && 
+          store.TractorInStore.length === 0 && (
+            <Card className="w-full max-w-sm mx-auto text-center p-6">
+              <CardContent className="space-y-6">
+                <div className="bg-gray-50 rounded-lg p-4 mx-auto w-20 h-20 flex items-center justify-center">
+                  <CreditCard className="w-10 h-10 text-gray-400" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold"><TranslatedText greetings={singleStoreOwnerTranslations.noTractorsAvailable} /></h3>
+                  <p className="text-muted-foreground">
+                  <TranslatedText greetings={singleStoreOwnerTranslations.noTractorsAvailableStore} />
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {selectedTab === "Tractor" &&  store.TractorInStore.map((tractor) => (
+              <TractorCard key={tractor.id} tractor={tractor.baseTractor} />
+            ))}
+
+          {selectedTab === "Attachment" && store.TractorInStore.length === 0 && (
+            <Card className="w-full max-w-sm mx-auto text-center p-6">
+              <CardContent className="space-y-6">
+                <div className="bg-gray-50 rounded-lg p-4 mx-auto w-20 h-20 flex items-center justify-center">
+                  <CreditCard className="w-10 h-10 text-gray-400" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold"><TranslatedText greetings={singleStoreOwnerTranslations.noAttachmentsAvailable} /></h3>
+                  <p className="text-muted-foreground">
+                  <TranslatedText greetings={singleStoreOwnerTranslations.noAttachmentsAvailableStore} />
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {selectedTab === "Attachment" && store.AttachmentInStore.map((tractor) => (
+            <AttachmentCard key={tractor.id} attachment={tractor.baseAttachment} />
+          ))}
+
         </div>
+
       </div>
-  
-      {/* Tab Content */}
-      <div className="pt-2 sm:pt-4 md:pt-6 p-1 sm:p-2">
-      {selectedTab === 'Overview' && (
-        <div className="container mx-auto p-2 sm:p-4 md:p-6">
-          <div className="flex flex-col xl:flex-row gap-3 sm:gap-4 md:gap-6">
-            <div className="w-full xl:w-[47%] min-w-[250px] sm:min-w-[300px] md:min-w-[350px] lg:min-w-[400px]">
-              <AlternatingAddForm tractors={store.TractorInStore} attachments={store.AttachmentInStore} />
-            </div>
-            <div className="w-full xl:w-[53%]">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
-                {store.TractorInStore.map((tractor) => (
-                  <TractorCard 
-                    key={tractor.id} 
-                    tractor={tractor.baseTractor} 
-                    
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {selectedTab === 'Tractor' && (
         <div className="container mx-auto p-2 sm:p-4 md:p-6">
@@ -222,7 +288,6 @@ export default function StorePage({
         </div>
       )}
     </div>
-    </div>
-  </div>
+  
   )
 }

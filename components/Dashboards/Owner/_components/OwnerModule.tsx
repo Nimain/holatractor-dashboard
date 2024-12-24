@@ -36,6 +36,11 @@ const OwnerModule = () => {
   const [isAssignOpen, setIsAssignOpen] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState<string | null>(null)
 
+  const renderUserName = (user: any) => {
+    if (!user) return 'Unknown User';
+    return `${user.first_name} ${user.middle_name ?? ""} ${user.last_name}`;
+  };
+
   const { cookie } = useCookie()
   const user = cookie.get("user")
   const access_token = cookie.get("access_token")
@@ -212,7 +217,7 @@ const OwnerModule = () => {
                           return (
                             <Card key={request.id} className="drop-shadow-md">
                               <CardHeader>
-                                <CardTitle>{`${request.user.first_name} ${request.user.middle_name ?? ""} ${request.user.last_name}`}</CardTitle>
+                                <CardTitle>{renderUserName(request.user)}</CardTitle>
                                 <Badge className="w-fit">{request.bookingStatus}</Badge>
                               </CardHeader>
                               <CardContent>
@@ -245,7 +250,7 @@ const OwnerModule = () => {
                         .map((request) => (
                           <Card key={request.id} className="border-2 border-red-500 drop-shadow-md">
                             <CardHeader>
-                              <CardTitle>{`${request.user.first_name} ${request.user.middle_name ?? ""} ${request.user.last_name}`}</CardTitle>
+                              <CardTitle>{renderUserName(request.user)}</CardTitle>
                               <Badge className="w-fit">{request.bookingStatus}</Badge>
                             </CardHeader>
                             <CardContent>
@@ -271,7 +276,7 @@ const OwnerModule = () => {
                         .map((request) => (
                           <Card key={request.id} className="drop-shadow-md">
                             <CardHeader>
-                              <CardTitle>{`${request.user.first_name} ${request.user.middle_name ?? ""} ${request.user.last_name}`}</CardTitle>
+                              <CardTitle>{renderUserName(request.user)}</CardTitle>
                               <Badge className="w-fit">{request.bookingStatus}</Badge>
                             </CardHeader>
                             <CardContent>
@@ -310,7 +315,7 @@ const OwnerModule = () => {
                         .map((request) => (
                           <Card key={request.id} className="drop-shadow-md">
                             <CardHeader>
-                              <CardTitle>{`${request.user.first_name} ${request.user.middle_name ?? ""} ${request.user.last_name}`}</CardTitle>
+                              <CardTitle>{renderUserName(request.user)}</CardTitle>
                               <Badge className="w-fit">{request.bookingStatus}</Badge>
                             </CardHeader>
                             <CardContent>
@@ -337,7 +342,7 @@ const OwnerModule = () => {
                         .map((request) => (
                           <Card key={request.id} className="drop-shadow-md">
                             <CardHeader>
-                              <CardTitle>{`${request.user.first_name} ${request.user.middle_name ?? ""} ${request.user.last_name}`}</CardTitle>
+                              <CardTitle>{renderUserName(request.user)}</CardTitle>
                               <Badge className="w-fit">{`${request.payment[0].status}`}</Badge>
                             </CardHeader>
                             <CardContent>
@@ -370,7 +375,7 @@ const OwnerModule = () => {
                         .map((request) => (
                           <Card key={request.id} className="drop-shadow-md">
                             <CardHeader>
-                              <CardTitle>{`${request.user.first_name} ${request.user.middle_name ?? ""} ${request.user.last_name}`}</CardTitle>
+                              <CardTitle>{renderUserName(request.user)}</CardTitle>
                               <Badge className="w-fit">{`${request.payment[0].status}`}</Badge>
                             </CardHeader>
                             <CardContent>
@@ -403,7 +408,7 @@ const OwnerModule = () => {
                         .map((request) => (
                           <Card key={request.id} className="drop-shadow-md">
                             <CardHeader>
-                              <CardTitle>{`${request.user.first_name} ${request.user.middle_name ?? ""} ${request.user.last_name}`}</CardTitle>
+                              <CardTitle>{renderUserName(request.user)}</CardTitle>
                               <Badge className="w-fit">{`${request.payment[0].status}`}</Badge>
                             </CardHeader>
                             <CardContent>
@@ -475,3 +480,4 @@ const OwnerModule = () => {
 }
 
 export default OwnerModule
+

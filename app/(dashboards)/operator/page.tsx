@@ -1,13 +1,12 @@
+import OwnerShrimmer from '@/components/Dashboards/Owner/_components/OwnerShrimmer'
 import dynamic from 'next/dynamic'
 
 const OperatorPage = dynamic(
-  ()=> import('@/components/Dashboards/Operator/Operator'),
+  ()=> import('@/components/Dashboards/Operator/NewDashboard'),
   {
       ssr: false,
       loading: () => (
-        <div className="w-full h-screen flex items-center justify-center">
-          Loading...
-        </div>
+        <OwnerShrimmer />
       )
     }
 )

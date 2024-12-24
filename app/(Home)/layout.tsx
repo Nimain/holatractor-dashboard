@@ -9,7 +9,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body style={{fontFamily: 'ARIALCUSTOMFONTS'}} className="bg-[#e5e5e5]">
+      <body style={{fontFamily: 'Poppins'}} className="bg-[#e5e5e5]">
         <ReduxWrapper>
         {children}
         </ReduxWrapper>

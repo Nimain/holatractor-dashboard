@@ -27,6 +27,7 @@ const currencies = [
 ]
 
 export default function PaymentMethods({ bookingId }: { bookingId: string }) {
+    const [open, setOpen] = useState(false)
     const [selectedMethod, setSelectedMethod] = useState<string | null>(null)
     const [isAddModalOpen, setIsAddModalOpen] = useState(false)
     const [confirming, setConfirming] = useState(false)
@@ -127,7 +128,6 @@ export default function PaymentMethods({ bookingId }: { bookingId: string }) {
             },
         }).then((res) => {
             successMessage("Thank you for confirming. Now assign an operator")
-            window.location.reload()
         }).catch((err) => {
             if (err.response && err.response.status === 404) {
                 if(err.response.data.message === "Booking is not valid"){
@@ -144,6 +144,8 @@ export default function PaymentMethods({ bookingId }: { bookingId: string }) {
                     errorMessage("User has not confirmed the booking. Wait till user booked")
                 } else if(err.response.data.message === "You are not allowed to perform this task"){
                     errorMessage("You are not allowed to perform this task")
+                } else if(err.response.data.message === "Bank details not found"){
+                    errorMessage("Bank details not found")
                 }
             } else {
                 errorMessage("Some error occurred")
@@ -157,10 +159,10 @@ export default function PaymentMethods({ bookingId }: { bookingId: string }) {
         fetchBankAccounts()
         fetchPaypalAccounts()
         fetchUPIAccounts()
-    }, [])
+    }, [isAddModalOpen])
 
     return (
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button>
                     Accept
@@ -190,13 +192,13 @@ export default function PaymentMethods({ bookingId }: { bookingId: string }) {
                                                 <TabsTrigger value="upi">UPI</TabsTrigger>
                                             </TabsList>
                                             <TabsContent value="bank">
-                                                <BankAccountForm />
+                                                <BankAccountForm setIsAddModalOpen={setIsAddModalOpen} />
                                             </TabsContent>
                                             <TabsContent value="paypal">
-                                                <PayPalForm />
+                                                <PayPalForm setIsAddModalOpen={setIsAddModalOpen} />
                                             </TabsContent>
                                             <TabsContent value="upi">
-                                                <UPIForm />
+                                                <UPIForm setIsAddModalOpen={setIsAddModalOpen} />
                                             </TabsContent>
                                         </Tabs>
                                     </DialogContent>
@@ -282,7 +284,7 @@ export default function PaymentMethods({ bookingId }: { bookingId: string }) {
     )
 }
 
-function BankAccountForm() {
+function BankAccountForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: boolean) => void }) {
 
     const [loading, setLoading] = useState(false)
     const [formData, setFormData] = useState({
@@ -308,15 +310,25 @@ function BankAccountForm() {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
-        renderInstance.post("/bank_account", { ...formData, ownerId: user.userId }, {
+        renderInstance.post("/bank-account", { ...formData, ownerId: user.userId }, {
             headers: {
                 Authorization: `Bearer ${access_token}`,
             },
         }).then(() => {
             successMessage("Bank account added")
-            window.location.reload()
+            setIsAddModalOpen(false)
         }).catch((err) => {
-            errorMessage("Error adding bank account")
+            if (err.response && err.response.status === 404){
+                if(err.response.data.message === "Log in user not found"){
+                    errorMessage("Log in user not found")
+                } 
+            } else if (err.response && err.response.status === 409){
+                if(err.response.data.message === "You can't add someone else's account"){
+                    errorMessage("You can't add someone else's account")
+                } 
+            } else {
+                errorMessage("Error adding bank account")
+            }
         }).finally(() => {
             setLoading(false)
         })
@@ -351,7 +363,7 @@ function BankAccountForm() {
     )
 }
 
-function PayPalForm() {
+function PayPalForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: boolean) => void }) {
     const [email, setEmail] = useState('')
     const [loading, setLoading] = useState(false)
 
@@ -368,9 +380,19 @@ function PayPalForm() {
             },
         }).then(() => {
             successMessage("paypal account added")
-            window.location.reload()
+            setIsAddModalOpen(false)
         }).catch((err) => {
-            errorMessage("Error adding bank account")
+            if (err.response && err.response.status === 404){
+                if(err.response.data.message === "Log in user not found"){
+                    errorMessage("Log in user not found")
+                } 
+            } else if (err.response && err.response.status === 409){
+                if(err.response.data.message === "You can't add someone else's account"){
+                    errorMessage("You can't add someone else's account")
+                } 
+            } else {
+                errorMessage("Error adding paypal account")
+            }
         }).finally(() => {
             setLoading(false)
         })
@@ -386,7 +408,7 @@ function PayPalForm() {
     )
 }
 
-function UPIForm() {
+function UPIForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: boolean) => void }) {
     const [upiId, setUpiId] = useState('')
     const [qrCode, setQrCode] = useState<File | null>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
@@ -410,9 +432,19 @@ function UPIForm() {
             },
         }).then(() => {
             successMessage("paypal account added")
-            window.location.reload()
+            setIsAddModalOpen(false)
         }).catch((err) => {
-            errorMessage("Error adding bank account")
+            if (err.response && err.response.status === 404){
+                if(err.response.data.message === "Log in user not found"){
+                    errorMessage("Log in user not found")
+                } 
+            } else if (err.response && err.response.status === 409){
+                if(err.response.data.message === "You can't add someone else's account"){
+                    errorMessage("You can't add someone else's account")
+                } 
+            } else {
+                errorMessage("Error adding paypal account")
+            }
         }).finally(() => {
             setLoading(false)
         })

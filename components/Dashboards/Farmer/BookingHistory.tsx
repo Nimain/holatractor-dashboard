@@ -1089,7 +1089,7 @@ const FarmerBookingHistory = () => {
 
 export default FarmerBookingHistory
 
-function BankAccountForm({ username, bankname, accnum, swiftcode, iban, routingnum, branchCode, currency, country }: { username: string, bankname: string, accnum: string, swiftcode: string, iban: string, routingnum: string, branchCode: string, currency: string, country: string }) {
+export function BankAccountForm({ username, bankname, accnum, swiftcode, iban, routingnum, branchCode, currency, country }: { username: string, bankname: string, accnum: string, swiftcode: string, iban: string, routingnum: string, branchCode: string, currency: string, country: string }) {
 
   return (
     <div className="space-y-4">
@@ -1106,7 +1106,7 @@ function BankAccountForm({ username, bankname, accnum, swiftcode, iban, routingn
   )
 }
 
-function PayPalForm({ email }: { email: string }) {
+export function PayPalForm({ email }: { email: string }) {
 
   return (
     <div className="space-y-4">
@@ -1115,7 +1115,7 @@ function PayPalForm({ email }: { email: string }) {
   )
 }
 
-function UPIForm({ upiId, upi }: { upiId: string, upi: string }) {
+export function UPIForm({ upiId, upi }: { upiId: string, upi: string }) {
 
   return (
     <div className="space-y-4">

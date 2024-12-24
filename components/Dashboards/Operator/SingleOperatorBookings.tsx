@@ -6,7 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CalendarDays, Clock, MapPin, DollarSign, ReceiptPoundSterling } from "lucide-react"
+import { CalendarDays, Clock, MapPin, DollarSign, ReceiptPoundSterling } from 'lucide-react'
 import { BookingStatus, OperatorBookingJob, ownerOperatorRequest, ownerOperatorResponse } from "@/utils/Types/types"
 import { renderInstance } from "@/utils/Axios/RenderInstance"
 import { useParams, useRouter } from "next/navigation";
@@ -37,6 +37,11 @@ export default function Operator() {
     const { slug } = useParams()
 
     const router = useRouter()
+
+    const renderUserName = (user: any) => {
+        if (!user) return 'Unknown User';
+        return `${user.first_name} ${user.middle_name ?? ""} ${user.last_name}`;
+    };
 
     function handleFetchAllRequests() {
         setFetchingRequests(true)
@@ -232,7 +237,7 @@ export default function Operator() {
         else if (value === BookingStatus.Started) url = `/operatorbooking/${id}/starting`
         if (!url) {
             errorMessage("Invalid select")
-            ReceiptPoundSterling
+            return
         }
         renderInstance.patch(url, {}, {
             headers: {
@@ -307,7 +312,7 @@ export default function Operator() {
                                         completedJobs
                                             .filter((operatorReq) => (operatorReq.booking.bookingStatus !== BookingStatus.Finished))
                                             .map((details, i) => {
-                                                const name = `${details.booking.user.first_name} ${details.booking.user.middle_name ?? ""} ${details.booking.user.last_name}`
+                                                const name = renderUserName(details.booking.user)
                                                 const location = `new delhi`
                                                 if (updateStatusBookingCode === details.booking_id) return <CircularProgress key={i} />
                                                 return (
@@ -413,7 +418,7 @@ export default function Operator() {
                                         requests
                                             .filter((operatorReq) => (operatorReq.operator_response === ownerOperatorResponse.NotSeen))
                                             .map((details, i) => {
-                                                const name = `${details.booking.user.first_name} ${details.booking.user.middle_name ?? ""} ${details.booking.user.last_name}`
+                                                const name = renderUserName(details.booking.user)
                                                 const location = `new delhi`
                                                 if (rejectingRequests) return <CircularProgress key={i} />
                                                 return (
@@ -476,7 +481,7 @@ export default function Operator() {
                                         completedJobs
                                             .filter((booking) => (booking.booking.bookingStatus === BookingStatus.Finished))
                                             .map((details, i) => {
-                                                const name = `${details.booking.user.first_name} ${details.booking.user.middle_name ?? ""} ${details.booking.user.last_name}`
+                                                const name = renderUserName(details.booking.user)
                                                 const location = `new delhi`
                                                 if (rejectingRequests) return <CircularProgress key={i} />
                                                 return (
@@ -523,3 +528,4 @@ export default function Operator() {
         </div>
     )
 }
+

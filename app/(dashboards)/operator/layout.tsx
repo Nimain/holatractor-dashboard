@@ -2,6 +2,8 @@ import "../../globals.css"
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ReduxWrapper from "../_components/ReduxWrapper";
+import SidebarWrapper from "./_components/SidebarWrapper";
+import Header from "@/components/Dashboards/Operator/_components/Header";
 
 function FarmerDashboardLayout({
     children,
@@ -10,17 +12,18 @@ function FarmerDashboardLayout({
   }) {
     return (
       <html lang="en">
-        <body>
-          <div className="flex h-screen bg-[#EDF4FA]">
-            <main className="flex-1 overflow-y-auto p-4 md:p-8">
-              <ReduxWrapper>
+      <body style={{fontFamily: 'Poppins'}}>
+        <ReduxWrapper>
+          <SidebarWrapper>
+            <main className="flex-1 overflow-y-auto my-2">
               <ToastContainer />
+              <Header />
               {children}
-              </ReduxWrapper>
             </main>
-          </div>
-        </body>
-      </html>
+          </SidebarWrapper>
+        </ReduxWrapper>
+      </body>
+    </html>
     )
   }
 

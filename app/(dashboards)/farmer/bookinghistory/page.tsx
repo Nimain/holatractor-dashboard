@@ -1,7 +1,7 @@
 import dynamic from 'next/dynamic'
 
-const OperatorPage = dynamic(
-    ()=> import('@/components/Dashboards/Operator/SingleOperatorBookings'),
+const BookingHistory = dynamic(
+    ()=> import('@/components/Dashboards/Farmer/Booking/NewBookingHistory'),
     {
         ssr: false,
         loading: () => (
@@ -12,9 +12,10 @@ const OperatorPage = dynamic(
       }
   )
 
-export default function Operator() {
-
-    return (
-        <OperatorPage />
-    )
+const BookingHistoryPage = () => {
+  return (
+    <BookingHistory />
+  )
 }
+
+export default BookingHistoryPage

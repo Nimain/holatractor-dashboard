@@ -18,6 +18,7 @@ import { useCookie } from "next-cookie"
 import { MouseEvent, useState } from "react"
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages';
 import { CircularProgress } from "@mui/material"
+import Image from "next/image"
 
 interface OwnerActionProps {
     index: number;
@@ -29,10 +30,11 @@ interface OwnerActionProps {
     updateDate: string;
     status: number;
     id: string;
+    screenShots: string[]
 }
 
 const OwnerAction = (
-    { index, name, mailHover, email, emailVerified, creatDate, updateDate, status, id }: OwnerActionProps
+    { index, name, mailHover, email, emailVerified, creatDate, updateDate, status, id, screenShots }: OwnerActionProps
 ) => {
     const [loading, setLoading] = useState(false)
 
@@ -146,6 +148,19 @@ const OwnerAction = (
                         </Label>
                         <Input id="username" value={email} readOnly={true} className="col-span-3" />
                     </div>
+                    {
+                        screenShots.map((imageLInk, i)=>{
+                            return(
+                                <Image
+                                src={imageLInk}
+                                key={i}
+                                alt="Payment proof"
+                                width={400}
+                                height={400}
+                                className="w-[90%] mx-auto object-cover" />
+                            )
+                        })
+                    }
                 </div>
                 <SheetFooter>
                     <SheetClose asChild>

@@ -11,6 +11,10 @@ import { useCookie } from 'next-cookie';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react'
 import RequestOperators from '../_components/RequestOperators';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Briefcase, FileText, Mail, Phone } from 'lucide-react';
+import TranslatedText from '@/components/Menubar/TranslatedText';
+import { ownerBookingsTranslation } from './OwnerBookingsTranslations';
 
 const AssignOperator = ({ selectedRequest, storeId, store }: { selectedRequest: string; storeId?: string | null; store?: Store | null; }) => {
 
@@ -74,7 +78,7 @@ const AssignOperator = ({ selectedRequest, storeId, store }: { selectedRequest: 
 
     useEffect(() => {
         handleFetchAllOperators()
-    })
+    }, [])
 
     return (
         <Dialog open={isAssignOpen} onOpenChange={setIsAssignOpen}>
@@ -85,50 +89,60 @@ const AssignOperator = ({ selectedRequest, storeId, store }: { selectedRequest: 
                         setIsAssignOpen(true)
                     }}
                 >
-                    Assign Operator
+                    <TranslatedText greetings={ownerBookingsTranslation.assignOperator} />
                 </Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Assign Operator</DialogTitle>
+                    <DialogTitle><TranslatedText greetings={ownerBookingsTranslation.assignOperator} /></DialogTitle>
                 </DialogHeader>
                 {
                     fetchingOperators ?
-                        <p>Fetching all Operators</p>
+                        <p><TranslatedText greetings={ownerBookingsTranslation.fetchingOperators} /></p>
                         :
                         allOperators.length === 0 ?
                             <div
                                 className="w-fill h-[50vh] flex items-center justify-center flex-col gap-5">
-                                <p>No operators available</p>
+                                <p><TranslatedText greetings={ownerBookingsTranslation.noOperatorsAvailable} /></p>
                                 {/* <RequestOperators store={store} /> */}
                             </div>
                             :
-                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 max-h-[90vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
                                 {allOperators.map((operator: OperatorInStore) => {
-                                    if (assigning) return <CircularProgress key={operator.id} />
                                     return (
-                                        <Card key={operator.id}>
+                                        <Card className="w-full max-w-md" key={operator.id}>
                                             <CardHeader>
-                                                <CardTitle>{`${operator.operator.user.first_name} ${operator.operator.user.middle_name ?? ""} ${operator.operator.user.last_name}`}</CardTitle>
+                                                <div className="flex items-center space-x-4">
+                                                    <Avatar className="h-12 w-12">
+                                                        <AvatarImage src={operator.operator.user.image || ''} alt={`${operator.operator.user.first_name} ${operator.operator.user.last_name}`} />
+                                                        <AvatarFallback>{operator.operator.user.first_name[0]}{operator.operator.user.last_name[0]}</AvatarFallback>
+                                                    </Avatar>
+                                                    <div>
+                                                        <CardTitle>{operator.operator.user.first_name} {operator.operator.user.middle_name ?? ""} {operator.operator.user.last_name}</CardTitle>
+                                                    </div>
+                                                </div>
                                             </CardHeader>
-                                            <CardContent>
-                                                {
-                                                    operator.operator.user.image &&
-                                                    <Image
-                                                        src={operator.operator.user.image}
-                                                        alt={`${operator.operator.user.first_name} ${operator.operator.user.middle_name ?? ""} ${operator.operator.user.last_name}`}
-                                                        className="w-24 h-24 rounded-full mx-auto"
-                                                        width={200}
-                                                        height={200}
-                                                    />
-                                                }
+                                            <CardContent className="space-y-2">
+                                                <div className="flex items-center">
+                                                    <Mail className="mr-2 h-4 w-4" />
+                                                    <span className="text-sm">{operator.operator.user.email}</span>
+                                                </div>
+                                                <div className="flex items-center">
+                                                    <Phone className="mr-2 h-4 w-4" />
+                                                    <span className="text-sm">{operator.operator.user.mobile}</span>
+                                                </div>
+                                                {operator.operator.OperatorBookingJob.length > 0 && (
+                                                    <div className="flex items-center">
+                                                        <Briefcase className="mr-2 h-4 w-4" />
+                                                        <span className="text-sm"><TranslatedText greetings={ownerBookingsTranslation.stores} />: {operator.operator.OperatorBookingJob.length}</span>
+                                                    </div>
+                                                )}
                                             </CardContent>
                                             <CardFooter>
-                                                <Button
-                                                    className="w-full"
-                                                    onClick={() => handleAssign(operator.operator_id)}
-                                                >
-                                                    Assign
+                                                <Button className="w-full" disabled={assigning} onClick={() => { handleAssign(operator.operator_id) }}>
+                                                    {
+                                                        assigning ? <TranslatedText greetings={ownerBookingsTranslation.assigning} /> : <TranslatedText greetings={ownerBookingsTranslation.assign} />
+                                                    }
                                                 </Button>
                                             </CardFooter>
                                         </Card>

@@ -397,7 +397,7 @@ const ExpandedSidebar = () => {
         qu: "Qhatariynin",
         gn: "Ñemity",
       }),
-      route: "#",
+      route: "/Subscriptions",
     },
     {
       icon: (

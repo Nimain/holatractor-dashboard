@@ -1,6 +1,5 @@
 "use client"
 
-import OwnerShrimmer from '@/components/Dashboards/Owner/_components/OwnerShrimmer'
 import dynamic from 'next/dynamic'
 import { ReactNode } from 'react'
 

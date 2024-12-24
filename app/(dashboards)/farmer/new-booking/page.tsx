@@ -1,7 +1,7 @@
 import dynamic from 'next/dynamic'
 
 const Booking = dynamic(
-    ()=> import('@/components/Dashboards/Farmer/NewBooking'),
+    ()=> import('@/components/Dashboards/Farmer/Booking/NewBooking'),
     {
         ssr: false,
         loading: () => (

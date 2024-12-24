@@ -1,43 +1,120 @@
 "use client"
 
-import { Booking } from "@/utils/Types/types"
+import { Booking, BookingHours, BookingStatus, Store } from "@/utils/Types/types"
 import {
     Sheet,
+    SheetClose,
     SheetContent,
     SheetHeader,
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Mail, MessageCircle, MoreHorizontal, NotepadText, Phone, Plus } from "lucide-react";
+import { ChevronRight, ChevronsUpDown, House, Mail, MessageCircle, MoreHorizontal, NotepadText, Phone, Plus, Tractor, Truck } from "lucide-react";
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { useCookie } from "next-cookie";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
+import { Backdrop, CircularProgress } from "@mui/material";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { MapContainer, Polygon, TileLayer } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import Image from "next/image";
+import { Pagination, Autoplay } from 'swiper/modules';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import 'swiper/css';
+import 'swiper/css/autoplay';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
+import 'swiper/css/scrollbar';
+import PaymentMethods from "./BankAccountSelect";
+import { RiDirectionLine } from "react-icons/ri";
+import TranslatedText from "@/components/Menubar/TranslatedText";
+import { ownerMarketPlaceTranslations } from "./OwnerMarketPlaceTranslations";
+import { newBookingTranslations } from "../../Farmer/FarmerTranslation";
 
-const NewBookings = ({ booking }: { booking: Booking }) => {
+interface AvailStore {
+    storeId: string;
+    storeName: string;
+    availableTractors: {
+        tractorId: string;
+        tractorName: string;
+    }[];
+    availableAttachments: {
+        attachmentId: string;
+        attachmentName: string;
+    }[];
+}
+
+const NewBookings = ({ booking, minDistance }: { booking: Booking; minDistance: number | null }) => {
+
+    const [availableStores, setAvailableStores] = useState<AvailStore[]>([])
+    const [checkingAvailability, setCheckingAvailability] = useState(false)
+    const [converting, setConverting] = useState(false)
 
     const { cookie } = useCookie();
     const access_token = cookie.get("access_token");
 
-    function fetchAvailableStores(){
-        renderInstance.post(`/booking/standalone-booking/${booking.id}/check-available-stores`,{},{
+    const limeOptions = { color: 'lime' }
+
+    function fetchAvailableStores() {
+        setCheckingAvailability(true)
+        renderInstance.post(`/booking/standalone-booking/${booking.id}/check-available-stores`, {}, {
             headers: {
-              Authorization: `Bearer ${access_token}`,
+                Authorization: `Bearer ${access_token}`,
             },
-          })
-        .then((res)=>{
-            console.log(res)
-        }).catch((err)=>{
-            console.log(err)
         })
-    } 
+            .then((res) => {
+                setAvailableStores(res.data)
+            }).catch((err) => {
+                if (err.response) {
+                    if (err.response.status === 404 && err.response.data.message === "Log in user not valid") {
+                        errorMessage("Log in user not valid")
+                    } else if (err.response.status === 404 && err.response.data.message === "Booking not found") {
+                        errorMessage("Booking not found")
+                    } else if (err.response.status === 409 && err.response.data.message === "Booking has been taken by another store") {
+                        errorMessage("Booking has been taken by another store")
+                    }
+                }
+            }).finally(() => {
+                setCheckingAvailability(false)
+            })
+    }
+
+    function bookingConverting(storeId: string, bookingId: string) {
+        setConverting(true)
+        renderInstance.post(`/booking/standalone-booking/${bookingId}/convert-booking/store/${storeId}`, {}, {
+            headers: {
+                Authorization: `Bearer ${access_token}`,
+            },
+        })
+            .then((res) => {
+                successMessage("Booked")
+                window.location.reload()
+            }).catch((err) => {
+                if (err.response) {
+                    if (err.response.status === 404 && err.response.data.message === "Login User not found") {
+                        errorMessage("Login User not found")
+                    } else if (err.response.status === 404 && err.response.data.message === "Store not found or not owned by the user") {
+                        errorMessage("Store not found or not owned by the user")
+                    } else if (err.response.status === 404 && err.response.data.message === "Booking not found") {
+                        errorMessage("Booking not found")
+                    } else if (err.response.status === 409 && err.response.data.message === "Booking has taken by other owner") {
+                        errorMessage("Booking has taken by other owner")
+                    }
+                }
+            }).finally(() => {
+                setConverting(false)
+            })
+    }
 
     useEffect(() => {
-      fetchAvailableStores()
+        fetchAvailableStores()
     }, [])
 
     return (
@@ -63,25 +140,23 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
                                     {`${booking.user?.email.split('@')[0].slice(0, 3)}...@${booking.user?.email.split('@')[1]}`}
                                 </span>
                             </div>
+                            <div className="flex items-center pt-2">
+                                <RiDirectionLine className="h-4 w-4 mr-2 text-muted-foreground" />
+                                <span className="text-sm">
+                                <TranslatedText greetings={ownerMarketPlaceTranslations.distance} />: {minDistance?.toFixed(2) ?? 0}km
+                                </span>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
             </SheetTrigger>
-            <SheetContent side="right" className="w-full sm:max-w-2xl p-0 bg-white">
+            <SheetContent side="right" className="p-0 bg-white">
                 <SheetHeader className="px-6 py-4 border-b">
                     <SheetTitle className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                             <ChevronRight className="h-4 w-4" />
-                            <span className="text-lg font-semibold">Lead Preview</span>
+                            <span className="text-lg font-semibold"><TranslatedText greetings={ownerMarketPlaceTranslations.leadPreview} /></span>
                         </div>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex items-center space-x-2 border border-gray-300 px-4 py-2 rounded-md"
-                        >
-                            <span className="text-sm">View full details</span>
-                            <ChevronRight className="h-4 w-4 text-gray-600" />
-                        </Button>
                     </SheetTitle>
                 </SheetHeader>
 
@@ -92,24 +167,33 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
                             <div className="flex items-center space-x-4">
                                 <div>
                                     <Avatar className="h-16 w-16">
-                                        <AvatarImage src="/placeholder.svg?height=64&width=64" />
-                                        <AvatarFallback>JB</AvatarFallback>
+                                        {
+                                            booking.user?.image &&
+                                            <AvatarImage src={booking.user?.image} />
+                                        }
+                                        <AvatarFallback>
+                                            {booking.user?.first_name[0]}{booking.user?.last_name[0]}
+                                        </AvatarFallback>
                                     </Avatar>
                                 </div>
                                 <div>
                                     <div>
-                                        <h2 className="text-xl font-semibold">Jerome Bell</h2>
+                                        <h2 className="text-xl font-semibold">
+                                            {`${booking.user?.first_name} ${booking.user?.middle_name ?? ""} ${booking.user?.last_name}`}
+                                        </h2>
                                     </div>
-                                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                                        <Mail className="h-4 w-4" />
-                                        <span className="text-sm">jeromebell@gmail.com</span>
-                                        <span>•</span>
-                                        <Phone className="h-4 w-4" />
-                                        <span className="text-sm">(405) 555-0128</span>
-                                    </div>
+                                    {
+                                        booking.owner_confirm &&
+                                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                                            <Mail className="h-4 w-4" />
+                                            <span className="text-sm">
+                                                {booking.user?.email}
+                                            </span>
+                                        </div>
+                                    }
                                 </div>
                             </div>
-                            <div className="flex space-x-2">
+                            {/* <div className="flex space-x-2">
                                 <div className="h-7 w-7 flex items-center justify-center rounded-full bg-gray-200">
                                     <Plus className="h-4 w-4 text-muted-foreground" />
                                 </div>
@@ -122,10 +206,10 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
                                 <div className="h-7 w-7 flex items-center justify-center rounded-full bg-gray-200">
                                     <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                                 </div>
-                            </div>
+                            </div> */}
 
                         </div>
-                        <div>
+                        {/* <div>
                             <div className="grid grid-cols-4 gap-4 mt-6 border">
                                 <div className="p-4">
                                     <Label className="text-xs text-muted-foreground">Lead owner</Label>
@@ -144,130 +228,259 @@ const NewBookings = ({ booking }: { booking: Booking }) => {
                                     <div className="font-medium">$ 5,000</div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                    <div className="flex space-x-2 mt-4">
-                        <Button variant="secondary" className="bg-green-100 text-green-800 w-32 h-10">New</Button>
-                        <Button variant="secondary" className="bg-green-100 text-green-800 w-32 h-10">Open</Button>
-                        <Button variant="secondary" className="bg-emerald-500 text-white w-32 h-10">In Progress</Button>
-                        <Button variant="outline" size="sm" className="w-32 h-10">Open deals</Button>
-                        <Button variant="outline" size="sm" className="w-32 h-10">Closed</Button>
+                        </div> */}
                     </div>
 
                     <div className="flex items-center justify-between mt-6">
-                        <div className="flex items-center">
-                            <Label className="text-md text-muted-foreground">Lead source</Label>
-                            <select className="ml-2 p-1 text-xs border rounded-md">
-                                <option value="source1">Source 1</option>
-                                <option value="source2">Source 2</option>
-                                <option value="source3">Source 3</option>
-                            </select>
-                        </div>
-                        <div className="flex items-center space-x-2 p-2 border rounded-md">
+                        {
+                            booking.booking_hours &&
+                            <div className="flex items-center space-x-2 p-2 border rounded-md">
+                                <span className="text-green-500">
+                                    <i className="fas fa-check-circle"></i>
+                                </span>
+                                <span className="text-sm text-muted-foreground">
+                                <TranslatedText greetings={ownerMarketPlaceTranslations.duration} />: <span className="font-medium">{booking.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : booking.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : booking.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : booking.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : booking.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : booking.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : booking.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}</span>
+                                </span>
+                            </div>
+                        }
+                        <div className="flex items-center space-x-2 p-2 border rounded-md ml-auto">
                             <span className="text-green-500">
                                 <i className="fas fa-check-circle"></i>
                             </span>
                             <span className="text-sm text-muted-foreground">
-                                Last activity: <span className="font-medium">2 Jan 2020 at 10:00 AM</span>
+                            <TranslatedText greetings={ownerMarketPlaceTranslations.created} />: <span className="font-medium">{new Date(booking.createdAt).toLocaleDateString()}</span>
                             </span>
                         </div>
                     </div>
 
                     <div className="mt-6">
-                        <div className="flex justify-between">
-                            <h3 className="text-lg font-semibold">
-                                Upcoming Activity
-                                <span className="text-sm font-normal text-muted-foreground ml-6">2</span>
-                            </h3>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="flex items-center space-x-2 text-red-700 px-4 py-2"
-                            >
-                                <span>View full details</span>
-                                <ChevronRight className="h-4 w-4 text-gray-600" />
-                            </Button>
+                        <Calendar
+                            initialFocus
+                            mode="range"
+                            selected={(booking.end_date && !booking.booking_hours) ? {
+                                from: new Date(booking.start_date),
+                                to: new Date(booking.end_date),
+                            } : {
+                                from: new Date(booking.start_date),
+                                to: new Date(booking.start_date)
+                            }}
+                            className="text-xl text-blue-500" />
+                    </div>
+                    <div className="w-full flex items-center justify-around gap-2 flex-wrap">
+                    {
+                        booking.farm &&
+                        <div className="mt-6">
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button>
+                                        <House />
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <MapContainer
+                                        center={booking.farm.boundary.coordinates[0]}
+                                        zoom={16}
+                                        scrollWheelZoom={false}
+                                        style={{ width: "100%", height: "80vh", zIndex: 1 }}>
+                                        <TileLayer
+                                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                        />
+                                        <Polygon pathOptions={limeOptions} positions={booking.farm.boundary.coordinates} />
+                                    </MapContainer>
+                                </DialogContent>
+                            </Dialog>
                         </div>
-                        <div className="mt-2 border rounded-md p-4">
-                            <div className="flex items-start justify-between">
-                                <div>
-                                    <div className="flex items-center space-x-2">
-                                        <input type="checkbox" className="w-4 h-4 rounded-full border-gray-400 accent-blue-500" />
-                                        <h4 className="font-medium">Prepare quote for Jerome Bell</h4>
+                    }
+                    {
+                        booking.standaloneTractors.length > 0 &&
+                        <div className="mt-6">
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button>
+                                        <Tractor className="mr-2" /> {booking.standaloneTractors.length}
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-h-[90vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
+                                    <div className="w-full grid grid-cols-2 gap-5">
+                                        {
+                                            booking.standaloneTractors.map((tractorDetails, i) => {
+                                                return (
+                                                    <Card key={i}>
+                                                        <CardTitle>
+                                                            {tractorDetails.tractor.name}
+                                                        </CardTitle>
+                                                        <CardContent>
+                                                            <Swiper
+                                                                modules={[Autoplay, Pagination]}
+                                                                spaceBetween={0}
+                                                                slidesPerView={1}
+                                                                loop={true}
+                                                                pagination={true}
+                                                                autoplay={true}
+                                                                className="w-full h-full"
+                                                            >
+                                                                {
+                                                                    tractorDetails.tractor.images.map((imageLink) => {
+                                                                        return (
+                                                                            <SwiperSlide className="w-full h-full" key={imageLink}>
+                                                                                <Image
+                                                                                    alt={tractorDetails.tractor.name}
+                                                                                    src={imageLink}
+                                                                                    width={400}
+                                                                                    height={400}
+                                                                                    className="h-52 w-full object-cover"
+                                                                                    unoptimized={true} />
+                                                                            </SwiperSlide>
+                                                                        )
+                                                                    })
+                                                                }
+                                                            </Swiper>
+                                                            <p>
+                                                            <TranslatedText greetings={ownerMarketPlaceTranslations.tractorType} />: {tractorDetails.tractor.type}
+                                                            </p>
+                                                            <p>
+                                                            <TranslatedText greetings={ownerMarketPlaceTranslations.quantity} />: {tractorDetails.count}
+                                                            </p>
+                                                        </CardContent>
+                                                    </Card>
+                                                )
+                                            })
+                                        }
                                     </div>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        She's interested in our new product line and wants our very best price.
-                                        Please include a detailed breakdown of costs.
-                                    </p>
-                                </div>
-                                <Button variant="ghost" size="icon">
-                                    <MoreHorizontal className="h-4 w-4" />
+                                </DialogContent>
+                            </Dialog>
+                        </div>
+                    }
+                    {
+                        booking.standaloneAttachments.length > 0 &&
+                        <div className="mt-6">
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button>
+                                        <Truck className="mr-2"/> {booking.standaloneAttachments.length}
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-h-[90vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
+                                    <div className="w-full grid grid-cols-2 gap-5">
+                                        {
+                                            booking.standaloneAttachments.map((tractorDetails, i) => {
+                                                return (
+                                                    <Card key={i}>
+                                                        <CardTitle>
+                                                            {tractorDetails.attachment.name}
+                                                        </CardTitle>
+                                                        <CardContent>
+                                                            <Swiper
+                                                                modules={[Autoplay, Pagination]}
+                                                                spaceBetween={0}
+                                                                slidesPerView={1}
+                                                                loop={true}
+                                                                pagination={true}
+                                                                autoplay={true}
+                                                                className="w-full h-full"
+                                                            >
+                                                                {
+                                                                    tractorDetails.attachment.images.map((imageLink) => {
+                                                                        return (
+                                                                            <SwiperSlide className="w-full h-full" key={imageLink}>
+                                                                                <Image
+                                                                                    alt={tractorDetails.attachment.name}
+                                                                                    src={imageLink}
+                                                                                    width={400}
+                                                                                    height={400}
+                                                                                    className="h-52 w-full object-cover"
+                                                                                    unoptimized={true} />
+                                                                            </SwiperSlide>
+                                                                        )
+                                                                    })
+                                                                }
+                                                            </Swiper>
+                                                            <p>
+                                                            <TranslatedText greetings={ownerMarketPlaceTranslations.quantity} />: {tractorDetails.count}
+                                                            </p>
+                                                        </CardContent>
+                                                    </Card>
+                                                )
+                                            })
+                                        }
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
+                    }
+                    </div>
+                        <Collapsible className="mt-4 mx-auto">
+                            <CollapsibleTrigger>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex items-center space-x-2 border border-gray-300 px-4 py-2 rounded-md"
+                                >
+                                    {
+                                        checkingAvailability ? <span className="text-sm">
+                                            <TranslatedText greetings={ownerMarketPlaceTranslations.checkingAvailability} />
+                                        </span>
+                                            :
+                                            <span className="text-sm">
+                                                <TranslatedText greetings={ownerMarketPlaceTranslations.availableStores} /> {availableStores.length}
+                                            </span>
+                                    }
+                                    {
+                                        !checkingAvailability &&
+                                        <ChevronsUpDown className="h-4 w-4 text-gray-600" />
+                                    }
                                 </Button>
-                            </div>
-                            <div className="flex items-center justify-between mt-4 text-sm border p-4 rounded-md">
-                                <div className="flex items-center space-x-4 w-full">
-                                    <div className="flex flex-col w-1/3 rounded-md">
-                                        <Label className="text-xs text-muted-foreground">Reminder</Label>
-                                        <select className="border p-2 rounded-md text-sm">
-                                            <option>No reminder</option>
-                                            <option>1 hour before</option>
-                                            <option>1 day before</option>
-                                            <option>Custom</option>
-                                        </select>
-                                    </div>
-                                    <div className="flex flex-col w-1/3 rounded-md">
-                                        <Label className="text-xs text-muted-foreground">Task Priority</Label>
-                                        <select className="border p-2 rounded-md text-sm">
-                                            <option>Low</option>
-                                            <option>Medium</option>
-                                            <option>High</option>
-                                            <option>Critical</option>
-                                        </select>
-                                    </div>
-                                    <div className="flex flex-col w-1/3 rounded-md">
-                                        <Label className="text-xs text-muted-foreground">Assigned to</Label>
-                                        <select className="border p-2 rounded-md text-sm">
-                                            <option>Esther Howard</option>
-                                            <option>John Doe</option>
-                                            <option>Jane Smith</option>
-                                            <option>David Williams</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="mt-6">
-                        <div className="border border-gray-200 rounded-lg shadow-sm">
-                            <div className="flex items-center justify-between border-b p-4">
-                                <h3 className="text-xl font-semibold flex items-center gap-2 text-gray-900">
-                                    <NotepadText className="w-5 h-5 text-muted-foreground" />
-                                    Notes
-                                    <span className="text-sm font-normal text-gray-500">4</span>
-                                </h3>
-                                <div className="flex items-center gap-2 p-2 border rounded-md shadow-sm">
-                                    <Calendar className="text-xl text-blue-500" />
-                                    <span className="text-base text-gray-800">January 2, 2024</span>
-                                </div>
-                            </div>
-
-                            <div className="mt-4 p-4">
-                                <div className="flex items-start justify-between pb-4 mb-4">
-                                    <div>
-                                        <h4 className="font-medium text-gray-800">Note by Esther Howard</h4>
-                                        <p className="text-sm text-gray-600 mt-1">
-                                            She's interested in our new product line and wants our very best price.
-                                            Please include a detailed breakdown of costs.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <Button variant="outline" className="w-full mt-4">+ Add note</Button>
-                    </div>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                                {
+                                    availableStores.map((storeDetails, i) => {
+                                        return (
+                                            <Dialog key={i}>
+                                                <DialogTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="flex items-center space-x-2 border border-gray-300 px-4 py-2 rounded-md"
+                                                    >
+                                                        <span className="text-sm">
+                                                            {storeDetails.storeName}
+                                                        </span>
+                                                        <ChevronRight className="h-4 w-4 text-gray-600" />
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent className="max-w-xl">
+                                                    <DialogHeader>
+                                                        <DialogTitle className="text-xl font-semibold">
+                                                        <TranslatedText greetings={ownerMarketPlaceTranslations.confirmBookingLeadForStore} /> {storeDetails.storeName}
+                                                        </DialogTitle>
+                                                        <DialogDescription>
+                                                        <TranslatedText greetings={ownerMarketPlaceTranslations.confirmBookingAction} />
+                                                        </DialogDescription>
+                                                    </DialogHeader>
+                                                    <DialogFooter className="sm:justify-start">
+                                                        <DialogClose asChild>
+                                                            <Button variant="outline">
+                                                            <TranslatedText greetings={ownerMarketPlaceTranslations.dontBook} />
+                                                            </Button>
+                                                        </DialogClose>
+                                                        <PaymentMethods bookingId={booking.id} storeId={storeDetails.storeId} />
+                                                    </DialogFooter>
+                                                </DialogContent>
+                                            </Dialog>
+                                        )
+                                    })
+                                }
+                            </CollapsibleContent>
+                        </Collapsible>
                 </div>
+
+                <Backdrop
+                    sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+                    open={converting}
+                >
+                    <CircularProgress />
+                </Backdrop>
             </SheetContent>
 
         </Sheet>

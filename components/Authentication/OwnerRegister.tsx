@@ -16,7 +16,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from '../ui/label'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
-import { City, Country, Role, Subscriptions } from '@/utils/Types/types'
+import { City, Country, Role, Subscriptions, SubscriptionType } from '@/utils/Types/types'
 import { renderInstance } from '@/utils/Axios/RenderInstance'
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
 import { Backdrop, CircularProgress } from '@mui/material'
@@ -33,7 +33,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
-import { AtSign, BadgeDollarSign, CalendarIcon, Check, ChevronsUpDown, CircleCheck, DatabaseZap, Eye, EyeOff, MapPinned, VenetianMask } from 'lucide-react'
+import { AtSign, BadgeDollarSign, Building, CalendarIcon, Check, ChevronsUpDown, CircleCheck, DatabaseZap, Eye, EyeOff, MapPinned, Rocket, VenetianMask, Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
 import { format, setYear } from 'date-fns'
@@ -45,7 +45,7 @@ import { useCookie } from 'next-cookie'
 import { useRouter } from 'next/navigation'
 import { Separator } from '../ui/separator'
 import countryData from './CountryCodeRoles'
-import { Badge } from '../ui/badge'
+import QRCODE from "@/assets/QRcode.jpg"
 
 const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => {
     const [open, setOpen] = useState(false)
@@ -88,6 +88,11 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
     const [fetchSubscriptions, setFetchSubscriptions] = useState(false)
     const [selectedPlan, setSelectedPlan] = useState<Subscriptions | null>(null)
     const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
+
+    const [purchasing, setPurchasing] = useState(false)
+
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
     const { cookie } = useCookie()
     const access_token = cookie.get("access_token");
@@ -156,6 +161,22 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
         return Math.abs(ageDate.getUTCFullYear() - 1970);
     }
 
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            setSelectedFile(file);
+
+            // Generate a preview URL for the selected image
+            const preview = URL.createObjectURL(file);
+            setPreviewUrl(preview);
+        }
+    };
+
+    const handleRemoveFile = () => {
+        setSelectedFile(null);
+        setPreviewUrl(null);
+    };
+
     async function ownerRegister() {
         if (!agEmail) {
             errorMessage("Please add the email")
@@ -222,6 +243,11 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
             return
         }
 
+        if (!selectedPlan) {
+            errorMessage("Please select a plan")
+            return
+        }
+
         const { firstName, middleName, lastName } = splitFullName(name);
         const encryptedPassword = CryptoJS.AES.encrypt(
             agPassword,
@@ -229,6 +255,21 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
         ).toString();
 
         setLoading(true)
+
+        if (!selectedFile) {
+            errorMessage("Please upload your payment proof")
+            return
+        }
+
+        let paymentProofLink = ""
+        const buffer = Buffer.from(await selectedFile.arrayBuffer());
+        paymentProofLink = await uploadFileToS3(buffer, selectedFile.name);
+
+        if (!paymentProofLink) {
+            errorMessage("Something went wrong in uploading the image");
+            return;
+        }
+
         const selectedRole = await renderInstance.get('/role/getIdByName/owner')
         if (!selectedRole) {
             errorMessage("Currently not possible to register")
@@ -283,7 +324,8 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
             attachment: attachmentLink,
             document_number,
             expiry_date,
-            payment_id: "test"
+            payment_id: "test",
+            paymentScreenshots: paymentProofLink
         };
 
         inPage ?
@@ -296,8 +338,19 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                 .then((res) => {
                     if (res.status === 201 && res.data.access_token) {
                         successMessage("Created successfully")
-                        router.refresh()
-                        window.location.reload()
+                        setPurchasing(true)
+                        renderInstance.post(`/subscription/owner_purchase/${selectedPlan.id}`, {}, {
+                            headers: {
+                                Authorization: `Bearer ${res.data.access_token}`,
+                            }
+                        }).then(() => {
+                            successMessage("Subscription purchased")
+                            router.push("/login")
+                        }).catch(() => {
+                            errorMessage("Failed to purchase subscription")
+                        }).finally(() => {
+                            setPurchasing(false)
+                        })
                     }
                 })
                 .catch((err) => {
@@ -338,9 +391,19 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                         cookie.remove("access_token", { path: "/" });
 
                         successMessage("User sign up successfully");
-                        setTimeout(() => {
-                            router.push("/login");
-                        }, 3000);
+                        setPurchasing(true)
+                        renderInstance.post(`/subscription/owner_purchase/${selectedPlan.id}`, {}, {
+                            headers: {
+                                Authorization: `Bearer ${res.data.access_token}`,
+                            }
+                        }).then(() => {
+                            successMessage("Subscription purchased")
+                            router.push("/login")
+                        }).catch((err) => {
+                            errorMessage("Failed to purchase subscription")
+                        }).finally(() => {
+                            setPurchasing(false)
+                        })
                     }
                 })
                 .catch((err) => {
@@ -391,13 +454,6 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
         setIsPaymentDialogOpen(true)
     }
 
-    const handlePayment = (e: React.FormEvent) => {
-        e.preventDefault()
-        // Here you would typically handle the payment processing
-        console.log(`Processing payment for ${selectedPlan?.name}`)
-        setIsPaymentDialogOpen(false)
-    }
-
     useEffect(() => {
         fetchAllCountry()
     }, [])
@@ -428,7 +484,7 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
 
                 <Backdrop
                     sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-                    open={loading}
+                    open={loading || purchasing}
                 >
                     <CircularProgress />
                 </Backdrop>
@@ -1188,48 +1244,55 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                                     :
                                     <div className="container mx-auto p-4">
                                         <h1 className="text-3xl font-bold mb-6 text-center">Choose Your Subscription Plan</h1>
-                                        <div className='w-full flex justify-end items-center my-4'>
-                                            <Button
-                                            onClick={()=>{ ownerRegister() }}>
-                                                Skip subscription
-                                            </Button>
-                                        </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                             {subscriptions.filter(subs => subs.for_owner === true).length === 0 ?
                                                 <p>No subscriptions present for owners</p>
                                                 :
                                                 subscriptions.filter(subs => subs.for_owner === true).map((sub) => (
-                                                    <Card key={sub.id} className={`flex flex-col ${selectedPlan?.id === sub.id ? 'border-primary' : ''}`}>
-                                                        <CardHeader>
-                                                            <CardTitle>{sub.name}</CardTitle>
-                                                            <CardDescription>{sub.type} Plan</CardDescription>
-                                                        </CardHeader>
-                                                        <CardContent className="flex-grow">
-                                                            <div className="mb-4">
-                                                                <span className="text-3xl font-bold">${sub.actual_cost}</span>
-                                                                {sub.discount_cost < sub.actual_cost && (
-                                                                    <span className="text-muted-foreground line-through ml-2">${sub.actual_cost}</span>
-                                                                )}
-                                                            </div>
+                                                    <Card
+                                                        key={sub.id}
+                                                        className="flex flex-col bg-white hover:bg-black hover:text-white transition-colors duration-300 group"
+                                                    >
+                                                        <CardHeader className="flex-1 space-y-4">
                                                             <div className="space-y-2">
-                                                                {sub.focused_features.map((feature, index) => (
-                                                                    <li key={index} className="text-sm font-medium flex gap-2 items-center text-green-500">
-                                                                        <CircleCheck /> <p className="text-green-500">{feature}</p>
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="text-primary group-hover:text-white">
+                                                                        {sub.type === SubscriptionType.Business ? <Building className="w-6 h-6" /> : sub.type === SubscriptionType.Premium ? <Rocket className="w-6 h-6" /> : <Zap className="w-6 h-6" />}
+                                                                    </div>
+                                                                </div>
+                                                                <h3 className="text-2xl font-bold">{sub.name}</h3>
+                                                                <p className={`text-sm text-gray-500 group-hover:text-white`}>
+                                                                    {sub.type}
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex items-baseline text-6xl font-bold">
+                                                                ${sub.actual_cost - sub.discount_cost}
+                                                                <span className={`ml-1 text-sm font-normal text-gray-500 group-hover:text-white`}>
+                                                                    - {sub.total_days} days
+                                                                </span>
+                                                            </div>
+                                                        </CardHeader>
+
+                                                        <Separator className="mb-3" />
+                                                        <CardContent className="flex-1">
+                                                            <ul className="space-y-4">
+                                                                {sub.focused_features.map((feature, i) => (
+                                                                    <li key={i} className="flex items-center text-green-600">
+                                                                        <Check className="h-4 w-4 mr-2" />
+                                                                        <span>{feature}</span>
                                                                     </li>
                                                                 ))}
-                                                                {sub.features.map((feature, index) => (
-                                                                    <li key={index} className="text-sm flex gap-2 items-center">
-                                                                        <CircleCheck />{feature}
+                                                                {sub.features.map((feature, i) => (
+                                                                    <li key={i} className="flex items-center">
+                                                                        <Check className="h-4 w-4 mr-2" />
+                                                                        <span>{feature}</span>
                                                                     </li>
                                                                 ))}
-                                                            </div>
-                                                            <div className="mt-4">
-                                                                <Badge variant="outline">{sub.total_days} days</Badge>
-                                                            </div>
+                                                            </ul>
                                                         </CardContent>
                                                         <CardFooter>
                                                             <Button
-                                                                className="w-full"
+                                                                className="w-full transition-all duration-500 group-hover:bg-white group-hover:text-black"
                                                                 onClick={() => handleSelectPlan(sub)}
                                                                 variant={selectedPlan?.id === sub.id ? "secondary" : "default"}
                                                             >
@@ -1241,44 +1304,81 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                                         </div>
 
                                         <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-                                            <DialogContent>
+                                            <DialogContent className='h-[90vh] overflow-auto' style={{ scrollbarWidth: "none" }}>
                                                 <DialogHeader>
-                                                    <DialogTitle>Complete Your Purchase</DialogTitle>
-                                                    <DialogDescription>
-                                                        You're about to subscribe to the {selectedPlan?.name} for ${selectedPlan?.discount_cost}.
-                                                    </DialogDescription>
+                                                    <DialogTitle className='text-center'>Complete Your payment and update the screen shot</DialogTitle>
                                                 </DialogHeader>
-                                                <form onSubmit={handlePayment}>
-                                                    <div className="grid gap-4 py-4">
-                                                        <div className="grid grid-cols-4 items-center gap-4">
-                                                            <Label htmlFor="name" className="text-right">
-                                                                Name
-                                                            </Label>
-                                                            <Input id="name" className="col-span-3" />
-                                                        </div>
-                                                        <div className="grid grid-cols-4 items-center gap-4">
-                                                            <Label htmlFor="card-number" className="text-right">
-                                                                Card Number
-                                                            </Label>
-                                                            <Input id="card-number" className="col-span-3" />
-                                                        </div>
-                                                        <div className="grid grid-cols-4 items-center gap-4">
-                                                            <Label htmlFor="expiry" className="text-right">
-                                                                Expiry Date
-                                                            </Label>
-                                                            <Input id="expiry" className="col-span-3" placeholder="MM/YY" />
-                                                        </div>
-                                                        <div className="grid grid-cols-4 items-center gap-4">
-                                                            <Label htmlFor="cvv" className="text-right">
-                                                                CVV
-                                                            </Label>
-                                                            <Input id="cvv" className="col-span-3" />
+                                                <div className='grid grid-cols-2 gap-4'>
+                                                    <Image
+                                                        src={QRCODE}
+                                                        alt='QR code image'
+                                                        className='w-full object-contain'
+                                                        unoptimized={true} />
+                                                    <div className="space-y-4 flex flex-col items-center justify-center">
+                                                        <h3 className="text-lg font-medium">Payment Proof</h3>
+                                                        <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg">
+                                                            <label
+                                                                htmlFor="payment-proof"
+                                                                className="relative flex flex-col items-center justify-center gap-1 p-8 text-center cursor-pointer w-full h-[300px]"
+                                                            >
+                                                                {!previewUrl ? (
+                                                                    <>
+                                                                        <div className="size-10 flex items-center justify-center rounded-full bg-primary/10">
+                                                                            <svg
+                                                                                className="size-6 text-primary"
+                                                                                xmlns="http://www.w3.org/2000/svg"
+                                                                                width="24"
+                                                                                height="24"
+                                                                                viewBox="0 0 24 24"
+                                                                                fill="none"
+                                                                                stroke="currentColor"
+                                                                                strokeWidth="2"
+                                                                                strokeLinecap="round"
+                                                                                strokeLinejoin="round"
+                                                                            >
+                                                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                                                <polyline points="17 8 12 3 7 8" />
+                                                                                <line x1="12" x2="12" y1="3" y2="15" />
+                                                                            </svg>
+                                                                        </div>
+                                                                        <p className="text-sm text-muted-foreground mt-2">
+                                                                            Drag & drop or click to choose files
+                                                                        </p>
+                                                                        <input
+                                                                            id="payment-proof"
+                                                                            type="file"
+                                                                            accept="image/*,.pdf"
+                                                                            className="sr-only"
+                                                                            onChange={handleFileChange}
+                                                                        />
+                                                                    </>
+                                                                ) : (
+                                                                    <div className="relative">
+                                                                        <img
+                                                                            src={previewUrl}
+                                                                            alt="Uploaded File Preview"
+                                                                            className="max-h-40 rounded-lg object-cover"
+                                                                        />
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={handleRemoveFile}
+                                                                            className="absolute top-2 right-2 bg-red-500 text-white text-xs rounded-full p-1"
+                                                                        >
+                                                                            ✕
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </label>
+                                                            {
+                                                                selectedFile && <Button className='w-full' disabled={loading || purchasing} onClick={() => { ownerRegister() }}>
+                                                                    {
+                                                                        (loading || purchasing) ? "Creating..." : "Creating account"
+                                                                    }
+                                                                </Button>
+                                                            }
                                                         </div>
                                                     </div>
-                                                    <DialogFooter>
-                                                        <Button type="submit">Pay Now</Button>
-                                                    </DialogFooter>
-                                                </form>
+                                                </div>
                                             </DialogContent>
                                         </Dialog>
                                     </div>

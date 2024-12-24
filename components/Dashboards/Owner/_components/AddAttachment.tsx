@@ -20,6 +20,8 @@ import { Backdrop } from "@mui/material";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import TranslatedText from "@/components/Menubar/TranslatedText";
+import { singleStoreOwnerTranslations } from "../SingleStoreTranslation";
 
 const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentInStore[] }) => {
   const [open, setOpen] = useState(false);
@@ -33,7 +35,6 @@ const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentI
   const access_token = cookie.get("access_token");
 
   const { slug } = useParams();
-  const { refresh } = useRouter();
 
   function fetchAllAttachments() {
     if (access_token) {
@@ -83,11 +84,25 @@ const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentI
       })
       .then((res) => {
         successMessage("Attachment added successfully");
-        refresh();
       })
       .catch((err) => {
-        console.log(err);
-        errorMessage("Some error occurred");
+        if (err.response && err.response.status === 404 && err.response.data.message === "Store not present") {
+          errorMessage("Store not present")
+        } else if (err.response && err.response.status === 404 && err.response.data.message === "User not present") {
+          errorMessage("User not present")
+        } else if (err.response && err.response.status === 400 && err.response.data.message === "No owner is availalable for this store") {
+          errorMessage("No owner is availalable for this store")
+        } else if (err.response && err.response.status === 401 && err.response.data.message === "You are not allowed to modify the store") {
+          errorMessage("You are not allowed to modify the store")
+        } else if (err.response && err.response.status === 409 && err.response.data.message === "No active subscriptions") {
+          errorMessage("No active subscriptions")
+        } else if (err.response && err.response.status === 409 && err.response.data.message === "Maximum attachments reached") {
+          errorMessage("Maximum attachments reached")
+        } else if (err.response && err.response.status === 404 && err.response.data.message === "Attachment not found") {
+          errorMessage("Attachment not found")
+        } else {
+          errorMessage("Some error occurred");
+        }
       })
       .finally(() => {
         setCreating(false);
@@ -98,7 +113,7 @@ const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentI
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <div className="bg-white rounded-xl p-6 shadow-lg w-full xl:w-[47%] min-w-[350px] xl:-mt-[8.7rem]">
+        <div>
           <div className="flex flex-col items-center justify-center h-full space-y-4">
             <div className="w-32 h-32 bg-gray-200 rounded-full flex items-center justify-center">
               <Image
@@ -110,9 +125,9 @@ const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentI
                 unoptimized={true}
               />
             </div>
-            <h3 className="text-2xl font-bold text-center">Add New Attachment</h3>
+            <h3 className="text-2xl font-bold text-center"><TranslatedText greetings={singleStoreOwnerTranslations.addNewAttachment} /></h3>
             <p className="text-gray-600 text-center">
-              Click to add a new attachment to your inventory
+            <TranslatedText greetings={singleStoreOwnerTranslations.clickAddNewAttachment} />
             </p>
             <Button
               className="mt-4"
@@ -121,27 +136,27 @@ const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentI
               }}
             >
               <AddIcon className="mr-2" />
-              Add Attachment
+              <TranslatedText greetings={singleStoreOwnerTranslations.addAttachment} />
             </Button>
           </div>
         </div>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[425px]">
-        <div className="grid gap-4 py-4">
+      <DialogContent className="max-h-[90vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
+        <div className="grid gap-4 py-4 grid-cols-2">
           {selectedAttachmentId ? (
             <div className="grid gap-4">
-              <Label htmlFor="hourly-price">Hourly Price</Label>
+              <Label htmlFor="hourly-price"><TranslatedText greetings={singleStoreOwnerTranslations.hourlyPrice} /> ($)</Label>
               <Input
                 id="hourly-price"
                 type="number"
                 value={hourlyPrice}
                 onChange={(e) => setHourlyPrice(Number(e.target.value))}
               />
-              <Button onClick={saveAttachment}>Save Attachment</Button>
+              <Button onClick={saveAttachment}><TranslatedText greetings={singleStoreOwnerTranslations.saveAttachment} /></Button>
             </div>
           ) : fetchingAttachments ? (
-            <p>Loading attachments...</p>
+            <p><TranslatedText greetings={singleStoreOwnerTranslations.loadingTractors} />...</p>
           ) : (
             allAttachments.map((attachment) => (
               <div key={attachment.id} className="border p-4 rounded-md">
@@ -171,14 +186,14 @@ const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentI
                   className="mt-2 w-full"
                   onClick={() => setSelectedAttachmentId(attachment.id)}
                 >
-                  Select
+                  <TranslatedText greetings={singleStoreOwnerTranslations.select} />
                 </Button>
               </div>
             ))
           )}
         </div>
         <Backdrop open={creating}>
-          <p>Adding attachment to store...</p>
+          <p><TranslatedText greetings={singleStoreOwnerTranslations.addingAttachmentToStore} />...</p>
         </Backdrop>
       </DialogContent>
     </Dialog>

@@ -40,19 +40,7 @@ const NewBooking = () => {
     const [startDate, setstartDate] = useState<Date>();
     const [endDate, setEndDate] = useState<Date>();
     const [BookingHours, setBookingHours] = useState("");
-
-    const [countryName, setCountryName] = useState("");
-    const [allCountry, setAllCountry] = useState<Country[]>([]);
-    const [zipCode, setZipCode] = useState("");
-    const [fetchingCity, setFetchingCity] = useState(false);
-    const [allcity, setAllCity] = useState<City[]>([]);
-    const [popoverOpenCity, setPopoverOpenCity] = useState(false)
-    const [fetchingContry, setFetchingCountry] = useState(false);
-    const [roadName, setRoadName] = useState("");
-    const [address, setAddress] = useState("");
-    const [city, setCity] = useState("");
-    const [state, setState] = useState("");
-    const [popoverOpen, setPopoverOpen] = useState(false)
+    
     const [farms, setFarms] = useState<Farm[]>([])
     const [fetchingFarms, setFetchingFarms] = useState(false)
     const [selectedFarm, setSelectedFarm] = useState("")
@@ -295,7 +283,7 @@ const NewBooking = () => {
                 user_id: user.userId,
                 store_id: store_id,
                 start_date: new Date(startDate),
-                end_date: BookingHours === "more" ? endDate : new Date(),
+                end_date: endDate,
                 tractor_ids: selectedTractorIds,
                 attachment_ids: selectedAttachmentIds,
             };
@@ -305,7 +293,6 @@ const NewBooking = () => {
                 user_id: user.userId,
                 store_id: store_id,
                 start_date: new Date(startDate),
-                end_date: BookingHours === "more" ? endDate : new Date(),
                 booking_hours: BookingHours,
                 tractor_ids: selectedTractorIds,
                 attachment_ids: selectedAttachmentIds,
@@ -705,7 +692,10 @@ const NewBooking = () => {
             <MapPin className="h-5 w-5 text-primary" />
             <h3 className="font-semibold">Distance Details</h3>
           </div>
+          {
+            booking.distance &&
           <p className="pl-7">Total Distance: {parseFloat(booking.distance).toFixed(2)} km</p>
+          }
         </div>
 
         <Separator />

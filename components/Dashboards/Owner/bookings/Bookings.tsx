@@ -13,25 +13,12 @@ import {
     CardTitle,
 } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-
-import {
-    ChartConfig,
-    ChartContainer,
-    ChartTooltip,
-    ChartTooltipContent,
-} from "@/components/ui/chart"
 import { YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 import { CalendarIcon, ChevronDown, Minus, Plus, Search, User, X, Wifi, Share2, Users, ArrowRight, MapPin, Clock, Phone, } from 'lucide-react'
 import { addDays, format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
 import {
     Select,
     SelectContent,
@@ -39,16 +26,19 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Booking, BookingStatus, OperatorInStore, PaymentStatus } from "@/utils/Types/types";
+import { Booking, BookingHours, BookingStatus, OperatorInStore, PaymentStatus } from "@/utils/Types/types";
 import { useCookie } from "next-cookie";
-import { renderInstance } from "@/utils/Axios/RenderInstance";
-import { errorMessage } from "@/utils/Toastify/Messages";
+import { NestJsBaseURL, renderInstance } from "@/utils/Axios/RenderInstance";
+import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import OwnerShrimmer from "../_components/OwnerShrimmer";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import Image from "next/image";
 import AssignOperator from "./AssignOperator";
 import PaymentReview from "../_components/PaymentProofAction";
+import PaymentMethods from '../_components/BankAccountSelect'
+import { io, Socket } from "socket.io-client";
+import TranslatedText from "@/components/Menubar/TranslatedText";
+import { ownerBookingsTranslation } from "./OwnerBookingsTranslations";
+import { newBookingTranslations } from "../../Farmer/FarmerTranslation";
 
 interface user {
     userId: string;
@@ -76,19 +66,24 @@ const Bookings = () => {
     const [date, setDate] = useState(new Date());
     const [location, setLocation] = useState<Location>({ latitude: null, longitude: null });
     const [error, setError] = useState<string | null>(null);
+    const [selectedFilter, setSelectedFilter] = useState("all")
 
     const [allBookings, setAllBookings] = useState<Booking[]>([])
     const [fetchingBookings, setFetchingBookings] = useState(false)
     const [query, setQuery] = useState('');
+    const [confirming, setConfirming] = useState(false)
 
+    const [timeRange, setTimeRange] = useState('last30');
 
-    const [dayFilter, setDayFilter] = useState('sunday');
-    const [timeRange, setTimeRange] = useState("last30");
-    const [selectedYear, setSelectedYear] = useState(2022);
-  
-    const years: number[] = [2020, 2021, 2022, 2023, 2024, 2025];
-  
-    const chartData: ChartDataSet = {
+    const [selectedRange, setSelectedRange] = useState<TimeRange>("")
+
+    const leftSectionRef = useRef<HTMLDivElement>(null)
+    const rightSectionRef = useRef<HTMLDivElement>(null)
+
+    const timeRanges = ["Last 30 Days", "Last 90 Days"] as const
+    type TimeRange = typeof timeRanges[number] | string
+
+    const chartData = {
         last30: [
           { time: 'Jan', passengers: 200 },
           { time: 'Feb', passengers: 600 },
@@ -108,13 +103,22 @@ const Bookings = () => {
 
     const { cookie } = useCookie()
     const user: user = cookie.get("user")
+    const access_token = cookie.get("access_token")
+
+    function generateYearOptions() {
+        const currentYear = new Date().getFullYear();
+        const years = [];
+        for (let year = 2021; year <= currentYear; year++) {
+            years.push(year.toString());
+        }
+        return years.reverse();
+    }
 
     function fetchBookings() {
         setFetchingBookings(true)
 
         renderInstance.get(`/owner/get-owner-booking-page-details/${user.userId}`)
             .then((res) => {
-                console.log(res.data)
                 setAllBookings(res.data.allBookings)
             }).catch((err) => {
                 errorMessage("Error fetching operator lists")
@@ -122,6 +126,81 @@ const Bookings = () => {
                 setFetchingBookings(false)
             })
     }
+
+    const handleReject = (id: string) => {
+        setConfirming(true)
+        // Implement accept logic here
+        renderInstance.patch(`/booking/${id}/owner_reject`, {}, {
+            headers: {
+                Authorization: `Bearer ${access_token}`,
+            },
+        }).then((res) => {
+            successMessage("You have rejected this request")
+        }).catch((err) => {
+            if (err.response && err.response.status === 404 && err.response.data.message === "Booking is not valid") {
+                errorMessage("Log in user not found")
+            } else if (err.response && err.response.status === 400 && err.response.data.message === "User has not confirmed the booking. Wait till user booked") {
+                errorMessage("User has not confirmed the booking. Wait till user booked")
+            } else if (err.response && err.response.status === 400 && err.response.data.message === "You are not allowed to perform this task") {
+                errorMessage("You are not allowed to perform this task")
+            } else {
+                errorMessage("Some error occurred")
+            }
+        }).finally(() => {
+            setConfirming(false)
+        })
+    }
+
+    useEffect(() => {
+        const handleScroll = (e: WheelEvent) => {
+            const target = e.currentTarget as HTMLDivElement
+            target.scrollTop += e.deltaY
+        }
+
+        const section = leftSectionRef.current
+        if (section) {
+            section.addEventListener('wheel', handleScroll)
+        }
+
+        const rsection = rightSectionRef.current
+        if (rsection) {
+            rsection.addEventListener('wheel', handleScroll)
+        }
+
+        return () => {
+            if (section) {
+                section.removeEventListener('wheel', handleScroll)
+            }
+        }
+    }, [])
+
+    useEffect(() => {
+        // Connect to the socket server
+        const newSocket: Socket = io(NestJsBaseURL, {
+            query: {
+                userId: user.userId
+            }
+        });
+
+        // Listen for the 'newFarmerNotification' event
+        newSocket.on('newBooking', (booking: Booking) => {
+            setAllBookings(prevBookings => {
+                const existingBookingIndex = prevBookings.findIndex(b => b.id === booking.id);
+
+                if (existingBookingIndex !== -1) {
+                    const updatedBookings = prevBookings.filter(b => b.id !== booking.id);
+                    return [booking, ...updatedBookings];
+                } else {
+                    return [booking, ...prevBookings];
+                }
+            });
+        });
+
+        // Clean up the event listener when the component unmounts
+        return () => {
+            newSocket.disconnect();
+        };
+    }, []);
 
     useEffect(() => {
         if (user) {
@@ -147,8 +226,6 @@ const Bookings = () => {
         }
     }, []);
 
-    if (fetchingBookings) return <OwnerShrimmer />
-
     return (
         <div className="flex flex-col h-screen bg-gray-50">
             {/* Header */}
@@ -158,7 +235,7 @@ const Bookings = () => {
 
 
                 {/* Left Section - Train Cards */}
-                <div className="w-2/5 mx-auto p-4 overflow-auto">
+                <div className="w-2/5 mx-auto p-4 overflow-auto" style={{ scrollbarWidth: "none" }} ref={leftSectionRef}>
                     {/* Search Bar */}
                     <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
                         <div className="flex items-center gap-4">
@@ -179,336 +256,2349 @@ const Bookings = () => {
 
                     {/* Filters */}
                     <div className="flex justify-between gap-4 mb-6">
-                        <Select>
+                        <Select defaultValue="all" onValueChange={(e) => { setSelectedFilter(e) }}>
                             <SelectTrigger className="w-[140px] bg-white">
-                                <SelectValue placeholder="All class" />
+                                <SelectValue placeholder={<TranslatedText greetings={ownerBookingsTranslation.allBookings} />} />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">All class</SelectItem>
-                                <SelectItem value="business">Business</SelectItem>
-                                <SelectItem value="luxury">Luxury</SelectItem>
-                                <SelectItem value="executive">Executive</SelectItem>
+                                <SelectItem value="all">
+                                    <TranslatedText greetings={ownerBookingsTranslation.all} />
+                                </SelectItem>
+                                <SelectItem value="open">
+                                    <TranslatedText greetings={ownerBookingsTranslation.open} />
+                                </SelectItem>
+                                <SelectItem value="accepted">
+                                    <TranslatedText greetings={ownerBookingsTranslation.accepted} />
+                                </SelectItem>
+                                <SelectItem value="ongoing">
+                                    <TranslatedText greetings={ownerBookingsTranslation.ongoing} />
+                                </SelectItem>
+                                <SelectItem value="unpaid">
+                                    <TranslatedText greetings={ownerBookingsTranslation.unpaid} />
+                                </SelectItem>
+                                <SelectItem value="review">
+                                    <TranslatedText greetings={ownerBookingsTranslation.review} />
+                                </SelectItem>
+                                <SelectItem value="completed">
+                                    <TranslatedText greetings={ownerBookingsTranslation.completed} />
+                                </SelectItem>
+                                <SelectItem value="rejected">
+                                    <TranslatedText greetings={ownerBookingsTranslation.rejected} />
+                                </SelectItem>
                             </SelectContent>
                         </Select>
-
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" className="bg-white flex items-center gap-5">
-                                    <CalendarIcon className="h-4 w-4 text-gray-500" />
-                                    {format(date, "EEE, d MMM")}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                    mode="single"
-                                    selected={date}
-                                    // onSelect={setDate}
-                                    initialFocus
-                                />
-                            </PopoverContent>
-                        </Popover>
                     </div>
 
                     {/* Train List */}
-                    <div className="space-y-4">
-                        {allBookings.map((ticket, i) => (
-                            <Card
-                                key={i}
-                                className={cn(
-                                    "py-4 hover:shadow-md transition-shadow"
-                                )}
-                            >
-                                <CardContent>
-                                    <div className="flex items-start justify-between">
-                                        <div>
-                                            <h3 className="text-lg font-medium">
-                                                #holabook{ticket.id.slice(-5)}
-                                            </h3>
-                                        </div>
-                                        <span className="text-lg font-semibold text-green-500">
-                                            {ticket.total_cost.toFixed(2)}
-                                        </span>
-                                    </div>
-
-                                    <div className="flex justify-between items-center mb-4">
-                                        <div>
-                                            <p className="font-medium">{new Date(ticket.start_date).toLocaleDateString()}</p>
-                                            {/* <p className="text-sm text-blue-500">{ticket.from.time}</p> */}
-                                        </div>
-                                        <div className="grow mx-4 border-t-2 border-dashed border-gray-300" />
-                                        <div className="text-right">
-                                            <p className="font-medium">{ticket.booking_hours ? ticket.booking_hours : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
-                                            {/* <p className="text-sm text-blue-500">{ticket.to.time}</p> */}
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between pt-3 border-t">
-                                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                                            <Badge>
-                                                {ticket.bookingStatus}
-                                            </Badge>
-                                            <span className="px-3 py-1 bg-gray-50 rounded-full">
-                                                {`${ticket.user?.first_name} ${ticket.user?.middle_name ?? ""} ${ticket.user?.last_name}`}
-                                            </span>
-                                        </div>
-                                        <Button variant="ghost" className="text-orange-500 hover:text-orange-600">
-                                            <Share2 className="w-4 h-4 mr-2" />
-                                            Share
-                                        </Button>
-                                        <Sheet>
-
-                                            <SheetTrigger asChild>
-                                                <Button className="bg-primaryColor hover:bg-primaryColor">
-                                                    View details
-                                                </Button>
-                                            </SheetTrigger>
-
-                                            <SheetContent className="overflow-auto" style={{ scrollbarWidth: "none" }}>
-                                                <SheetHeader>
-                                                    <SheetTitle className="text-xl font-semibold">Details</SheetTitle>
-                                                </SheetHeader>
-
-                                                <div className="space-y-4 mt-6">
-                                                    {/* Order Info */}
-                                                    <div className="space-y-2">
-                                                        <div className="flex justify-between text-sm">
-                                                            <span className="text-gray-500">Id</span>
-                                                            <span>#holabook{ticket.id.slice(-5)}</span>
-                                                        </div>
-
-                                                        <div className="space-y-1">
-                                                            <div >
-
-                                                                <div className="flex justify-between gap-2">
-                                                                    <p className="text-gray-500 text-sm">From</p>
-                                                                    <p className="flex  font-medium"><CalendarIcon className="w-4 h-4 mt-1 text-gray-400" />
-                                                                        {new Date(ticket.start_date).toLocaleDateString()}
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-
-                                                            <div >
-                                                                <div className="flex justify-between gap-2">
-                                                                    <p className="text-gray-500 text-sm">To</p>
-                                                                    <p className="flex  justify-between font-medium"><CalendarIcon className="w-4 h-4 mt-1 text-gray-400" />
-                                                                        {
-                                                                            ticket.booking_hours ? ticket.booking_hours : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()
-                                                                        }
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        {
-                                                            ticket.booking_hours &&
-                                                            <div className="flex justify-between gap-2">
-                                                                <p className="text-gray-500 text-sm">Estimation</p>
-                                                                <p className="flex items-center font-medium"> <Clock className="w-4 h-4 text-gray-400" />
-                                                                    {ticket.booking_hours}
-                                                                </p>
-                                                            </div>
-                                                        }
+                    {
+                        fetchingBookings ?
+                            <div className="space-y-4">
+                                <div className="animate-pulse w-full h-[160px] bg-gray-300 rounded" />
+                                <div className="animate-pulse w-full h-[160px] bg-gray-300 rounded" />
+                                <div className="animate-pulse w-full h-[160px] bg-gray-300 rounded" />
+                                <div className="animate-pulse w-full h-[160px] bg-gray-300 rounded" />
+                                <div className="animate-pulse w-full h-[160px] bg-gray-300 rounded" />
+                                <div className="animate-pulse w-full h-[160px] bg-gray-300 rounded" />
+                                <div className="animate-pulse w-full h-[160px] bg-gray-300 rounded" />
+                                <div className="animate-pulse w-full h-[160px] bg-gray-300 rounded" />
+                                <div className="animate-pulse w-full h-[160px] bg-gray-300 rounded" />
+                                <div className="animate-pulse w-full h-[160px] bg-gray-300 rounded" />
+                                <div className="animate-pulse w-full h-[160px] bg-gray-300 rounded" />
+                            </div>
+                            :
+                            <div className="space-y-4">
+                                {
+                                    selectedFilter === "all" && allBookings.filter(bo => bo.confirm).map((ticket, i) => (
+                                        <Card
+                                            key={i}
+                                            className={cn(
+                                                "py-4 hover:shadow-md transition-shadow"
+                                            )}
+                                        >
+                                            <CardContent>
+                                                <div className="flex items-start justify-between">
+                                                    <div>
+                                                        <h3 className="text-lg font-medium">
+                                                            #holabook{ticket.id.slice(-5)}
+                                                        </h3>
                                                     </div>
+                                                    <span className="text-lg font-semibold text-green-500">
+                                                        ${ticket.total_cost.toFixed(2)}
+                                                    </span>
+                                                </div>
 
-                                                    {/* Status */}
-                                                    <div className="flex justify-between gap-2">
-                                                        <div>status</div>
-
-                                                        <Badge>{ticket.bookingStatus}</Badge>
+                                                <div className="flex justify-between items-center mb-4">
+                                                    <div>
+                                                        <p className="font-medium">{new Date(ticket.start_date).toLocaleDateString()}</p>
+                                                        {/* <p className="text-sm text-blue-500">{ticket.from.time}</p> */}
                                                     </div>
-
-                                                    {/* Driver Info */}
-                                                    <div className="flex items-center gap-3 py-3 border-y">
-                                                        <div className="w-10 h-10 bg-gray-200 rounded-full" />
-                                                        <div>
-                                                            <p className="font-medium">Mr. {`${ticket.user?.first_name} ${ticket.user?.middle_name ?? ""} ${ticket.user?.last_name}`}</p>
-                                                            <p className="text-sm text-gray-500">Report at ${new Date(ticket.createdAt).toLocaleDateString()}</p>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Timeline */}
-                                                    <div className="space-y-6">
-                                                        <div className="flex gap-3">
-                                                            <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${ticket.bookingStatus === BookingStatus.Open
-                                                                    ? 'bg-green-500'
-                                                                    : 'bg-yellow-400'
-                                                                    }`} />
-                                                            </div>
-
-                                                            <div className="flex-1 pb-6">
-                                                                <div className="flex justify-between">
-                                                                    <p className="font-medium">You just confirmed the booking</p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex gap-3">
-                                                            <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${ticket.bookingStatus === BookingStatus.Accepted
-                                                                    ? 'bg-green-500'
-                                                                    : 'bg-yellow-400'
-                                                                    }`} />
-                                                            </div>
-
-                                                            <div className="flex-1 pb-6">
-                                                                <div className="flex justify-between">
-                                                                    <p className="font-medium">
-                                                                        Operator has accepted this booking.
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex gap-3">
-                                                            <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${ticket.bookingStatus === BookingStatus.Arriving
-                                                                    ? 'bg-green-500'
-                                                                    : 'bg-yellow-400'
-                                                                    }`} />
-                                                            </div>
-
-                                                            <div className="flex-1 pb-6">
-                                                                <div className="flex justify-between">
-                                                                    <p className="font-medium">
-                                                                        The booking has left for it's destination.
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex gap-3">
-                                                            <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${ticket.bookingStatus === BookingStatus.Arrived
-                                                                    ? 'bg-green-500'
-                                                                    : 'bg-yellow-400'
-                                                                    }`} />
-                                                            </div>
-
-                                                            <div className="flex-1 pb-6">
-                                                                <div className="flex justify-between">
-                                                                    <p className="font-medium">
-                                                                        The booking has arrived at it's destination.
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex gap-3">
-                                                            <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped)
-                                                                    ? 'bg-green-500'
-                                                                    : 'bg-yellow-400'
-                                                                    }`} />
-                                                            </div>
-
-                                                            <div className="flex-1 pb-6">
-                                                                <div className="flex justify-between">
-                                                                    <p className="font-medium">
-                                                                        The booking has started it's work.
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex gap-3">
-                                                            <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) && (ticket.payment[0].status === PaymentStatus.FarmerPENDING)
-                                                                    ? 'bg-green-500'
-                                                                    : 'bg-yellow-400'
-                                                                    }`} />
-                                                            </div>
-
-                                                            <div className="flex-1 pb-6">
-                                                                <div className="flex justify-between">
-                                                                    <p className="font-medium">
-                                                                        The booking has completed. Wailting for farmer to pay.
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex gap-3">
-                                                            <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) && (ticket.payment[0].status === PaymentStatus.FarmerCONFIRMED)
-                                                                    ? 'bg-green-500'
-                                                                    : 'bg-yellow-400'
-                                                                    }`} />
-                                                            </div>
-
-                                                            <div className="flex-1 pb-6">
-                                                                <div className="flex justify-between">
-                                                                    <p className="font-medium">
-                                                                        FArmer has submitted payment details
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex gap-3">
-                                                            <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")
-                                                                    ? 'bg-green-500'
-                                                                    : 'bg-yellow-400'
-                                                                    }`} />
-                                                            </div>
-
-                                                            <div className="flex-1 pb-6">
-                                                                <div className="flex justify-between">
-                                                                    <p className="font-medium">
-                                                                        Farmer has submitted payment details
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex gap-3">
-                                                            <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) && (ticket.payment[0].status === PaymentStatus.OwnerREJECTED)
-                                                                    ? 'bg-green-500'
-                                                                    : 'bg-yellow-400'
-                                                                    }`} />
-                                                            </div>
-
-                                                            <div className="flex-1 pb-6">
-                                                                <div className="flex justify-between">
-                                                                    <p className="font-medium">
-                                                                        You have rejected the booking payment details.
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex gap-3">
-                                                            <div className="flex flex-col items-center">
-                                                                <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED")
-                                                                    ? 'bg-green-500'
-                                                                    : 'bg-yellow-400'
-                                                                    }`} />
-                                                            </div>
-
-                                                            <div className="flex-1 pb-6">
-                                                                <div className="flex justify-between">
-                                                                    <p className="font-medium">
-                                                                        The booking job has completed and you have accepted the payment.
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                                    <div className="grow mx-4 border-t-2 border-dashed border-gray-300" />
+                                                    <div className="text-right">
+                                                        <p className="font-medium">{ticket.booking_hours ? <span className="text-sm text-muted-foreground">
+                                                            <TranslatedText greetings={ownerBookingsTranslation.duration} />: <span className="font-medium">{ticket.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : ticket.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : ticket.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : ticket.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : ticket.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : ticket.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : ticket.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}</span>
+                                                        </span> : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
+                                                        {/* <p className="text-sm text-blue-500">{ticket.to.time}</p> */}
                                                     </div>
                                                 </div>
 
-                                                {
-                                                    ticket.bookingStatus === BookingStatus.Open &&
-                                                    <AssignOperator selectedRequest={ticket.id} storeId={ticket.store_id} store={ticket.store} />
-                                                }
-                                                {
-                                                    (ticket.payment.length > 0 && ticket.payment[0].status === PaymentStatus.FarmerCONFIRMED) && <PaymentReview
-                                                        referenceNumber={ticket.payment[0].transaction_reference[ticket.payment[0].transaction_reference.length - 1]}
-                                                        screenshotUrl={ticket.payment[0].screenshots[ticket.payment[0].screenshots.length - 1]}
-                                                        paymentId={ticket.payment[0].id} />
-                                                }
-                                            </SheetContent>
-                                        </Sheet>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
+                                                <div className="flex items-center justify-between pt-3 border-t">
+                                                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                        <Badge>
+                                                            {ticket.bookingStatus}
+                                                        </Badge>
+                                                        <span className="px-3 py-1 bg-gray-50 rounded-full">
+                                                            {`${ticket.user?.first_name} ${ticket.user?.middle_name ?? ""} ${ticket.user?.last_name}`}
+                                                        </span>
+                                                    </div>
+                                                    <Button variant="ghost" className="text-orange-500 hover:text-orange-600">
+                                                        <Share2 className="w-4 h-4 mr-2" />
+                                                        <TranslatedText greetings={ownerBookingsTranslation.share} />
+                                                    </Button>
+                                                    <Sheet>
+
+                                                        <SheetTrigger asChild>
+                                                            <Button className="bg-primaryColor hover:bg-primaryColor">
+                                                                <TranslatedText greetings={ownerBookingsTranslation.viewDetails} />
+                                                            </Button>
+                                                        </SheetTrigger>
+
+                                                        <SheetContent className="overflow-auto" style={{ scrollbarWidth: "none" }}>
+                                                            <SheetHeader>
+                                                                <SheetTitle className="text-xl font-semibold">Details</SheetTitle>
+                                                            </SheetHeader>
+
+                                                            {
+                                                                !ticket.confirm && <p className="text-red-700"><TranslatedText greetings={ownerBookingsTranslation.userNotConfirmed} /></p>
+                                                            }
+
+                                                            {
+                                                                !ticket.owner_confirm && ticket.bookingStatus !== BookingStatus.Rejected && <div className="flex items-center space-x-2">
+                                                                    {/* <Button onClick={() => handleAccept(request.id)}>Accept</Button> */}
+                                                                    <PaymentMethods bookingId={ticket.id} />
+                                                                    <Button variant="destructive" onClick={() => handleReject(ticket.id)} disabled={confirming}>
+                                                                        {confirming ? <TranslatedText greetings={ownerBookingsTranslation.rejecting} /> : <TranslatedText greetings={ownerBookingsTranslation.reject} />}
+                                                                    </Button>
+                                                                </div>
+                                                            }
+
+                                                            <div className="space-y-4 mt-6">
+                                                                {/* Order Info */}
+                                                                <div className="space-y-2">
+                                                                    <div className="flex justify-between text-sm">
+                                                                        <span className="text-gray-500">Id</span>
+                                                                        <span>#holabook{ticket.id.slice(-5)}</span>
+                                                                    </div>
+
+                                                                    <div className="space-y-1">
+                                                                        <div >
+
+                                                                            <div className="flex justify-between gap-2">
+                                                                                <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.from} /></p>
+                                                                                <p className="flex  font-medium"><CalendarIcon className="w-4 h-4 mt-1 text-gray-400" />
+                                                                                    {new Date(ticket.start_date).toLocaleDateString()}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {
+                                                                            ticket.end_date &&
+                                                                            <div >
+                                                                                <div className="flex justify-between gap-2">
+                                                                                    <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.to} /></p>
+                                                                                    <p className="flex  justify-between font-medium"><CalendarIcon className="w-4 h-4 mt-1 text-gray-400" />
+                                                                                        {new Date(ticket.end_date).toLocaleDateString()}
+                                                                                    </p>
+                                                                                </div>
+                                                                            </div>
+                                                                        }
+                                                                    </div>
+                                                                    {
+                                                                        ticket.booking_hours &&
+                                                                        <div className="flex justify-between gap-2">
+                                                                            <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.estimation} /></p>
+                                                                            <p className="flex items-center font-medium"> <Clock className="w-4 h-4 text-gray-400" />
+                                                                                {ticket.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : ticket.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : ticket.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : ticket.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : ticket.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : ticket.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : ticket.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}
+                                                                            </p>
+                                                                        </div>
+                                                                    }
+                                                                </div>
+
+                                                                {/* Status */}
+                                                                <div className="flex justify-between gap-2">
+                                                                    <div><TranslatedText greetings={ownerBookingsTranslation.status} /></div>
+
+                                                                    <Badge>{ticket.bookingStatus}</Badge>
+                                                                </div>
+
+                                                                {/* Driver Info */}
+                                                                <div className="flex items-center gap-3 py-3 border-y">
+                                                                    <div className="w-10 h-10 bg-gray-200 rounded-full" />
+                                                                    <div>
+                                                                        <p className="font-medium">Mr. {`${ticket.user?.first_name} ${ticket.user?.middle_name ?? ""} ${ticket.user?.last_name}`}</p>
+                                                                        <p className="text-sm text-gray-500"><TranslatedText greetings={ownerBookingsTranslation.reportAt} /> ${new Date(ticket.createdAt).toLocaleDateString()}</p>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Timeline */}
+                                                                <div className="space-y-6">
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Open) && ticket.owner_confirm) || (ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium"><TranslatedText greetings={ownerBookingsTranslation.confirmedBooking} /></p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    {
+                                                                        ticket.bookingStatus === BookingStatus.Open && ticket.owner_confirm &&
+                                                                        <AssignOperator selectedRequest={ticket.id} storeId={ticket.store_id} store={ticket.store} />
+                                                                    }
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.operatorAccepted} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.leftForDestination} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.arrivedAtDestination} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.startedWork} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.waitingForPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.farmerSubmittedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.rejectedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.completedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {
+                                                                (ticket.payment.length > 0 && ticket.payment[0].status === PaymentStatus.FarmerCONFIRMED) && <PaymentReview
+                                                                    referenceNumber={ticket.payment[0].transaction_reference[ticket.payment[0].transaction_reference.length - 1]}
+                                                                    screenshotUrl={ticket.payment[0].screenshots[ticket.payment[0].screenshots.length - 1]}
+                                                                    paymentId={ticket.payment[0].id} />
+                                                            }
+                                                        </SheetContent>
+                                                    </Sheet>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))
+                                }
+                                {
+                                    selectedFilter === "open" && allBookings.filter(bo => (bo.bookingStatus === BookingStatus.Open && bo.confirm)).map((ticket, i) => (
+                                        <Card
+                                            key={i}
+                                            className={cn(
+                                                "py-4 hover:shadow-md transition-shadow"
+                                            )}
+                                        >
+                                            <CardContent>
+                                                <div className="flex items-start justify-between">
+                                                    <div>
+                                                        <h3 className="text-lg font-medium">
+                                                            #holabook{ticket.id.slice(-5)}
+                                                        </h3>
+                                                    </div>
+                                                    <span className="text-lg font-semibold text-green-500">
+                                                        ${ticket.total_cost.toFixed(2)}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex justify-between items-center mb-4">
+                                                    <div>
+                                                        <p className="font-medium">{new Date(ticket.start_date).toLocaleDateString()}</p>
+                                                        {/* <p className="text-sm text-blue-500">{ticket.from.time}</p> */}
+                                                    </div>
+                                                    <div className="grow mx-4 border-t-2 border-dashed border-gray-300" />
+                                                    <div className="text-right">
+                                                        <p className="font-medium">{ticket.booking_hours ? <span className="text-sm text-muted-foreground">
+                                                            <TranslatedText greetings={ownerBookingsTranslation.duration} />: <span className="font-medium">{ticket.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : ticket.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : ticket.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : ticket.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : ticket.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : ticket.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : ticket.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}</span>
+                                                        </span> : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
+                                                        {/* <p className="text-sm text-blue-500">{ticket.to.time}</p> */}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between pt-3 border-t">
+                                                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                        <Badge>
+                                                            {ticket.bookingStatus}
+                                                        </Badge>
+                                                        <span className="px-3 py-1 bg-gray-50 rounded-full">
+                                                            {`${ticket.user?.first_name} ${ticket.user?.middle_name ?? ""} ${ticket.user?.last_name}`}
+                                                        </span>
+                                                    </div>
+                                                    <Button variant="ghost" className="text-orange-500 hover:text-orange-600">
+                                                        <Share2 className="w-4 h-4 mr-2" />
+                                                        <TranslatedText greetings={ownerBookingsTranslation.share} />
+                                                    </Button>
+                                                    <Sheet>
+
+                                                        <SheetTrigger asChild>
+                                                            <Button className="bg-primaryColor hover:bg-primaryColor">
+                                                                <TranslatedText greetings={ownerBookingsTranslation.viewDetails} />
+                                                            </Button>
+                                                        </SheetTrigger>
+
+                                                        <SheetContent className="overflow-auto" style={{ scrollbarWidth: "none" }}>
+                                                            <SheetHeader>
+                                                                <SheetTitle className="text-xl font-semibold"><TranslatedText greetings={ownerBookingsTranslation.details} /></SheetTitle>
+                                                            </SheetHeader>
+
+                                                            <div className="space-y-4 mt-6">
+                                                                {/* Order Info */}
+                                                                <div className="space-y-2">
+
+                                                                    {
+                                                                        !ticket.owner_confirm && ticket.bookingStatus !== BookingStatus.Rejected && <div className="flex items-center space-x-2">
+                                                                            {/* <Button onClick={() => handleAccept(request.id)}>Accept</Button> */}
+                                                                            <PaymentMethods bookingId={ticket.id} />
+                                                                            <Button variant="destructive" onClick={() => handleReject(ticket.id)} disabled={confirming}>
+                                                                                {
+                                                                                    confirming ? <TranslatedText greetings={ownerBookingsTranslation.rejecting} /> : <TranslatedText greetings={ownerBookingsTranslation.reject} />
+                                                                                }
+                                                                            </Button>
+                                                                        </div>
+                                                                    }
+
+                                                                    <div className="flex justify-between text-sm">
+                                                                        <span className="text-gray-500">Id</span>
+                                                                        <span>#holabook{ticket.id.slice(-5)}</span>
+                                                                    </div>
+
+                                                                    <div className="space-y-1">
+                                                                        <div >
+
+                                                                            <div className="flex justify-between gap-2">
+                                                                                <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.from} /></p>
+                                                                                <p className="flex  font-medium"><CalendarIcon className="w-4 h-4 mt-1 text-gray-400" />
+                                                                                    {new Date(ticket.start_date).toLocaleDateString()}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {
+                                                                            ticket.end_date &&
+                                                                            <div >
+                                                                                <div className="flex justify-between gap-2">
+                                                                                    <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.to} /></p>
+                                                                                    <p className="flex  justify-between font-medium"><CalendarIcon className="w-4 h-4 mt-1 text-gray-400" />
+                                                                                        {new Date(ticket.end_date).toLocaleDateString()}
+                                                                                    </p>
+                                                                                </div>
+                                                                            </div>
+                                                                        }
+                                                                    </div>
+                                                                    {
+                                                                        ticket.booking_hours &&
+                                                                        <div className="flex justify-between gap-2">
+                                                                            <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.estimation} /></p>
+                                                                            <p className="flex items-center font-medium"> <Clock className="w-4 h-4 text-gray-400" />
+                                                                                {ticket.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : ticket.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : ticket.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : ticket.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : ticket.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : ticket.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : ticket.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}
+                                                                            </p>
+                                                                        </div>
+                                                                    }
+                                                                </div>
+
+                                                                {/* Status */}
+                                                                <div className="flex justify-between gap-2">
+                                                                    <div><TranslatedText greetings={ownerBookingsTranslation.status} /></div>
+
+                                                                    <Badge>{ticket.bookingStatus}</Badge>
+                                                                </div>
+
+                                                                {/* Driver Info */}
+                                                                <div className="flex items-center gap-3 py-3 border-y">
+                                                                    <div className="w-10 h-10 bg-gray-200 rounded-full" />
+                                                                    <div>
+                                                                        <p className="font-medium">Mr. {`${ticket.user?.first_name} ${ticket.user?.middle_name ?? ""} ${ticket.user?.last_name}`}</p>
+                                                                        <p className="text-sm text-gray-500"><TranslatedText greetings={ownerBookingsTranslation.reportAt} /> ${new Date(ticket.createdAt).toLocaleDateString()}</p>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Timeline */}
+                                                                <div className="space-y-6">
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Open) && ticket.owner_confirm) || (ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium"><TranslatedText greetings={ownerBookingsTranslation.confirmedBooking} /></p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    {
+                                                                        ticket.bookingStatus === BookingStatus.Open && ticket.owner_confirm &&
+                                                                        <AssignOperator selectedRequest={ticket.id} storeId={ticket.store_id} store={ticket.store} />
+                                                                    }
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.operatorAccepted} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.leftForDestination} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.arrivedAtDestination} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.startedWork} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.waitingForPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.farmerSubmittedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.rejectedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.completedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {
+                                                                ticket.bookingStatus === BookingStatus.Open &&
+                                                                <AssignOperator selectedRequest={ticket.id} storeId={ticket.store_id} store={ticket.store} />
+                                                            }
+                                                            {
+                                                                (ticket.payment.length > 0 && ticket.payment[0].status === PaymentStatus.FarmerCONFIRMED) && <PaymentReview
+                                                                    referenceNumber={ticket.payment[0].transaction_reference[ticket.payment[0].transaction_reference.length - 1]}
+                                                                    screenshotUrl={ticket.payment[0].screenshots[ticket.payment[0].screenshots.length - 1]}
+                                                                    paymentId={ticket.payment[0].id} />
+                                                            }
+                                                        </SheetContent>
+                                                    </Sheet>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))
+                                }
+                                {
+                                    selectedFilter === "accepted" && allBookings.filter(bo => bo.bookingStatus === BookingStatus.Accepted).map((ticket, i) => (
+                                        <Card
+                                            key={i}
+                                            className={cn(
+                                                "py-4 hover:shadow-md transition-shadow"
+                                            )}
+                                        >
+                                            <CardContent>
+                                                <div className="flex items-start justify-between">
+                                                    <div>
+                                                        <h3 className="text-lg font-medium">
+                                                            #holabook{ticket.id.slice(-5)}
+                                                        </h3>
+                                                    </div>
+                                                    <span className="text-lg font-semibold text-green-500">
+                                                        ${ticket.total_cost.toFixed(2)}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex justify-between items-center mb-4">
+                                                    <div>
+                                                        <p className="font-medium">{new Date(ticket.start_date).toLocaleDateString()}</p>
+                                                        {/* <p className="text-sm text-blue-500">{ticket.from.time}</p> */}
+                                                    </div>
+                                                    <div className="grow mx-4 border-t-2 border-dashed border-gray-300" />
+                                                    <div className="text-right">
+                                                        <p className="font-medium">{ticket.booking_hours ? <span className="text-sm text-muted-foreground">
+                                                            <TranslatedText greetings={ownerBookingsTranslation.duration} />: <span className="font-medium">{ticket.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : ticket.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : ticket.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : ticket.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : ticket.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : ticket.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : ticket.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}</span>
+                                                        </span> : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
+                                                        {/* <p className="text-sm text-blue-500">{ticket.to.time}</p> */}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between pt-3 border-t">
+                                                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                        <Badge>
+                                                            {ticket.bookingStatus}
+                                                        </Badge>
+                                                        <span className="px-3 py-1 bg-gray-50 rounded-full">
+                                                            {`${ticket.user?.first_name} ${ticket.user?.middle_name ?? ""} ${ticket.user?.last_name}`}
+                                                        </span>
+                                                    </div>
+                                                    <Button variant="ghost" className="text-orange-500 hover:text-orange-600">
+                                                        <Share2 className="w-4 h-4 mr-2" />
+                                                        <TranslatedText greetings={ownerBookingsTranslation.share} />
+                                                    </Button>
+                                                    <Sheet>
+
+                                                        <SheetTrigger asChild>
+                                                            <Button className="bg-primaryColor hover:bg-primaryColor">
+                                                                <TranslatedText greetings={ownerBookingsTranslation.viewDetails} />
+                                                            </Button>
+                                                        </SheetTrigger>
+
+                                                        <SheetContent className="overflow-auto" style={{ scrollbarWidth: "none" }}>
+                                                            <SheetHeader>
+                                                                <SheetTitle className="text-xl font-semibold"><TranslatedText greetings={ownerBookingsTranslation.details} /></SheetTitle>
+                                                            </SheetHeader>
+
+                                                            <div className="space-y-4 mt-6">
+                                                                {/* Order Info */}
+                                                                <div className="space-y-2">
+                                                                    <div className="flex justify-between text-sm">
+                                                                        <span className="text-gray-500">Id</span>
+                                                                        <span>#holabook{ticket.id.slice(-5)}</span>
+                                                                    </div>
+
+                                                                    <div className="space-y-1">
+                                                                        <div >
+
+                                                                            <div className="flex justify-between gap-2">
+                                                                                <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.from} /></p>
+                                                                                <p className="flex  font-medium"><CalendarIcon className="w-4 h-4 mt-1 text-gray-400" />
+                                                                                    {new Date(ticket.start_date).toLocaleDateString()}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {
+                                                                            ticket.end_date &&
+                                                                            <div >
+                                                                                <div className="flex justify-between gap-2">
+                                                                                    <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.to} /></p>
+                                                                                    <p className="flex  justify-between font-medium"><CalendarIcon className="w-4 h-4 mt-1 text-gray-400" />
+                                                                                        {new Date(ticket.end_date).toLocaleDateString()}
+                                                                                    </p>
+                                                                                </div>
+                                                                            </div>
+                                                                        }
+                                                                    </div>
+                                                                    {
+                                                                        ticket.booking_hours &&
+                                                                        <div className="flex justify-between gap-2">
+                                                                            <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.estimation} /></p>
+                                                                            <p className="flex items-center font-medium"> <Clock className="w-4 h-4 text-gray-400" />
+                                                                                {ticket.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : ticket.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : ticket.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : ticket.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : ticket.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : ticket.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : ticket.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}
+                                                                            </p>
+                                                                        </div>
+                                                                    }
+                                                                </div>
+
+                                                                {/* Status */}
+                                                                <div className="flex justify-between gap-2">
+                                                                    <div><TranslatedText greetings={ownerBookingsTranslation.status} /></div>
+
+                                                                    <Badge>{ticket.bookingStatus}</Badge>
+                                                                </div>
+
+                                                                {/* Driver Info */}
+                                                                <div className="flex items-center gap-3 py-3 border-y">
+                                                                    <div className="w-10 h-10 bg-gray-200 rounded-full" />
+                                                                    <div>
+                                                                        <p className="font-medium">Mr. {`${ticket.user?.first_name} ${ticket.user?.middle_name ?? ""} ${ticket.user?.last_name}`}</p>
+                                                                        <p className="text-sm text-gray-500"><TranslatedText greetings={ownerBookingsTranslation.reportAt} /> ${new Date(ticket.createdAt).toLocaleDateString()}</p>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Timeline */}
+                                                                <div className="space-y-6">
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Open) || (ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium"><TranslatedText greetings={ownerBookingsTranslation.confirmedBooking} /></p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    {
+                                                                        ticket.bookingStatus === BookingStatus.Open &&
+                                                                        <AssignOperator selectedRequest={ticket.id} storeId={ticket.store_id} store={ticket.store} />
+                                                                    }
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.operatorAccepted} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.leftForDestination} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.arrivedAtDestination} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.startedWork} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.waitingForPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.farmerSubmittedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.rejectedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.completedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            {
+                                                                (ticket.payment.length > 0 && ticket.payment[0].status === PaymentStatus.FarmerCONFIRMED) && <PaymentReview
+                                                                    referenceNumber={ticket.payment[0].transaction_reference[ticket.payment[0].transaction_reference.length - 1]}
+                                                                    screenshotUrl={ticket.payment[0].screenshots[ticket.payment[0].screenshots.length - 1]}
+                                                                    paymentId={ticket.payment[0].id} />
+                                                            }
+                                                        </SheetContent>
+                                                    </Sheet>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))
+                                }
+                                {
+                                    selectedFilter === "ongoing" && allBookings.filter(bo => ((bo.bookingStatus === BookingStatus.Arriving) || (bo.bookingStatus === BookingStatus.Arrived) || (bo.bookingStatus === BookingStatus.Started) || (bo.bookingStatus === BookingStatus.Stopped))).map((ticket, i) => (
+                                        <Card
+                                            key={i}
+                                            className={cn(
+                                                "py-4 hover:shadow-md transition-shadow"
+                                            )}
+                                        >
+                                            <CardContent>
+                                                <div className="flex items-start justify-between">
+                                                    <div>
+                                                        <h3 className="text-lg font-medium">
+                                                            #holabook{ticket.id.slice(-5)}
+                                                        </h3>
+                                                    </div>
+                                                    <span className="text-lg font-semibold text-green-500">
+                                                        ${ticket.total_cost.toFixed(2)}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex justify-between items-center mb-4">
+                                                    <div>
+                                                        <p className="font-medium">{new Date(ticket.start_date).toLocaleDateString()}</p>
+                                                        {/* <p className="text-sm text-blue-500">{ticket.from.time}</p> */}
+                                                    </div>
+                                                    <div className="grow mx-4 border-t-2 border-dashed border-gray-300" />
+                                                    <div className="text-right">
+                                                        <p className="font-medium">{ticket.booking_hours ? <span className="text-sm text-muted-foreground">
+                                                            <TranslatedText greetings={ownerBookingsTranslation.duration} />: <span className="font-medium">{ticket.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : ticket.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : ticket.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : ticket.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : ticket.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : ticket.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : ticket.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}</span>
+                                                        </span> : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
+                                                        {/* <p className="text-sm text-blue-500">{ticket.to.time}</p> */}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between pt-3 border-t">
+                                                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                        <Badge>
+                                                            {ticket.bookingStatus}
+                                                        </Badge>
+                                                        <span className="px-3 py-1 bg-gray-50 rounded-full">
+                                                            {`${ticket.user?.first_name} ${ticket.user?.middle_name ?? ""} ${ticket.user?.last_name}`}
+                                                        </span>
+                                                    </div>
+                                                    <Button variant="ghost" className="text-orange-500 hover:text-orange-600">
+                                                        <Share2 className="w-4 h-4 mr-2" />
+                                                        <TranslatedText greetings={ownerBookingsTranslation.share} />
+                                                    </Button>
+                                                    <Sheet>
+
+                                                        <SheetTrigger asChild>
+                                                            <Button className="bg-primaryColor hover:bg-primaryColor">
+                                                                <TranslatedText greetings={ownerBookingsTranslation.viewDetails} />
+                                                            </Button>
+                                                        </SheetTrigger>
+
+                                                        <SheetContent className="overflow-auto" style={{ scrollbarWidth: "none" }}>
+                                                            <SheetHeader>
+                                                                <SheetTitle className="text-xl font-semibold"><TranslatedText greetings={ownerBookingsTranslation.details} /></SheetTitle>
+                                                            </SheetHeader>
+
+                                                            <div className="space-y-4 mt-6">
+                                                                {/* Order Info */}
+                                                                <div className="space-y-2">
+                                                                    <div className="flex justify-between text-sm">
+                                                                        <span className="text-gray-500">Id</span>
+                                                                        <span>#holabook{ticket.id.slice(-5)}</span>
+                                                                    </div>
+
+                                                                    <div className="space-y-1">
+                                                                        <div >
+
+                                                                            <div className="flex justify-between gap-2">
+                                                                                <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.from} /></p>
+                                                                                <p className="flex  font-medium"><CalendarIcon className="w-4 h-4 mt-1 text-gray-400" />
+                                                                                    {new Date(ticket.start_date).toLocaleDateString()}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {
+                                                                            ticket.end_date &&
+                                                                            <div >
+                                                                                <div className="flex justify-between gap-2">
+                                                                                    <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.to} /></p>
+                                                                                    <p className="flex  justify-between font-medium"><CalendarIcon className="w-4 h-4 mt-1 text-gray-400" />
+                                                                                        {new Date(ticket.end_date).toLocaleDateString()}
+                                                                                    </p>
+                                                                                </div>
+                                                                            </div>
+                                                                        }
+                                                                    </div>
+                                                                    {
+                                                                        ticket.booking_hours &&
+                                                                        <div className="flex justify-between gap-2">
+                                                                            <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.estimation} /></p>
+                                                                            <p className="flex items-center font-medium"> <Clock className="w-4 h-4 text-gray-400" />
+                                                                                {ticket.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : ticket.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : ticket.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : ticket.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : ticket.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : ticket.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : ticket.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}
+                                                                            </p>
+                                                                        </div>
+                                                                    }
+                                                                </div>
+
+                                                                {/* Status */}
+                                                                <div className="flex justify-between gap-2">
+                                                                    <div><TranslatedText greetings={ownerBookingsTranslation.status} /></div>
+
+                                                                    <Badge>{ticket.bookingStatus}</Badge>
+                                                                </div>
+
+                                                                {/* Driver Info */}
+                                                                <div className="flex items-center gap-3 py-3 border-y">
+                                                                    <div className="w-10 h-10 bg-gray-200 rounded-full" />
+                                                                    <div>
+                                                                        <p className="font-medium">Mr. {`${ticket.user?.first_name} ${ticket.user?.middle_name ?? ""} ${ticket.user?.last_name}`}</p>
+                                                                        <p className="text-sm text-gray-500"><TranslatedText greetings={ownerBookingsTranslation.reportAt} /> ${new Date(ticket.createdAt).toLocaleDateString()}</p>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Timeline */}
+                                                                <div className="space-y-6">
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Open) || (ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium"><TranslatedText greetings={ownerBookingsTranslation.confirmedBooking} /></p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    {
+                                                                        ticket.bookingStatus === BookingStatus.Open &&
+                                                                        <AssignOperator selectedRequest={ticket.id} storeId={ticket.store_id} store={ticket.store} />
+                                                                    }
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.operatorAccepted} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.leftForDestination} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.arrivedAtDestination} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.startedWork} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.waitingForPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.farmerSubmittedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.rejectedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.completedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {
+                                                                (ticket.payment.length > 0 && ticket.payment[0].status === PaymentStatus.FarmerCONFIRMED) && <PaymentReview
+                                                                    referenceNumber={ticket.payment[0].transaction_reference[ticket.payment[0].transaction_reference.length - 1]}
+                                                                    screenshotUrl={ticket.payment[0].screenshots[ticket.payment[0].screenshots.length - 1]}
+                                                                    paymentId={ticket.payment[0].id} />
+                                                            }
+                                                        </SheetContent>
+                                                    </Sheet>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))
+                                }
+                                {
+                                    selectedFilter === "unpaid" && allBookings.filter(bo => bo.payment.length > 0).filter(bo => ((bo.bookingStatus === BookingStatus.Finished) || (`${bo.payment[0].status}` === "FarmerPENDING") || (`${bo.payment[0].status}` === "OwnerREJECTED"))).map((ticket, i) => (
+                                        <Card
+                                            key={i}
+                                            className={cn(
+                                                "py-4 hover:shadow-md transition-shadow"
+                                            )}
+                                        >
+                                            <CardContent>
+                                                <div className="flex items-start justify-between">
+                                                    <div>
+                                                        <h3 className="text-lg font-medium">
+                                                            #holabook{ticket.id.slice(-5)}
+                                                        </h3>
+                                                    </div>
+                                                    <span className="text-lg font-semibold text-green-500">
+                                                        ${ticket.total_cost.toFixed(2)}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex justify-between items-center mb-4">
+                                                    <div>
+                                                        <p className="font-medium">{new Date(ticket.start_date).toLocaleDateString()}</p>
+                                                        {/* <p className="text-sm text-blue-500">{ticket.from.time}</p> */}
+                                                    </div>
+                                                    <div className="grow mx-4 border-t-2 border-dashed border-gray-300" />
+                                                    <div className="text-right">
+                                                        <p className="font-medium">{ticket.booking_hours ? <span className="text-sm text-muted-foreground">
+                                                            <TranslatedText greetings={ownerBookingsTranslation.duration} />: <span className="font-medium">{ticket.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : ticket.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : ticket.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : ticket.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : ticket.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : ticket.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : ticket.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}</span>
+                                                        </span> : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
+                                                        {/* <p className="text-sm text-blue-500">{ticket.to.time}</p> */}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between pt-3 border-t">
+                                                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                        <Badge>
+                                                            {ticket.bookingStatus}
+                                                        </Badge>
+                                                        <span className="px-3 py-1 bg-gray-50 rounded-full">
+                                                            {`${ticket.user?.first_name} ${ticket.user?.middle_name ?? ""} ${ticket.user?.last_name}`}
+                                                        </span>
+                                                    </div>
+                                                    <Button variant="ghost" className="text-orange-500 hover:text-orange-600">
+                                                        <Share2 className="w-4 h-4 mr-2" />
+                                                        <TranslatedText greetings={ownerBookingsTranslation.share} />
+                                                    </Button>
+                                                    <Sheet>
+
+                                                        <SheetTrigger asChild>
+                                                            <Button className="bg-primaryColor hover:bg-primaryColor">
+                                                                <TranslatedText greetings={ownerBookingsTranslation.viewDetails} />
+                                                            </Button>
+                                                        </SheetTrigger>
+
+                                                        <SheetContent className="overflow-auto" style={{ scrollbarWidth: "none" }}>
+                                                            <SheetHeader>
+                                                                <SheetTitle className="text-xl font-semibold"><TranslatedText greetings={ownerBookingsTranslation.details} /></SheetTitle>
+                                                            </SheetHeader>
+
+                                                            <div className="space-y-4 mt-6">
+                                                                {/* Order Info */}
+                                                                <div className="space-y-2">
+                                                                    <div className="flex justify-between text-sm">
+                                                                        <span className="text-gray-500">Id</span>
+                                                                        <span>#holabook{ticket.id.slice(-5)}</span>
+                                                                    </div>
+
+                                                                    <div className="space-y-1">
+                                                                        <div >
+
+                                                                            <div className="flex justify-between gap-2">
+                                                                                <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.from} /></p>
+                                                                                <p className="flex  font-medium"><CalendarIcon className="w-4 h-4 mt-1 text-gray-400" />
+                                                                                    {new Date(ticket.start_date).toLocaleDateString()}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {
+                                                                            ticket.end_date &&
+                                                                            <div >
+                                                                                <div className="flex justify-between gap-2">
+                                                                                    <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.to} /></p>
+                                                                                    <p className="flex  justify-between font-medium"><CalendarIcon className="w-4 h-4 mt-1 text-gray-400" />
+                                                                                        {new Date(ticket.end_date).toLocaleDateString()}
+                                                                                    </p>
+                                                                                </div>
+                                                                            </div>
+                                                                        }
+                                                                    </div>
+                                                                    {
+                                                                        ticket.booking_hours &&
+                                                                        <div className="flex justify-between gap-2">
+                                                                            <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.estimation} /></p>
+                                                                            <p className="flex items-center font-medium"> <Clock className="w-4 h-4 text-gray-400" />
+                                                                                {ticket.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : ticket.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : ticket.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : ticket.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : ticket.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : ticket.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : ticket.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}
+                                                                            </p>
+                                                                        </div>
+                                                                    }
+                                                                </div>
+
+                                                                {/* Status */}
+                                                                <div className="flex justify-between gap-2">
+                                                                    <div><TranslatedText greetings={ownerBookingsTranslation.status} /></div>
+
+                                                                    <Badge>{ticket.bookingStatus}</Badge>
+                                                                </div>
+
+                                                                {/* Driver Info */}
+                                                                <div className="flex items-center gap-3 py-3 border-y">
+                                                                    <div className="w-10 h-10 bg-gray-200 rounded-full" />
+                                                                    <div>
+                                                                        <p className="font-medium">Mr. {`${ticket.user?.first_name} ${ticket.user?.middle_name ?? ""} ${ticket.user?.last_name}`}</p>
+                                                                        <p className="text-sm text-gray-500"><TranslatedText greetings={ownerBookingsTranslation.reportAt} /> ${new Date(ticket.createdAt).toLocaleDateString()}</p>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Timeline */}
+                                                                <div className="space-y-6">
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Open) || (ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium"><TranslatedText greetings={ownerBookingsTranslation.confirmedBooking} /></p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.operatorAccepted} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.leftForDestination} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.arrivedAtDestination} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.startedWork} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.waitingForPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.farmerSubmittedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.rejectedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.completedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {
+                                                                ticket.bookingStatus === BookingStatus.Open &&
+                                                                <AssignOperator selectedRequest={ticket.id} storeId={ticket.store_id} store={ticket.store} />
+                                                            }
+                                                            {
+                                                                (ticket.payment.length > 0 && ticket.payment[0].status === PaymentStatus.FarmerCONFIRMED) && <PaymentReview
+                                                                    referenceNumber={ticket.payment[0].transaction_reference[ticket.payment[0].transaction_reference.length - 1]}
+                                                                    screenshotUrl={ticket.payment[0].screenshots[ticket.payment[0].screenshots.length - 1]}
+                                                                    paymentId={ticket.payment[0].id} />
+                                                            }
+                                                        </SheetContent>
+                                                    </Sheet>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))
+                                }
+                                {
+                                    selectedFilter === "review" && allBookings.filter(bo => bo.payment.length > 0).filter(bo => ((bo.bookingStatus === BookingStatus.Finished) || (`${bo.payment[0].status}` === "FarmerCONFIRMED"))).map((ticket, i) => (
+                                        <Card
+                                            key={i}
+                                            className={cn(
+                                                "py-4 hover:shadow-md transition-shadow"
+                                            )}
+                                        >
+                                            <CardContent>
+                                                <div className="flex items-start justify-between">
+                                                    <div>
+                                                        <h3 className="text-lg font-medium">
+                                                            #holabook{ticket.id.slice(-5)}
+                                                        </h3>
+                                                    </div>
+                                                    <span className="text-lg font-semibold text-green-500">
+                                                        ${ticket.total_cost.toFixed(2)}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex justify-between items-center mb-4">
+                                                    <div>
+                                                        <p className="font-medium">{new Date(ticket.start_date).toLocaleDateString()}</p>
+                                                        {/* <p className="text-sm text-blue-500">{ticket.from.time}</p> */}
+                                                    </div>
+                                                    <div className="grow mx-4 border-t-2 border-dashed border-gray-300" />
+                                                    <div className="text-right">
+                                                        <p className="font-medium">{ticket.booking_hours ? <span className="text-sm text-muted-foreground">
+                                                            <TranslatedText greetings={ownerBookingsTranslation.duration} />: <span className="font-medium">{ticket.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : ticket.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : ticket.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : ticket.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : ticket.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : ticket.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : ticket.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}</span>
+                                                        </span> : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
+                                                        {/* <p className="text-sm text-blue-500">{ticket.to.time}</p> */}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between pt-3 border-t">
+                                                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                        <Badge>
+                                                            {ticket.bookingStatus}
+                                                        </Badge>
+                                                        <span className="px-3 py-1 bg-gray-50 rounded-full">
+                                                            {`${ticket.user?.first_name} ${ticket.user?.middle_name ?? ""} ${ticket.user?.last_name}`}
+                                                        </span>
+                                                    </div>
+                                                    <Button variant="ghost" className="text-orange-500 hover:text-orange-600">
+                                                        <Share2 className="w-4 h-4 mr-2" />
+                                                        <TranslatedText greetings={ownerBookingsTranslation.share} />
+                                                    </Button>
+                                                    <Sheet>
+
+                                                        <SheetTrigger asChild>
+                                                            <Button className="bg-primaryColor hover:bg-primaryColor">
+                                                                <TranslatedText greetings={ownerBookingsTranslation.viewDetails} />
+                                                            </Button>
+                                                        </SheetTrigger>
+
+                                                        <SheetContent className="overflow-auto" style={{ scrollbarWidth: "none" }}>
+                                                            <SheetHeader>
+                                                                <SheetTitle className="text-xl font-semibold"><TranslatedText greetings={ownerBookingsTranslation.details} /></SheetTitle>
+                                                            </SheetHeader>
+
+                                                            <div className="space-y-4 mt-6">
+                                                                {/* Order Info */}
+                                                                <div className="space-y-2">
+                                                                    <div className="flex justify-between text-sm">
+                                                                        <span className="text-gray-500">Id</span>
+                                                                        <span>#holabook{ticket.id.slice(-5)}</span>
+                                                                    </div>
+
+                                                                    <div className="space-y-1">
+                                                                        <div >
+
+                                                                            <div className="flex justify-between gap-2">
+                                                                                <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.from} /></p>
+                                                                                <p className="flex  font-medium"><CalendarIcon className="w-4 h-4 mt-1 text-gray-400" />
+                                                                                    {new Date(ticket.start_date).toLocaleDateString()}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {
+                                                                            ticket.end_date &&
+                                                                            <div >
+                                                                                <div className="flex justify-between gap-2">
+                                                                                    <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.to} /></p>
+                                                                                    <p className="flex  justify-between font-medium"><CalendarIcon className="w-4 h-4 mt-1 text-gray-400" />
+                                                                                        {new Date(ticket.end_date).toLocaleDateString()}
+                                                                                    </p>
+                                                                                </div>
+                                                                            </div>
+                                                                        }
+                                                                    </div>
+                                                                    {
+                                                                        ticket.booking_hours &&
+                                                                        <div className="flex justify-between gap-2">
+                                                                            <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.estimation} /></p>
+                                                                            <p className="flex items-center font-medium"> <Clock className="w-4 h-4 text-gray-400" />
+                                                                                {ticket.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : ticket.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : ticket.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : ticket.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : ticket.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : ticket.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : ticket.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}
+                                                                            </p>
+                                                                        </div>
+                                                                    }
+                                                                </div>
+
+                                                                {/* Status */}
+                                                                <div className="flex justify-between gap-2">
+                                                                    <div><TranslatedText greetings={ownerBookingsTranslation.status} /></div>
+
+                                                                    <Badge>{ticket.bookingStatus}</Badge>
+                                                                </div>
+
+                                                                {/* Driver Info */}
+                                                                <div className="flex items-center gap-3 py-3 border-y">
+                                                                    <div className="w-10 h-10 bg-gray-200 rounded-full" />
+                                                                    <div>
+                                                                        <p className="font-medium">Mr. {`${ticket.user?.first_name} ${ticket.user?.middle_name ?? ""} ${ticket.user?.last_name}`}</p>
+                                                                        <p className="text-sm text-gray-500"><TranslatedText greetings={ownerBookingsTranslation.reportAt} /> ${new Date(ticket.createdAt).toLocaleDateString()}</p>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Timeline */}
+                                                                <div className="space-y-6">
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Open) || (ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium"><TranslatedText greetings={ownerBookingsTranslation.confirmedBooking} /></p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.operatorAccepted} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.leftForDestination} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.arrivedAtDestination} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.leftForDestination} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.waitingForPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.farmerSubmittedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.rejectedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.completedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {
+                                                                ticket.bookingStatus === BookingStatus.Open &&
+                                                                <AssignOperator selectedRequest={ticket.id} storeId={ticket.store_id} store={ticket.store} />
+                                                            }
+                                                            {
+                                                                (ticket.payment.length > 0 && ticket.payment[0].status === PaymentStatus.FarmerCONFIRMED) && <PaymentReview
+                                                                    referenceNumber={ticket.payment[0].transaction_reference[ticket.payment[0].transaction_reference.length - 1]}
+                                                                    screenshotUrl={ticket.payment[0].screenshots[ticket.payment[0].screenshots.length - 1]}
+                                                                    paymentId={ticket.payment[0].id} />
+                                                            }
+                                                        </SheetContent>
+                                                    </Sheet>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))
+                                }
+                                {
+                                    selectedFilter === "completed" && allBookings.filter(bo => bo.payment.length > 0).filter(bo => ((bo.bookingStatus === BookingStatus.Finished) || (`${bo.payment[0].status}` === "COMPLETED"))).map((ticket, i) => (
+                                        <Card
+                                            key={i}
+                                            className={cn(
+                                                "py-4 hover:shadow-md transition-shadow"
+                                            )}
+                                        >
+                                            <CardContent>
+                                                <div className="flex items-start justify-between">
+                                                    <div>
+                                                        <h3 className="text-lg font-medium">
+                                                            #holabook{ticket.id.slice(-5)}
+                                                        </h3>
+                                                    </div>
+                                                    <span className="text-lg font-semibold text-green-500">
+                                                        ${ticket.total_cost.toFixed(2)}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex justify-between items-center mb-4">
+                                                    <div>
+                                                        <p className="font-medium">{new Date(ticket.start_date).toLocaleDateString()}</p>
+                                                        {/* <p className="text-sm text-blue-500">{ticket.from.time}</p> */}
+                                                    </div>
+                                                    <div className="grow mx-4 border-t-2 border-dashed border-gray-300" />
+                                                    <div className="text-right">
+                                                        <p className="font-medium">{ticket.booking_hours ? <span className="text-sm text-muted-foreground">
+                                                            <TranslatedText greetings={ownerBookingsTranslation.duration} />: <span className="font-medium">{ticket.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : ticket.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : ticket.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : ticket.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : ticket.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : ticket.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : ticket.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}</span>
+                                                        </span> : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
+                                                        {/* <p className="text-sm text-blue-500">{ticket.to.time}</p> */}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between pt-3 border-t">
+                                                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                        <Badge>
+                                                            {ticket.bookingStatus}
+                                                        </Badge>
+                                                        <span className="px-3 py-1 bg-gray-50 rounded-full">
+                                                            {`${ticket.user?.first_name} ${ticket.user?.middle_name ?? ""} ${ticket.user?.last_name}`}
+                                                        </span>
+                                                    </div>
+                                                    <Button variant="ghost" className="text-orange-500 hover:text-orange-600">
+                                                        <Share2 className="w-4 h-4 mr-2" />
+                                                        <TranslatedText greetings={ownerBookingsTranslation.share} />
+                                                    </Button>
+                                                    <Sheet>
+
+                                                        <SheetTrigger asChild>
+                                                            <Button className="bg-primaryColor hover:bg-primaryColor">
+                                                                <TranslatedText greetings={ownerBookingsTranslation.viewDetails} />
+                                                            </Button>
+                                                        </SheetTrigger>
+
+                                                        <SheetContent className="overflow-auto" style={{ scrollbarWidth: "none" }}>
+                                                            <SheetHeader>
+                                                                <SheetTitle className="text-xl font-semibold"><TranslatedText greetings={ownerBookingsTranslation.details} /></SheetTitle>
+                                                            </SheetHeader>
+
+                                                            <div className="space-y-4 mt-6">
+                                                                {/* Order Info */}
+                                                                <div className="space-y-2">
+                                                                    <div className="flex justify-between text-sm">
+                                                                        <span className="text-gray-500">Id</span>
+                                                                        <span>#holabook{ticket.id.slice(-5)}</span>
+                                                                    </div>
+
+                                                                    <div className="space-y-1">
+                                                                        <div >
+
+                                                                            <div className="flex justify-between gap-2">
+                                                                                <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.from} /></p>
+                                                                                <p className="flex  font-medium"><CalendarIcon className="w-4 h-4 mt-1 text-gray-400" />
+                                                                                    {new Date(ticket.start_date).toLocaleDateString()}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {
+                                                                            ticket.end_date &&
+                                                                            <div >
+                                                                                <div className="flex justify-between gap-2">
+                                                                                    <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.to} /></p>
+                                                                                    <p className="flex  justify-between font-medium"><CalendarIcon className="w-4 h-4 mt-1 text-gray-400" />
+                                                                                        {new Date(ticket.end_date).toLocaleDateString()}
+                                                                                    </p>
+                                                                                </div>
+                                                                            </div>
+                                                                        }
+                                                                    </div>
+                                                                    {
+                                                                        ticket.booking_hours &&
+                                                                        <div className="flex justify-between gap-2">
+                                                                            <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.estimation} /></p>
+                                                                            <p className="flex items-center font-medium"> <Clock className="w-4 h-4 text-gray-400" />
+                                                                                {ticket.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : ticket.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : ticket.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : ticket.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : ticket.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : ticket.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : ticket.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}
+                                                                            </p>
+                                                                        </div>
+                                                                    }
+                                                                </div>
+
+                                                                {/* Status */}
+                                                                <div className="flex justify-between gap-2">
+                                                                    <div><TranslatedText greetings={ownerBookingsTranslation.status} /></div>
+
+                                                                    <Badge>{ticket.bookingStatus}</Badge>
+                                                                </div>
+
+                                                                {/* Driver Info */}
+                                                                <div className="flex items-center gap-3 py-3 border-y">
+                                                                    <div className="w-10 h-10 bg-gray-200 rounded-full" />
+                                                                    <div>
+                                                                        <p className="font-medium">Mr. {`${ticket.user?.first_name} ${ticket.user?.middle_name ?? ""} ${ticket.user?.last_name}`}</p>
+                                                                        <p className="text-sm text-gray-500"><TranslatedText greetings={ownerBookingsTranslation.reportAt} /> ${new Date(ticket.createdAt).toLocaleDateString()}</p>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Timeline */}
+                                                                <div className="space-y-6">
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Open) || (ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium"><TranslatedText greetings={ownerBookingsTranslation.confirmedBooking} /></p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.operatorAccepted} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.leftForDestination} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.arrivedAtDestination} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.startedWork} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.waitingForPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.farmerSubmittedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.rejectedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.completedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {
+                                                                ticket.bookingStatus === BookingStatus.Open &&
+                                                                <AssignOperator selectedRequest={ticket.id} storeId={ticket.store_id} store={ticket.store} />
+                                                            }
+                                                            {
+                                                                (ticket.payment.length > 0 && ticket.payment[0].status === PaymentStatus.FarmerCONFIRMED) && <PaymentReview
+                                                                    referenceNumber={ticket.payment[0].transaction_reference[ticket.payment[0].transaction_reference.length - 1]}
+                                                                    screenshotUrl={ticket.payment[0].screenshots[ticket.payment[0].screenshots.length - 1]}
+                                                                    paymentId={ticket.payment[0].id} />
+                                                            }
+                                                        </SheetContent>
+                                                    </Sheet>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))
+                                }
+                                {
+                                    selectedFilter === "rejected" && allBookings.filter(bo => (bo.bookingStatus === BookingStatus.Rejected)).map((ticket, i) => (
+                                        <Card
+                                            key={i}
+                                            className={cn(
+                                                "py-4 hover:shadow-md transition-shadow"
+                                            )}
+                                        >
+                                            <CardContent>
+                                                <div className="flex items-start justify-between">
+                                                    <div>
+                                                        <h3 className="text-lg font-medium">
+                                                            #holabook{ticket.id.slice(-5)}
+                                                        </h3>
+                                                    </div>
+                                                    <span className="text-lg font-semibold text-green-500">
+                                                        ${ticket.total_cost.toFixed(2)}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex justify-between items-center mb-4">
+                                                    <div>
+                                                        <p className="font-medium">{new Date(ticket.start_date).toLocaleDateString()}</p>
+                                                        {/* <p className="text-sm text-blue-500">{ticket.from.time}</p> */}
+                                                    </div>
+                                                    <div className="grow mx-4 border-t-2 border-dashed border-gray-300" />
+                                                    <div className="text-right">
+                                                        <p className="font-medium">{ticket.booking_hours ? <span className="text-sm text-muted-foreground">
+                                                            <TranslatedText greetings={ownerBookingsTranslation.duration} />: <span className="font-medium">{ticket.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : ticket.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : ticket.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : ticket.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : ticket.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : ticket.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : ticket.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}</span>
+                                                        </span> : ticket.end_date && new Date(ticket.end_date).toLocaleDateString()}</p>
+                                                        {/* <p className="text-sm text-blue-500">{ticket.to.time}</p> */}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between pt-3 border-t">
+                                                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                        <Badge>
+                                                            {ticket.bookingStatus}
+                                                        </Badge>
+                                                        <span className="px-3 py-1 bg-gray-50 rounded-full">
+                                                            {`${ticket.user?.first_name} ${ticket.user?.middle_name ?? ""} ${ticket.user?.last_name}`}
+                                                        </span>
+                                                    </div>
+                                                    <Button variant="ghost" className="text-orange-500 hover:text-orange-600">
+                                                        <Share2 className="w-4 h-4 mr-2" />
+                                                        <TranslatedText greetings={ownerBookingsTranslation.share} />
+                                                    </Button>
+                                                    <Sheet>
+
+                                                        <SheetTrigger asChild>
+                                                            <Button className="bg-primaryColor hover:bg-primaryColor">
+                                                                <TranslatedText greetings={ownerBookingsTranslation.viewDetails} />
+                                                            </Button>
+                                                        </SheetTrigger>
+
+                                                        <SheetContent className="overflow-auto" style={{ scrollbarWidth: "none" }}>
+                                                            <SheetHeader>
+                                                                <SheetTitle className="text-xl font-semibold"><TranslatedText greetings={ownerBookingsTranslation.details} /></SheetTitle>
+                                                            </SheetHeader>
+
+                                                            <div className="space-y-4 mt-6">
+                                                                {/* Order Info */}
+                                                                <div className="space-y-2">
+                                                                    <div className="flex justify-between text-sm">
+                                                                        <span className="text-gray-500">Id</span>
+                                                                        <span>#holabook{ticket.id.slice(-5)}</span>
+                                                                    </div>
+
+                                                                    <div className="space-y-1">
+                                                                        <div >
+
+                                                                            <div className="flex justify-between gap-2">
+                                                                                <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.from} /></p>
+                                                                                <p className="flex  font-medium"><CalendarIcon className="w-4 h-4 mt-1 text-gray-400" />
+                                                                                    {new Date(ticket.start_date).toLocaleDateString()}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {
+                                                                            ticket.end_date &&
+                                                                            <div >
+                                                                                <div className="flex justify-between gap-2">
+                                                                                    <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.to} /></p>
+                                                                                    <p className="flex  justify-between font-medium"><CalendarIcon className="w-4 h-4 mt-1 text-gray-400" />
+                                                                                        {new Date(ticket.end_date).toLocaleDateString()}
+                                                                                    </p>
+                                                                                </div>
+                                                                            </div>
+                                                                        }
+                                                                    </div>
+                                                                    {
+                                                                        ticket.booking_hours &&
+                                                                        <div className="flex justify-between gap-2">
+                                                                            <p className="text-gray-500 text-sm"><TranslatedText greetings={ownerBookingsTranslation.estimation} /></p>
+                                                                            <p className="flex items-center font-medium"> <Clock className="w-4 h-4 text-gray-400" />
+                                                                                {ticket.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : ticket.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : ticket.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : ticket.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : ticket.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : ticket.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : ticket.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} />}
+                                                                            </p>
+                                                                        </div>
+                                                                    }
+                                                                </div>
+
+                                                                {/* Status */}
+                                                                <div className="flex justify-between gap-2">
+                                                                    <div><TranslatedText greetings={ownerBookingsTranslation.status} /></div>
+
+                                                                    <Badge>{ticket.bookingStatus}</Badge>
+                                                                </div>
+
+                                                                {/* Driver Info */}
+                                                                <div className="flex items-center gap-3 py-3 border-y">
+                                                                    <div className="w-10 h-10 bg-gray-200 rounded-full" />
+                                                                    <div>
+                                                                        <p className="font-medium">Mr. {`${ticket.user?.first_name} ${ticket.user?.middle_name ?? ""} ${ticket.user?.last_name}`}</p>
+                                                                        <p className="text-sm text-gray-500"><TranslatedText greetings={ownerBookingsTranslation.reportAt} /> ${new Date(ticket.createdAt).toLocaleDateString()}</p>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Timeline */}
+                                                                <div className="space-y-6">
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Open) || (ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium"><TranslatedText greetings={ownerBookingsTranslation.confirmedBooking} /></p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Accepted) || (ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.operatorAccepted} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Arriving) || (ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.leftForDestination} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Arrived) || (ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.arrivedAtDestination} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${(ticket.bookingStatus === BookingStatus.Started) || (ticket.bookingStatus === BookingStatus.Stopped) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.startedWork} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerPENDING")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.waitingForPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "FarmerCONFIRMED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.farmerSubmittedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "OwnerREJECTED")) || ((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.rejectedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-3">
+                                                                        <div className="flex flex-col items-center">
+                                                                            <div className={`w-3 h-3 rounded-full ${((ticket.bookingStatus === BookingStatus.Finished) && (`${ticket.payment[0].status}` === "COMPLETED"))
+                                                                                ? 'bg-green-500'
+                                                                                : 'bg-yellow-400'
+                                                                                }`} />
+                                                                        </div>
+
+                                                                        <div className="flex-1 pb-6">
+                                                                            <div className="flex justify-between">
+                                                                                <p className="font-medium">
+                                                                                    <TranslatedText greetings={ownerBookingsTranslation.completedPayment} />
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {
+                                                                ticket.bookingStatus === BookingStatus.Open &&
+                                                                <AssignOperator selectedRequest={ticket.id} storeId={ticket.store_id} store={ticket.store} />
+                                                            }
+                                                            {
+                                                                (ticket.payment.length > 0 && ticket.payment[0].status === PaymentStatus.FarmerCONFIRMED) && <PaymentReview
+                                                                    referenceNumber={ticket.payment[0].transaction_reference[ticket.payment[0].transaction_reference.length - 1]}
+                                                                    screenshotUrl={ticket.payment[0].screenshots[ticket.payment[0].screenshots.length - 1]}
+                                                                    paymentId={ticket.payment[0].id} />
+                                                            }
+                                                        </SheetContent>
+                                                    </Sheet>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ))
+                                }
+                            </div>
+                    }
                 </div>
 
                 {/* Right Section - Map & Statistics */}
-                <div className="w-3/5 p-4 bg-white shadow overflow-auto">
+                <div className="w-3/5 p-4 bg-white shadow overflow-auto" style={{ scrollbarWidth: "none" }} ref={rightSectionRef}>
                     <div className="h-full flex flex-col">
                         {/* Map */}
 
@@ -537,125 +2627,101 @@ const Bookings = () => {
 
                         {/* Statistics */}
                         <div className="space-y-6 mt-6">
-                            {/* Navigation Tabs */}
-                            {/* <div className="flex justify-between border-b">
-                                {["Details", "Amenities", "Statistics", "Route", "Reviews"].map((tab) => (
-                                    <Button
-                                        key={tab}
-                                        variant="ghost"
-                                        onClick={() => setActiveTab(tab)}
-                                        className={`px-4 py-2 -mb-px ${tab === activeTab
-                                            ? "border-b-2 border-blue-500 text-blue-600"
-                                            : "text-gray-500"
-                                            }`}
-                                    >
-                                        {tab}
-                                    </Button>
-                                ))}
-                            </div> */}
 
                             {/* Tab Content */}
-                            <div className="bg-white shadow-sm rounded-xl p-6 max-w-4xl mx-auto">
-                                <div className="flex justify-between items-center mb-6">
-                                    <div>
-                                        <h2 className="text-2xl font-semibold text-gray-800">Booking</h2>
-                             </div>
-
-                                    <div className="flex items-center space-x-4">
-                                        <div className="flex space-x-2">
-                                            <Button
-                                                variant={timeRange === "last30" ? "default" : "outline"}
-                                                size="sm"
-                                                onClick={() => setTimeRange("last30")}
-                                                className="rounded-full"
+                            <div className="space-y-4">
+                                <div className="w-full space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h2 className="text-2xl font-semibold tracking-tight">Booking</h2>
+                                        <div className="flex items-center gap-2">
+                                            {timeRanges.map((range) => (
+                                                <Button
+                                                    key={range}
+                                                    variant={selectedRange === range ? "secondary" : "outline"}
+                                                    size="sm"
+                                                    className="rounded-full"
+                                                    onClick={() => setSelectedRange(range)}
+                                                >
+                                                    {range}
+                                                </Button>
+                                            ))}
+                                            <Select
+                                                value={selectedRange}
+                                                onValueChange={(value) => setSelectedRange(value)}
                                             >
-                                                Last 30 Days
-                                            </Button>
-                                            <Button
-                                                variant={timeRange === "last90" ? "default" : "outline"}
-                                                size="sm"
-                                                onClick={() => setTimeRange("last90")}
-                                                className="rounded-full"
-                                            >
-                                                Last 90 Days
-                                            </Button>
+                                                <SelectTrigger className="w-[120px]">
+                                                    <SelectValue placeholder="Select year" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {generateYearOptions().map((year) => (
+                                                        <SelectItem key={year} value={year}>
+                                                            {year}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                         </div>
-
-                                        <Select
-                                            value={selectedYear.toString()}
-                                            onValueChange={(value) => setSelectedYear(Number(value))}
-                                            
-                                        >
-                                            <SelectTrigger className="w-[100px] bg-gray-50 border-none rounded-xl py-1">
-                                                <SelectValue placeholder="Select Year" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {years.map(year => (
-                                                    <SelectItem key={year} value={year.toString()}>
-                                                        {year}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
                                     </div>
-                                </div>
 
-                                <Card className="border-none shadow-none">
-                                    <CardContent className="p-0">
-                                        <ResponsiveContainer width="100%" height={350}>
-                                        <BarChart
-            data={chartData[timeRange as keyof ChartDataSet]} // Type assertion for timeRange
-            margin={{ top: 20, right: 0, left: -20, bottom: 0 }}
-          >
-                                                <CartesianGrid
-                                                    vertical={false}
-                                                    horizontal={true}
-                                                    stroke="#f3f4f6"
-                                                    strokeDasharray="3 3"
-                                                />
-                                                <XAxis
-                                                    dataKey="time"
-                                                    axisLine={false}
-                                                    tickLine={false}
-                                                    tick={{ fill: '#6b7280', fontSize: 12 }}
-                                                />
-                                                <YAxis
-                                                    axisLine={false}
-                                                    tickLine={false}
-                                                    tick={{ fill: '#6b7280', fontSize: 12 }}
-                                                    ticks={[200, 400, 600, 800]}
-                                                />
-                                                <Tooltip
-                                                    cursor={{ fill: 'transparent' }}
-                                                    content={({ active, payload }) => {
-                                                        if (active && payload && payload.length) {
-                                                            return (
-                                                                <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
-                                                                    <p className="text-xs text-gray-500 mb-1">
-                                                                        {payload[0].payload.time} {selectedYear}
-                                                                    </p>
-                                                                    <p className="text-base font-semibold text-gray-800">
-                                                                        {payload[0].value} Bookings
-                                                                        <span className="text-green-600 text-xs ml-2">
-                                                                            +12% from last month
-                                                                        </span>
-                                                                    </p>
-                                                                </div>
-                                                            );
-                                                        }
-                                                        return null;
-                                                    }}
-                                                />
-                                                <Bar
-                                                    dataKey="passengers"
-                                                    fill="#3b82f6"
-                                                    radius={[8, 8, 0, 0]}
-                                                    background={{ fill: "#e5e7eb", radius: 8 }}
-                                                />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </CardContent>
-                                </Card>
+                                    {/* Chart Card */}
+                                    <Card className="p-4 mt-5">
+                                        <CardContent className="pt-4">
+                                            <ResponsiveContainer width="100%" height={300}>
+                                                <BarChart data={chartData[timeRange as keyof typeof chartData]} barSize={40}>
+                                                    <CartesianGrid vertical={false} stroke="#f0f0f0" />
+                                                    <XAxis
+                                                        dataKey="time"
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        dy={10}
+                                                    />
+                                                    <YAxis
+                                                        axisLine={false}
+                                                        tickLine={false}
+                                                        ticks={[200, 400, 600, 800]}
+                                                        dx={-10}
+                                                    />
+                                                    <Tooltip
+                                                        cursor={false}
+                                                        content={({ active, payload }) => {
+                                                            if (active && payload && payload.length) {
+                                                                return (
+                                                                    <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                                                        <div className="grid grid-cols-2 gap-2">
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                                                                    Bookings
+                                                                                </span>
+                                                                                <span className="font-bold text-muted-foreground">
+                                                                                    {payload[0].value}
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                                                                    Change
+                                                                                </span>
+                                                                                <span className="font-bold text-emerald-500">
+                                                                                    +12%
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            return null;
+                                                        }}
+                                                    />
+                                                    <Bar
+                                                        dataKey="passengers"
+                                                        fill="#1a73e8"
+                                                        radius={[4, 4, 0, 0]}
+                                                        background={{ fill: "#f8f9fa" }}
+                                                    />
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </CardContent>
+                                    </Card>
+                                </div>
                             </div>
                         </div>
 

@@ -4,6 +4,15 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ReduxWrapper from '../_components/ReduxWrapper';
 import SidebarWrapper from './_components/SidebarWrapper';
+import NewStore from '@/components/Dashboards/Owner/_components/NewStore';
+import dynamic from "next/dynamic";
+
+const Header = dynamic(
+  ()=> import('@/components/Dashboards/Owner/_components/Header'),
+  {
+      ssr: false,
+    }
+)
 
 const OwnerDashboardLayout = ({
   children,
@@ -12,11 +21,13 @@ const OwnerDashboardLayout = ({
 }) => {
   return (
     <html lang="en">
-      <body>
+      <body style={{fontFamily: 'Poppins'}}>
         <ReduxWrapper>
           <SidebarWrapper>
             <main className="flex-1 overflow-y-auto my-2">
+              <NewStore />
               <ToastContainer />
+              <Header />
               {children}
             </main>
           </SidebarWrapper>

@@ -35,10 +35,15 @@ import { Phone, Mail, MapPin, User } from 'lucide-react'
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
-import { OperatorInStore } from '@/utils/Types/types';
+import { OperatorAddStoreReuests, OperatorInStore } from '@/utils/Types/types';
 import { useCookie } from 'next-cookie';
-import { renderInstance } from '@/utils/Axios/RenderInstance';
+import { NestJsBaseURL, renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
+import RequestNewOperator from './RequestNewOperator';
+import OperatorRequests from './OperatorRequests';
+import { io, Socket } from 'socket.io-client';
+import TranslatedText from '@/components/Menubar/TranslatedText';
+import { ownerOperatorTranslations } from './OwnerOperatorTranslation';
 
 interface user {
     userId: string;
@@ -57,58 +62,13 @@ const OwnerOperator = () => {
     const [activeOperators, setActiveOperators] = useState(0)
     const [fetchingOperatorDetails, setFetchingOperatorDetails] = useState(false)
 
+    const [operatorRequests, setOperatorRequests] = useState<OperatorAddStoreReuests[]>([])
+
     const tabs = [
         { id: 'all', label: 'All', icon: LayoutGrid },
         { id: 'company', label: 'Company', icon: Building2 },
         { id: 'contact', label: 'Contact', icon: Users },
         { id: 'estimate', label: 'Estimate Value', icon: DollarSign },
-    ];
-
-    const jobInfo = [
-        { department: "Creative Associate", division: "Project Management", manager: "Alex Foster", hireDate: "May 13, 2024", location: "Metro DC" },
-        { department: "Marketing Team", division: "Leadership", manager: "Jack Danniel", hireDate: "Sep 05, 2024", location: "Bergen, NJ" },
-        { department: "Team Lead", division: "Creator", manager: "Alina Skazka", hireDate: "Jun 08, 2023", location: "Miami, FL" },
-        { department: "Finance & Accounting", division: "Senior Consultant", manager: "John Miller", hireDate: "Sep 13, 2022", location: "Chicago, IL" },
-        { department: "Team Lead", division: "Creator", manager: "Mark Baldwin", hireDate: "Jul 07, 2023", location: "Miami, FL" },
-    ];
-
-    const activities = [
-        {
-            avatar: "/api/placeholder/32/32",
-            name: "John Miller",
-            action: "last login on",
-            date: "Jul 13, 2024",
-            time: "05:36 PM"
-        },
-        {
-            avatar: "/api/placeholder/32/32",
-            name: "Merva Sahin",
-            action: "date created on",
-            date: "Sep 08, 2024",
-            time: "03:12 PM"
-        },
-        {
-            avatar: "/api/placeholder/32/32",
-            name: "Tammy Collier",
-            action: "updated on",
-            date: "Aug 15, 2023",
-            time: "05:36 PM"
-        }
-    ];
-
-    const compensation = [
-        {
-            amount: "862.00 USD per month",
-            effectiveDate: "May 10, 2015"
-        },
-        {
-            amount: "1560.00 USD per quarter",
-            effectiveDate: "Jun 08, 2022"
-        },
-        {
-            amount: "378.00 USD per week",
-            effectiveDate: "Jun 08, 2022"
-        }
     ];
 
     const { cookie } = useCookie()
@@ -128,11 +88,23 @@ const OwnerOperator = () => {
             })
     }
 
+    function fetchAllOperatorRequests(){
+        renderInstance.get(`/owner/get-requests-from-operators-to-join-store/${user.userId}`)
+        .then((res)=>{setOperatorRequests(res.data)})
+        .catch((err)=>{errorMessage("Error in fetching operator requests")})
+    }
+
     useEffect(() => {
         if (user) {
             fetchOperators()
         }
     }, [])
+
+    useEffect(()=>{
+        if(user){
+            fetchAllOperatorRequests()
+        }
+    },[])
 
     useEffect(() => {
         const updateDateTime = () => {
@@ -148,22 +120,48 @@ const OwnerOperator = () => {
         return () => clearInterval(intervalId); // Cleanup on component unmount
     }, []);
 
+    useEffect(() => {
+        // Connect to the socket server
+        const newSocket: Socket = io(NestJsBaseURL, {
+            query: {
+                userId: user.userId
+            }
+        });
+
+        // Listen for the 'newFarmerNotification' event
+        newSocket.on('acceptedOperatorRequest', (request: OperatorAddStoreReuests) => {
+            setOperatorRequests((prevRequests) =>
+                prevRequests.filter((req) => req.id !== request.id)
+              );
+         });
+
+        // Clean up the event listener when the component unmounts
+        return () => {
+            newSocket.disconnect();
+        };
+    }, []);
+
     return (
         <div>
             {/* Header */}
-            <div className="flex justify-between items-center mb-8">
+            <div className="flex justify-between items-center mb-8 pt-4">
 
                 <Breadcrumb>
                     <BreadcrumbList>
                         <BreadcrumbItem>
-                            <BreadcrumbLink href="/owner">Dashboard</BreadcrumbLink>
+                            <BreadcrumbLink href="/owner"><TranslatedText greetings={ownerOperatorTranslations.dashboard} /></BreadcrumbLink>
                         </BreadcrumbItem>
                         <BreadcrumbSeparator />
                         <BreadcrumbItem>
-                            <BreadcrumbLink href="/owner/operator">Operators</BreadcrumbLink>
+                            <BreadcrumbLink href="/owner/operator"><TranslatedText greetings={ownerOperatorTranslations.operators} /></BreadcrumbLink>
                         </BreadcrumbItem>
                     </BreadcrumbList>
                 </Breadcrumb>
+                
+                <div className='flex items-center gap-3'>
+                {operatorRequests.length > 0 && <OperatorRequests requests={operatorRequests} />}
+                <RequestNewOperator />
+                </div>
 
             </div>
 
@@ -221,7 +219,7 @@ const OwnerOperator = () => {
                 {/* Total Operators Card */}
                 <div className="col-span-1 bg-white rounded-lg border shadow-sm p-6">
                     <div className="flex justify-between items-center">
-                        <h3 className="text-gray-600 text-sm font-medium">Active Operators</h3> {/* Changed "Customers" to "Operators" */}
+                        <h3 className="text-gray-600 text-sm font-medium"><TranslatedText greetings={ownerOperatorTranslations.activeOperators} /></h3> {/* Changed "Customers" to "Operators" */}
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                             <MoreHorizontal className="h-4 w-4" />
                         </Button>
@@ -238,7 +236,7 @@ const OwnerOperator = () => {
                 {/* Total Member Card */}
                 <div className="col-span-1 bg-white rounded-lg border shadow-sm p-6">
                     <div className="flex justify-between items-center">
-                        <h3 className="text-gray-600 text-sm font-medium">Total Operators</h3>
+                        <h3 className="text-gray-600 text-sm font-medium"><TranslatedText greetings={ownerOperatorTranslations.totalOperators} /></h3>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                             <MoreHorizontal className="h-4 w-4" />
                         </Button>
@@ -319,18 +317,18 @@ const OwnerOperator = () => {
                 <div className="flex items-center gap-4 flex-wrap">
                     <button className="flex items-center gap-2 px-4 py-2 border rounded-lg">
                         <Import className="w-4 h-4" />
-                        Import
+                        <TranslatedText greetings={ownerOperatorTranslations.import} />
                     </button>
                     <button className="flex items-center gap-2 px-4 py-2 border rounded-lg">
                         <Filter className="w-4 h-4" />
-                        Filter
+                        <TranslatedText greetings={ownerOperatorTranslations.filter} />
                     </button>
-                    <button className="px-4 py-2 bg-primaryColor text-white rounded-lg">List</button>
+                    <button className="px-4 py-2 bg-primaryColor text-white rounded-lg"><TranslatedText greetings={ownerOperatorTranslations.list} /></button>
                     <button className="p-2 border rounded-lg">
                         <Grid className="w-4 h-4" />
                     </button>
                     <button className="flex items-center gap-2 px-4 py-2 border rounded-lg">
-                        Short by
+                    <TranslatedText greetings={ownerOperatorTranslations.sortBy} />
                         <ChevronDown className="w-4 h-4" />
                     </button>
                 </div>
@@ -346,7 +344,7 @@ const OwnerOperator = () => {
                             </TableHead>
                             <TableHead className="text-left font-bold text-lg">
                             <div className="flex items-center gap-2">
-                                    Profile
+                            <TranslatedText greetings={ownerOperatorTranslations.profile} />
                                     <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
                                         <RiArrowUpDownLine className="h-4 w-4" />
                                     </div>
@@ -354,7 +352,7 @@ const OwnerOperator = () => {
                             </TableHead>
                             <TableHead className="text-left font-bold text-lg">
                             <div className="flex items-center gap-2">
-                                    Contact
+                            <TranslatedText greetings={ownerOperatorTranslations.contact} />
                                     <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
                                         <RiArrowUpDownLine className="h-4 w-4" />
                                     </div>
@@ -362,7 +360,7 @@ const OwnerOperator = () => {
                             </TableHead>
                             <TableHead className="text-left font-bold text-lg">
                             <div className="flex items-center gap-2">
-                                    Store
+                            <TranslatedText greetings={ownerOperatorTranslations.store} />
                                     <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
                                         <RiArrowUpDownLine className="h-4 w-4" />
                                     </div>
@@ -370,7 +368,7 @@ const OwnerOperator = () => {
                             </TableHead>
                             <TableHead className="text-left font-bold text-lg">
                             <div className="flex items-center gap-2">
-                                    Per hour
+                            <TranslatedText greetings={ownerOperatorTranslations.perHour} />
                                     <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
                                         <RiArrowUpDownLine className="h-4 w-4" />
                                     </div>
@@ -378,7 +376,7 @@ const OwnerOperator = () => {
                             </TableHead>
                             <TableHead className="text-left font-bold text-lg">
                             <div className="flex items-center gap-2">
-                                    Per month
+                            <TranslatedText greetings={ownerOperatorTranslations.perMonth} />
                                     <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
                                         <RiArrowUpDownLine className="h-4 w-4" />
                                     </div>
@@ -386,7 +384,7 @@ const OwnerOperator = () => {
                             </TableHead>
                             <TableHead className="text-left font-bold text-lg">
                                 <div className="flex items-center gap-2">
-                                    Per job
+                                <TranslatedText greetings={ownerOperatorTranslations.perJob} />
                                     <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
                                         <RiArrowUpDownLine className="h-4 w-4" />
                                     </div>
@@ -394,7 +392,7 @@ const OwnerOperator = () => {
                             </TableHead>
                             <TableHead className="text-left font-bold text-lg">
                                 <div className="flex items-center gap-2">
-                                    Status
+                                <TranslatedText greetings={ownerOperatorTranslations.status} />
                                     <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
                                         <RiArrowUpDownLine className="h-4 w-4" />
                                     </div>
@@ -403,9 +401,9 @@ const OwnerOperator = () => {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {fetchingOperatorDetails ? <p>Loading operator lists</p>
+                        {fetchingOperatorDetails ? <OperatorTableShrimmer />
                             :
-                            allOperators.length === 0 ? <p>No operators available</p>
+                            allOperators.length === 0 ? <p><TranslatedText greetings={ownerOperatorTranslations.noOperatorsAvailable} /></p>
                                 :
                                 allOperators.map((customer, i) => (
                                     <Dialog open={isOpen} onOpenChange={setIsOpen} key={i}>
@@ -472,14 +470,13 @@ const OwnerOperator = () => {
                                                 <Tabs defaultValue="overview" className="flex-1">
                                                     <TabsList className="h-full bg-transparent gap-4">
                                                         <TabsTrigger value="overview" className="data-[state=active]:border-b-2 data-[state=active]:border-red-500 rounded-none">
-                                                            Overview
+                                                        <TranslatedText greetings={ownerOperatorTranslations.overview} />
                                                         </TabsTrigger>
-
                                                         <TabsTrigger value="performance" className="data-[state=active]:border-b-2 data-[state=active]:border-red-500 rounded-none">
-                                                            Performance
+                                                        <TranslatedText greetings={ownerOperatorTranslations.performance} />
                                                         </TabsTrigger>
                                                         <TabsTrigger value="files" className="data-[state=active]:border-b-2 data-[state=active]:border-red-500 rounded-none">
-                                                            Rating
+                                                        <TranslatedText greetings={ownerOperatorTranslations.rating} />
                                                         </TabsTrigger>
 
                                                     </TabsList>
@@ -514,13 +511,13 @@ const OwnerOperator = () => {
 
                                                         <div className="space-y-8">
                                                             <section>
-                                                                <h3 className="text-sm font-semibold mb-4">About</h3>
+                                                                <h3 className="text-sm font-semibold mb-4"><TranslatedText greetings={ownerOperatorTranslations.about} /></h3>
                                                                 <div className="space-y-3">
                                                                     {
                                                                         customer.operator.user.country_code && customer.operator.user.mobile &&
                                                                         <div className="flex items-center gap-2">
                                                                             <Phone className="h-4 w-4 text-muted-foreground" />
-                                                                            <span className="text-sm">(629) 555-0123</span>
+                                                                            {/* <span className="text-sm">(629) 555-0123</span> */}
                                                                         </div>
                                                                     }
                                                                     <div className="flex items-center gap-2">
@@ -533,7 +530,7 @@ const OwnerOperator = () => {
                                                             </section>
 
                                                             <section>
-                                                                <h3 className="text-sm font-semibold mb-4">Employee details</h3>
+                                                                <h3 className="text-sm font-semibold mb-4"><TranslatedText greetings={ownerOperatorTranslations.employeeDetails} /></h3>
                                                                 <div className="space-y-3">
                                                                     <div className="flex items-center gap-2">
                                                                         <User className="h-4 w-4 text-muted-foreground" />
@@ -551,19 +548,29 @@ const OwnerOperator = () => {
                                                         {/* Job Information */}
                                                         <div className="bg-white rounded-lg border">
                                                             <div className="flex justify-between items-center p-4 border-b">
-                                                                <h3 className="font-semibold">Job Information</h3>
+                                                                <h3 className="font-semibold"><TranslatedText greetings={ownerOperatorTranslations.jobInformation} /></h3>
                                                                 <Button variant="outline" size="sm" className="text-red-600">
-                                                                    + Add Info
+                                                                    + <TranslatedText greetings={ownerOperatorTranslations.addInfo} />
                                                                 </Button>
                                                             </div>
                                                             <table className="w-full">
                                                                 <thead>
                                                                     <tr className="border-b bg-gray-50">
-                                                                        <th className="text-left p-4 text-xs font-medium text-gray-500">Start date</th>
-                                                                        <th className="text-left p-4 text-xs font-medium text-gray-500">Duration</th>
-                                                                        <th className="text-left p-4 text-xs font-medium text-gray-500">End date</th>
-                                                                        <th className="text-left p-4 text-xs font-medium text-gray-500">Total cost</th>
-                                                                        <th className="text-left p-4 text-xs font-medium text-gray-500">Status</th>
+                                                                        <th className="text-left p-4 text-xs font-medium text-gray-500">
+                                                                        <TranslatedText greetings={ownerOperatorTranslations.startDate} />
+                                                                        </th>
+                                                                        <th className="text-left p-4 text-xs font-medium text-gray-500">
+                                                                        <TranslatedText greetings={ownerOperatorTranslations.duration} />
+                                                                        </th>
+                                                                        <th className="text-left p-4 text-xs font-medium text-gray-500">
+                                                                            <TranslatedText greetings={ownerOperatorTranslations.endDate} />
+                                                                        </th>
+                                                                        <th className="text-left p-4 text-xs font-medium text-gray-500">
+                                                                        <TranslatedText greetings={ownerOperatorTranslations.totalCost} />
+                                                                        </th>
+                                                                        <th className="text-left p-4 text-xs font-medium text-gray-500">
+                                                                        <TranslatedText greetings={ownerOperatorTranslations.status} />
+                                                                        </th>
                                                                         <th className="w-16"></th>
                                                                     </tr>
                                                                 </thead>
@@ -571,7 +578,7 @@ const OwnerOperator = () => {
                                                                     {customer.operator.OperatorBookingJob.map((job, index) => (
                                                                         <tr key={index} className="border-b last:border-0">
                                                                             <td className="p-4 text-sm">{new Date(job.booking.start_date).toLocaleDateString()}</td>
-                                                                            <td className="p-4 text-sm">{job.booking.booking_hours ?? "More than 8 hours"}</td>
+                                                                            <td className="p-4 text-sm">{job.booking.booking_hours ?? <TranslatedText greetings={ownerOperatorTranslations.moreThanEightHours} />}</td>
                                                                             <td className="p-4 text-sm">{job.booking.end_date ?new Date(job.booking.end_date).toLocaleDateString() : new Date().toLocaleDateString()}</td>
                                                                             <td className="p-4 text-sm">{job.booking.total_cost.toFixed(2)}</td>
                                                                             <td className="p-4 text-sm">{job.booking.bookingStatus}</td>
@@ -645,3 +652,36 @@ const OwnerOperator = () => {
 }
 
 export default OwnerOperator
+
+function OperatorTableShrimmer(){
+    return(
+        Array.from({ length: 5 }).map((_, index) => (
+          <tr key={index} className="animate-pulse border-b">
+            <td className="p-4">
+              <div className="h-4 w-4 bg-gray-300 rounded"></div>
+            </td>
+            <td className="p-4">
+              <div className="h-4 w-32 bg-gray-300 rounded"></div>
+            </td>
+            <td className="p-4">
+              <div className="h-4 w-32 bg-gray-300 rounded"></div>
+            </td>
+            <td className="p-4">
+              <div className="h-4 w-24 bg-gray-300 rounded"></div>
+            </td>
+            <td className="p-4">
+              <div className="h-4 w-16 bg-gray-300 rounded"></div>
+            </td>
+            <td className="p-4">
+              <div className="h-4 w-16 bg-gray-300 rounded"></div>
+            </td>
+            <td className="p-4">
+              <div className="h-4 w-16 bg-gray-300 rounded"></div>
+            </td>
+            <td className="p-4">
+              <div className="h-4 w-16 bg-gray-300 rounded"></div>
+            </td>
+          </tr>
+        ))
+      )
+  }

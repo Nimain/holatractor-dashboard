@@ -479,53 +479,6 @@ const NewAttachment = () => {
               })}
           </div>
 
-          <div className="w-full flex items-center gap-[20px] max-w-[600px] mx-auto">
-            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    // aria-expanded={popoverOpen}
-                    className="w-full justify-between"
-                  >
-                    {tractorName
-                      ? allTractors.find((country) => country.tractor.name === tractorName) && tractorName
-                      : "Select inventory..."}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0">
-                  <Command>
-                    <CommandInput placeholder="Search inventory..." />
-                    <CommandList>
-                      <CommandEmpty>No inventory found.</CommandEmpty>
-                      <CommandGroup>
-                        {allTractors.map((country, index) => (
-                          <CommandItem
-                            key={index}
-                            value={country.tractor.name}
-                            onSelect={(currentValue) => {
-                              setTractorType(country.tractor.id)
-                              setTractorName(country.tractor.name)
-                              setPopoverOpen(false)
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                tractorType === country.tractor.type ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {country.tractor.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-          </div>
-
         </CardContent>
 
       </Card>

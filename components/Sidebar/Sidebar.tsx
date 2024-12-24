@@ -394,7 +394,7 @@ const Sidebar = () => {
         qu: "Qhatariynin",
         gn: "Ñemity",
       }),
-      route: "#",
+      route: "/Subscriptions",
     },
     {
       icon: (

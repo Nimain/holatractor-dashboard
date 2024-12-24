@@ -187,7 +187,7 @@ export interface Tractor {
   inventory: Inventory[];
   user: User;
   TractorInStore: TractorInStore[];
-  TractorLead: TractorLead[];            
+  TractorLead: TractorLead[];
   BookingStandaloneTractor: BookingStandaloneTractor[];
 }
 
@@ -228,20 +228,20 @@ export interface BookingAttachment {
 }
 
 export interface BookingStandaloneTractor {
-  id        :string; 
-  bookingId :string;
-  tractorId :string;
-  count     :number; // Number of tractors booked
-  booking :Booking;
-  tractor :Tractor;
+  id: string;
+  bookingId: string;
+  tractorId: string;
+  count: number; // Number of tractors booked
+  booking: Booking;
+  tractor: Tractor;
 }
 export interface BookingStandaloneAttachment {
-  id           :string;
-  bookingId    :string;
-  attachmentId :string;
-  count        :number; // Number of tractors booked
-  booking    :Booking;
-  attachment :Attachment;
+  id: string;
+  bookingId: string;
+  attachmentId: string;
+  count: number; // Number of tractors booked
+  booking: Booking;
+  attachment: Attachment;
 }
 
 export interface LeaseTractor {
@@ -313,11 +313,11 @@ export interface Booking {
   location?: Location | null;
   tractors: BookingTractor[];
   attachments: BookingAttachment[];
-  standaloneTractors    :BookingStandaloneTractor[]; // Standalone tractors
-  standaloneAttachments :BookingStandaloneAttachment[];
+  standaloneTractors: BookingStandaloneTractor[]; // Standalone tractors
+  standaloneAttachments: BookingStandaloneAttachment[];
   OperatorBookingJob: OperatorBookingJob[];
-  ownerOperatorRequest  :ownerOperatorRequest[];
-  farm ?:                 Farm | null;
+  ownerOperatorRequest: ownerOperatorRequest[];
+  farm?: Farm | null;
   user?: User | null;
   payment: Payment[]
 }
@@ -592,6 +592,7 @@ export interface Owner {
   payment_id: string;
   createdAt: Date;
   updatedAt: Date;
+  paymentScreenshots: string[];
   user: User; // Relation to the User model as "Owner user"
   role: Role; // Relation to the Role model as "Owner role"
   location: Location; // Relation to the Location model as "location of owner"
@@ -720,6 +721,10 @@ export interface OperatorAddStoreReuests {
   store_id: string
   operator_response: ownerOperatorResponse
   store_owner_response: ownerOperatorResponse
+  cost_per_job?: string
+  cost_per_hour?: string
+  cost_per_month?: string
+  note?: string
   base_id: string
   createdAt: Date
   updatedAt: Date
@@ -942,33 +947,33 @@ export interface AttachmentInDealerStore {
 }
 
 export interface TractorLead {
-  id            :string   
-  user_id    :string
-  message?:       string | null
-  tractorId     :string
-  dealerStoreId :string
-  base_id       :string
-  createdAt     :Date
-  updatedAt     :Date
-  tractor     :Tractor     
-  dealerStore :DealerStore 
-  user        :User        
-  base        :Base        
+  id: string
+  user_id: string
+  message?: string | null
+  tractorId: string
+  dealerStoreId: string
+  base_id: string
+  createdAt: Date
+  updatedAt: Date
+  tractor: Tractor
+  dealerStore: DealerStore
+  user: User
+  base: Base
 }
 
 export interface AttachmentLead {
-  id            :string
-  user_id       :string
-  message?       :string | null
-  attachmentId  :string
-  dealerStoreId :string
-  base_id       :string
-  createdAt:     Date 
-  updatedAt:     Date 
-  attachment:  Attachment 
+  id: string
+  user_id: string
+  message?: string | null
+  attachmentId: string
+  dealerStoreId: string
+  base_id: string
+  createdAt: Date
+  updatedAt: Date
+  attachment: Attachment
   dealerStore: DealerStore
-  user        :User      
-  base        :Base  
+  user: User
+  base: Base
 }
 
 export interface Farm {
@@ -988,17 +993,36 @@ export interface Farm {
 }
 
 export interface FarmerNotification {
-  id        :string                 
+  id: string
+  title: string
+  message: string
+  type: FarmerNotificationType
+  userId: string
+  baseId: string
+  createdAt: Date
+  updatedAt: Date
+
+  user: User
+  base: Base
+}
+
+export interface OwnerNotification {
+  id        :string              
   title     :string
   message   :string
-  type      :FarmerNotificationType
+  type      :OwnerNotificationType
   userId    :string
   baseId    :string
-  createdAt :Date            
-  updatedAt :Date              
+  createdAt :Date
+  updatedAt :Date
 
-  user :User 
+  user :User
   base :Base
+}
+
+export enum OwnerNotificationType {
+  storeCreated,
+  Booking
 }
 
 export enum FarmerNotificationType {

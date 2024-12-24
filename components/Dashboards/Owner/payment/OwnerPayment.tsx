@@ -24,10 +24,10 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { useEffect, useRef, useState } from 'react'
-import { Owner, Booking, Subscriptions, PayPal, BankAccount, UPI } from '@/utils/Types/types'
+import { Owner, Booking, Subscriptions, PayPal, BankAccount, UPI, Payment } from '@/utils/Types/types'
 import { Input } from '@/components/ui/input'
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
-import { renderInstance } from '@/utils/Axios/RenderInstance'
+import { NestJsBaseURL, renderInstance } from '@/utils/Axios/RenderInstance'
 import { uploadFileToS3 } from '@/utils/AWS/FileUpload'
 import { useCookie } from 'next-cookie'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -39,6 +39,9 @@ import PaymentSheet from './PaymentSheet'
 import { DownloadPDFButton } from './PaymentPDF';
 import { addDays } from 'date-fns'
 import Image from 'next/image'
+import { io, Socket } from 'socket.io-client'
+import TranslatedText from '@/components/Menubar/TranslatedText'
+import { ownerPaymentHistoryTranslations } from './PaymentHistoryTrnslation'
 
 const currencies = [
   { code: 'USD', symbol: '$', name: 'US Dollar' },
@@ -60,15 +63,40 @@ const OwnerPayment = () => {
   const [ownerDetails, setOwnerDetails] = useState<Owner | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isFetching, setIsFetching] = useState(false)
-  const [isOpen, setIsOpen] = useState(false);
   const [selectedPayments, setSelectedPayments] = useState<string[]>([])
   const [monthlyRevenue, setMonthlyRevenue] = useState(0)
   const [monthlyRejected, setMonthlyRejected] = useState(0)
   const [subscription, setSubscription] = useState<Subscriptions | null>(null)
   const [subscriptionActive, setSubscriptionActive] = useState<Subscriptions | null>(null)
+  const [activeFilter, setActiveFilter] = useState("all")
+  const [receiverPayments, setReceiverPayments] = useState<Payment[]>([])
+  const [senderPayments, setSenderPayments] = useState<Payment[]>([])
 
   const { cookie } = useCookie()
   const user: user = cookie.get("user")
+
+  const bookingFilters = [
+    {
+      placeholder: <TranslatedText greetings={ownerPaymentHistoryTranslations.all} />,
+      value: "all",
+    },
+    {
+      placeholder: <TranslatedText greetings={ownerPaymentHistoryTranslations.unpaid} />,
+      value: "unpaid",
+    },
+    {
+      placeholder: <TranslatedText greetings={ownerPaymentHistoryTranslations.ownerReview} />,
+      value: "review",
+    },
+    {
+      placeholder: <TranslatedText greetings={ownerPaymentHistoryTranslations.rejected} />,
+      value: "rejected",
+    },
+    {
+      placeholder: <TranslatedText greetings={ownerPaymentHistoryTranslations.completed} />,
+      value: "completed",
+    },
+  ]
 
   const handlePaymentSelect = (paymentId: string) => {
     setSelectedPayments(prev =>
@@ -97,6 +125,8 @@ const OwnerPayment = () => {
     renderInstance.get(`/owner/get-owner-payment-page-details/${user.userId}`)
       .then((res) => {
         setOwnerDetails(res.data.ownerDetails)
+        setReceiverPayments(res.data.ownerDetails.user.paymentReciever)
+        setSenderPayments(res.data.ownerDetails.user.paymentSender)
         setMonthlyRevenue(res.data.monthlyRevenue)
         setMonthlyRejected(res.data.monthlyRejected)
         setSubscription(res.data.subscription)
@@ -109,14 +139,52 @@ const OwnerPayment = () => {
   }
 
   useEffect(() => {
+    // Connect to the socket server
+    const newSocket: Socket = io(NestJsBaseURL, {
+      query: {
+        userId: user.userId
+      }
+    });
+
+    // Listen for the 'newFarmerNotification' event
+    newSocket.on('getUpdatedPayment', (payment: Payment) => {
+      setSenderPayments((prevPayments) => {
+        const existingPaymentIndex = prevPayments.findIndex((b) => b.id === payment.id);
+
+        if (existingPaymentIndex !== -1) {
+          // If payment exists, remove the old one and add the new one at the start
+          const updatedPayments = prevPayments.filter((b) => b.id !== payment.id);
+          return [payment, ...updatedPayments];
+        } else {
+          // If payment doesn't exist, leave the array as it is
+          return prevPayments;
+        }
+      });
+      setReceiverPayments((prevPayments) => {
+        const existingPaymentIndex = prevPayments.findIndex((b) => b.id === payment.id);
+
+        if (existingPaymentIndex !== -1) {
+          // If payment exists, remove the old one and add the new one at the start
+          const updatedPayments = prevPayments.filter((b) => b.id !== payment.id);
+          return [payment, ...updatedPayments];
+        } else {
+          // If payment doesn't exist, leave the array as it is
+          return prevPayments;
+        }
+      });
+    });
+
+    // Clean up the event listener when the component unmounts
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
     if (user) {
       fetchPageDetails()
     }
   }, [])
-
-  if (isFetching) return <OwnerShrimmer />
-
-  if (!ownerDetails) return <p>Owner details not present</p>
 
   return (
     <div>
@@ -126,11 +194,11 @@ const OwnerPayment = () => {
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink href="/owner">Dashboard</BreadcrumbLink>
+              <BreadcrumbLink href="/owner"><TranslatedText greetings={ownerPaymentHistoryTranslations.dashboard} /></BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbLink href="/owner/payment">Payment</BreadcrumbLink>
+              <BreadcrumbLink href="/owner/payment"><TranslatedText greetings={ownerPaymentHistoryTranslations.payment} /></BreadcrumbLink>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
@@ -138,27 +206,27 @@ const OwnerPayment = () => {
         <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
           <DialogTrigger asChild>
             <Button>
-              Add Payment Method
+            <TranslatedText greetings={ownerPaymentHistoryTranslations.addPaymentMethod} />
             </Button>
           </DialogTrigger>
           <DialogContent className="max-h-[80vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
             <DialogHeader>
-              <DialogTitle>Add Payment Method</DialogTitle>
+              <DialogTitle><TranslatedText greetings={ownerPaymentHistoryTranslations.addPaymentMethod} /></DialogTitle>
             </DialogHeader>
             <Tabs defaultValue="bank">
               <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="bank">Bank Account</TabsTrigger>
-                <TabsTrigger value="paypal">PayPal</TabsTrigger>
-                <TabsTrigger value="upi">UPI</TabsTrigger>
+                <TabsTrigger value="bank"><TranslatedText greetings={ownerPaymentHistoryTranslations.bankAccount} /></TabsTrigger>
+                <TabsTrigger value="paypal"><TranslatedText greetings={ownerPaymentHistoryTranslations.paypal} /></TabsTrigger>
+                <TabsTrigger value="upi"><TranslatedText greetings={ownerPaymentHistoryTranslations.orCode} /></TabsTrigger>
               </TabsList>
               <TabsContent value="bank">
-                <BankAccountForm />
+                <BankAccountForm setIsAddModalOpen={setIsAddModalOpen} />
               </TabsContent>
               <TabsContent value="paypal">
-                <PayPalForm />
+                <PayPalForm setIsAddModalOpen={setIsAddModalOpen} />
               </TabsContent>
               <TabsContent value="upi">
-                <UPIForm />
+                <UPIForm setIsAddModalOpen={setIsAddModalOpen} />
               </TabsContent>
             </Tabs>
           </DialogContent>
@@ -174,7 +242,7 @@ const OwnerPayment = () => {
               {/* Revenue Section */}
               <div className="border-r border-gray-200 pr-4">
                 <div className="space-y-1">
-                  <p className="text-sm text-gray-500">Total spend this month</p>
+                  <p className="text-sm text-gray-500"><TranslatedText greetings={ownerPaymentHistoryTranslations.revenueThisMonth} /></p>
                   <div className="flex items-center gap-2">
                     <span className="text-2xl font-bold">${monthlyRevenue}</span>
                     {/* <div className="flex items-center text-sm text-emerald-500">
@@ -202,7 +270,7 @@ const OwnerPayment = () => {
               {/* Rejected Section */}
               <div className="border-r border-gray-200 pr-4">
                 <div className="space-y-1">
-                  <p className="text-sm text-gray-500">Total spend in seed/ fertilizer</p>
+                  <p className="text-sm text-gray-500"><TranslatedText greetings={ownerPaymentHistoryTranslations.rejectedThisMonth} /></p>
                   <div className="flex items-center gap-2">
                     <span className="text-2xl font-bold">${monthlyRejected}</span>
                     {/* <div className="flex items-center text-sm text-red-500">
@@ -236,14 +304,14 @@ const OwnerPayment = () => {
           subscription &&
           <Card className="w-full">
             <CardContent className="p-6">
-              <h2 className="text-xl font-semibold mb-4">My Plan</h2>
-              <p className="text-gray-600 mb-4">Change your plan based on your needs</p>
+              <h2 className="text-xl font-semibold mb-4"><TranslatedText greetings={ownerPaymentHistoryTranslations.mySubscriptionPlan} /></h2>
+              <p className="text-gray-600 mb-4"><TranslatedText greetings={ownerPaymentHistoryTranslations.changeYourPlan} /></p>
               <div className="flex items-center gap-2 mb-4">
                 <div className="h-2 w-2 bg-green-400 rounded-full"></div>
                 <span className="font-medium">
                   {subscription.name}
                 </span>
-                <span className="text-gray-500 text-sm">Billed monthly</span>
+                <span className="text-gray-500 text-sm"><TranslatedText greetings={ownerPaymentHistoryTranslations.billedMonthly} /></span>
               </div>
               <div className="mb-4">
                 <span className="text-xl font-semibold">${subscription.actual_cost.toFixed(2)} USD</span>
@@ -252,110 +320,137 @@ const OwnerPayment = () => {
                 </span>
               </div>
               <div className="flex gap-4 flex-wrap">
-                <Button variant="default">Explore Plans</Button>
-                <Button variant="outline">Manage Plans</Button>
+                <Button variant="default"><TranslatedText greetings={ownerPaymentHistoryTranslations.explorePlans} /></Button>
               </div>
             </CardContent>
           </Card>
         }
 
         {/* Payment Method Section */}
-        <Card className="w-full">
-          <CardContent className="p-6 flex flex-col gap-3 max-h-[300px] overflow-auto" style={{scrollbarWidth: "none"}}>
-            <div className="w-full flex items-center justify-between gap-4 flex-wrap">
-              <h2 className="text-xl font-semibold mb-4">Payment Method</h2>
-              {
-                ((ownerDetails.user.BankAccount.length === 0) && (ownerDetails.user.PayPal.length === 0) && (ownerDetails.user.UPI.length === 0)) &&
+        {
+          ownerDetails &&
+          <Card className="w-full">
+            <CardContent className="p-6 flex flex-col gap-3 max-h-[300px] overflow-auto" style={{ scrollbarWidth: "none" }}>
+              <div className="w-full flex items-center justify-between gap-4 flex-wrap">
+                <h2 className="text-xl font-semibold mb-4">Payment Method</h2>
+                {
+                  ((ownerDetails.user.BankAccount.length === 0) && (ownerDetails.user.PayPal.length === 0) && (ownerDetails.user.UPI.length === 0)) &&
                   <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
                     <DialogTrigger asChild>
                       <Button>
                         <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Payment Method
+                        <TranslatedText greetings={ownerPaymentHistoryTranslations.addPaymentMethod} />
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="max-h-[80vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
                       <DialogHeader>
-                        <DialogTitle>Add Payment Method</DialogTitle>
+                        <DialogTitle><TranslatedText greetings={ownerPaymentHistoryTranslations.addPaymentMethod} /></DialogTitle>
                       </DialogHeader>
                       <Tabs defaultValue="bank">
                         <TabsList className="grid w-full grid-cols-3">
-                          <TabsTrigger value="bank">Bank Account</TabsTrigger>
-                          <TabsTrigger value="paypal">PayPal</TabsTrigger>
-                          <TabsTrigger value="upi">UPI</TabsTrigger>
+                          <TabsTrigger value="bank"><TranslatedText greetings={ownerPaymentHistoryTranslations.bankAccount} /></TabsTrigger>
+                          <TabsTrigger value="paypal"><TranslatedText greetings={ownerPaymentHistoryTranslations.paypal} /></TabsTrigger>
+                          <TabsTrigger value="upi"><TranslatedText greetings={ownerPaymentHistoryTranslations.orCode} /></TabsTrigger>
                         </TabsList>
                         <TabsContent value="bank">
-                          <BankAccountForm />
+                          <BankAccountForm setIsAddModalOpen={setIsAddModalOpen} />
                         </TabsContent>
                         <TabsContent value="paypal">
-                          <PayPalForm />
+                          <PayPalForm setIsAddModalOpen={setIsAddModalOpen} />
                         </TabsContent>
                         <TabsContent value="upi">
-                          <UPIForm />
+                          <UPIForm setIsAddModalOpen={setIsAddModalOpen} />
                         </TabsContent>
                       </Tabs>
                     </DialogContent>
                   </Dialog>
-              }
-            </div>
-            {
-              ownerDetails.user.PayPal.map((paypal, i) => {
-                return (
-                  <div className="flex items-center justify-between flex-wrap gap-4 border p-4 rounded-lg" key={i}>
-                    <div className="flex items-center flex-wrap gap-4">
-                      <PayPalIcon className="h-6 w-6 text-blue-600" />
-                      <p>{paypal.email}</p>
+                }
+              </div>
+              {
+                ownerDetails.user.PayPal.map((paypal, i) => {
+                  return (
+                    <div className="flex items-center justify-between flex-wrap gap-4 border p-4 rounded-lg" key={i}>
+                      <div className="flex items-center flex-wrap gap-4">
+                        <PayPalIcon className="h-6 w-6 text-blue-600" />
+                        <p>{paypal.email}</p>
+                      </div>
+                      <PaypalReadOnly email={paypal.email} />
                     </div>
-                    <PaypalReadOnly email={paypal.email} />
-                  </div>
-                )
-              })
-            }
-            {
-              ownerDetails.user.UPI.map((upi, i)=>{
-                return(
-                  <div className="flex items-center justify-between flex-wrap gap-4 border p-4 rounded-lg" key={i}>
-                <div className="flex items-center flex-wrap gap-4">
-                  <PayPalIcon className="h-6 w-6 text-blue-600" />
-                  <p>{upi.upi_id}</p>
-                </div>
-                <UPIReadonly upi={upi} />
-              </div>
-                )
-              })
-            }
-            {
-              ownerDetails.user.BankAccount.map((bankAccount, i)=>{
-                return(
-                  <div className="flex items-center justify-between flex-wrap gap-4 border p-4 rounded-lg" key={i}>
-                <div className="flex items-center flex-wrap gap-4">
-                  <PayPalIcon className="h-6 w-6 text-blue-600" />
-                  <div>
-                    <p>{bankAccount.accountNumber}</p>
-                    <p className="text-sm text-gray-500">{bankAccount.bankName}</p>
-                  </div>
-                </div>
-                <BankAccountReadOnly bankAccount={bankAccount} />
-              </div>
-                )
-              })
-            }
-          </CardContent>
-        </Card>
+                  )
+                })
+              }
+              {
+                ownerDetails.user.UPI.map((upi, i) => {
+                  return (
+                    <div className="flex items-center justify-between flex-wrap gap-4 border p-4 rounded-lg" key={i}>
+                      <div className="flex items-center flex-wrap gap-4">
+                        <PayPalIcon className="h-6 w-6 text-blue-600" />
+                        <p>{upi.upi_id}</p>
+                      </div>
+                      <UPIReadonly upi={upi} />
+                    </div>
+                  )
+                })
+              }
+              {
+                ownerDetails.user.BankAccount.map((bankAccount, i) => {
+                  return (
+                    <div className="flex items-center justify-between flex-wrap gap-4 border p-4 rounded-lg" key={i}>
+                      <div className="flex items-center flex-wrap gap-4">
+                        <PayPalIcon className="h-6 w-6 text-blue-600" />
+                        <div>
+                          <p>{bankAccount.accountNumber}</p>
+                          <p className="text-sm text-gray-500">{bankAccount.bankName}</p>
+                        </div>
+                      </div>
+                      <BankAccountReadOnly bankAccount={bankAccount} />
+                    </div>
+                  )
+                })
+              }
+            </CardContent>
+          </Card>
+        }
       </div>
 
       {/* Payment History Section */}
 
-      <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
-        <div>
-          <h2 className="text-xl font-semibold">Payment History ({ownerDetails.user.paymentReciever.length + ownerDetails.user.paymentSender.length})</h2>
-          <p className="text-gray-600">See history of your payment plan invoice</p>
+      {
+        ownerDetails &&
+        <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
+          <div>
+            <h2 className="text-xl font-semibold"><TranslatedText greetings={ownerPaymentHistoryTranslations.paymentHistory} /> ({ownerDetails.user.paymentReciever.length + ownerDetails.user.paymentSender.length})</h2>
+            <p className="text-gray-600"><TranslatedText greetings={ownerPaymentHistoryTranslations.seePaymentHistory} /></p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Select onValueChange={e => setActiveFilter(e)} defaultValue='all'>
+              <SelectTrigger className='w-[180px]'>
+                <SelectValue placeholder={<TranslatedText greetings={ownerPaymentHistoryTranslations.filterBy} />} />
+              </SelectTrigger>
+              <SelectContent>
+                {
+                  bookingFilters.map((filer, index) => {
+                    return (
+                      <SelectItem key={index} value={filer.value}>
+                        {filer.placeholder}
+                      </SelectItem>
+                    )
+                  })
+                }
+              </SelectContent>
+            </Select>
+            <DownloadPDFButton
+              payments={[...ownerDetails.user.paymentReciever, ...ownerDetails.user.paymentSender]}
+              bookings={[...ownerDetails.user.paymentReciever, ...ownerDetails.user.paymentSender]
+                .map(payment =>
+                  ownerDetails.user.Booking.find(booking => booking.id === payment.booking_id)
+                ).filter(Boolean) as Booking[]
+              }
+              fileName="all_payments.pdf"
+            />
+          </div>
         </div>
-        <DownloadPDFButton
-          payments={getSelectedPaymentsAndBookings().payments}
-          bookings={getSelectedPaymentsAndBookings().bookings}
-          fileName="selected_payments.pdf"
-        />
-      </div>
+      }
 
       <div className="overflow-x-auto">
         <Table className="border border-gray-200 rounded-lg">
@@ -366,7 +461,7 @@ const OwnerPayment = () => {
               </TableHead>
               <TableHead className="font-bold">
                 <div className="flex items-center gap-2">
-                  Payment Id
+                <TranslatedText greetings={ownerPaymentHistoryTranslations.paymentInvoice} />
                   <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
                     <RiArrowUpDownLine className="h-4 w-4" />
                   </div>
@@ -374,7 +469,7 @@ const OwnerPayment = () => {
               </TableHead>
               <TableHead className="font-bold">
                 <div className="flex items-center gap-2">
-                  Type
+                <TranslatedText greetings={ownerPaymentHistoryTranslations.amount} />
                   <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
                     <RiArrowUpDownLine className="h-4 w-4" />
                   </div>
@@ -382,7 +477,7 @@ const OwnerPayment = () => {
               </TableHead>
               <TableHead className="font-bold">
                 <div className="flex items-center gap-2">
-                  Amount Paid to Store
+                <TranslatedText greetings={ownerPaymentHistoryTranslations.lastModified} />
                   <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
                     <RiArrowUpDownLine className="h-4 w-4" />
                   </div>
@@ -390,15 +485,7 @@ const OwnerPayment = () => {
               </TableHead>
               <TableHead className="font-bold">
                 <div className="flex items-center gap-2">
-                  Last modified
-                  <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
-                    <RiArrowUpDownLine className="h-4 w-4" />
-                  </div>
-                </div>
-              </TableHead>
-              <TableHead className="font-bold">
-                <div className="flex items-center gap-2">
-                  Status
+                <TranslatedText greetings={ownerPaymentHistoryTranslations.status} />
                   <div className="hover:bg-gray-200 p-1 aspect-square rounded-full">
                     <RiArrowUpDownLine className="h-4 w-4" />
                   </div>
@@ -416,16 +503,38 @@ const OwnerPayment = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {ownerDetails.user.paymentReciever.map((item, index) => {
-              return (
-                <PaymentSheet index={index} item={item} />
-              )
-            })}
-            {ownerDetails.user.paymentSender.map((item, index) => {
-              return (
-                <PaymentSheet index={index} item={item} />
-              )
-            })}
+            {
+              isFetching ? <PaymentTableShrimmer /> :
+                activeFilter === "all" ? receiverPayments.map((item, index) => {
+                  return (
+                    <PaymentSheet index={index} item={item} key={index} />
+                  )
+                })
+                  :
+                  activeFilter === "unpaid" ? senderPayments.filter(po => (`${po.status}` === "FarmerPENDING")).map((item, index) => {
+                    return (
+                      <PaymentSheet index={index} item={item} key={index} />
+                    )
+                  })
+                    :
+                    activeFilter === "review" ? senderPayments.filter(po => (`${po.status}` === "FarmerCONFIRMED")).map((item, index) => {
+                      return (
+                        <PaymentSheet index={index} item={item} key={index} />
+                      )
+                    })
+                      :
+                      activeFilter === "rejected" ? senderPayments.filter(po => (`${po.status}` === "OwnerREJECTED")).map((item, index) => {
+                        return (
+                          <PaymentSheet index={index} item={item} key={index} />
+                        )
+                      })
+                        :
+                        activeFilter === "completed" && senderPayments.filter(po => (`${po.status}` === "COMPLETED")).map((item, index) => {
+                          return (
+                            <PaymentSheet index={index} item={item} key={index} />
+                          )
+                        })
+            }
           </TableBody>
         </Table>
       </div>
@@ -437,7 +546,31 @@ const OwnerPayment = () => {
 
 export default OwnerPayment
 
-function BankAccountForm() {
+function PaymentTableShrimmer() {
+  return (
+    Array.from({ length: 5 }).map((_, index) => (
+      <tr key={index} className="animate-pulse border-b">
+        <td className="p-4">
+          <div className="h-4 w-4 bg-gray-300 rounded"></div>
+        </td>
+        <td className="p-4">
+          <div className="h-4 w-32 bg-gray-300 rounded"></div>
+        </td>
+        <td className="p-4">
+          <div className="h-4 w-32 bg-gray-300 rounded"></div>
+        </td>
+        <td className="p-4">
+          <div className="h-4 w-24 bg-gray-300 rounded"></div>
+        </td>
+        <td className="p-4">
+          <div className="h-4 w-16 bg-gray-300 rounded"></div>
+        </td>
+      </tr>
+    ))
+  )
+}
+
+function BankAccountForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: boolean) => void }) {
 
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -463,13 +596,13 @@ function BankAccountForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    renderInstance.post("/bank_account", { ...formData, ownerId: user.userId }, {
+    renderInstance.post("/bank-account", { ...formData, ownerId: user.userId }, {
       headers: {
         Authorization: `Bearer ${access_token}`,
       },
     }).then(() => {
       successMessage("Bank account added")
-      window.location.reload()
+      setIsAddModalOpen(false)
     }).catch((err) => {
       errorMessage("Error adding bank account")
     }).finally(() => {
@@ -504,7 +637,7 @@ function BankAccountForm() {
         </SelectContent>
       </Select>
       <Input name="country" placeholder="Country" onChange={handleChange} required />
-      <Button type="submit">Add Bank Account</Button>
+      <Button type="submit"><TranslatedText greetings={ownerPaymentHistoryTranslations.addBankAccount} /></Button>
     </form>
   )
 }
@@ -514,7 +647,7 @@ function BankAccountReadOnly({ bankAccount }: { bankAccount: BankAccount }) {
     <Dialog>
       <DialogTrigger asChild>
         <Button variant={"outline"}>
-          View
+        <TranslatedText greetings={ownerPaymentHistoryTranslations.view} />
         </Button>
       </DialogTrigger>
       <DialogContent className='w-fit'>
@@ -535,7 +668,7 @@ function BankAccountReadOnly({ bankAccount }: { bankAccount: BankAccount }) {
   )
 }
 
-function PayPalForm() {
+function PayPalForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: boolean) => void }) {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -552,7 +685,7 @@ function PayPalForm() {
       },
     }).then(() => {
       successMessage("paypal account added")
-      window.location.reload()
+      setIsAddModalOpen(false)
     }).catch((err) => {
       errorMessage("Error adding bank account")
     }).finally(() => {
@@ -568,7 +701,7 @@ function PayPalForm() {
         <CircularProgress />
       </Backdrop >
       <Input type="email" placeholder="PayPal Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-      <Button type="submit">Add PayPal</Button>
+      <Button type="submit"><TranslatedText greetings={ownerPaymentHistoryTranslations.addPaypal} /></Button>
     </form>
   )
 }
@@ -578,7 +711,7 @@ function PaypalReadOnly({ email }: { email: string; }) {
     <Dialog>
       <DialogTrigger asChild>
         <Button variant={"outline"}>
-          View
+        <TranslatedText greetings={ownerPaymentHistoryTranslations.view} />
         </Button>
       </DialogTrigger>
       <DialogContent className='w-fit'>
@@ -594,7 +727,7 @@ function PaypalReadOnly({ email }: { email: string; }) {
   )
 }
 
-function UPIForm() {
+function UPIForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: boolean) => void }) {
   const [upiId, setUpiId] = useState('')
   const [qrCode, setQrCode] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -618,7 +751,7 @@ function UPIForm() {
       },
     }).then(() => {
       successMessage("paypal account added")
-      window.location.reload()
+      setIsAddModalOpen(false)
     }).catch((err) => {
       errorMessage("Error adding bank account")
     }).finally(() => {
@@ -653,23 +786,23 @@ function UPIForm() {
           {qrCode ? 'Change QR Code' : 'Upload QR Code'}
         </Button>
       </div>
-      {qrCode && <p className="text-sm text-muted-foreground">File selected: {qrCode.name}</p>}
-      <Button type="submit">Add UPI</Button>
+      {qrCode && <p className="text-sm text-muted-foreground"><TranslatedText greetings={ownerPaymentHistoryTranslations.fileSelected} />: {qrCode.name}</p>}
+      <Button type="submit"><TranslatedText greetings={ownerPaymentHistoryTranslations.addOrCode} /></Button>
     </form>
   )
 }
 
-function UPIReadonly({upi}:{upi: UPI}){
-  return(
+function UPIReadonly({ upi }: { upi: UPI }) {
+  return (
     <Dialog>
       <DialogTrigger asChild>
         <Button variant={"outline"}>
-          View
+          <TranslatedText greetings={ownerPaymentHistoryTranslations.view} />
         </Button>
       </DialogTrigger>
       <DialogContent className='w-fit'>
         <Card>
-          <CardContent className='max-w-sm max-h-[80vh] overflow-auto' style={{scrollbarWidth: "none"}}>
+          <CardContent className='max-w-sm max-h-[80vh] overflow-auto' style={{ scrollbarWidth: "none" }}>
             <div className='space-y-4'>
               <Input value={upi.upi_id} readOnly />
               <Image alt={upi.upi_id} src={upi.qr_code} width={400} height={400} className='w-full h-auto object-cover' unoptimized={true} />

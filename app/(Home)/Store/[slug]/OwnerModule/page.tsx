@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -32,52 +32,50 @@ export default function Owner() {
 
     const handleAccept = (id: string) => {
         setConfirming(true)
-        // Implement accept logic here
-        renderInstance.patch(`/booking/${id}/owner_confirm`,{},{
+        renderInstance.patch(`/booking/${id}/owner_confirm`, {}, {
             headers: {
                 Authorization: `Bearer ${access_token}`,
-              },
-        }).then((res)=>{
+            },
+        }).then((res) => {
             successMessage("Thank you for confirming. Now assign an operator")
             handleFetchAllBookings()
-        }).catch((err)=>{
+        }).catch((err) => {
             errorMessage("Some error occurred")
-        }).finally(()=>{
+        }).finally(() => {
             setConfirming(false)
         })
     }
 
     const handleReject = (id: string) => {
         setConfirming(true)
-        // Implement accept logic here
-        renderInstance.patch(`/booking/${id}/owner_reject`,{},{
+        renderInstance.patch(`/booking/${id}/owner_reject`, {}, {
             headers: {
                 Authorization: `Bearer ${access_token}`,
-              },
-        }).then((res)=>{
+            },
+        }).then((res) => {
             successMessage("You have rejected this request")
             handleFetchAllBookings()
-        }).catch((err)=>{
+        }).catch((err) => {
             errorMessage("Some error occurred")
-        }).finally(()=>{
+        }).finally(() => {
             setConfirming(false)
         })
     }
 
     const handleAssign = (operatorId: string) => {
         setAssigning(true)
-        renderInstance.patch(`/booking/${selectedRequest}/${operatorId}/request_operator`,{},{
+        renderInstance.patch(`/booking/${selectedRequest}/${operatorId}/request_operator`, {}, {
             headers: {
                 Authorization: `Bearer ${access_token}`,
-              },
-        }).then((res)=>{
+            },
+        }).then((res) => {
             successMessage("Operator assigned")
             console.log(res)
             setIsAssignOpen(false)
-        }).catch((error)=>{
+        }).catch((error) => {
             errorMessage("Some error occurred while assigning")
             console.log(error)
-        }).finally(()=>{
+        }).finally(() => {
             setAssigning(false)
         })
     }
@@ -113,6 +111,11 @@ export default function Owner() {
         handleFetchAllOperators()
     }, [slug])
 
+    const renderUserName = (user: Booking['user']) => {
+        if (!user) return 'Unknown User';
+        return `${user.first_name} ${user.middle_name ?? ""} ${user.last_name}`;
+    }
+
     return (
         <div className="p-4">
             <Tabs defaultValue="not_seen">
@@ -121,107 +124,105 @@ export default function Owner() {
                     <TabsTrigger value="rejected">Rejected</TabsTrigger>
                     <TabsTrigger value="accepted">Accepted</TabsTrigger>
                 </TabsList>
-                <TabsContent value={"not_seen"}>
-                    {
-                        fetchingBookings ? <p>Getting all the bookings</p>
-                            :
-                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                {getBookingsOfAStore
-                                    .filter((request) => (!request.owner_confirm && request.confirm && request.bookingStatus === BookingStatus.Open)).length === 0 ?
-                                    <p>No open requests availanle</p>
-                                    :
-                                getBookingsOfAStore
-                                    .filter((request) => (!request.owner_confirm && request.confirm && request.bookingStatus === BookingStatus.Open))
-                                    .map((request) => {
-                                        if(confirming) return <CircularProgress key={request.id} />
-                                        return (
-                                            <Card key={request.id} className="drop-shadow-md">
-                                                <CardHeader>
-                                                    <CardTitle>{`${request.user.first_name} ${request.user.middle_name ?? ""} ${request.user.last_name}`}</CardTitle>
-                                                    <Badge className="w-fit">{request.bookingStatus}</Badge>
-                                                </CardHeader>
-                                                <CardContent>
-                                                    <p>Total Cost: ${request.total_cost}</p>
-                                                    {/* <p>Location: {request.location}</p> */}
-                                                </CardContent>
-                                                <CardFooter className="flex justify-end space-x-2">
-                                                        <Button onClick={() => handleAccept(request.id)}>Accept</Button>
-                                                        <Button variant="destructive" onClick={() => handleReject(request.id)}>
-                                                            Reject
-                                                        </Button>
-                                            </CardFooter>
-                                            </Card>
-                                        )
-                                    })}
-                            </div>
-                    }
-                </TabsContent>
-                <TabsContent value={"rejected"}>
-                    {
-                        fetchingBookings ? <p>Getting all the bookings</p>
-                            :
-                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                {getBookingsOfAStore
-                                    .filter((request) => (!request.owner_confirm && request.confirm && request.bookingStatus === BookingStatus.Rejected)).length === 0 ?
-                                    <p>No reject bookings found</p> :
-                                getBookingsOfAStore
-                                    .filter((request) => (!request.owner_confirm && request.confirm && request.bookingStatus === BookingStatus.Rejected))
-                                    .map((request) => (
-                                        <Card key={request.id} className="border-2 border-red-500 drop-shadow-md">
-                                            <CardHeader>
-                                                <CardTitle>{`${request.user.first_name} ${request.user.middle_name ?? ""} ${request.user.last_name}`}</CardTitle>
-                                                <Badge className="w-fit">{request.bookingStatus}</Badge>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <p>Total Cost: ${request.total_cost}</p>
-                                                {/* <p>Location: {request.location}</p> */}
-                                            </CardContent>
-                                            <CardFooter className="flex justify-end space-x-2">
-                                                <Button onClick={() => handleAccept(request.id)}>Accept</Button>
-                                                <Button variant="destructive" onClick={() => handleReject(request.id)}>
-                                                    Reject
-                                                </Button>
-                                            </CardFooter>
-                                        </Card>
-                                    ))}
-                            </div>
-                    }
-                </TabsContent>
-                <TabsContent value={"accepted"}>
-                    {
-                        fetchingBookings ? <p>Getting all the bookings</p>
-                            :
-                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                {getBookingsOfAStore
-                                    .filter((request) => (request.owner_confirm && request.confirm && request.bookingStatus === BookingStatus.Open)).length === 0 ?
-                                    <p>No open requests available</p>
-                                    :
-                                getBookingsOfAStore
-                                    .filter((request) => (request.owner_confirm && request.confirm && request.bookingStatus === BookingStatus.Open))
-                                    .map((request) => (
-                                        <Card key={request.id} className="drop-shadow-md">
-                                            <CardHeader>
-                                                <CardTitle>{`${request.user.first_name} ${request.user.middle_name ?? ""} ${request.user.last_name}`}</CardTitle>
-                                                <Badge className="w-fit">{request.bookingStatus}</Badge>
-                                            </CardHeader>
-                                            <CardContent>
-                                                <p>Total Cost: ${request.total_cost}</p>
-                                                {/* <p>Location: {request.location}</p> */}
-                                            </CardContent>
-                                            <CardFooter className="flex justify-end space-x-2">
-                                                <Button
-                                                    onClick={() => {
-                                                        setSelectedRequest(request.id)
-                                                        setIsAssignOpen(true)
-                                                    }}
-                                                >
-                                                    Assign Operator
-                                                </Button>
+                <TabsContent value="not_seen">
+                    {fetchingBookings ? (
+                        <p>Getting all the bookings</p>
+                    ) : (
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {getBookingsOfAStore
+                                .filter((request) => (!request.owner_confirm && request.confirm && request.bookingStatus === BookingStatus.Open))
+                                .map((request) => (
+                                    <Card key={request.id} className="drop-shadow-md">
+                                        <CardHeader>
+                                            <CardTitle>{renderUserName(request.user)}</CardTitle>
+                                            <Badge className="w-fit">{request.bookingStatus}</Badge>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <p>Total Cost: ${request.total_cost}</p>
+                                        </CardContent>
+                                        <CardFooter className="flex justify-end space-x-2">
+                                            {confirming ? (
+                                                <CircularProgress />
+                                            ) : (
+                                                <>
+                                                    <Button onClick={() => handleAccept(request.id)}>Accept</Button>
+                                                    <Button variant="destructive" onClick={() => handleReject(request.id)}>
+                                                        Reject
+                                                    </Button>
+                                                </>
+                                            )}
                                         </CardFooter>
-                                        </Card>
-                                    ))}
-                            </div>
-                    }
+                                    </Card>
+                                ))}
+                            {getBookingsOfAStore.filter((request) => (!request.owner_confirm && request.confirm && request.bookingStatus === BookingStatus.Open)).length === 0 && (
+                                <p>No open requests available</p>
+                            )}
+                        </div>
+                    )}
+                </TabsContent>
+                <TabsContent value="rejected">
+                    {fetchingBookings ? (
+                        <p>Getting all the bookings</p>
+                    ) : (
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {getBookingsOfAStore
+                                .filter((request) => (!request.owner_confirm && request.confirm && request.bookingStatus === BookingStatus.Rejected))
+                                .map((request) => (
+                                    <Card key={request.id} className="border-2 border-red-500 drop-shadow-md">
+                                        <CardHeader>
+                                            <CardTitle>{renderUserName(request.user)}</CardTitle>
+                                            <Badge className="w-fit">{request.bookingStatus}</Badge>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <p>Total Cost: ${request.total_cost}</p>
+                                        </CardContent>
+                                        <CardFooter className="flex justify-end space-x-2">
+                                            <Button onClick={() => handleAccept(request.id)}>Accept</Button>
+                                            <Button variant="destructive" onClick={() => handleReject(request.id)}>
+                                                Reject
+                                            </Button>
+                                        </CardFooter>
+                                    </Card>
+                                ))}
+                            {getBookingsOfAStore.filter((request) => (!request.owner_confirm && request.confirm && request.bookingStatus === BookingStatus.Rejected)).length === 0 && (
+                                <p>No rejected bookings found</p>
+                            )}
+                        </div>
+                    )}
+                </TabsContent>
+                <TabsContent value="accepted">
+                    {fetchingBookings ? (
+                        <p>Getting all the bookings</p>
+                    ) : (
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {getBookingsOfAStore
+                                .filter((request) => (request.owner_confirm && request.confirm && request.bookingStatus === BookingStatus.Open))
+                                .map((request) => (
+                                    <Card key={request.id} className="drop-shadow-md">
+                                        <CardHeader>
+                                            <CardTitle>{renderUserName(request.user)}</CardTitle>
+                                            <Badge className="w-fit">{request.bookingStatus}</Badge>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <p>Total Cost: ${request.total_cost}</p>
+                                        </CardContent>
+                                        <CardFooter className="flex justify-end space-x-2">
+                                            <Button
+                                                onClick={() => {
+                                                    setSelectedRequest(request.id)
+                                                    setIsAssignOpen(true)
+                                                }}
+                                            >
+                                                Assign Operator
+                                            </Button>
+                                        </CardFooter>
+                                    </Card>
+                                ))}
+                            {getBookingsOfAStore.filter((request) => (request.owner_confirm && request.confirm && request.bookingStatus === BookingStatus.Open)).length === 0 && (
+                                <p>No open requests available</p>
+                            )}
+                        </div>
+                    )}
                 </TabsContent>
             </Tabs>
 
@@ -230,45 +231,45 @@ export default function Owner() {
                     <DialogHeader>
                         <DialogTitle>Assign Operator</DialogTitle>
                     </DialogHeader>
-                    {
-                        fetchingOperators ?
+                    {fetchingOperators ? (
                         <p>Fetching all Operators</p>
-                        :
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {allOperators.map((operator) => {
-                            if(assigning) return <CircularProgress key={operator.id} />
-                            return (
+                    ) : (
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {allOperators.map((operator) => (
                                 <Card key={operator.id}>
                                     <CardHeader>
-                                        <CardTitle>{`${operator.user.first_name} ${operator.user.middle_name ?? ""} ${operator.user.last_name}`}</CardTitle>
+                                        <CardTitle>{renderUserName(operator.user)}</CardTitle>
                                     </CardHeader>
                                     <CardContent>
-                                        {
-                                            operator.user.image &&
+                                        {operator.user?.image && (
                                             <Image
                                                 src={operator.user.image}
-                                                alt={`${operator.user.first_name} ${operator.user.middle_name ?? ""} ${operator.user.last_name}`}
+                                                alt={renderUserName(operator.user)}
                                                 className="w-24 h-24 rounded-full mx-auto"
                                                 width={200}
                                                 height={200}
                                             />
-                                        }
+                                        )}
                                     </CardContent>
                                     <CardFooter>
-                                        <Button
-                                            className="w-full"
-                                            onClick={() => handleAssign(operator.id)}
-                                        >
-                                            Assign
-                                        </Button>
+                                        {assigning ? (
+                                            <CircularProgress />
+                                        ) : (
+                                            <Button
+                                                className="w-full"
+                                                onClick={() => handleAssign(operator.id)}
+                                            >
+                                                Assign
+                                            </Button>
+                                        )}
                                     </CardFooter>
                                 </Card>
-                            )
-                        })}
-                    </div>
-                    }
+                            ))}
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
         </div>
     )
 }
+

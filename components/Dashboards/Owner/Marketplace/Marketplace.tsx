@@ -12,6 +12,9 @@ import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
 import { useCookie } from 'next-cookie';
 import NewBookings from './NewBookings'
+import SeeBooking from './SeeBooking'
+import TranslatedText from '@/components/Menubar/TranslatedText'
+import { ownerMarketPlaceTranslations } from './OwnerMarketPlaceTranslations'
 
 
 interface Lead {
@@ -37,7 +40,17 @@ interface user {
   email: string;
 }
 
-const marketplace = () => {
+interface NewBookings {
+  booking: Booking;
+  minDistance: number | null
+}
+
+interface Location {
+  latitude: number | null;
+  longitude: number | null;
+}
+
+const Marketplace = () => {
 
   const [isOpen, setIsOpen] = useState(false);
   const [open, setOpen] = useState(false)
@@ -48,9 +61,12 @@ const marketplace = () => {
   const [totalStandAloneBookimgs, setTotalStandAloneBookimgs] = useState(0)
   const [customers, setCustomers] = useState(0)
   const [openBookings, setOpenBookings] = useState<Booking[]>([])
-  const [newBookings, setNewBookings] = useState<Booking[]>([])
+  const [newBookings, setNewBookings] = useState<NewBookings[]>([])
   const [inProgressBookings, setInProgressBookings] = useState<Booking[]>([])
   const [completedBookings, setCompletedBookings] = useState<Booking[]>([])
+
+  const [location, setLocation] = useState<Location>({ latitude: null, longitude: null });
+  const [error, setError] = useState<string | null>(null);
 
   const { cookie } = useCookie()
   const user: user = cookie.get("user")
@@ -61,32 +77,32 @@ const marketplace = () => {
 
   const stats = [
     {
-      title: "INCOME",
+      title: <TranslatedText greetings={ownerMarketPlaceTranslations.income} />,
       value: `$${totalReceived}`,
       change: "10.5%",
       isPositive: true,
-      description: "vs last month",
+      description: <TranslatedText greetings={ownerMarketPlaceTranslations.vsLastMonth} />,
     },
     {
-      title: "AVG. SALES",
+      title: <TranslatedText greetings={ownerMarketPlaceTranslations.avgSales} />,
       value: `$${totalReceived}`,
       change: "6.2%",
       isPositive: true,
-      description: "vs last month",
+      description: <TranslatedText greetings={ownerMarketPlaceTranslations.vsLastMonth} />,
     },
     {
-      title: "BOOKINGS",
+      title: <TranslatedText greetings={ownerMarketPlaceTranslations.bookings} />,
       value: totalStandAloneBookimgs,
       change: "0.7%",
       isPositive: false,
-      description: "vs last month",
+      description: <TranslatedText greetings={ownerMarketPlaceTranslations.vsLastMonth} />,
     },
     {
-      title: "LEADS",
+      title: <TranslatedText greetings={ownerMarketPlaceTranslations.leads} />,
       value: customers,
       change: "15.2%",
       isPositive: false,
-      description: "vs last month",
+      description: <TranslatedText greetings={ownerMarketPlaceTranslations.vsLastMonth} />,
     },
   ];
 
@@ -122,8 +138,8 @@ const marketplace = () => {
 
   function fetchNewBookings() {
     setFetchingPageDetails(true)
-
-    renderInstance.get(`/booking/get/stand-alone/bookings`)
+    
+    renderInstance.get(`/booking/get/stand-alone/bookings?lat=${location.latitude}&lng=${location.longitude}&radius=80`)
       .then((res) => {
         setNewBookings(res.data)
       }).catch((err) => {
@@ -139,13 +155,29 @@ const marketplace = () => {
     }
   }, [])
 
-  useEffect(()=>{
-    fetchNewBookings()
-  },[])
+  useEffect(() => {
+    if(location.latitude && location.longitude) {
+      fetchNewBookings()
+    }
+  }, [location])
 
-  if (fetchingPageDetails) return <OwnerShrimmer />
-
-  if (!user) return <p>user not found</p>
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position: GeolocationPosition) => {
+          setLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error: GeolocationPositionError) => {
+          setError(error.message);
+        }
+      );
+    } else {
+      setError("Geolocation is not supported by this browser.");
+    }
+  }, []);
 
   return (
     <>
@@ -153,11 +185,11 @@ const marketplace = () => {
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
-              <BreadcrumbLink href="/owner">Dashboard</BreadcrumbLink>
+              <BreadcrumbLink href="/owner"><TranslatedText greetings={ownerMarketPlaceTranslations.dashboard} /></BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbLink href="/owner/marketplace">Marketplace</BreadcrumbLink>
+              <BreadcrumbLink href="/owner/marketplace"><TranslatedText greetings={ownerMarketPlaceTranslations.marketplace} /></BreadcrumbLink>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
@@ -178,7 +210,7 @@ const marketplace = () => {
                       <Info className="h-4 w-4 text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Click for more details</p>
+                      <p><TranslatedText greetings={ownerMarketPlaceTranslations.clickForMoreDetails} /></p>
                     </TooltipContent>
                   </Tooltip>
                 </CardHeader>
@@ -203,15 +235,18 @@ const marketplace = () => {
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-white p-7 rounded-md">
                   <CardTitle className="text-lg font-semibold flex items-center space-x-2">
                     <span className="h-3 w-3 rounded-full bg-blue-500"></span>
-                    <span>New</span>
+                    <span><TranslatedText greetings={ownerMarketPlaceTranslations.new} /></span>
                   </CardTitle>
                   <span className="text-sm text-muted-foreground">
-                    {newBookings.length} Leads
+                    {newBookings.length} <TranslatedText greetings={ownerMarketPlaceTranslations.leads} />
                   </span>
                 </CardHeader>
               </Card>
-              {newBookings.length === 0 ? <p>No open bookings available</p> : newBookings.map((lead) => (
-                <NewBookings booking={lead} key={lead.id} />
+              {fetchingPageDetails ?
+              <LeadShrimmer />
+              : 
+              newBookings.length === 0 ? <p><TranslatedText greetings={ownerMarketPlaceTranslations.noOpenBookingsAvailable} /></p> : newBookings.map((lead) => (
+                <NewBookings booking={lead.booking} key={lead.booking.id} minDistance={lead.minDistance} />
               ))}
             </div>
 
@@ -221,37 +256,18 @@ const marketplace = () => {
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-white p-7 rounded-md">
                   <CardTitle className="text-lg font-semibold flex items-center space-x-2">
                     <span className="h-3 w-3 rounded-full bg-purple-500"></span>
-                    <span>Open</span>
+                    <span><TranslatedText greetings={ownerMarketPlaceTranslations.open} /></span>
                   </CardTitle>
                   <span className="text-sm text-muted-foreground">
-                    {openBookings.length} Leads
+                    {openBookings.length} <TranslatedText greetings={ownerMarketPlaceTranslations.leads} />
                   </span>
                 </CardHeader>
               </Card>
-              {openBookings.length === 0 ? <p>No open bookings available</p> : openBookings.map((lead) => (
-                <Card key={lead.id} className="overflow-hidden bg-white shadow-sm rounded-md mt-3">
-                  <CardContent className="flex items-center space-x-4 p-4">
-                    <Avatar className="h-12 w-12">
-                      {
-                        lead.user && lead.user?.image &&
-                      <AvatarImage src={lead.user?.image} alt={lead.user.first_name} />
-                      }
-                      <AvatarFallback>
-                        {lead.user?.first_name[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium leading-none">{lead.user?.first_name} {lead.user?.middle_name ?? ""} {lead.user?.last_name}</p>
-                      <p className="text-sm text-muted-foreground">{new Date(lead.createdAt).toLocaleDateString()}</p>
-                      <div className="flex items-center pt-2">
-                        <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm">
-                          {`${lead.user?.email.split('@')[0].slice(0, 3)}...@${lead.user?.email.split('@')[1]}`}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+              {fetchingPageDetails ?
+              <LeadShrimmer />
+              :
+              openBookings.length === 0 ? <p><TranslatedText greetings={ownerMarketPlaceTranslations.noOpenBookingsAvailable} /></p> : openBookings.map((lead) => (
+                <SeeBooking booking={lead} key={lead.id} />
               ))}
             </div>
 
@@ -261,37 +277,19 @@ const marketplace = () => {
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-white p-7 rounded-md">
                   <CardTitle className="text-lg font-semibold flex items-center space-x-2">
                     <span className="h-3 w-3 rounded-full bg-green-500"></span>
-                    <span>In Progress</span>
+                    <span><TranslatedText greetings={ownerMarketPlaceTranslations.inProgress} /></span>
                   </CardTitle>
                   <span className="text-sm text-muted-foreground">
-                    {inProgressBookings.length} Leads
+                    {inProgressBookings.length} <TranslatedText greetings={ownerMarketPlaceTranslations.leads} />
                   </span>
                 </CardHeader>
               </Card>
-              {inProgressBookings.length === 0 ? <p>No open bookings available</p> :inProgressBookings.map((lead) => (
-                <Card key={lead.id} className="overflow-hidden bg-white shadow-sm rounded-md mt-3">
-                  <CardContent className="flex items-center space-x-4 p-4">
-                    <Avatar className="h-12 w-12">
-                      {
-                        lead.user && lead.user?.image &&
-                      <AvatarImage src={lead.user?.image} alt={lead.user.first_name} />
-                      }
-                      <AvatarFallback>
-                        {lead.user?.first_name[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium leading-none">{lead.user?.first_name} {lead.user?.middle_name ?? ""} {lead.user?.last_name}</p>
-                      <p className="text-sm text-muted-foreground">{new Date(lead.createdAt).toLocaleDateString()}</p>
-                      <div className="flex items-center pt-2">
-                        <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm">
-                          {`${lead.user?.email.split('@')[0].slice(0, 3)}...@${lead.user?.email.split('@')[1]}`}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+              {
+              fetchingPageDetails ?
+              <LeadShrimmer />
+              :
+              inProgressBookings.length === 0 ? <p><TranslatedText greetings={ownerMarketPlaceTranslations.noOpenBookingsAvailable} /></p> : inProgressBookings.map((lead) => (
+                <SeeBooking booking={lead} key={lead.id} />
               ))}
             </div>
 
@@ -301,37 +299,19 @@ const marketplace = () => {
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-white p-7 rounded-md">
                   <CardTitle className="text-lg font-semibold flex items-center space-x-2">
                     <span className="h-3 w-3 rounded-full bg-red-500"></span>
-                    <span>Closed</span>
+                    <span><TranslatedText greetings={ownerMarketPlaceTranslations.closed} /></span>
                   </CardTitle>
                   <span className="text-sm text-muted-foreground">
-                    {completedBookings.length} Leads
+                    {completedBookings.length} <TranslatedText greetings={ownerMarketPlaceTranslations.leads} />
                   </span>
                 </CardHeader>
               </Card>
-              {completedBookings.length === 0 ? <p>No open bookings available</p> :completedBookings.map((lead) => (
-                <Card key={lead.id} className="overflow-hidden bg-white shadow-sm rounded-md mt-3">
-                  <CardContent className="flex items-center space-x-4 p-4">
-                    <Avatar className="h-12 w-12">
-                      {
-                        lead.user && lead.user?.image &&
-                      <AvatarImage src={lead.user?.image} alt={lead.user.first_name} />
-                      }
-                      <AvatarFallback>
-                        {lead.user?.first_name[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium leading-none">{lead.user?.first_name} {lead.user?.middle_name ?? ""} {lead.user?.last_name}</p>
-                      <p className="text-sm text-muted-foreground">{new Date(lead.createdAt).toLocaleDateString()}</p>
-                      <div className="flex items-center pt-2">
-                        <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm">
-                          {`${lead.user?.email.split('@')[0].slice(0, 3)}...@${lead.user?.email.split('@')[1]}`}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+              {
+              fetchingPageDetails ?
+              <LeadShrimmer />
+              :
+              completedBookings.length === 0 ? <p><TranslatedText greetings={ownerMarketPlaceTranslations.noOpenBookingsAvailable} /></p> : completedBookings.map((lead) => (
+                <SeeBooking booking={lead} key={lead.id} />
               ))}
             </div>
           </div>
@@ -344,4 +324,16 @@ const marketplace = () => {
   )
 }
 
-export default marketplace
+export default Marketplace
+
+function LeadShrimmer() {
+  return (
+    <div className="space-y-4">
+      {
+        Array.from({ length: 2 }).map((_, index) => (
+          <div className="animate-pulse w-full h-32 bg-white shadow-sm rounded-md" key={index} />
+        ))
+      }
+    </div>
+  )
+}
