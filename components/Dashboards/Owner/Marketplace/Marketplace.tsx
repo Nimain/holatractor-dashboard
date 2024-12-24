@@ -267,7 +267,7 @@ const Marketplace = () => {
               <LeadShrimmer />
               :
               openBookings.length === 0 ? <p><TranslatedText greetings={ownerMarketPlaceTranslations.noOpenBookingsAvailable} /></p> : openBookings.map((lead) => (
-                <SeeBooking booking={lead} />
+                <SeeBooking booking={lead} key={lead.id} />
               ))}
             </div>
 
@@ -289,7 +289,7 @@ const Marketplace = () => {
               <LeadShrimmer />
               :
               inProgressBookings.length === 0 ? <p><TranslatedText greetings={ownerMarketPlaceTranslations.noOpenBookingsAvailable} /></p> : inProgressBookings.map((lead) => (
-                <SeeBooking booking={lead} />
+                <SeeBooking booking={lead} key={lead.id} />
               ))}
             </div>
 
@@ -311,7 +311,7 @@ const Marketplace = () => {
               <LeadShrimmer />
               :
               completedBookings.length === 0 ? <p><TranslatedText greetings={ownerMarketPlaceTranslations.noOpenBookingsAvailable} /></p> : completedBookings.map((lead) => (
-                <SeeBooking booking={lead} />
+                <SeeBooking booking={lead} key={lead.id} />
               ))}
             </div>
           </div>

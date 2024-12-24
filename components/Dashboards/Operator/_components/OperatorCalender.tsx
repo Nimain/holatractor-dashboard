@@ -27,18 +27,18 @@ export const CalendarOne = ({ booking }: { booking: Booking[]; }) => {
     const daysInMonth = getDaysInMonth(currentMonth, currentYear);
 
     const monthNames = [
-        <TranslatedText greetings={operatorDashboardTranslations.january} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.february} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.march} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.april} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.may} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.june} />,
-        <TranslatedText greetings={operatorDashboardTranslations.july} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.august} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.september} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.october} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.november} />, 
-        <TranslatedText greetings={operatorDashboardTranslations.december} />
+        <TranslatedText key={"jan"} greetings={operatorDashboardTranslations.january} />, 
+        <TranslatedText key={"feb"} greetings={operatorDashboardTranslations.february} />, 
+        <TranslatedText key={"mar"} greetings={operatorDashboardTranslations.march} />, 
+        <TranslatedText key={"apr"} greetings={operatorDashboardTranslations.april} />, 
+        <TranslatedText key={"may"} greetings={operatorDashboardTranslations.may} />, 
+        <TranslatedText key={"jun"} greetings={operatorDashboardTranslations.june} />,
+        <TranslatedText key={"jul"} greetings={operatorDashboardTranslations.july} />, 
+        <TranslatedText key={"aug"} greetings={operatorDashboardTranslations.august} />, 
+        <TranslatedText key={"sep"} greetings={operatorDashboardTranslations.september} />, 
+        <TranslatedText key={"oct"} greetings={operatorDashboardTranslations.october} />, 
+        <TranslatedText key={"nov"} greetings={operatorDashboardTranslations.november} />, 
+        <TranslatedText key={"dec"} greetings={operatorDashboardTranslations.december} />
     ];
 
     // Handlers for navigation
