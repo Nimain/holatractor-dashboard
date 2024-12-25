@@ -1,6 +1,6 @@
 import axios from "axios";
 
-export const NestJsBaseURL = "http://localhost:5000"
+export const NestJsBaseURL = "https://farmmechanize.holatractor.com/api/"
 // export const NestJsBaseURL = "http://192.168.1.43:5000"
 
 export const renderInstance = axios.create({

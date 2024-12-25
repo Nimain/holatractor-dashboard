@@ -30,7 +30,6 @@ export default function StoresPage() {
     }})
     .then((res)=>{
       setStores(res.data)
-      console.log(res.data)
     }).catch((err)=>{
       errorMessage("Error fetching user detaild")
     }).finally(()=>{

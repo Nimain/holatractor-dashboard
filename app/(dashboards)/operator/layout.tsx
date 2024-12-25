@@ -3,7 +3,15 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ReduxWrapper from "../_components/ReduxWrapper";
 import SidebarWrapper from "./_components/SidebarWrapper";
-import Header from "@/components/Dashboards/Operator/_components/Header";
+import dynamic from "next/dynamic";
+
+const Header = dynamic(
+  ()=> import("@/components/Dashboards/Operator/_components/Header"),
+  {
+      ssr: false,
+    }
+)
+
 
 function FarmerDashboardLayout({
     children,

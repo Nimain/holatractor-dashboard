@@ -4,11 +4,17 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ReduxWrapper from '../_components/ReduxWrapper';
 import SidebarWrapper from './_components/SidebarWrapper';
-import NewStore from '@/components/Dashboards/Owner/_components/NewStore';
 import dynamic from "next/dynamic";
 
 const Header = dynamic(
   ()=> import('@/components/Dashboards/Owner/_components/Header'),
+  {
+      ssr: false,
+    }
+)
+
+const NewStore = dynamic(
+  ()=> import('@/components/Dashboards/Owner/_components/NewStore'),
   {
       ssr: false,
     }
