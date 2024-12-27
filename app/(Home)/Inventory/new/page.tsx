@@ -40,6 +40,7 @@ const NewInventory = () => {
   const [tractorType, setTractorType] = useState<string>("");
   const [dobDate, setDobDate] = useState<string | undefined>(undefined);
   const [value, setValue] = useState([20, 100000]);
+  const [fixedPrice, setFixedPrice] = useState(20)
 
   const [fetchingCity, setFetchingCity] = useState(false);
   const [allcity, setAllCity] = useState<City[]>([]);
@@ -106,6 +107,12 @@ const NewInventory = () => {
       errorMessage("Please select the year of purchase")
       return
     }
+
+    if(!fixedPrice){
+      errorMessage("Please give the fixed price")
+      return
+    }
+
     let tractorImages: string[] = [];
 
     if (selectedImage.length > 0) {
@@ -130,7 +137,8 @@ const NewInventory = () => {
       tractor_model: tractorModel,
       tractor_year: convertYearToDate(dobDate), // Using the Date directly
       min_price: `${value[0]}`,
-      max_price: `${value[1]}`
+      max_price: `${value[1]}`,
+      fixed_price: `${fixedPrice}`
     };
 
     setLoading(true);
@@ -414,6 +422,16 @@ const NewInventory = () => {
                   }}
                 />
               </div>
+              <div className="flex flex-col gap-[4px] w-fit">
+              <Label>Fixed price (in dollar $)</Label>
+              <Input
+                type="number"
+                value={fixedPrice}
+                onChange={(e) => {
+                  setFixedPrice(parseInt(e.target.value));
+                }}
+              />
+            </div>
             </div>
 
           </CardContent>
@@ -575,6 +593,16 @@ const NewInventory = () => {
                 value={value[1]}
                 onChange={(e) => {
                   setValue([value[0], Number(e.target.value)]);
+                }}
+              />
+            </div>
+            <div className="flex flex-col gap-[4px] w-fit">
+              <Label>Fixed price (in dollar $)</Label>
+              <Input
+                type="number"
+                value={fixedPrice}
+                onChange={(e) => {
+                  setFixedPrice(parseInt(e.target.value));
                 }}
               />
             </div>
@@ -742,6 +770,16 @@ const NewInventory = () => {
                 }}
               />
             </div>
+            <div className="flex flex-col gap-[4px] w-fit">
+              <Label>Fixed price (in dollar $)</Label>
+              <Input
+                type="number"
+                value={fixedPrice}
+                onChange={(e) => {
+                  setFixedPrice(parseInt(e.target.value));
+                }}
+              />
+            </div>
           </div>
 
         </CardContent>
@@ -906,6 +944,16 @@ const NewInventory = () => {
                 }}
               />
             </div>
+            <div className="flex flex-col gap-[4px] w-fit">
+              <Label>Fixed price (in dollar $)</Label>
+              <Input
+                type="number"
+                value={fixedPrice}
+                onChange={(e) => {
+                  setFixedPrice(parseInt(e.target.value));
+                }}
+              />
+            </div>
           </div>
 
         </CardContent>
@@ -1067,6 +1115,16 @@ const NewInventory = () => {
                 value={value[1]}
                 onChange={(e) => {
                   setValue([value[0], Number(e.target.value)]);
+                }}
+              />
+            </div>
+            <div className="flex flex-col gap-[4px] w-fit">
+              <Label>Fixed price (in dollar $)</Label>
+              <Input
+                type="number"
+                value={fixedPrice}
+                onChange={(e) => {
+                  setFixedPrice(parseInt(e.target.value));
                 }}
               />
             </div>

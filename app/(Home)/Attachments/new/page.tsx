@@ -41,6 +41,7 @@ const NewAttachment = () => {
   const [tractorType, setTractorType] = useState("");
   const [tractorName, setTractorName] = useState("");
   const [allTractors, setAllTractors] = useState<Inventory[]>([]);
+  const [fixedPrice, setFixedPrice] = useState(20)
 
   const [imageUploading, setImageUploading] = useState(false);
   const [creatingAttachment, setCreatingATtachment] = useState(false);
@@ -190,6 +191,11 @@ const NewAttachment = () => {
       return;
     }
 
+    if (!fixedPrice) {
+      errorMessage("Please give the fixed price")
+      return
+    }
+
     let tractorImages;
 
     if (selectedImage.length > 0) {
@@ -211,6 +217,7 @@ const NewAttachment = () => {
       description: en_description,
       tractorId: tractorType,
       images: tractorImages,
+      fixed_price: `${fixedPrice}`
     };
     setCreatingATtachment(true);
     renderInstance
@@ -287,8 +294,8 @@ const NewAttachment = () => {
             <div
               key={index}
               className={`text-xl font-medium px-4 py-2 transition border border-t-0 border-l-0 border-r-0 border-purple-500 ${details.locale === activeLanguage
-                  ? "border-b-4 text-primaryColor"
-                  : "border-b-0"
+                ? "border-b-4 text-primaryColor"
+                : "border-b-0"
                 } cursor-pointer`}
               onClick={() => {
                 setActiveLanguage(details.locale);
@@ -332,6 +339,17 @@ const NewAttachment = () => {
               </div>
             </div>
           )}
+
+          <div className="flex flex-col gap-[4px] w-full">
+            <Label>Fixed price (in dollar $)</Label>
+            <Input
+              type="number"
+              value={fixedPrice}
+              onChange={(e) => {
+                setFixedPrice(parseInt(e.target.value));
+              }}
+            />
+          </div>
 
           {activeLanguage === "es" && (
             <div className="w-full flex flex-col items-center gap-[20px] max-w-[600px] mx-auto">

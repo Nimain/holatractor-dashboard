@@ -610,7 +610,7 @@ const WithoutStoreBooking = () => {
                                                                             <div>
                                                                                 <h4 className="font-medium">{tractor.name}</h4>
                                                                                 <p className="text-sm text-muted-foreground">{tractor.description}</p>
-                                                                                {/* <p className="text-sm font-medium mt-2">${tractor.hourlyPrice}/hour</p> */}
+                                                                                <p className="text-sm font-medium mt-2">${tractor.inventory[0].fixedPrice?.toFixed(2)}/hour</p>
                                                                                 <p className="text-xs text-muted-foreground">
                                                                                     {/* Year: {format(new Date(tractor.year), 'yyyy')} | */}
                                                                                     Type: {tractor.type}
@@ -652,7 +652,7 @@ const WithoutStoreBooking = () => {
                                                                             <div>
                                                                                 <h4 className="font-medium">{attachment.name}</h4>
                                                                                 <p className="text-sm text-muted-foreground">{attachment.description}</p>
-                                                                                {/* <p className="text-sm font-medium mt-2">${attachment.hourlyPrice}/hour</p> */}
+                                                                                <p className="text-sm font-medium mt-2">${attachment.fixedPrice?.toFixed(2)}/hour</p>
                                                                             </div>
                                                                         </div>
                                                                     </CardContent>

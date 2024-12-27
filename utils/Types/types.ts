@@ -206,6 +206,7 @@ export interface Attachment {
   images: string[];
   tractorId: string[];
   base_id: string;
+  fixedPrice?: number;
   createdAt: Date;
   updatedAt: Date;
   AttachmentInStore: AttachmentInStore[];
@@ -235,6 +236,7 @@ export interface BookingStandaloneTractor {
   booking: Booking;
   tractor: Tractor;
 }
+
 export interface BookingStandaloneAttachment {
   id: string;
   bookingId: string;
@@ -330,6 +332,7 @@ export interface Inventory {
   base_id: string;
   min_price: number;
   max_price: number;
+  fixedPrice?: number;
   createdAt: Date;
   updatedAt: Date;
   tractor: Tractor;

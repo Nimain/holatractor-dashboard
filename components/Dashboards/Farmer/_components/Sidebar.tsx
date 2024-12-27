@@ -188,54 +188,6 @@ const Sidebar = () => {
           </Tooltip>
           {isExpanded && <TranslatedText greetings={sidebarTranslations.logout} />}
         </Button>
-       <Link href={"/farmer/operatordash"}>  <Button
-          className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
-        >
-          <Tooltip title={"operator"} placement="right">
-          <Settings className="h-6 w-6" />
-              </Tooltip>
-          {isExpanded && "operator"}
-        </Button></Link>
-        <Link href={"/farmer/paymentoperator"}>  <Button
-          className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
-        >
-          <Tooltip title={"operatorpayment"} placement="right">
-          <BadgeIndianRupee className="h-6 w-6" />
-              </Tooltip>
-          {isExpanded && "operatorpayment"}
-        </Button></Link>
-        <Link href={"/farmer/dealertracking"}>  <Button
-          className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
-        >
-          <Tooltip title={"TrackDealer"} placement="right">
-          <LocateFixed className="h-6 w-6" />
-              </Tooltip>
-          {isExpanded && "TrackDealer"}
-        </Button></Link>
-        <Link href={"/farmer/dealerdashboard"}>  <Button
-          className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
-        >
-          <Tooltip title={"DealerDashboard"} placement="right">
-          <LayoutDashboard className="h-6 w-6" />
-              </Tooltip>
-          {isExpanded && "DealerDashboard"}
-        </Button></Link>
-        <Link href={"/farmer/dealerdeal"}>  <Button
-          className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
-        >
-          <Tooltip title={"dealerDeal"} placement="right">
-          <Handshake className="h-6 w-6" />
-              </Tooltip>
-          {isExpanded && "dealerDeal"}
-        </Button></Link>
-        <Link href={"/farmer/dealersale"}>  <Button
-          className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
-        >
-          <Tooltip title={"dealersales"} placement="right">
-          <Bolt className="h-6 w-6" />
-              </Tooltip>
-          {isExpanded && "dealerSales"}
-        </Button></Link>
       </nav>
     </aside>
   )
