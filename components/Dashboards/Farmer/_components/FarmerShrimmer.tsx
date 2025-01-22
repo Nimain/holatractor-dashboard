@@ -6,25 +6,6 @@ const FarmerShimmer: React.FC = () => {
     <div className="w-full flex gap-4 my-4 animate-pulse">
 
       <div className="w-full space-y-6">
-        {/* header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-          {/* Placeholder for greeting and user name */}
-          <div className="flex items-center mb-4 md:mb-0">
-            <div className="h-6 md:h-8 bg-gray-300 rounded w-48"></div>
-          </div>
-
-          {/* Placeholder for buttons and icons */}
-          <div className="flex items-center gap-6 ml-auto">
-            <div className="h-10 bg-gray-300 rounded w-36"></div>
-            <div className="h-10 bg-gray-300 rounded w-32"></div>
-            <div className="h-10 bg-gray-300 rounded w-12"></div>
-            <div className="relative">
-              <div className="h-10 w-10 bg-gray-300 rounded-full"></div>
-              <span className="absolute top-0 right-0 h-4 w-4 bg-gray-400 rounded-full"></span>
-            </div>
-            <div className="h-10 w-10 bg-gray-300 rounded-full"></div>
-          </div>
-        </div>
         <div className="flex justify-between">
           {/* Main Content Area */}
           <div className="flex-grow">
@@ -80,7 +61,6 @@ const FarmerShimmer: React.FC = () => {
 
             {/* Logs Table Section */}
             <div className="w-full bg-white p-2 rounded-2xl drop-shadow h-96 overflow-auto">
-              <div className="h-6 bg-gray-300 rounded w-1/4 mx-auto mb-4"></div>
               <div className="space-y-2">
                 <div className="grid grid-cols-4 gap-4">
                   {Array(4).fill(0).map((_, index) => (

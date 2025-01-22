@@ -17,6 +17,7 @@ import { renderInstance } from "@/utils/Axios/RenderInstance"
 import { errorMessage } from "@/utils/Toastify/Messages"
 import TranslatedText from "@/components/Menubar/TranslatedText"
 import { sidebarTranslations } from "../FarmerTranslation"
+import { useFarmContext } from "@/components/wrappers/FarmProvider"
 
 interface user {
   userId: string;
@@ -28,12 +29,8 @@ interface user {
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [showFarmList, setShowFarmList] = useState(false)
-  const [fetching, setFetching] = useState(false)
-  const [loading, setLoading] = useState(false)
-
-  const [farms, setFarms] = useState<Farm[]>([])
-
-  const dispatch = useDispatch();
+  
+  const { farms, fetching, fetchFarmer } = useFarmContext();
 
   const router = useRouter()
 
@@ -48,30 +45,6 @@ const Sidebar = () => {
     cookie.remove("isOwner")
     cookie.remove("isODealer")
     router.push("/login")
-  }
-  useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1500);
-    return () => clearTimeout(timer);
-  }, []);
-  
-  console.log(loading, user);
-
-  function fetchFarmer() {
-
-    setFetching(true)
-    renderInstance.get(`/farmer/${user.userId}`)
-      .then((res) => {
-        setFarms(res.data.farms)
-        dispatch(changeFarm(res.data.farms[0]))
-      }).catch((err) => {
-        if (err.response && err.response.status === 404 && err.response.data.message === "Farmer not found") {
-          errorMessage("Farmer not found")
-        } else {
-          errorMessage("Error fetching user detaild")
-        }
-      }).finally(()=>{
-        setFetching(false)
-      })
   }
 
   useEffect(() => {

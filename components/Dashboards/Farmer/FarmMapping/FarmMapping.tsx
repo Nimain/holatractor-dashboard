@@ -20,6 +20,7 @@ import { area, polygon } from "@turf/turf";
 import { useRouter } from 'next/navigation';
 import TranslatedText from '@/components/Menubar/TranslatedText';
 import { farmDetailsTranslations } from '../SingleFarm/FarmTranslations';
+import { useFarmContext } from '@/components/wrappers/FarmProvider';
 
 interface Location {
   latitude: number | null;
@@ -46,6 +47,8 @@ const FarmBooking = () => {
 
   const [adding, setAdding] = useState(false)
 
+  const { fetchFarmer, setFarms } = useFarmContext();
+
   const router = useRouter()
 
   const { cookie } = useCookie()
@@ -57,10 +60,10 @@ const FarmBooking = () => {
 
     // Convert Leaflet coordinates to Turf.js-compatible format (GeoJSON-like)
     const coordinates = leafletLatLngs.map((latlng: { lng: any; lat: any; }) => [latlng.lng, latlng.lat]);
-    
+
     // Close the polygon by repeating the first coordinate at the end
     coordinates.push(coordinates[0]);
-    
+
     // Create a Turf.js polygon
     const polyArea = polygon([coordinates]);
     const totalArea = area(polyArea);
@@ -89,23 +92,25 @@ const FarmBooking = () => {
       boundary: {
         coordinates: coordinates,
         area: farea
-     }
+      }
     }, {
       headers: {
         Authorization: `Bearer ${access_token}`,
       }
-    }).then(() => {
+    }).then((res) => {
       successMessage("Farm added")
+      setFarms((prevFarms) => [...prevFarms, res.data]);
+      fetchFarmer()
       router.push("/farmer")
     }).catch((err) => {
       if (err.response) {
-        if(err.response.status === 404 && err.response.data.message === "Farmer details not found"){
+        if (err.response.status === 404 && err.response.data.message === "Farmer details not found") {
           errorMessage("Farmer details not found")
-        } else if(err.response.status === 404 && err.response.data.message === "Log in user not found"){
+        } else if (err.response.status === 404 && err.response.data.message === "Log in user not found") {
           errorMessage("Log in user not found")
-        } else if(err.response.status === 409 && err.response.data.message === "Login user is not admin"){
+        } else if (err.response.status === 409 && err.response.data.message === "Login user is not admin") {
           errorMessage("Login user is not admin")
-        } else if(err.response.status === 409 && err.response.data.message === "You have already a farm with this name"){
+        } else if (err.response.status === 409 && err.response.data.message === "You have already a farm with this name") {
           errorMessage("You have already a farm with this name")
         }
       } else {
@@ -167,11 +172,11 @@ const FarmBooking = () => {
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-fit h-fit">
+        <DialogContent>
 
-          <Card className="w-sm">
+          <Card className='p-0 border-0'>
             <CardHeader>
-            <TranslatedText greetings={farmDetailsTranslations.giveFarmDetails} />
+              <TranslatedText greetings={farmDetailsTranslations.giveFarmDetails} />
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-4">
@@ -179,21 +184,26 @@ const FarmBooking = () => {
                 <Input
                   value={farmName}
                   onChange={e => { setFarmName(e.target.value) }}
-                  required={true} />
+                  required={true}
+                  readOnly={adding} />
               </div>
               <div className="space-y-4">
                 <Label><TranslatedText greetings={farmDetailsTranslations.farmDescription} /></Label>
                 <Textarea
                   value={farmDescription}
                   onChange={e => { setFarmDescription(e.target.value) }}
-                  className="resize-none" />
+                  className="resize-none"
+                  readOnly={adding} />
               </div>
               <Separator />
             </CardContent>
             <CardFooter>
-              <Button onClick={() => { handleAddFarm() }}>
-                {adding && <CircularProgress />}
-                <TranslatedText greetings={farmDetailsTranslations.addFarm} />
+              <Button onClick={() => { handleAddFarm() }} disabled={adding}>
+                {adding ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  <TranslatedText greetings={farmDetailsTranslations.addFarm} />
+                )}
               </Button>
             </CardFooter>
           </Card>
