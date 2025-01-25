@@ -22,12 +22,14 @@ import { useCookie } from 'next-cookie'
 import { paymentHistoryTranslations } from './PaymentHistoryTranslations'
 import TranslatedText from '@/components/Menubar/TranslatedText'
 
-const PaymentDetailsSheet = ({ payment }: { payment: Payment; }) => {
+const PaymentDetailsSheet = ({ payment, paymentRefresh }: { payment: Payment; paymentRefresh: () => void }) => {
 
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
     const [loading, setLoading] = useState(false)
+
+    const [open, setOpen] = useState(false)
 
     const { cookie } = useCookie()
     const access_token = cookie.get("access_token")
@@ -72,6 +74,8 @@ const PaymentDetailsSheet = ({ payment }: { payment: Payment; }) => {
             },
         }).then((res) => {
             successMessage("Payment details submitted")
+            paymentRefresh()
+            setOpen(false)
         }).catch((err) => {
             if (err.response && err.response.status === 404 && err.response.data.message === "Log in user not found") {
                 errorMessage("Log in user not found")
@@ -90,7 +94,7 @@ const PaymentDetailsSheet = ({ payment }: { payment: Payment; }) => {
     }
 
     return (
-        <Sheet>
+        <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
                 <TableRow className="border-b hover:bg-gray-50">
                     <TableCell className='p-4'>
@@ -211,12 +215,12 @@ const PaymentDetailsSheet = ({ payment }: { payment: Payment; }) => {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="email"><TranslatedText greetings={paymentHistoryTranslations.email} /></Label>
-                                <Input id="email" value={payment.booking.store?.owner.user.email} />
+                                <Input id="email" value={payment.booking.store?.owner.user.email} readOnly={true} />
                             </div>
                             {
-                                `${payment.status} === "OwnerREJECTED` && <div className="space-y-2">
+                                `${payment.status} === "OwnerREJECTED` && (payment.rejecting_reasons.length >= 1) && <div className="space-y-2">
                                 <Label><TranslatedText greetings={paymentHistoryTranslations.rejectionReason} /></Label>
-                                <Textarea value={payment.rejecting_reasons[payment.rejecting_reasons.length -1]} />
+                                <Textarea value={payment.rejecting_reasons[payment.rejecting_reasons.length -1]} readOnly={true} />
                             </div>
                             }
                         </div>

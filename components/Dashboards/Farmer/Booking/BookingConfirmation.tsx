@@ -15,7 +15,7 @@ import { newBookingTranslations } from "../FarmerTranslation";
 import TranslatedText from "@/components/Menubar/TranslatedText";
 
 
-const BookingConfirmation = ({ newBooking }: { newBooking: Booking; }) => {
+const BookingConfirmation = ({ newBooking, updateBookingStatus }: { newBooking: Booking; updateBookingStatus: (id: string, confirmed: boolean) => void }) => {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false);
 
@@ -45,6 +45,7 @@ const BookingConfirmation = ({ newBooking }: { newBooking: Booking; }) => {
                 },
             }).then((res) => {
                 successMessage("Successfully booked")
+                updateBookingStatus(newBooking.id, true)
                 setOpen(false)
             }).catch((err) => {
                 if (err.response && err.response.status === 404 && err.response.data.message === "Booking is not valid") {

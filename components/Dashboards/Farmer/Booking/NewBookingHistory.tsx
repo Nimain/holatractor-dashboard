@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import {
   ChevronDown,
   Search,
-  ArrowUpDown
+  ArrowUpDown,
+  X,
+  Check
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Booking, BookingHours, BookingStatus, Payment } from '@/utils/Types/types';
@@ -12,13 +14,19 @@ import { NestJsBaseURL, renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
 import { useCookie } from 'next-cookie';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { format } from "date-fns"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import BookingConfirmation from './BookingConfirmation';
 import { io, Socket } from 'socket.io-client';
 import TranslatedText from '@/components/Menubar/TranslatedText';
 import { bookingHistoryTranslations } from './BookingHistoryTranslations';
 import { newBookingTranslations } from '../FarmerTranslation';
+import Pagination from '@/utils/Paginations/Pagination';
 
 interface user {
   userId: string;
@@ -27,27 +35,81 @@ interface user {
   email: string;
 }
 
+interface PaginationResponse {
+  itemsPerPage: number,
+  page: number,
+  all: number,
+  unconfirmed: number,
+  assigned: number,
+  ongoing: number,
+  completed: number,
+  rejected: number,
+  totalPages: number
+}
+
+const durations = [
+  {
+    label: "1 hr",
+    value: `${BookingHours.ONE_HOUR}`
+  },
+  {
+    label: "2 hr",
+    value: `${BookingHours.TWO_HOURS}`
+  },
+  {
+    label: "3 hr",
+    value: `${BookingHours.THREE_HOURS}`
+  },
+  {
+    label: "4 hr",
+    value: `${BookingHours.FOUR_HOURS}`
+  },
+  {
+    label: "5 hr",
+    value: `${BookingHours.FIVE_HOURS}`
+  },
+  {
+    label: "6 hr",
+    value: `${BookingHours.SIX_HOURS}`
+  },
+  {
+    label: "7 hr",
+    value: `${BookingHours.SEVEN_HOURS}`
+  },
+  {
+    label: "8 hr",
+    value: `${BookingHours.EIGHT_HOURS}`
+  },
+]
+
 const NewBookingHistory = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [fetching, setFetching] = useState(false)
-  const [activeFilter, setActiveFilter] = useState("unconfirmed")
+  const [activeFilter, setActiveFilter] = useState("all")
+
+  const [pagination, setPagination] = useState<PaginationResponse>({
+    itemsPerPage: 10,
+    page: 1,
+    all: 0,
+    unconfirmed: 0,
+    assigned: 0,
+    ongoing: 0,
+    completed: 0,
+    rejected: 0,
+    totalPages: 0
+  })
+  const [searchCategory, setSearchCategory] = useState("owner_name")
+  const [date, setDate] = useState<Date>()
+  const [openDuration, setOpenDuration] = useState(false)
 
   const { cookie } = useCookie()
   const user: user = cookie.get("user")
 
-  // Search handler
-  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const term = event.target.value.toLowerCase();
-    setSearchTerm(term);
-
-    const filteredBookings = bookings.filter(booking =>
-      booking.id.toLowerCase().includes(term) ||
-      booking.store?.name.toLowerCase().includes(term)
-    );
-
-    setBookings(filteredBookings);
-  };
+  const handleClear = () => {
+    setSearchTerm("")
+    setDate(new Date())
+  }
 
   const filterBookingHours = (val: string) => {
     let hours = <TranslatedText greetings={newBookingTranslations.hours['1h']} />
@@ -90,9 +152,10 @@ const NewBookingHistory = () => {
 
   function fetchPayments() {
     setFetching(true)
-    renderInstance.get(`/farmer/bookingPage/${user.userId}`)
+    renderInstance.get(`/farmer/bookingPage/${user.userId}?filter=${activeFilter}&page=${pagination.page}&category=${searchCategory}&search=${searchTerm}`)
       .then((res) => {
-        setBookings(res.data)
+        setPagination(res.data.pagination)
+        setBookings(res.data.bookings)
       }).catch((err) => {
         errorMessage("Error fetching payments")
       }).finally(() => {
@@ -100,39 +163,154 @@ const NewBookingHistory = () => {
       })
   }
 
+  const renderInput = () => {
+    switch (searchCategory) {
+      case "booking_type":
+        return (
+          <Select value={searchTerm} onValueChange={setSearchTerm}>
+            <SelectTrigger className="w-full rounded-l-none">
+              <SelectValue placeholder="Select booking type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="standalone">Standalone</SelectItem>
+              <SelectItem value="store">Store</SelectItem>
+            </SelectContent>
+          </Select>
+        )
+      case "start_date":
+        return (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={`w-full justify-start text-left font-normal rounded-l-none ${!date && "text-muted-foreground"}`}
+              >
+                {date ? format(date, "PPP") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={(newDate) => {
+                  setDate(newDate)
+                  setSearchTerm(newDate ? format(newDate, "yyyy-MM-dd") : "")
+                }}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        )
+      case "duration":
+        return (
+          <Popover open={openDuration} onOpenChange={setOpenDuration}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={openDuration}
+                className="w-full justify-between rounded-l-none"
+              >
+                {searchTerm
+                  ? durations.find((duration) => duration.value === searchTerm)?.label || "Select duration..."
+                  : "Select duration..."}
+                <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0">
+              <Command>
+                <CommandInput placeholder="Search duration..." />
+                <CommandList>
+                  <CommandEmpty>No duration found.</CommandEmpty>
+                  <CommandGroup>
+                    {durations.map((duration) => (
+                      <CommandItem
+                        key={duration.value}
+                        onSelect={() => {
+                          setSearchTerm(duration.value)
+                          setOpenDuration(false)
+                        }}
+                      >
+                        <Check className={`mr-2 h-4 w-4 ${searchTerm === duration.value ? "opacity-100" : "opacity-0"}`} />
+                        {duration.label}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        )
+      case "price":
+        return (
+          <Input
+            type="number"
+            placeholder="Enter price"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="rounded-l-none"
+          />
+        )
+      default:
+        return (
+          <div className="relative flex-1">
+            <Input
+              type="text"
+              placeholder="Type here to search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 rounded-l-none"
+            />
+          </div>
+        )
+    }
+  }
+
+  const updateBookingStatus = (id: string, confirmed: boolean) => {
+    setBookings((prevBookings) =>
+      prevBookings.map((booking) =>
+        booking.id === id ? { ...booking, confirm: confirmed } : booking
+      )
+    );
+  };
+
+  const handlePageChange = (page: number) => {
+    setPagination((prevPagination) => ({ ...prevPagination, page }))
+  }
+
   useEffect(() => {
     if (user) {
       fetchPayments()
     }
-  }, [])
+  }, [activeFilter, searchTerm, pagination.page])
 
   useEffect(() => {
     // Connect to the socket server
     const newSocket: Socket = io(NestJsBaseURL, {
-        query: {
-            userId: user.userId
-        }
+      query: {
+        userId: user.userId
+      }
     });
 
     // Listen for the 'newFarmerNotification' event
     newSocket.on('newBooking', (booking: Booking) => {
-        setBookings(prevBookings => {
-            const existingBookingIndex = prevBookings.findIndex(b => b.id === booking.id);
-            
-            if (existingBookingIndex !== -1) {
-                const updatedBookings = prevBookings.filter(b => b.id !== booking.id);
-                return [booking, ...updatedBookings];
-            } else {
-                return [booking, ...prevBookings];
-            }
-        });
-     });
+      setBookings(prevBookings => {
+        const existingBookingIndex = prevBookings.findIndex(b => b.id === booking.id);
+
+        if (existingBookingIndex !== -1) {
+          const updatedBookings = prevBookings.filter(b => b.id !== booking.id);
+          return [booking, ...updatedBookings];
+        } else {
+          return [booking, ...prevBookings];
+        }
+      });
+    });
 
     // Clean up the event listener when the component unmounts
     return () => {
-        newSocket.disconnect();
+      newSocket.disconnect();
     };
-}, []);
+  }, []);
 
   return (
     <div className="p-6">
@@ -184,17 +362,31 @@ const NewBookingHistory = () => {
 
       {/* Search and Filter Bar */}
       <div className="flex justify-between items-center mb-6">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <input
-            type="text"
-            placeholder="Type here to search"
-            value={searchTerm}
-            onChange={handleSearch}
-            className="pl-10 pr-4 py-2 w-full border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+        <div className="relative flex items-center max-w-2xl w-full">
+          <Select value={searchCategory} onValueChange={setSearchCategory}>
+            <SelectTrigger className="w-[160px] rounded-r-none">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="owner_name">Owner name</SelectItem>
+              <SelectItem value="booking_type">Booking type</SelectItem>
+              <SelectItem value="start_date">Start date</SelectItem>
+              <SelectItem value="duration">Duration</SelectItem>
+              <SelectItem value="price">Price</SelectItem>
+            </SelectContent>
+          </Select>
+          {renderInput()}
+          {searchTerm && (
+            <Button
+              variant="ghost"
+              onClick={handleClear}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
-        <Select onValueChange={e => setActiveFilter(e)} defaultValue='unconfirmed'>
+        <Select onValueChange={e => setActiveFilter(e)} defaultValue='all'>
           <SelectTrigger className='w-[180px]'>
             <SelectValue placeholder={<TranslatedText greetings={bookingHistoryTranslations.filterBy} />} />
           </SelectTrigger>
@@ -203,7 +395,7 @@ const NewBookingHistory = () => {
               bookingFilters.map((filer, index) => {
                 return (
                   <SelectItem key={index} value={filer.value}>
-                    {filer.placeholder}
+                    {filer.placeholder} {pagination[filer.value as keyof PaginationResponse]}
                   </SelectItem>
                 )
               })
@@ -218,25 +410,25 @@ const NewBookingHistory = () => {
           <TableHeader>
             <TableRow className="border-b">
               <TableHead className="text-left p-4 font-medium text-gray-600">
-              <TranslatedText greetings={bookingHistoryTranslations.bookingNo} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+                <TranslatedText greetings={bookingHistoryTranslations.bookingNo} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
               <TableHead className="text-left p-4 font-medium text-gray-600">
-              <TranslatedText greetings={bookingHistoryTranslations.ownerName} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+                <TranslatedText greetings={bookingHistoryTranslations.ownerName} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
               <TableHead className="text-left p-4 font-medium text-gray-600">
-              <TranslatedText greetings={bookingHistoryTranslations.bookingType} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+                <TranslatedText greetings={bookingHistoryTranslations.bookingType} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
               <TableHead className="text-left p-4 font-medium text-gray-600">
-              <TranslatedText greetings={bookingHistoryTranslations.startDate} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+                <TranslatedText greetings={bookingHistoryTranslations.startDate} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
               <TableHead className="text-left p-4 font-medium text-gray-600">
-              <TranslatedText greetings={bookingHistoryTranslations.duration} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+                <TranslatedText greetings={bookingHistoryTranslations.duration} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
               <TableHead className="text-left p-4 font-medium text-gray-600">
-              <TranslatedText greetings={bookingHistoryTranslations.totalPrice} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+                <TranslatedText greetings={bookingHistoryTranslations.totalPrice} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
               <TableHead className="text-left p-4 font-medium text-gray-600">
-              <TranslatedText greetings={bookingHistoryTranslations.status} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
+                <TranslatedText greetings={bookingHistoryTranslations.status} /> <span className='w-6 h-6 rounded-full inline-flex items-center justify-center hover:bg-gray-200'><ArrowUpDown size={14} className="inline" /></span>
               </TableHead>
               {
                 activeFilter === "unconfirmed" &&
@@ -248,148 +440,40 @@ const NewBookingHistory = () => {
           </TableHeader>
           <TableBody>
             {fetching ? <PaymentTableLoader bookings={bookings} /> : bookings.length === 0 ? <p>No bookings available</p> :
-              activeFilter === "unconfirmed" ?
-                bookings.filter(bo => !bo.confirm).map((booking, index) => (
-                  <TableRow key={index} className="border-b hover:bg-gray-50">
-                    <TableCell className="p-4 text-sm text-blue-600">{booking.id}</TableCell>
-                    <TableCell className="p-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm">{booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A"}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="p-4 text-sm text-gray-600">
-                      {booking.bookingType || 'N/A'}
-                    </TableCell>
-                    <TableCell className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</TableCell>
-                    <TableCell className="p-4 text-sm text-gray-600">
-                      {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A'}
-                    </TableCell>
-                    <TableCell className="p-4 text-sm">${booking.total_cost.toFixed(2)}</TableCell>
-                    <TableCell className="p-4 text-sm text-blue-600 font-medium">
-                      {booking.bookingStatus}
-                    </TableCell>
+              bookings.map((booking, index) => (
+                <TableRow key={index} className="border-b hover:bg-gray-50">
+                  <TableCell className="p-4 text-sm text-blue-600">{booking.id}</TableCell>
+                  <TableCell className="p-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">{booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A"}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="p-4 text-sm text-gray-600">
+                    {booking.bookingType || 'N/A'}
+                  </TableCell>
+                  <TableCell className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</TableCell>
+                  <TableCell className="p-4 text-sm text-gray-600">
+                    {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A'}
+                  </TableCell>
+                  <TableCell className="p-4 text-sm">${booking.total_cost.toFixed(2)}</TableCell>
+                  <TableCell className="p-4 text-sm text-blue-600 font-medium">
+                    {booking.bookingStatus}
+                  </TableCell>
+                  {
+                    !booking.confirm &&
                     <TableCell className="p-4 text-sm">
-                      <BookingConfirmation newBooking={booking} />
+                      <BookingConfirmation newBooking={booking} updateBookingStatus={updateBookingStatus} />
                     </TableCell>
-                  </TableRow>
-                ))
-                :
-                activeFilter === "assigned" ?
-                  bookings.filter(bo => (bo.owner_confirm || bo.bookingStatus === BookingStatus.Accepted)).map((booking, index) => (
-                    <TableRow key={index} className="border-b hover:bg-gray-50">
-                      <TableCell className="p-4 text-sm text-blue-600">{booking.id}</TableCell>
-                      <TableCell className="p-4">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm">{booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A"}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="p-4 text-sm text-gray-600">
-                        {booking.bookingType || 'N/A'}
-                      </TableCell>
-                      <TableCell className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</TableCell>
-                      <TableCell className="p-4 text-sm text-gray-600">
-                        {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A'}
-                      </TableCell>
-                      <TableCell className="p-4 text-sm">${booking.total_cost.toFixed(2)}</TableCell>
-                      <TableCell className="p-4 text-sm text-blue-600 font-medium">
-                        {booking.bookingStatus}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                  :
-                  activeFilter === "ongoing" ?
-                    bookings.filter(bo => (bo.bookingStatus === BookingStatus.Arriving || bo.bookingStatus === BookingStatus.Arrived || bo.bookingStatus === BookingStatus.Started || bo.bookingStatus === BookingStatus.Stopped)).map((booking, index) => (
-                      <TableRow key={index} className="border-b hover:bg-gray-50">
-                        <TableCell className="p-4 text-sm text-blue-600">{booking.id}</TableCell>
-                        <TableCell className="p-4">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm">{booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A"}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="p-4 text-sm text-gray-600">
-                          {booking.bookingType || 'N/A'}
-                        </TableCell>
-                        <TableCell className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</TableCell>
-                        <TableCell className="p-4 text-sm text-gray-600">
-                          {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A'}
-                        </TableCell>
-                        <TableCell className="p-4 text-sm">${booking.total_cost.toFixed(2)}</TableCell>
-                        <TableCell className="p-4 text-sm text-blue-600 font-medium">
-                          {booking.bookingStatus}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                    :
-                    activeFilter === "completed" ?
-                      bookings.filter(bo => (bo.bookingStatus === BookingStatus.Finished)).map((booking, index) => (
-                        <TableRow key={index} className="border-b hover:bg-gray-50">
-                          <TableCell className="p-4 text-sm text-blue-600">{booking.id}</TableCell>
-                          <TableCell className="p-4">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm">{booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A"}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="p-4 text-sm text-gray-600">
-                            {booking.bookingType || 'N/A'}
-                          </TableCell>
-                          <TableCell className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</TableCell>
-                          <TableCell className="p-4 text-sm text-gray-600">
-                            {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A'}
-                          </TableCell>
-                          <TableCell className="p-4 text-sm">${booking.total_cost.toFixed(2)}</TableCell>
-                          <TableCell className="p-4 text-sm text-blue-600 font-medium">
-                            {booking.bookingStatus}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                      :
-                      activeFilter === "rejected" ?
-                        bookings.filter(bo => (bo.bookingStatus === BookingStatus.Rejected)).map((booking, index) => (
-                          <TableRow key={index} className="border-b hover:bg-gray-50">
-                            <TableCell className="p-4 text-sm text-blue-600">{booking.id}</TableCell>
-                            <TableCell className="p-4">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm">{booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A"}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="p-4 text-sm text-gray-600">
-                              {booking.bookingType || 'N/A'}
-                            </TableCell>
-                            <TableCell className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</TableCell>
-                            <TableCell className="p-4 text-sm text-gray-600">
-                              {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A'}
-                            </TableCell>
-                            <TableCell className="p-4 text-sm">${booking.total_cost.toFixed(2)}</TableCell>
-                            <TableCell className="p-4 text-sm text-blue-600 font-medium">
-                              {booking.bookingStatus}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                        :
-                        bookings.map((booking, index) => (
-                          <TableRow key={index} className="border-b hover:bg-gray-50">
-                            <TableCell className="p-4 text-sm text-blue-600">{booking.id}</TableCell>
-                            <TableCell className="p-4">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm">{booking.store ? `${booking.store.owner.user.first_name} ${booking.store.owner.user.middle_name ?? ""} ${booking.store.owner.user.last_name}` : "N/A"}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="p-4 text-sm text-gray-600">
-                              {booking.bookingType || 'N/A'}
-                            </TableCell>
-                            <TableCell className="p-4 text-sm">{new Date(booking.start_date).toLocaleDateString()}</TableCell>
-                            <TableCell className="p-4 text-sm text-gray-600">
-                              {booking.booking_hours ? filterBookingHours(booking.booking_hours) : booking.end_date ? new Date(booking.end_date).toLocaleDateString() : 'N/A'}
-                            </TableCell>
-                            <TableCell className="p-4 text-sm">${booking.total_cost.toFixed(2)}</TableCell>
-                            <TableCell className="p-4 text-sm text-blue-600 font-medium">
-                              {booking.bookingStatus}
-                            </TableCell>
-                          </TableRow>
-                        ))
+                  }
+                </TableRow>
+              ))
             }
           </TableBody>
         </Table>
+        {
+          (pagination.totalPages > 1) && !fetching &&
+          <Pagination totalPages={pagination.totalPages} currentPage={pagination.page} onPageChange={handlePageChange} />
+        }
       </Card>
     </div>
   );
@@ -397,7 +481,7 @@ const NewBookingHistory = () => {
 
 export default NewBookingHistory
 
-function PaymentTableLoader({bookings}: {bookings: Booking[]}) {
+function PaymentTableLoader({ bookings }: { bookings: Booking[] }) {
   return (
     <>
       {Array.from({ length: Math.max(5, bookings.length || 5) }).map((_, index) => (

@@ -190,6 +190,14 @@ const BookingStore = () => {
             .then((res) => {
                 if (res.status === 201) {
                     setNewBooking(res.data)
+                    setSelectedAttachmentIds([])
+                    setSelectedTractorIds([])
+                    setSelectedFarm("")
+                    setDate({
+                        from: new Date(),
+                        to: addDays(new Date(), 1),
+                    })
+                    setstartDate(new Date())
                     setOpen(true)
                 }
             })
