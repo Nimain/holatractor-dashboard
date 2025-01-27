@@ -132,88 +132,106 @@ const HomeDashboard = (
                 {/* First Card with Swiper */}
                 <div className="relative rounded-[20px] h-80 1600px:h-96 overflow-hidden">
                     {/* Slider with only changing images */}
-                    <Swiper
-                        modules={[Autoplay, Pagination]}
-                        spaceBetween={0}
-                        slidesPerView={1}
-                        loop={true}
-                        pagination={true}
-                        autoplay={true}
-                        className="w-full h-full"
-                    >
-                        {stores.map((details, i) => {
-                            return (
-                                <SwiperSlide key={i} className="w-full h-full">
-                                    <div className="relative flex items-center justify-center w-full h-full">
-                                        <Image
-                                            src={details.image}
-                                            alt={details.name}
-                                            className="w-full h-full object-cover rounded-xl absolute top-0 left-0 z-[-2]"
-                                            width={300}
-                                            height={400}
-                                            unoptimized={true}
-                                        />
-                                        <div className="absolute top-0 left-0 z-[-1] bg-black/20 w-full h-full" />
-                                        <div className="absolute bottom-4 left-4 right-4 z-20 flex items-center justify-between">
-                                            {/* Overlapping User Images */}
-                                            {
-                                                bookings.length === 0 ?
-                                                    <span className="hidden 768px:block text-white text-lg font-bold ml-4 text-center mt-3">
-                                                        <TranslatedText greetings={OwnerDashboardTranslation.noBookingsCompleted} />
-                                                    </span>
-                                                    :
-                                                    <div className="hidden 768px:flex pointer-events-auto">
-                                                        {
-                                                            bookings.map((book, index) => {
-                                                                if (index >= 3) return null
-                                                                return (
-                                                                    <div
-                                                                        className="w-12 h-12 overflow-hidden relative -mr-6"
-                                                                        style={{ zIndex: 3 }}
-                                                                        key={index}
-                                                                    >
-                                                                        <Avatar>
-                                                                            {
-                                                                                book.user && book.user.image &&
-                                                                                <AvatarImage src={book.user.image} alt={`${book.user.image}`} />
-                                                                            }
-                                                                            <AvatarFallback className="bg-white drop-shadow-md">{book.user?.first_name[0]}{book.user?.last_name[1]}</AvatarFallback>
-                                                                        </Avatar>
-                                                                    </div>
-                                                                )
-                                                            })
-                                                        }
-                                                        <span className="text-white text-lg font-bold ml-8 text-center mt-3">
-                                                            {bookings.length > 3 && "+"} {bookings.length > 3 ? bookings.length - 3 : bookings.length} <TranslatedText greetings={OwnerDashboardTranslation.hasBooked} />
-                                                        </span>
-                                                    </div>
-                                            }
+                    {
+                        stores.length === 0 ? <Card className="w-full shadow-lg h-full rounded-2xl">
+                            <CardContent className="flex items-center justify-center h-full">
+                                <div className="text-center">
+                                    <Image
+                                        src="https://img.freepik.com/premium-vector/available-allowed-icon-concept_313674-42037.jpg"
+                                        alt="No Operator Available"
+                                        className="w-64 object-cover rounded-full mx-auto mb-4"
+                                        width={256}
+                                        height={256}
+                                        unoptimized={true}
+                                    />
+                                    <h2 className="text-lg font-semibold">No Stores Available</h2>
+                                </div>
+                            </CardContent>
+                        </Card>
+                            :
+                            <Swiper
+                                modules={[Autoplay, Pagination]}
+                                spaceBetween={0}
+                                slidesPerView={1}
+                                loop={true}
+                                pagination={true}
+                                autoplay={true}
+                                className="w-full h-full"
+                            >
+                                {stores.map((details, i) => {
+                                    return (
+                                        <SwiperSlide key={i} className="w-full h-full">
+                                            <div className="relative flex items-center justify-center w-full h-full">
+                                                <Image
+                                                    src={details.image}
+                                                    alt={details.name}
+                                                    className="w-full h-full object-cover rounded-xl absolute top-0 left-0 z-[-2]"
+                                                    width={300}
+                                                    height={400}
+                                                    unoptimized={true}
+                                                />
+                                                <div className="absolute top-0 left-0 z-[-1] bg-black/20 w-full h-full" />
+                                                <div className="absolute bottom-4 left-4 right-4 z-20 flex items-center justify-between">
+                                                    {/* Overlapping User Images */}
+                                                    {
+                                                        bookings.length === 0 ?
+                                                            <span className="hidden 768px:block text-white text-lg font-bold ml-4 text-center mt-3">
+                                                                <TranslatedText greetings={OwnerDashboardTranslation.noBookingsCompleted} />
+                                                            </span>
+                                                            :
+                                                            <div className="hidden 768px:flex pointer-events-auto">
+                                                                {
+                                                                    bookings.map((book, index) => {
+                                                                        if (index >= 3) return null
+                                                                        return (
+                                                                            <div
+                                                                                className="w-12 h-12 overflow-hidden relative -mr-6"
+                                                                                style={{ zIndex: 3 }}
+                                                                                key={index}
+                                                                            >
+                                                                                <Avatar>
+                                                                                    {
+                                                                                        book.user && book.user.image &&
+                                                                                        <AvatarImage src={book.user.image} alt={`${book.user.image}`} />
+                                                                                    }
+                                                                                    <AvatarFallback className="bg-white drop-shadow-md">{book.user?.first_name[0]}{book.user?.last_name[1]}</AvatarFallback>
+                                                                                </Avatar>
+                                                                            </div>
+                                                                        )
+                                                                    })
+                                                                }
+                                                                <span className="text-white text-lg font-bold ml-8 text-center mt-3">
+                                                                    {bookings.length > 3 && "+"} {bookings.length > 3 ? bookings.length - 3 : bookings.length} <TranslatedText greetings={OwnerDashboardTranslation.hasBooked} />
+                                                                </span>
+                                                            </div>
+                                                    }
 
-                                            {/* Open Store Button */}
-                                            <Link href={`/owner/stores/${details.id}`} className="mx-auto 768px:mx-0">
-                                                <Button
-                                                    className="inline-flex items-center px-6 py-3 text-white font-bold bg-black rounded-full shadow-lg border-2 border-transparent transition-all duration-300 transform hover:scale-105 group pointer-events-auto">
-                                                    <TranslatedText greetings={OwnerDashboardTranslation.openStore} />
-                                                    <svg
-                                                        fill="currentColor"
-                                                        viewBox="0 0 24 24"
-                                                        className="ml-2 w-6 h-6 transition-all duration-300 group-hover:translate-x-2"
-                                                    >
-                                                        <path
-                                                            clipRule="evenodd"
-                                                            d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm4.28 10.28a.75.75 0 000-1.06l-3-3a.75.75 0 10-1.06 1.06l1.72 1.72H8.25a.75.75 0 000 1.5h5.69l-1.72 1.72a.75.75 0 101.06 1.06l3-3z"
-                                                            fillRule="evenodd"
-                                                        />
-                                                    </svg>
-                                                </Button>
-                                            </Link>
-                                        </div>
-                                        <h1 className="text-xl md:text-3xl font-bold text-white">{details.name}</h1>
-                                    </div>
-                                </SwiperSlide>
-                            );
-                        })}
-                    </Swiper>
+                                                    {/* Open Store Button */}
+                                                    <Link href={`/owner/stores/${details.id}`} className="mx-auto 768px:mx-0">
+                                                        <Button
+                                                            className="inline-flex items-center px-6 py-3 text-white font-bold bg-black rounded-full shadow-lg border-2 border-transparent transition-all duration-300 transform hover:scale-105 group pointer-events-auto">
+                                                            <TranslatedText greetings={OwnerDashboardTranslation.openStore} />
+                                                            <svg
+                                                                fill="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                                className="ml-2 w-6 h-6 transition-all duration-300 group-hover:translate-x-2"
+                                                            >
+                                                                <path
+                                                                    clipRule="evenodd"
+                                                                    d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm4.28 10.28a.75.75 0 000-1.06l-3-3a.75.75 0 10-1.06 1.06l1.72 1.72H8.25a.75.75 0 000 1.5h5.69l-1.72 1.72a.75.75 0 101.06 1.06l3-3z"
+                                                                    fillRule="evenodd"
+                                                                />
+                                                            </svg>
+                                                        </Button>
+                                                    </Link>
+                                                </div>
+                                                <h1 className="text-xl md:text-3xl font-bold text-white">{details.name}</h1>
+                                            </div>
+                                        </SwiperSlide>
+                                    );
+                                })}
+                            </Swiper>
+                    }
                 </div>
 
                 {/* Second Card */}
@@ -243,61 +261,77 @@ const HomeDashboard = (
             <div className="grid grid-cols-1 1050px:grid-cols-2 1200px:grid-cols-3 gap-6 mt-6" style={{ backgroundColor: '#EAF6FA' }}>
 
                 {
-                    operators.length !== 0 &&
-                    <Card className="w-full shadow-lg rounded-2xl">
-                        <CardHeader>
-                            <div className="flex items-center mb-4">
-                                <div className="flex">
-                                    <Avatar>
+                    operators.length === 0 ? (
+                        <Card className="w-full shadow-lg rounded-2xl">
+                            <CardContent className="flex items-center justify-center h-full">
+                                <div className="text-center">
+                                    <Image
+                                        src="https://img.freepik.com/premium-vector/available-allowed-icon-concept_313674-42037.jpg"
+                                        alt="No Operator Available"
+                                        className="w-64 h-64 object-cover rounded-full mx-auto mb-4"
+                                        width={256}
+                                        height={256}
+                                        unoptimized={true}
+                                    />
+                                    <h2 className="text-lg font-semibold">No Operator Available</h2>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) :
+                        <Card className="w-full shadow-lg rounded-2xl">
+                            <CardHeader>
+                                <div className="flex items-center mb-4">
+                                    <div className="flex">
+                                        <Avatar>
                                             <AvatarFallback className="bg-white drop-shadow-md">
                                                 {operators[slideIndex].operator.user.first_name[0]}{operators[slideIndex].operator.user.last_name[0]}
                                             </AvatarFallback>
-                                    </Avatar>
+                                        </Avatar>
+                                    </div>
                                 </div>
-                            </div>
-                            <h2 className="text-lg font-semibold leading-relaxed mb-6">
-                                {`${operators[slideIndex].operator.user.first_name} ${operators[slideIndex].operator.user.middle_name ?? ""} ${operators[slideIndex].operator.user.last_name}`}
-                            </h2>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="relative my-2 mb-0 bottom-7">
-                                <hr className="absolute top-0 left-0 w-full h-0.3 bg-black" />
-                                <Button variant="default" size="sm" className="flex absolute top-1/2 left-14 transform -translate-x-1/2 -translate-y-1/2 rounded-full">
-                                    <span><TranslatedText greetings={OwnerDashboardTranslation.seeProfile} /></span>
-                                </Button>
-                            </div>
-                            <div className="mt-10 mb-6 space-y-4">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-sm font-medium"><TranslatedText greetings={operatorWorkPageTranslations.costPerJob} />:</span>
-                                    <span className="text-sm font-bold">${operators[slideIndex].cost_per_job ?? 'N/A'}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-sm font-medium"><TranslatedText greetings={operatorWorkPageTranslations.costPerHour} />:</span>
-                                    <span className="text-sm font-bold">${operators[slideIndex].cost_per_hour ?? 'N/A'}/hr</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-sm font-medium"><TranslatedText greetings={operatorWorkPageTranslations.costPerMonth} />:</span>
-                                    <span className="text-sm font-bold">${operators[slideIndex].cost_per_month ?? 'N/A'}/day</span>
-                                </div>
-                            </div>
-                        </CardContent>
-                        <CardFooter>
-                            <div className="flex justify-between items-center w-full mt-4 space-x-2">
-                                <div>
-                                    <span className="text-2xl font-bold">{slideIndex + 1}</span>
-                                    <span className="text-muted-foreground">/{totalSlides}</span>
-                                </div>
-                                <div className="flex space-x-4">
-                                    <Button variant="outline" size="icon" onClick={handlePrev}>
-                                        &lt;
-                                    </Button>
-                                    <Button variant="outline" size="icon" onClick={handleNext}>
-                                        &gt;
+                                <h2 className="text-lg font-semibold leading-relaxed mb-6">
+                                    {`${operators[slideIndex].operator.user.first_name} ${operators[slideIndex].operator.user.middle_name ?? ""} ${operators[slideIndex].operator.user.last_name}`}
+                                </h2>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="relative my-2 mb-0 bottom-7">
+                                    <hr className="absolute top-0 left-0 w-full h-0.3 bg-black" />
+                                    <Button variant="default" size="sm" className="flex absolute top-1/2 left-14 transform -translate-x-1/2 -translate-y-1/2 rounded-full">
+                                        <span><TranslatedText greetings={OwnerDashboardTranslation.seeProfile} /></span>
                                     </Button>
                                 </div>
-                            </div>
-                        </CardFooter>
-                    </Card>
+                                <div className="mt-10 mb-6 space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm font-medium"><TranslatedText greetings={operatorWorkPageTranslations.costPerJob} />:</span>
+                                        <span className="text-sm font-bold">${operators[slideIndex].cost_per_job ?? 'N/A'}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm font-medium"><TranslatedText greetings={operatorWorkPageTranslations.costPerHour} />:</span>
+                                        <span className="text-sm font-bold">${operators[slideIndex].cost_per_hour ?? 'N/A'}/hr</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-sm font-medium"><TranslatedText greetings={operatorWorkPageTranslations.costPerMonth} />:</span>
+                                        <span className="text-sm font-bold">${operators[slideIndex].cost_per_month ?? 'N/A'}/day</span>
+                                    </div>
+                                </div>
+                            </CardContent>
+                            <CardFooter>
+                                <div className="flex justify-between items-center w-full mt-4 space-x-2">
+                                    <div>
+                                        <span className="text-2xl font-bold">{slideIndex + 1}</span>
+                                        <span className="text-muted-foreground">/{totalSlides}</span>
+                                    </div>
+                                    <div className="flex space-x-4">
+                                        <Button variant="outline" size="icon" onClick={handlePrev}>
+                                            &lt;
+                                        </Button>
+                                        <Button variant="outline" size="icon" onClick={handleNext}>
+                                            &gt;
+                                        </Button>
+                                    </div>
+                                </div>
+                            </CardFooter>
+                        </Card>
                 }
 
                 <Card className="w-full shadow-lg rounded-2xl">
