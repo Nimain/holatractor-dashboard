@@ -8,7 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import HolaTractor from "../../../../assets/traclog.png"
 
 const navigationItems = [
-  { icon: '🔴', label: 'Dashboard', href: '/dashboard' },
+  { icon: '🔴', label: 'Dashboard', href: '/dealer' },
   { icon: '🌾', label: 'Farms', href: '/farms' },
   { icon: '💼', label: 'Business', href: '/business' },
 ]

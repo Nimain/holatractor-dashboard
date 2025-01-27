@@ -8,7 +8,7 @@ import 'slick-carousel/slick/slick-theme.css';
 import { MapContainer, TileLayer, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';  // Import leaflet styles
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
-import { Check, Tractor as TractorIcon, Smartphone, Wrench, Upload } from "lucide-react"
+import { Check, Tractor as TractorIcon, Smartphone, Wrench, Upload, User } from "lucide-react"
 import { Pie, PieChart, Cell, ResponsiveContainer } from "recharts"
 import 'keen-slider/keen-slider.min.css';
 import Link from 'next/link';
@@ -263,19 +263,15 @@ const HomeDashboard = (
                 {
                     operators.length === 0 ? (
                         <Card className="w-full shadow-lg rounded-2xl">
-                            <CardContent className="flex items-center justify-center h-full">
-                                <div className="text-center">
-                                    <Image
-                                        src="https://img.freepik.com/premium-vector/available-allowed-icon-concept_313674-42037.jpg"
-                                        alt="No Operator Available"
-                                        className="w-64 h-64 object-cover rounded-full mx-auto mb-4"
-                                        width={256}
-                                        height={256}
-                                        unoptimized={true}
-                                    />
-                                    <h2 className="text-lg font-semibold">No Operator Available</h2>
+                            <CardContent className="flex flex-col items-center justify-center h-full p-6">
+                            <div className="text-center">
+                                <div className="mb-4 p-4 bg-gray-100 rounded-full inline-block">
+                                    <User className="w-16 h-16 text-gray-400" />
                                 </div>
-                            </CardContent>
+                                <h2 className="text-xl font-semibold mb-2">No Operator Available</h2>
+                                <p className="text-sm text-gray-500">Add operators to see their details here.</p>
+                            </div>
+                        </CardContent>
                         </Card>
                     ) :
                         <Card className="w-full shadow-lg rounded-2xl">

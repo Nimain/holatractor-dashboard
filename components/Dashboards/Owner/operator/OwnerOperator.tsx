@@ -44,6 +44,7 @@ import OperatorRequests from './OperatorRequests';
 import { io, Socket } from 'socket.io-client';
 import TranslatedText from '@/components/Menubar/TranslatedText';
 import { ownerOperatorTranslations } from './OwnerOperatorTranslation';
+import { EmptyState } from '@/utils/EmptyStates';
 
 interface user {
     userId: string;
@@ -401,10 +402,15 @@ const OwnerOperator = () => {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {fetchingOperatorDetails ? <OperatorTableShrimmer />
-                            :
-                            allOperators.length === 0 ? <p><TranslatedText greetings={ownerOperatorTranslations.noOperatorsAvailable} /></p>
-                                :
+                        {fetchingOperatorDetails ? (
+                            <OperatorTableShrimmer />
+                        ) : allOperators.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={8}>
+                                    <EmptyState heading='No Operators Found' heading2='It looks like there are no operators available. Add a new operator to get started.' />
+                                </TableCell>
+                            </TableRow>
+                        ) :
                                 allOperators.map((customer, i) => (
                                     <Dialog open={isOpen} onOpenChange={setIsOpen} key={i}>
                                         <DialogTrigger asChild>
