@@ -21,142 +21,145 @@ import OwnerShrimmer from '../Owner/_components/OwnerShrimmer';
 import TranslatedText, { TranslatedTaskText } from '@/components/Menubar/TranslatedText';
 import { operatorDashboardTranslations } from './OperatorDashboardTranslations';
 import { newBookingTranslations } from '../Farmer/FarmerTranslation';
+import { CircularProgress } from '@mui/material';
 
 interface user {
-    userId: string;
-    image: string;
-    name: string;
-    email: string;
-  }
+  userId: string;
+  image: string;
+  name: string;
+  email: string;
+}
 
 const NewDashboard = () => {
-    const [operator, setOperator] = useState<Operator | null>(null)
-    const [stores, setStores] = useState<OperatorInStore[]>([])
-    const [bookings, setBookings] = useState<Booking[]>([])
-    const [latestBookings, setLatestBookings] = useState<Booking[]>([])
-    const [todayBookings, setTodayBookings] = useState(0)
-    const [fetchingOperatorDetails, setFetchingOperatorDetails] = useState(false)
-    const [updateStatusBookingCode, setUpdateStatusBookingCode] = useState("")
+  const [operator, setOperator] = useState<Operator | null>(null)
+  const [stores, setStores] = useState<OperatorInStore[]>([])
+  const [bookings, setBookings] = useState<Booking[]>([])
+  const [latestBookings, setLatestBookings] = useState<Booking[]>([])
+  const [todayBookings, setTodayBookings] = useState(0)
+  const [fetchingOperatorDetails, setFetchingOperatorDetails] = useState(false)
+  const [updateStatusBookingCode, setUpdateStatusBookingCode] = useState("")
 
-    const { cookie } = useCookie()
-    const user: user = cookie.get("user")
-    const access_token = cookie.get("access_token");
+  const { cookie } = useCookie()
+  const user: user = cookie.get("user")
+  const access_token = cookie.get("access_token");
 
-    function handleStatusChange(id: string, value: string) {
-      setUpdateStatusBookingCode(id)
-      let url = ""
-      if(value === BookingStatus.Arriving) url = `/operatorbooking/${id}/arriving`
-      else if(value === BookingStatus.Arrived) url = `/operatorbooking/${id}/arrived`
-      else if (value === BookingStatus.Stopped) url = `/operatorbooking/${id}/pausing`
-      else if (value === BookingStatus.Finished) url = `/operatorbooking/${id}/complete`
-      else if (value === BookingStatus.Started) url = `/operatorbooking/${id}/starting`
-      if (!url) {
-          errorMessage("Invalid select")
-          return
+  async function handleStatusChange(id: string, value: string) {
+    setUpdateStatusBookingCode(id)
+    let url = ""
+    if (value === BookingStatus.Arriving) url = `/operatorbooking/${id}/arriving`
+    else if (value === BookingStatus.Arrived) url = `/operatorbooking/${id}/arrived`
+    else if (value === BookingStatus.Stopped) url = `/operatorbooking/${id}/pausing`
+    else if (value === BookingStatus.Finished) url = `/operatorbooking/${id}/complete`
+    else if (value === BookingStatus.Started) url = `/operatorbooking/${id}/starting`
+    if (!url) {
+      errorMessage("Invalid select")
+      return
+    }
+    renderInstance.patch(url, {}, {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+    }).then(async () => {
+      const updatedBookings = await renderInstance.get(`/operator/getOperator/${user.userId}`)
+      setLatestBookings(updatedBookings.data.latestBookings)
+      successMessage("Status changed")
+    }).catch((err) => {
+      if (err.response && err.response.status === 404 && err.response.data.message === "Booking not found") {
+        errorMessage("Booking not valid")
+      } else if (err.response && err.response.status === 404 && err.response.data.message === "Operator not found") {
+        errorMessage("Operator not valid")
+      } else if (err.response && err.response.status === 400 && err.response.data.message === "Operator has not assigned to this booking") {
+        errorMessage("Operator has not assigned to this booking")
+      } else if (err.response && err.response.status === 400 && err.response.data.message === "Job has not started yet") {
+        errorMessage("Job has not started yet")
+      } else if (err.response && err.response.status === 409 && err.response.data.message === "This bakking has no payment details") {
+        errorMessage("This bakking has no payment details added")
+      } else {
+        errorMessage("Error updating the status")
       }
-      renderInstance.patch(url, {}, {
-          headers: {
-              Authorization: `Bearer ${access_token}`,
-          },
-      }).then(() => {
-          successMessage("Status changed")
-      }).catch((err) => {
-          if (err.response && err.response.status === 404 && err.response.data.message === "Booking not found") {
-              errorMessage("Booking not valid")
-          } else if (err.response && err.response.status === 404 && err.response.data.message === "Operator not found") {
-              errorMessage("Operator not valid")
-          } else if (err.response && err.response.status === 400 && err.response.data.message === "Operator has not assigned to this booking") {
-              errorMessage("Operator has not assigned to this booking")
-          } else if (err.response && err.response.status === 400 && err.response.data.message === "Job has not started yet") {
-              errorMessage("Job has not started yet")
-          } else if (err.response && err.response.status === 409 && err.response.data.message === "This bakking has no payment details") {
-              errorMessage("This bakking has no payment details added")
-          } else {
-              errorMessage("Error updating the status")
-          }
-      }).finally(() => {
-          setUpdateStatusBookingCode("")
-      })
+    }).finally(() => {
+      setUpdateStatusBookingCode("")
+    })
   }
-  
-    function fetchOperator(){
-      setFetchingOperatorDetails(true)
-  
-      renderInstance.get(`/operator/getOperator/${user.userId}`)
-      .then((res)=>{
+
+  function fetchOperator() {
+    setFetchingOperatorDetails(true)
+
+    renderInstance.get(`/operator/getOperator/${user.userId}`)
+      .then((res) => {
         setOperator(res.data.details)
         setStores(res.data.stores)
         setBookings(res.data.bookings)
         setTodayBookings(res.data.todayBookings)
         setLatestBookings(res.data.latestBookings)
-      }).catch((err)=>{
+      }).catch((err) => {
         errorMessage("Error fetching user detaild")
-      }).finally(()=>{
+      }).finally(() => {
         setFetchingOperatorDetails(false)
       })
+  }
+
+  useEffect(() => {
+    if (user) {
+      fetchOperator()
     }
-  
-    useEffect(()=>{
-      if(user){
-        fetchOperator()
-      }
-    },[])
+  }, [])
 
-    const transactions = [
-        {
-          type: "expense",
-          title: "Subscription Payment",
-          date: "Today, August 20, 2021",
-          time: "(10:06 PM)",
-          amount: 1200,
-        },
-        {
-          type: "income",
-          title: "Influencer Income",
-          date: "Today, August 20, 2021",
-          time: "(10:06 PM)",
-          amount: 1200,
-        },
-        {
-          type: "income",
-          title: "Influencer Income",
-          date: "Today, August 20, 2021",
-          time: "(10:06 PM)",
-          amount: 1200,
-        },
-      ]
+  const transactions = [
+    {
+      type: "expense",
+      title: "Subscription Payment",
+      date: "Today, August 20, 2021",
+      time: "(10:06 PM)",
+      amount: 1200,
+    },
+    {
+      type: "income",
+      title: "Influencer Income",
+      date: "Today, August 20, 2021",
+      time: "(10:06 PM)",
+      amount: 1200,
+    },
+    {
+      type: "income",
+      title: "Influencer Income",
+      date: "Today, August 20, 2021",
+      time: "(10:06 PM)",
+      amount: 1200,
+    },
+  ]
 
-      return (
-        <div>
-          <div className="flex flex-col">
-            {/* Tasks Section */}
-            <div className="flex gap-8 p-0 md:p-6 flex-col 1200px:flex-row bg-gray-50">
-              {/* Tasks Section */}
-              <div className="flex-1">
-                <div className="bg-white h-full flex flex-col rounded-xl">
-                  <div className="1200px:p-6 flex-grow">
-                    <div className="flex justify-between items-center mb-6 p-4 md:p-0">
-                      <h2 className="text-lg font-semibold flex items-center space-x-2">
-                        <span className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200">
-                          <BookOpen className="w-4 h-4 text-gray-600" /> {/* Icon inside a rounded box */}
-                        </span>
-                        <span><TranslatedText greetings={operatorDashboardTranslations.bookings} /></span>
-                      </h2>
-                      <Link href={"/operator/bookings"} className="text-sm text-gray-600 hover:text-gray-800">See All</Link>
-                    </div>
-    
-                    <div className="flex gap-6 flex-col 1400px:flex-row">
-                      {
-                        fetchingOperatorDetails ? 
-                        <div className='w-full bg-gray-300 animate-pulse rounded-xl h-80' />
-                        :
-                        latestBookings.map((booking, index)=>{
-                          const user_name = `${booking.user?.first_name} ${booking.user?.middle_name ?? ""} ${booking.user?.last_name}`
-                          return(
-                            <Card className="w-full 1200px:max-w-3xl bg-zinc-900 text-white shadow-lg" key={index}>
+  return (
+    <div>
+      <div className="flex flex-col">
+        {/* Tasks Section */}
+        <div className="flex gap-8 p-0 md:p-6 flex-col 1200px:flex-row bg-gray-50">
+          {/* Tasks Section */}
+          <div className="flex-1">
+            <div className="bg-white h-full flex flex-col rounded-xl">
+              <div className="1200px:p-6 flex-grow">
+                <div className="flex justify-between items-center mb-6 p-4 md:p-0">
+                  <h2 className="text-lg font-semibold flex items-center space-x-2">
+                    <span className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200">
+                      <BookOpen className="w-4 h-4 text-gray-600" /> {/* Icon inside a rounded box */}
+                    </span>
+                    <span><TranslatedText greetings={operatorDashboardTranslations.bookings} /></span>
+                  </h2>
+                  <Link href={"/operator/bookings"} className="text-sm text-gray-600 hover:text-gray-800">See All</Link>
+                </div>
+
+                <div className="flex gap-6 flex-col 1400px:flex-row">
+                  {
+                    fetchingOperatorDetails ?
+                      <div className='w-full bg-gray-300 animate-pulse rounded-xl h-80' />
+                      :
+                      latestBookings.map((booking, index) => {
+                        const user_name = `${booking.user?.first_name} ${booking.user?.middle_name ?? ""} ${booking.user?.last_name}`
+                        return (
+                          <Card className="w-full 1200px:max-w-3xl bg-zinc-900 text-white shadow-lg" key={index}>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                               <CardTitle className="text-lg font-bold">#holabook{booking.id.slice(-4)}</CardTitle>
-                              <Badge 
+                              <Badge
                                 variant={(booking.bookingStatus && booking.bookingStatus === BookingStatus.Finished) ? 'finished' : 'default'}
                               >
                                 {booking.bookingStatus}
@@ -212,110 +215,135 @@ const NewDashboard = () => {
                             </CardContent>
                             <CardFooter className="flex justify-between items-center flex-wrap gap-3">
                               <div className="text-sm">
-                              <TranslatedText greetings={operatorDashboardTranslations.created} />: {format(new Date(booking.createdAt), 'PPP')}
+                                <TranslatedText greetings={operatorDashboardTranslations.created} />: {format(new Date(booking.createdAt), 'PPP')}
                               </div>
                               {
                                 booking.bookingStatus && (
                                   booking.bookingStatus === BookingStatus.Accepted ?
-                                  <Button className="bg-primaryColor text-white hover:bg-primaryColor" onClick={()=>{handleStatusChange(booking.id, BookingStatus.Arriving)}}>
-                                    <TranslatedText greetings={operatorDashboardTranslations.arriving} />
-                                  </Button>
-                                  : booking.bookingStatus === BookingStatus.Arriving ? 
-                                  <Button className="bg-primaryColor text-white hover:bg-primaryColor" onClick={()=>{handleStatusChange(booking.id, BookingStatus.Arrived)}}>
-                                    <TranslatedText greetings={operatorDashboardTranslations.arrived} />
-                                  </Button>
-                                  : (booking.bookingStatus === BookingStatus.Arrived || booking.bookingStatus === BookingStatus.Stopped) ?
-                                  <Button className="bg-primaryColor text-white hover:bg-primaryColor" onClick={()=>{handleStatusChange(booking.id, BookingStatus.Started)}}>
-                                    <TranslatedText greetings={operatorDashboardTranslations.starting} />
-                                  </Button>
-                                  : (booking.bookingStatus === BookingStatus.Started) && <div className='space-x-2'>
-                                  <Button className="bg-primaryColor text-white hover:bg-primaryColor" onClick={()=>{handleStatusChange(booking.id, BookingStatus.Stopped)}}>
-                                  <TranslatedText greetings={operatorDashboardTranslations.pause} />
-                                  </Button>
-                                  <Button className="bg-primaryColor text-white hover:bg-primaryColor" onClick={()=>{handleStatusChange(booking.id, BookingStatus.Finished)}}>
-                                  <TranslatedText greetings={operatorDashboardTranslations.complete} />
-                                  </Button>
-                                  </div>
+                                    <Button className="bg-primaryColor text-white hover:bg-primaryColor" onClick={() => { handleStatusChange(booking.id, BookingStatus.Arriving) }} disabled={updateStatusBookingCode === booking.id}>
+                                      {
+                                        updateStatusBookingCode === booking.id ?
+                                          <CircularProgress color='inherit' size={32} />
+                                          :
+                                          <TranslatedText greetings={operatorDashboardTranslations.arriving} />
+                                      }
+                                    </Button>
+                                    : booking.bookingStatus === BookingStatus.Arriving ?
+                                      <Button className="bg-primaryColor text-white hover:bg-primaryColor" onClick={() => { handleStatusChange(booking.id, BookingStatus.Arrived) }} disabled={updateStatusBookingCode === booking.id}>
+                                        {
+                                          updateStatusBookingCode === booking.id ?
+                                            <CircularProgress color='inherit' size={32} />
+                                            :
+                                            <TranslatedText greetings={operatorDashboardTranslations.arrived} />
+                                        }
+                                      </Button>
+                                      : (booking.bookingStatus === BookingStatus.Arrived || booking.bookingStatus === BookingStatus.Stopped) ?
+                                        <Button className="bg-primaryColor text-white hover:bg-primaryColor" onClick={() => { handleStatusChange(booking.id, BookingStatus.Started) }} disabled={updateStatusBookingCode === booking.id}>
+                                          {
+                                            updateStatusBookingCode === booking.id ?
+                                              <CircularProgress color='inherit' size={32} />
+                                              :
+                                              <TranslatedText greetings={operatorDashboardTranslations.starting} />
+                                          }
+                                        </Button>
+                                        : (booking.bookingStatus === BookingStatus.Started) && <div className='space-x-2'>
+                                          <Button className="bg-primaryColor text-white hover:bg-primaryColor" onClick={() => { handleStatusChange(booking.id, BookingStatus.Stopped) }} disabled={updateStatusBookingCode === booking.id}>
+                                            {
+                                              updateStatusBookingCode === booking.id ?
+                                                <CircularProgress color='inherit' size={32} />
+                                                :
+                                                <TranslatedText greetings={operatorDashboardTranslations.pause} />
+                                            }
+                                          </Button>
+                                          <Button className="bg-primaryColor text-white hover:bg-primaryColor" onClick={() => { handleStatusChange(booking.id, BookingStatus.Finished) }} disabled={updateStatusBookingCode === booking.id}>
+                                            {
+                                              updateStatusBookingCode === booking.id ?
+                                                <CircularProgress color='inherit' size={32} />
+                                                :
+                                                <TranslatedText greetings={operatorDashboardTranslations.complete} />
+                                            }
+                                          </Button>
+                                        </div>
                                 )
                               }
                             </CardFooter>
                           </Card>
-                          )
-                        })
-                      }
-                    </div>
-    
-                    {/* Notification Toast */}
-                    <div className="mt-6 bg-gray-900 text-white p-4 rounded-xl flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        {
-                            todayBookings === 0 ?
+                        )
+                      })
+                  }
+                </div>
+
+                {/* Notification Toast */}
+                <div className="mt-6 bg-gray-900 text-white p-4 rounded-xl flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    {
+                      todayBookings === 0 ?
                         <span><TranslatedText greetings={operatorDashboardTranslations.zeroTasks} /></span>
                         :
                         <span><TranslatedTaskText greetings={todayBookings} /></span>
-                        }
-                      </div>
-                    </div>
+                    }
                   </div>
                 </div>
               </div>
-    
-              {/* Calendar Section */}
-              <CalendarOne booking={bookings} />
-              {/* <CalendarTwo /> */}
-    
             </div>
           </div>
-          <div className="grid gap-6 grid-cols-1 1200px:grid-cols-2 mt-2">
-            <div className="space-y-6">
-              <div className="rounded-lg bg-white p-6 shadow">
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-xl font-semibold"><TranslatedText greetings={operatorDashboardTranslations.lastTransaction} /></h2>
-                  <Link href={'#'} className="text-sm text-blue-600 hover:underline">
-                  <TranslatedText greetings={operatorDashboardTranslations.seeAll} />
-                  </Link>
+
+          {/* Calendar Section */}
+          <CalendarOne booking={bookings} />
+          {/* <CalendarTwo /> */}
+
+        </div>
+      </div>
+      <div className="grid gap-6 grid-cols-1 1200px:grid-cols-2 mt-2">
+        <div className="space-y-6">
+          <div className="rounded-lg bg-white p-6 shadow">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold"><TranslatedText greetings={operatorDashboardTranslations.lastTransaction} /></h2>
+              <Link href={'#'} className="text-sm text-blue-600 hover:underline">
+                <TranslatedText greetings={operatorDashboardTranslations.seeAll} />
+              </Link>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="rounded-lg bg-card p-4 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-full bg-red-100 p-2">
+                    <ArrowUpRight className="h-4 w-4 text-red-600" />
+                  </div>
+                  <span className="text-sm text-muted-foreground"><TranslatedText greetings={operatorDashboardTranslations.income} /></span>
                 </div>
-    
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="rounded-lg bg-card p-4 shadow-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="rounded-full bg-red-100 p-2">
-                        <ArrowUpRight className="h-4 w-4 text-red-600" />
-                      </div>
-                      <span className="text-sm text-muted-foreground"><TranslatedText greetings={operatorDashboardTranslations.income} /></span>
-                    </div>
-                    <p className="mt-2 text-2xl font-semibold">$0</p>
-                  </div>
-                  <div className="rounded-lg bg-card p-4 shadow-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="rounded-full bg-green-100 p-2">
-                        <ArrowDownRight className="h-4 w-4 text-green-600" />
-                      </div>
-                      <span className="text-sm text-muted-foreground"><TranslatedText greetings={operatorDashboardTranslations.pending} /></span>
-                    </div>
-                    <p className="mt-2 text-2xl font-semibold">$0</p>
-                  </div>
-                  <div className="rounded-lg bg-card p-4 shadow-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="rounded-full bg-blue-100 p-2">
-                        <Repeat className="h-4 w-4 text-blue-600" />
-                      </div>
-                      <span className="text-sm text-muted-foreground"><TranslatedText greetings={operatorDashboardTranslations.jobs} /></span>
-                    </div>
-                    <p className="mt-2 text-2xl font-semibold">
-                      {bookings.length}
-                    </p>
-                  </div>
-                </div>
+                <p className="mt-2 text-2xl font-semibold">$0</p>
               </div>
-    
-              <div className="rounded-lg border bg-card">
-                <div className="flex items-center justify-between border-b p-4">
-                  <div className="text-sm text-muted-foreground"><TranslatedText greetings={operatorDashboardTranslations.transaction} /></div>
-                  <div className="text-sm text-muted-foreground"><TranslatedText greetings={operatorDashboardTranslations.amount} /></div>
+              <div className="rounded-lg bg-card p-4 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-full bg-green-100 p-2">
+                    <ArrowDownRight className="h-4 w-4 text-green-600" />
+                  </div>
+                  <span className="text-sm text-muted-foreground"><TranslatedText greetings={operatorDashboardTranslations.pending} /></span>
                 </div>
-                <div className="divide-y">
-                  {/* {transactions.map((transaction, i) => (
+                <p className="mt-2 text-2xl font-semibold">$0</p>
+              </div>
+              <div className="rounded-lg bg-card p-4 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-full bg-blue-100 p-2">
+                    <Repeat className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <span className="text-sm text-muted-foreground"><TranslatedText greetings={operatorDashboardTranslations.jobs} /></span>
+                </div>
+                <p className="mt-2 text-2xl font-semibold">
+                  {bookings.length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border bg-card">
+            <div className="flex items-center justify-between border-b p-4">
+              <div className="text-sm text-muted-foreground"><TranslatedText greetings={operatorDashboardTranslations.transaction} /></div>
+              <div className="text-sm text-muted-foreground"><TranslatedText greetings={operatorDashboardTranslations.amount} /></div>
+            </div>
+            <div className="divide-y">
+              {/* {transactions.map((transaction, i) => (
                     <div key={i} className="flex items-center justify-between p-4">
                       <div className="flex items-center gap-4">
                         <div className="rounded-full bg-background p-2">
@@ -331,91 +359,91 @@ const NewDashboard = () => {
                       <div className="font-medium">${transaction.amount}</div>
                     </div>
                   ))} */}
-                  <p className='ml-2 my-4'><TranslatedText greetings={operatorDashboardTranslations.noTransactions} /></p>
-                </div>
-              </div>
+              <p className='ml-2 my-4'><TranslatedText greetings={operatorDashboardTranslations.noTransactions} /></p>
             </div>
-    
-            <div className="space-y-6">
-              <div className="rounded-lg bg-white p-6 shadow">
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-xl font-semibold"><TranslatedText greetings={operatorDashboardTranslations.store} /></h2>
-                  <Link href={'/operator/stores'} className="text-sm text-blue-600 hover:underline">
-                  <TranslatedText greetings={operatorDashboardTranslations.seeAll} />
-                  </Link>
-                </div>
-    
-                <div className="grid gap-8 grid-cols-1 md:grid-cols-2 1800px:grid-cols-3">
-                  {
-                  fetchingOperatorDetails ?
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="rounded-lg bg-white p-6 shadow">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold"><TranslatedText greetings={operatorDashboardTranslations.store} /></h2>
+              <Link href={'/operator/stores'} className="text-sm text-blue-600 hover:underline">
+                <TranslatedText greetings={operatorDashboardTranslations.seeAll} />
+              </Link>
+            </div>
+
+            <div className="grid gap-8 grid-cols-1 md:grid-cols-2 1800px:grid-cols-3">
+              {
+                fetchingOperatorDetails ?
                   Array.from({ length: 3 }).map((_, index) => (
                     <div key={index} className="animate-pulse bg-gray-300 rounded-lg shadow-sm w-full h-64" />
                   ))
                   :
                   stores.map((influencer, i) => (
-                    <Card 
-                    key={i} 
-                    className="w-full flex-shrink-0 rounded-xl bg-white shadow-md transition-all duration-300 hover:scale-55 hover:shadow-xl hover:bg-green-100 hover:ring-2 hover:ring-green-300"
-                  >
-                       <div className="relative">
-                         <Image
-                           src={influencer.store.image}
-                           alt={`${influencer.store.name}'s profile`}
-                           width={400}
-                           height={300}
-                           className="aspect-[4/3] w-full object-cover rounded-t-xl"
-                         />
-                         <button className="absolute right-4 top-4 rounded-full bg-white p-2">
-                           <Heart className="h-4 w-4 text-gray-600" />
-                         </button>
-                       </div>
-                       <div className="p-4">
-                         <div className="mb-2 space-y-2">
-                           <div className="flex items-center gap-1">
-                             <span className="text-lg md:text-2xl font-semibold">${influencer.cost_per_hour}</span>
-                             <span className="text-gray-600">/<TranslatedText greetings={operatorDashboardTranslations.perHour} /></span>
-                           </div>
-                           <div className="flex items-center gap-1">
-                             <span className="text-lg md:text-2xl font-semibold">${influencer.cost_per_job}</span>
-                             <span className="text-gray-600">/<TranslatedText greetings={operatorDashboardTranslations.perJob} /></span>
-                           </div>
-                           <div className="flex items-center gap-1">
-                             <span className="text-lg md:text-2xl font-semibold">${influencer.cost_per_month}</span>
-                             <span className="text-gray-600">/<TranslatedText greetings={operatorDashboardTranslations.perMonth} /></span>
-                           </div>
-                         </div>
-                         <p className="mb-3 text-sm text-gray-600">{influencer.store.name}</p>
-                         <div className="flex items-center gap-4 text-gray-600">
-                           <div className="flex items-center gap-1">
-                             <svg
-                               className="h-5 w-5"
-                               fill="none"
-                               stroke="currentColor"
-                               viewBox="0 0 24 24"
-                             >
-                               <path
-                                 strokeLinecap="round"
-                                 strokeLinejoin="round"
-                                 strokeWidth={1.5}
-                                 d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                               />
-                             </svg>
-                             <div className="flex items-center gap-1">
-                             <span className="text-sm font-semibold"><TranslatedText greetings={operatorDashboardTranslations.joinedSince} />: </span>
-                             <span className="text-gray-600">{new Date(influencer.createdAt).toLocaleDateString()}</span>
-                           </div>
-                           </div>
-                         </div>
-                       </div>
-                     </Card>
+                    <Card
+                      key={i}
+                      className="w-full flex-shrink-0 rounded-xl bg-white shadow-md transition-all duration-300 hover:scale-55 hover:shadow-xl hover:bg-green-100 hover:ring-2 hover:ring-green-300"
+                    >
+                      <div className="relative">
+                        <Image
+                          src={influencer.store.image}
+                          alt={`${influencer.store.name}'s profile`}
+                          width={400}
+                          height={300}
+                          className="aspect-[4/3] w-full object-cover rounded-t-xl"
+                        />
+                        <button className="absolute right-4 top-4 rounded-full bg-white p-2">
+                          <Heart className="h-4 w-4 text-gray-600" />
+                        </button>
+                      </div>
+                      <div className="p-4">
+                        <div className="mb-2 space-y-2">
+                          <div className="flex items-center gap-1">
+                            <span className="text-lg md:text-2xl font-semibold">${influencer.cost_per_hour}</span>
+                            <span className="text-gray-600">/<TranslatedText greetings={operatorDashboardTranslations.perHour} /></span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-lg md:text-2xl font-semibold">${influencer.cost_per_job}</span>
+                            <span className="text-gray-600">/<TranslatedText greetings={operatorDashboardTranslations.perJob} /></span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-lg md:text-2xl font-semibold">${influencer.cost_per_month}</span>
+                            <span className="text-gray-600">/<TranslatedText greetings={operatorDashboardTranslations.perMonth} /></span>
+                          </div>
+                        </div>
+                        <p className="mb-3 text-sm text-gray-600">{influencer.store.name}</p>
+                        <div className="flex items-center gap-4 text-gray-600">
+                          <div className="flex items-center gap-1">
+                            <svg
+                              className="h-5 w-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={1.5}
+                                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                              />
+                            </svg>
+                            <div className="flex items-center gap-1">
+                              <span className="text-sm font-semibold"><TranslatedText greetings={operatorDashboardTranslations.joinedSince} />: </span>
+                              <span className="text-gray-600">{new Date(influencer.createdAt).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
                   ))}
-                </div>
-              </div>
             </div>
           </div>
         </div>
-    
-      );
-    };
+      </div>
+    </div>
+
+  );
+};
 
 export default NewDashboard
