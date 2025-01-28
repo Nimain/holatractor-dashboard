@@ -89,7 +89,7 @@ export default function EnhancedOwnerTable() {
       .includes(searchTerm.toLowerCase())
   )
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen w-full bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">
