@@ -25,6 +25,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/redux/store';
 import { changeNewStoreShow } from '@/redux/NewStoreShow/NewStoreShow';
+import { useOwnerStoreContext } from '@/components/wrappers/StoreProvider';
 
 interface Location {
     latitude: number | null;
@@ -75,6 +76,8 @@ const NewStore = () => {
     const access_token = cookie.get("access_token")
 
     const fileInputRef = useRef<HTMLInputElement>(null)
+
+    const { setStores } = useOwnerStoreContext()
 
     const setOpen = () => {
         dispatch(changeNewStoreShow())
@@ -182,6 +185,7 @@ const NewStore = () => {
                 setFiles([])
                 setMainImage(null)
                 setOpen()
+                setStores((prevStores) => [...prevStores, res.data]);
             }
         }).catch((err) => {
 

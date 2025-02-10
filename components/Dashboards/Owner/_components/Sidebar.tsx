@@ -7,7 +7,7 @@ import { useCookie } from "next-cookie"
 import Image from "next/image"
 import Link from "next/link"
 import { useState, useEffect } from "react"
-import { Tooltip } from "@mui/material"
+import { CircularProgress, Tooltip } from "@mui/material"
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import StyleIcon from '@mui/icons-material/Style';
 import { Separator } from "@/components/ui/separator"
@@ -21,6 +21,7 @@ import { changeNewStoreShow } from "@/redux/NewStoreShow/NewStoreShow"
 import { useRouter } from "next/navigation"
 import TranslatedText from "@/components/Menubar/TranslatedText"
 import { ownerSidebar } from "./OwnerSidebarTranslations"
+import { useOwnerStoreContext } from "@/components/wrappers/StoreProvider"
 
 interface user {
     userId: string;
@@ -33,23 +34,14 @@ const Sidebar = () => {
     const [isExpanded, setIsExpanded] = useState(false)
     const [showStoreList, setShowStoreList] = useState(false)
 
-    const [stores, setStores] = useState<Store[]>([])
-
     const { cookie } = useCookie()
     const user: user = cookie.get("user")
+
+    const { fetchOwner, stores, loading } = useOwnerStoreContext();
 
     const dispatch = useDispatch()
 
     const router = useRouter()
-
-    function fetchOwner() {
-        renderInstance.get(`/owner/${user.userId}`)
-            .then((res) => {
-                setStores(res.data.stores)
-            }).catch((err) => {
-                errorMessage("Error fetching user detaild")
-            })
-    }
 
     function handleLogOut() {
         cookie.remove("access_token")
@@ -98,22 +90,29 @@ const Sidebar = () => {
                             </Tooltip>
                             {isExpanded && (
                                 <>
-                                    <TranslatedText greetings={ownerSidebar.store} /> {stores.length}
+                                    <TranslatedText greetings={ownerSidebar.store} /> {loading ? <CircularProgress size={20} color="inherit" /> : stores.length}
                                     <ChevronDown className="h-4 w-4 ml-auto" />
                                 </>
                             )}
                         </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="pl-6 mt-2 space-y-2">
-                        {isExpanded && <Link href={"#"}>
+                        {isExpanded && <>
+                            <div className="w-full flex flex-col gap-2">
+                                {stores.map((store, i) => {
+                                    return (
+                                        <Link key={i} href={`/owner/stores/${store.id}`} className="pl-6 text-sm hover:bg-white/20 py-2 rounded">{store.name}</Link>
+                                    )
+                                })}
+                            </div>
                             <Button
                                 className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
-                                onClick={()=>{dispatch(changeNewStoreShow())}}
+                                onClick={() => { dispatch(changeNewStoreShow()) }}
                             >
                                 <Plus className="h-6 w-6" />
                                 <TranslatedText greetings={ownerSidebar.newStore} />
                             </Button>
-                        </Link>}
+                        </>}
                     </CollapsibleContent>
                 </Collapsible>
                 <Link href={"/owner/bookings"}>

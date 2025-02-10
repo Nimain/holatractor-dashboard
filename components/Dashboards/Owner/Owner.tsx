@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react'
 import HomeDashboard from './_components/HomeDashboard'
 import OwnerShrimmer from './_components/OwnerShrimmer'
 import { io, Socket } from 'socket.io-client'
+import { useOwnerStoreContext } from '@/components/wrappers/StoreProvider'
 
 interface user {
   userId: string;
@@ -18,7 +19,6 @@ interface user {
 
 const OwnerDashboardPage = () => {
   const [fetchingOwnerDetails, setFetchingOwnerDetails] = useState(false)
-  const [stores, setStores] = useState<Store[]>([])
   const [operators, setOperators] = useState<OperatorInStore[]>([])
   const [bookings, setBookings] = useState<Booking[]>([])
   const [tractors, setTractors] = useState<Tractor[]>([])
@@ -28,6 +28,8 @@ const OwnerDashboardPage = () => {
 
   const { cookie } = useCookie()
   const user: user = cookie.get("user")
+
+  const { setStores, stores } = useOwnerStoreContext()
 
   function fetchOwner() {
     setFetchingOwnerDetails(true)
