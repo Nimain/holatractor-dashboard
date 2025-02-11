@@ -26,7 +26,7 @@ const currencies = [
     // Add more currencies as needed
 ]
 
-export default function PaymentMethods({ bookingId }: { bookingId: string }) {
+export default function PaymentMethods({ bookingId, fetchBooking }: { bookingId: string; fetchBooking?: (id: string) => {}; }) {
     const [open, setOpen] = useState(false)
     const [selectedMethod, setSelectedMethod] = useState<string | null>(null)
     const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -126,8 +126,12 @@ export default function PaymentMethods({ bookingId }: { bookingId: string }) {
             headers: {
                 Authorization: `Bearer ${access_token}`,
             },
-        }).then((res) => {
+        }).then(async (res) => {
+            if(fetchBooking){
+                fetchBooking(id)
+            }
             successMessage("Thank you for confirming. Now assign an operator")
+            setOpen(false)
         }).catch((err) => {
             if (err.response && err.response.status === 404) {
                 if(err.response.data.message === "Booking is not valid"){
