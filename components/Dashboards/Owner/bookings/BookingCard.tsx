@@ -176,7 +176,7 @@ export function BookingCard({ ticket: ticketProps, confirming, handleReject }: B
                   </div>
                   {
                     ticket.bookingStatus === BookingStatus.Open && ticket.owner_confirm &&
-                    <AssignOperator selectedRequest={ticket.id} storeId={ticket.store_id} store={ticket.store} />
+                    <AssignOperator selectedRequest={ticket.id} storeId={ticket.store_id}/>
                   }
                   <div className="flex gap-3">
                     <div className="flex flex-col items-center">

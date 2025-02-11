@@ -16,12 +16,14 @@ import { Briefcase, FileText, Mail, Phone } from 'lucide-react';
 import TranslatedText from '@/components/Menubar/TranslatedText';
 import { ownerBookingsTranslation } from './OwnerBookingsTranslations';
 
-const AssignOperator = ({ selectedRequest, storeId, store }: { selectedRequest: string; storeId?: string | null; store?: Store | null; }) => {
+const AssignOperator = ({ selectedRequest, storeId }: { selectedRequest: string; storeId?: string | null; }) => {
 
     const [isAssignOpen, setIsAssignOpen] = useState(false)
     const [fetchingOperators, setFetchingOperators] = useState(false)
     const [allOperators, setAllOperators] = useState<OperatorInStore[]>([])
     const [assigning, setAssigning] = useState(false)
+
+    const [allRequests, setAllRequests] = useState<string[]>([])
 
     const { cookie } = useCookie()
     const access_token = cookie.get("access_token")
@@ -76,8 +78,24 @@ const AssignOperator = ({ selectedRequest, storeId, store }: { selectedRequest: 
             })
     }
 
+    function handleFetchAllOperatorsRequests() {
+        setFetchingOperators(true)
+        renderInstance.get(`/store/all_operator_requests/${selectedRequest}`)
+            .then((res) => {
+                setAllRequests(res.data)
+            }).catch((err) => {
+                errorMessage("Some error occurred in fetching operators")
+            }).finally(() => {
+                setFetchingOperators(false)
+            })
+    }
+
     useEffect(() => {
         handleFetchAllOperators()
+    }, [])
+
+    useEffect(() => {
+        handleFetchAllOperatorsRequests()
     }, [])
 
     return (
@@ -139,9 +157,9 @@ const AssignOperator = ({ selectedRequest, storeId, store }: { selectedRequest: 
                                                 )}
                                             </CardContent>
                                             <CardFooter>
-                                                <Button className="w-full" disabled={assigning} onClick={() => { handleAssign(operator.operator_id) }}>
+                                                <Button className="w-full" disabled={assigning || allRequests.includes(operator.operator_id)} onClick={() => { handleAssign(operator.operator_id) }}>
                                                     {
-                                                        assigning ? <TranslatedText greetings={ownerBookingsTranslation.assigning} /> : <TranslatedText greetings={ownerBookingsTranslation.assign} />
+                                                        assigning ? <TranslatedText greetings={ownerBookingsTranslation.assigning} /> : allRequests.includes(operator.operator_id) ? "Requested" : <TranslatedText greetings={ownerBookingsTranslation.assign} />
                                                     }
                                                 </Button>
                                             </CardFooter>
