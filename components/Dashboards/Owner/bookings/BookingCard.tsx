@@ -1,5 +1,5 @@
 import { BookingHours, BookingStatus, PaymentStatus, type Booking } from "@/utils/Types/types"
-import { CalendarIcon, Clock, Share2 } from "lucide-react"
+import { CalendarIcon, Clock, RotateCw, Share2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,7 @@ import PaymentReview from "../_components/PaymentProofAction"
 import PaymentMethods from "../_components/BankAccountSelect"
 import { useState } from "react"
 import { renderInstance } from "@/utils/Axios/RenderInstance"
+import { CircularProgress } from "@mui/material"
 
 interface BookingCardProps {
   ticket: Booking
@@ -22,10 +23,13 @@ interface BookingCardProps {
 
 export function BookingCard({ ticket: ticketProps, confirming, handleReject }: BookingCardProps) {
   const [ticket, setTicket] = useState(ticketProps)
+  const [loading, setLoading] = useState(false)
 
   async function fetchBooking(id: string){
+    setLoading(true)
     const response = await renderInstance.get(`/booking/${id}`)
     setTicket(response.data)
+    setLoading(false)
   }
 
   return (
@@ -83,7 +87,12 @@ export function BookingCard({ ticket: ticketProps, confirming, handleReject }: B
 
             <SheetContent className="overflow-auto" style={{ scrollbarWidth: "none" }}>
               <SheetHeader>
-                <SheetTitle className="text-xl font-semibold">Details</SheetTitle>
+                <SheetTitle className="text-xl font-semibold flex items-center gap-2">
+                  <p>Details</p>
+                  {
+                    loading ? <CircularProgress size={20} color="inherit" /> : <RotateCw className="w-5" onClick={()=>{ fetchBooking(ticket.id) }} />
+                  }
+                </SheetTitle>
               </SheetHeader>
 
               {
