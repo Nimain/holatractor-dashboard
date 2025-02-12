@@ -16,16 +16,18 @@ import { CheckCircle, Clock, DollarSign, MessageCircle } from 'lucide-react'
 import { useCookie } from 'next-cookie'
 import React, { useState } from 'react'
 import { operatorWorkPageTranslations } from '../../Operator/WorkSection/WorkPageTranslations'
+import { useOperatorsRequestToJoinStoreContext } from '@/components/wrappers/OperatorsRequestToJoinStoreProvider'
 
 const OperatorRequests = ({ requests }: { requests: OperatorAddStoreReuests[]; }) => {
-    const [loading, setLoading] = useState(false)
+    const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({})
+
+    const { fetchAllOperatorRequests, fetching } = useOperatorsRequestToJoinStoreContext()
 
     const { cookie } = useCookie()
     const access_token = cookie.get("access_token")
 
     const handleAccept = (request: OperatorAddStoreReuests) => {
-
-        setLoading(true)
+        setLoadingStates((prev) => ({ ...prev, [request.id]: true }))
         renderInstance.post('/operator/addOperatorToStore', {
             operator_id: request.operator_id,
             store_id: request.store_id,
@@ -39,7 +41,8 @@ const OperatorRequests = ({ requests }: { requests: OperatorAddStoreReuests[]; }
             headers: {
                 Authorization: `Bearer ${access_token}`,
             }
-        }).then(() => {
+        }).then(async () => {
+            fetchAllOperatorRequests()
             successMessage("Congratulations")
         }).catch((err) => {
             if (err.response && err.response.status === 404 && err.response.data.message === "User is not found") {
@@ -56,7 +59,7 @@ const OperatorRequests = ({ requests }: { requests: OperatorAddStoreReuests[]; }
                 errorMessage("Some error occurred")
             }
         }).finally(() => {
-            setLoading(false)
+            setLoadingStates((prev) => ({ ...prev, [request.id]: false }))
         })
     }
 
@@ -121,8 +124,8 @@ const OperatorRequests = ({ requests }: { requests: OperatorAddStoreReuests[]; }
                                     </CardContent>
                                     <CardFooter className="flex justify-end space-x-2 mt-4">
                                         <FillAcceptanceForm id={requset.id} />
-                                        <Button onClick={() => {handleAccept(requset)}} disabled={loading}>
-                                            {loading ? <TranslatedText greetings={operatorWorkPageTranslations.accepting} /> : <TranslatedText greetings={operatorWorkPageTranslations.accept} />}
+                                        <Button onClick={() => {handleAccept(requset)}} disabled={loadingStates[requset.id] && fetching}>
+                                            {(loadingStates[requset.id] || fetching) ? <TranslatedText greetings={operatorWorkPageTranslations.accepting} /> : <TranslatedText greetings={operatorWorkPageTranslations.accept} />}
                                         </Button>
                                     </CardFooter>
                                 </Card>

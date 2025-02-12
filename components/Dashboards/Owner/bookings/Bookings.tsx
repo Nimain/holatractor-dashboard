@@ -22,7 +22,7 @@ import {
 import { Booking } from "@/utils/Types/types";
 import { useCookie } from "next-cookie";
 import { NestJsBaseURL, renderInstance } from "@/utils/Axios/RenderInstance";
-import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
+import { errorMessage } from "@/utils/Toastify/Messages";
 import { io, Socket } from "socket.io-client";
 import TranslatedText from "@/components/Menubar/TranslatedText";
 import { ownerBookingsTranslation } from "./OwnerBookingsTranslations";
@@ -135,30 +135,6 @@ const Bookings = () => {
             }).finally(() => {
                 setFetchingBookings(false)
             })
-    }
-
-    const handleReject = (id: string) => {
-        setConfirming(true)
-        // Implement accept logic here
-        renderInstance.patch(`/booking/${id}/owner_reject`, {}, {
-            headers: {
-                Authorization: `Bearer ${access_token}`,
-            },
-        }).then((res) => {
-            successMessage("You have rejected this request")
-        }).catch((err) => {
-            if (err.response && err.response.status === 404 && err.response.data.message === "Booking is not valid") {
-                errorMessage("Log in user not found")
-            } else if (err.response && err.response.status === 400 && err.response.data.message === "User has not confirmed the booking. Wait till user booked") {
-                errorMessage("User has not confirmed the booking. Wait till user booked")
-            } else if (err.response && err.response.status === 400 && err.response.data.message === "You are not allowed to perform this task") {
-                errorMessage("You are not allowed to perform this task")
-            } else {
-                errorMessage("Some error occurred")
-            }
-        }).finally(() => {
-            setConfirming(false)
-        })
     }
 
     const handlePageChange = (page: number) => {
@@ -339,7 +315,7 @@ const Bookings = () => {
                             <div className="space-y-4">
                                 {
                                     allBookings.filter(bo => bo.confirm).map((ticket, i) => (
-                                        <BookingCard confirming={confirming} handleReject={handleReject} ticket={ticket} key={i} />
+                                        <BookingCard confirming={confirming} setConfirming={setConfirming} ticket={ticket} accessToken={access_token} key={i} />
                                     ))
                                 }
                             </div>

@@ -1,5 +1,6 @@
 "use client"
 
+import { OperatorsRequestToJoinStoreProvider } from '@/components/wrappers/OperatorsRequestToJoinStoreProvider'
 import { OwnerStoreProvider } from '@/components/wrappers/StoreProvider'
 import dynamic from 'next/dynamic'
 import { ReactNode } from 'react'
@@ -19,8 +20,10 @@ const SidebarWrapper = ({
   return (
     <div className="flex h-screen bg-[#EAF6FA] gap-4 px-4 md:px-8">
       <OwnerStoreProvider>
-        <Sidebar />
-        {children}
+        <OperatorsRequestToJoinStoreProvider>
+          <Sidebar />
+          {children}
+        </OperatorsRequestToJoinStoreProvider>
       </OwnerStoreProvider>
     </div>
   )

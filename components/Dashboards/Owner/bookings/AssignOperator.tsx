@@ -35,6 +35,7 @@ const AssignOperator = ({ selectedRequest, storeId }: { selectedRequest: string;
                 Authorization: `Bearer ${access_token}`,
             },
         }).then((res) => {
+            handleFetchAllOperatorsRequests()
             successMessage("Operator assigned")
             setIsAssignOpen(false)
         }).catch((err) => {

@@ -35,7 +35,7 @@ import { Phone, Mail, MapPin, User } from 'lucide-react'
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Image from 'next/image';
-import { OperatorAddStoreReuests, OperatorInStore } from '@/utils/Types/types';
+import { BookingHours, OperatorAddStoreReuests, OperatorInStore } from '@/utils/Types/types';
 import { useCookie } from 'next-cookie';
 import { NestJsBaseURL, renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
@@ -45,6 +45,8 @@ import { io, Socket } from 'socket.io-client';
 import TranslatedText from '@/components/Menubar/TranslatedText';
 import { ownerOperatorTranslations } from './OwnerOperatorTranslation';
 import { EmptyState } from '@/utils/EmptyStates';
+import { newBookingTranslations } from '../../Farmer/FarmerTranslation';
+import { useOperatorsRequestToJoinStoreContext } from '@/components/wrappers/OperatorsRequestToJoinStoreProvider';
 
 interface user {
     userId: string;
@@ -63,7 +65,7 @@ const OwnerOperator = () => {
     const [activeOperators, setActiveOperators] = useState(0)
     const [fetchingOperatorDetails, setFetchingOperatorDetails] = useState(false)
 
-    const [operatorRequests, setOperatorRequests] = useState<OperatorAddStoreReuests[]>([])
+    const { operatorRequests, setOperatorRequests, fetchAllOperatorRequests } = useOperatorsRequestToJoinStoreContext()
 
     const tabs = [
         { id: 'all', label: 'All', icon: LayoutGrid },
@@ -87,12 +89,6 @@ const OwnerOperator = () => {
             }).finally(() => {
                 setFetchingOperatorDetails(false)
             })
-    }
-
-    function fetchAllOperatorRequests(){
-        renderInstance.get(`/owner/get-requests-from-operators-to-join-store/${user.userId}`)
-        .then((res)=>{setOperatorRequests(res.data)})
-        .catch((err)=>{errorMessage("Error in fetching operator requests")})
     }
 
     useEffect(() => {
@@ -523,7 +519,7 @@ const OwnerOperator = () => {
                                                                         customer.operator.user.country_code && customer.operator.user.mobile &&
                                                                         <div className="flex items-center gap-2">
                                                                             <Phone className="h-4 w-4 text-muted-foreground" />
-                                                                            {/* <span className="text-sm">(629) 555-0123</span> */}
+                                                                            <span className="text-sm">{customer.operator.user.country_code} {customer.operator.user.mobile}</span>
                                                                         </div>
                                                                     }
                                                                     <div className="flex items-center gap-2">
@@ -584,7 +580,7 @@ const OwnerOperator = () => {
                                                                     {customer.operator.OperatorBookingJob.map((job, index) => (
                                                                         <tr key={index} className="border-b last:border-0">
                                                                             <td className="p-4 text-sm">{new Date(job.booking.start_date).toLocaleDateString()}</td>
-                                                                            <td className="p-4 text-sm">{job.booking.booking_hours ?? <TranslatedText greetings={ownerOperatorTranslations.moreThanEightHours} />}</td>
+                                                                            <td className="p-4 text-sm">{job.booking.booking_hours ? job.booking.booking_hours === BookingHours.EIGHT_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['8h']} /> : job.booking.booking_hours === BookingHours.SEVEN_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['7h']} /> : job.booking.booking_hours === BookingHours.SIX_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['6h']} /> : job.booking.booking_hours === BookingHours.FIVE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['5h']} /> : job.booking.booking_hours === BookingHours.FOUR_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['4h']} /> : job.booking.booking_hours === BookingHours.THREE_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['3h']} /> : job.booking.booking_hours === BookingHours.TWO_HOURS ? <TranslatedText greetings={newBookingTranslations.hours['2h']} /> : <TranslatedText greetings={newBookingTranslations.hours['1h']} /> : <TranslatedText greetings={ownerOperatorTranslations.moreThanEightHours} />}</td>
                                                                             <td className="p-4 text-sm">{job.booking.end_date ?new Date(job.booking.end_date).toLocaleDateString() : new Date().toLocaleDateString()}</td>
                                                                             <td className="p-4 text-sm">{job.booking.total_cost.toFixed(2)}</td>
                                                                             <td className="p-4 text-sm">{job.booking.bookingStatus}</td>

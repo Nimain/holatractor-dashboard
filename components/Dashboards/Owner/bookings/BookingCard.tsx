@@ -14,22 +14,49 @@ import PaymentMethods from "../_components/BankAccountSelect"
 import { useState } from "react"
 import { renderInstance } from "@/utils/Axios/RenderInstance"
 import { CircularProgress } from "@mui/material"
+import { errorMessage, successMessage } from "@/utils/Toastify/Messages"
 
 interface BookingCardProps {
   ticket: Booking
   confirming: boolean
-  handleReject: (id: string) => void
+  accessToken: string
+  setConfirming: (id: boolean) => void
 }
 
-export function BookingCard({ ticket: ticketProps, confirming, handleReject }: BookingCardProps) {
+export function BookingCard({ ticket: ticketProps, confirming, setConfirming, accessToken }: BookingCardProps) {
   const [ticket, setTicket] = useState(ticketProps)
   const [loading, setLoading] = useState(false)
 
-  async function fetchBooking(id: string){
+  async function fetchBooking(id: string) {
     setLoading(true)
     const response = await renderInstance.get(`/booking/${id}`)
     setTicket(response.data)
     setLoading(false)
+  }
+
+  const handleReject = (id: string) => {
+    setConfirming(true)
+    // Implement accept logic here
+    renderInstance.patch(`/booking/${id}/owner_reject`, {}, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }).then(async (res) => {
+      await fetchBooking(id)
+      successMessage("You have rejected this request")
+    }).catch((err) => {
+      if (err.response && err.response.status === 404 && err.response.data.message === "Booking is not valid") {
+        errorMessage("Log in user not found")
+      } else if (err.response && err.response.status === 400 && err.response.data.message === "User has not confirmed the booking. Wait till user booked") {
+        errorMessage("User has not confirmed the booking. Wait till user booked")
+      } else if (err.response && err.response.status === 400 && err.response.data.message === "You are not allowed to perform this task") {
+        errorMessage("You are not allowed to perform this task")
+      } else {
+        errorMessage("Some error occurred")
+      }
+    }).finally(() => {
+      setConfirming(false)
+    })
   }
 
   return (
@@ -90,7 +117,7 @@ export function BookingCard({ ticket: ticketProps, confirming, handleReject }: B
                 <SheetTitle className="text-xl font-semibold flex items-center gap-2">
                   <p>Details</p>
                   {
-                    loading ? <CircularProgress size={20} color="inherit" /> : <RotateCw className="w-5" onClick={()=>{ fetchBooking(ticket.id) }} />
+                    loading ? <CircularProgress size={20} color="inherit" /> : <RotateCw className="w-5" onClick={() => { fetchBooking(ticket.id) }} />
                   }
                 </SheetTitle>
               </SheetHeader>
@@ -185,7 +212,7 @@ export function BookingCard({ ticket: ticketProps, confirming, handleReject }: B
                   </div>
                   {
                     ticket.bookingStatus === BookingStatus.Open && ticket.owner_confirm &&
-                    <AssignOperator selectedRequest={ticket.id} storeId={ticket.store_id}/>
+                    <AssignOperator selectedRequest={ticket.id} storeId={ticket.store_id} />
                   }
                   <div className="flex gap-3">
                     <div className="flex flex-col items-center">
