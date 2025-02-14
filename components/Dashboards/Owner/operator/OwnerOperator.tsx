@@ -57,7 +57,6 @@ interface user {
 
 const OwnerOperator = () => {
     const [activeTab, setActiveTab] = useState('all');
-    const [isOpen, setIsOpen] = useState(false)
     const [currentTime, setCurrentTime] = useState<string>("");
     const [currentDate, setCurrentDate] = useState<string>("");
 
@@ -408,7 +407,7 @@ const OwnerOperator = () => {
                             </TableRow>
                         ) :
                                 allOperators.map((customer, i) => (
-                                    <Dialog open={isOpen} onOpenChange={setIsOpen} key={i}>
+                                    <Dialog key={i}>
                                         <DialogTrigger asChild>
                                             <TableRow className="border-t">
                                                 <TableCell className="p-4">

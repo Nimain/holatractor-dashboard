@@ -3,13 +3,9 @@
 import { Wallet as PayPalIcon, PlusCircle, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { ArrowUpIcon, ArrowDownIcon } from 'lucide-react'
 import {
   Table,
   TableBody,
-  TableCaption,
-  TableCell,
-  TableFooter,
   TableHead,
   TableHeader,
   TableRow,

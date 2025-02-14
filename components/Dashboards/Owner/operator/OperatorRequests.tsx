@@ -183,15 +183,9 @@ function FillAcceptanceForm({id}:{id: string;}){
               successMessage("Requested")
               setOpen(false)
           }).catch((err) => {
-              if (err.response && err.response.status === 404 && err.response.data.message === "Store not found") {
-                  errorMessage("Store not found")
-              } else if (err.response && err.response.status === 404 && err.response.data.message === "Operator not found") {
-                  errorMessage("Operator not found")
-              } else if (err.response && err.response.status === 409 && err.response.data.message === "You are not allowed for this task") {
-                  errorMessage("You are not allowed for this task")
-              } else if (err.response && err.response.status === 409 && err.response.data.message === "You are already in this store") {
-                  errorMessage("Operator is already in this store")
-              } else {
+              if (err.response && err.response.status && err.response.data.message) {
+                  errorMessage(err.response.data.message)
+              }  else {
                   errorMessage("Error in requesting")
               }
           }).finally(() => {
@@ -216,7 +210,7 @@ function FillAcceptanceForm({id}:{id: string;}){
                                     id="field1"
                                     name="field1"
                                     type="number"
-                                    placeholder="Enter a number"
+                                    placeholder="Enter your amount..."
                                     value={formData.field1}
                                     onChange={handleInputChange}
                                     required
@@ -228,7 +222,7 @@ function FillAcceptanceForm({id}:{id: string;}){
                                     id="field2"
                                     name="field2"
                                     type="number"
-                                    placeholder="Enter a number"
+                                    placeholder="Enter your amount..."
                                     value={formData.field2}
                                     onChange={handleInputChange}
                                     required
@@ -240,7 +234,7 @@ function FillAcceptanceForm({id}:{id: string;}){
                                     id="field3"
                                     name="field3"
                                     type="number"
-                                    placeholder="Enter a number"
+                                    placeholder="Enter your amount..."
                                     value={formData.field3}
                                     onChange={handleInputChange}
                                     required
@@ -251,7 +245,7 @@ function FillAcceptanceForm({id}:{id: string;}){
                                 <Textarea
                                     id="textArea"
                                     name="textArea"
-                                    placeholder="Enter your text here"
+                                    placeholder="Enter your message here"
                                     value={formData.textArea}
                                     onChange={handleInputChange}
                                     required

@@ -117,15 +117,9 @@ const RequestNewOperator = () => {
               successMessage("Requested")
           }).catch((err) => {
             console.log(err)
-              if (err.response && err.response.status === 404 && err.response.data.message === "Store not found") {
-                  errorMessage("Store not found")
-              } else if (err.response && err.response.status === 404 && err.response.data.message === "Operator not found") {
-                  errorMessage("Operator not found")
-              } else if (err.response && err.response.status === 409 && err.response.data.message === "You are not allowed for this task") {
-                  errorMessage("You are not allowed for this task")
-              } else if (err.response && err.response.status === 409 && err.response.data.message === "You are already in this store") {
-                  errorMessage("Operator is already in this store")
-              } else {
+              if (err.response && err.response.status && err.response.data.message) {
+                  errorMessage(err.response.data.message)
+              }  else {
                   errorMessage("Error in requesting")
               }
           }).finally(() => {

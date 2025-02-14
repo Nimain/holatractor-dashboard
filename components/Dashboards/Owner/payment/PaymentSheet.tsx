@@ -14,7 +14,7 @@ import {
     SheetTrigger,
 } from "@/components/ui/sheet"
 import { TableCell, TableRow } from "@/components/ui/table"
-import { Payment } from "@/utils/Types/types"
+import { Booking, Payment } from "@/utils/Types/types"
 import { Copy, ExternalLink } from "lucide-react"
 import { renderInstance } from '@/utils/Axios/RenderInstance'
 import { useCookie } from 'next-cookie'
@@ -24,14 +24,16 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import TranslatedText from "@/components/Menubar/TranslatedText"
 import { ownerPaymentHistoryTranslations } from "./PaymentHistoryTrnslation"
+import { DownloadSinglePDFButton } from "./PaymentPDF"
+import { CircularProgress } from "@mui/material"
 
-const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
-    
+const PaymentSheet = ({ index, item }: { index: number; item: Payment; }) => {
+
     const [loading, setLoading] = useState(false)
     const [isRejecting, setIsRejecting] = useState(false)
     const [Rejecting, setRejecting] = useState(false)
     const [rejectionReason, setRejectionReason] = useState('')
-    
+
     const { cookie } = useCookie()
     const access_token = cookie.get("access_token")
 
@@ -41,52 +43,52 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
         // Here you would typically send the acceptance to your backend
         setLoading(true)
         renderInstance.patch(`/owner/confirm_payment/${item.id}`, {}, {
-          headers: {
-            Authorization: `Bearer ${access_token}`,
-          },
+            headers: {
+                Authorization: `Bearer ${access_token}`,
+            },
         })
-          .then((res) => {
-            successMessage("Accepted")
-            window.location.reload()
-          }).catch((err) => {
-            if (err.response && err.response.status === 404 && err.response.data.message === "Log in user not found") {
-              errorMessage("Log in user not found")
-            } else if (err.response && err.response.status === 404 && err.response.data.message === "Payment not found") {
-              errorMessage("Payment not found")
-            } else if (err.response && err.response.status === 409 && err.response.data.message === "You are not the correct reciever") {
-              errorMessage("You are not the correct reciever")
-            } else if (err.response && err.response.status === 400 && err.response.data.message === "Farmer has not confirmed this payment") {
-              errorMessage("Farmer has not confirmed this payment")
-            } else {
-              errorMessage("Error in accepting")
-            }
-          }).finally(() => {
-            setLoading(false)
-          })
-      }
+            .then((res) => {
+                successMessage("Accepted")
+                window.location.reload()
+            }).catch((err) => {
+                if (err.response && err.response.status === 404 && err.response.data.message === "Log in user not found") {
+                    errorMessage("Log in user not found")
+                } else if (err.response && err.response.status === 404 && err.response.data.message === "Payment not found") {
+                    errorMessage("Payment not found")
+                } else if (err.response && err.response.status === 409 && err.response.data.message === "You are not the correct reciever") {
+                    errorMessage("You are not the correct reciever")
+                } else if (err.response && err.response.status === 400 && err.response.data.message === "Farmer has not confirmed this payment") {
+                    errorMessage("Farmer has not confirmed this payment")
+                } else {
+                    errorMessage("Error in accepting")
+                }
+            }).finally(() => {
+                setLoading(false)
+            })
+    }
 
-      const handleReject = () => {
+    const handleReject = () => {
         if (rejectionReason.trim() === '') {
-          errorMessage('Please provide a reason for rejection')
-          return
+            errorMessage('Please provide a reason for rejection')
+            return
         }
         // Here you would typically send the rejection to your backend
         setRejecting(true)
         renderInstance.patch(`/owner/reject_payment/${item.id}`, {
-          reason: rejectionReason
+            reason: rejectionReason
         }, {
-          headers: {
-            Authorization: `Bearer ${access_token}`,
-          },
+            headers: {
+                Authorization: `Bearer ${access_token}`,
+            },
         })
-          .then((res) => {
-            successMessage("Accepted")
-          }).catch(() => {
-            errorMessage("Error in rejecting")
-          }).finally(() => {
-            setRejecting(false)
-          })
-      }
+            .then((res) => {
+                successMessage("Accepted")
+            }).catch(() => {
+                errorMessage("Error in rejecting")
+            }).finally(() => {
+                setRejecting(false)
+            })
+    }
 
     return (
         <Sheet>
@@ -107,10 +109,10 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                             {`${item.status}` === "FarmerPENDING" ? "Pending" : `${item.status}` === "FarmerCONFIRMED" ? <TranslatedText greetings={ownerPaymentHistoryTranslations.farmerPaid} /> : `${item.status}` === "OwnerREJECTED" ? <TranslatedText greetings={ownerPaymentHistoryTranslations.rejected} /> : <TranslatedText greetings={ownerPaymentHistoryTranslations.completed} />}
                         </span>
                     </TableCell>
-                    <TableCell>
-                        <Button variant="ghost" size="sm">
-                        <TranslatedText greetings={ownerPaymentHistoryTranslations.download} />
-                        </Button>
+                    <TableCell onClick={e => { e.stopPropagation() }}>
+                        {
+                            <DownloadSinglePDFButton payment={item} />
+                        }
                     </TableCell>
                 </TableRow>
             </SheetTrigger>
@@ -118,7 +120,7 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                 <SheetHeader>
                     <SheetTitle><TranslatedText greetings={ownerPaymentHistoryTranslations.paymentLinkDetails} /></SheetTitle>
                     <SheetDescription>
-                    <TranslatedText greetings={ownerPaymentHistoryTranslations.paymentDescription} />
+                        <TranslatedText greetings={ownerPaymentHistoryTranslations.paymentDescription} />
                     </SheetDescription>
                 </SheetHeader>
                 <div className="p-6 space-y-6 overflow-y-auto h-[calc(100vh-140px)]">
@@ -153,10 +155,10 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                                 <span className="ml-2">Copy</span>
                             </Button> */}
                             <a href={item.screenshots[item.screenshots.length - 1]} target="_blank">
-                            <Button variant="ghost" size="sm" className="h-8">
-                                <ExternalLink className="h-4 w-4" />
-                                <span className="ml-2"><TranslatedText greetings={ownerPaymentHistoryTranslations.visitLink} /></span>
-                            </Button>
+                                <Button variant="ghost" size="sm" className="h-8">
+                                    <ExternalLink className="h-4 w-4" />
+                                    <span className="ml-2"><TranslatedText greetings={ownerPaymentHistoryTranslations.visitLink} /></span>
+                                </Button>
                             </a>
                         </div>
                     }
@@ -202,7 +204,7 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                                 <div>
                                     <p className="font-medium"><TranslatedText greetings={ownerPaymentHistoryTranslations.awaitingPayment} /></p>
                                     <p className="text-sm text-muted-foreground">
-                                    <TranslatedText greetings={ownerPaymentHistoryTranslations.waitingForRecipient} />
+                                        <TranslatedText greetings={ownerPaymentHistoryTranslations.waitingForRecipient} />
                                     </p>
                                 </div>
                             </div>
@@ -211,7 +213,7 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                                 <div>
                                     <p className="font-medium"><TranslatedText greetings={ownerPaymentHistoryTranslations.paymentComplete} /></p>
                                     <p className="text-sm text-muted-foreground">
-                                    <TranslatedText greetings={ownerPaymentHistoryTranslations.paymentReceived} /> {item.amount.toFixed(2)} USD.
+                                        <TranslatedText greetings={ownerPaymentHistoryTranslations.paymentReceived} /> {item.amount.toFixed(2)} USD.
                                     </p>
                                 </div>
                             </div>
@@ -219,33 +221,33 @@ const PaymentSheet = ({ index, item }: { index: number; item: Payment }) => {
                     </div>
 
                     {isRejecting && (
-              <div className="space-y-2">
-                <Label htmlFor="rejectionReason"><TranslatedText greetings={ownerPaymentHistoryTranslations.reasonForRejection} /></Label>
-                <Textarea
-                  id="rejectionReason"
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                  placeholder="Provide a reason for rejection"
-                  required
-                />
-              </div>
-            )}
+                        <div className="space-y-2">
+                            <Label htmlFor="rejectionReason"><TranslatedText greetings={ownerPaymentHistoryTranslations.reasonForRejection} /></Label>
+                            <Textarea
+                                id="rejectionReason"
+                                value={rejectionReason}
+                                onChange={(e) => setRejectionReason(e.target.value)}
+                                placeholder="Provide a reason for rejection"
+                                required
+                            />
+                        </div>
+                    )}
 
                     {
                         `${item.status}` === "FarmerCONFIRMED" &&
                         <div className="flex items-center gap-2 flex-wrap">
                             {
-                                isRejecting ? 
-                                <Button variant="outline" onClick={()=>{handleReject()}} disabled={Rejecting}>
-                                    {
-                                        Rejecting ? <TranslatedText greetings={ownerPaymentHistoryTranslations.rejecting} /> : <TranslatedText greetings={ownerPaymentHistoryTranslations.confirmReject} />
-                                    }
-                                </Button>
-                                :
-                                <Button variant="outline" onClick={()=>{setIsRejecting(true)}}><TranslatedText greetings={ownerPaymentHistoryTranslations.reject} /></Button>
+                                isRejecting ?
+                                    <Button variant="outline" onClick={() => { handleReject() }} disabled={Rejecting}>
+                                        {
+                                            Rejecting ? <TranslatedText greetings={ownerPaymentHistoryTranslations.rejecting} /> : <TranslatedText greetings={ownerPaymentHistoryTranslations.confirmReject} />
+                                        }
+                                    </Button>
+                                    :
+                                    <Button variant="outline" onClick={() => { setIsRejecting(true) }}><TranslatedText greetings={ownerPaymentHistoryTranslations.reject} /></Button>
 
                             }
-                            <Button disabled={loading} onClick={()=>{handleAccept()}}>
+                            <Button disabled={loading} onClick={() => { handleAccept() }}>
                                 {loading ? <TranslatedText greetings={ownerPaymentHistoryTranslations.accepting} /> : <TranslatedText greetings={ownerPaymentHistoryTranslations.accept} />}
                             </Button>
                         </div>
