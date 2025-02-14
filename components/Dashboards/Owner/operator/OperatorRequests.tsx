@@ -154,6 +154,8 @@ function FillAcceptanceForm({id}:{id: string;}){
         textArea: ''
       })
 
+      const { fetchAllOperatorRequests } = useOperatorsRequestToJoinStoreContext()
+
       const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target
         setFormData(prev => ({ ...prev, [name]: value }))
@@ -177,6 +179,7 @@ function FillAcceptanceForm({id}:{id: string;}){
               }
           }).then((res) => {
               // Logic to fetch all request
+              fetchAllOperatorRequests()
               successMessage("Requested")
               setOpen(false)
           }).catch((err) => {
@@ -200,7 +203,7 @@ function FillAcceptanceForm({id}:{id: string;}){
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button variant={"outline"}>
-                <TranslatedText greetings={operatorWorkPageTranslations.reject} />
+                <TranslatedText greetings={operatorWorkPageTranslations.negotiate} />
                 </Button>
             </DialogTrigger>
             <DialogContent className='max-h-[90vh] overflow-auto w-fit h-fit' style={{ scrollbarWidth: "none" }}>

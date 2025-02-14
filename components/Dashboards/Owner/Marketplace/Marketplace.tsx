@@ -113,11 +113,6 @@ const Marketplace = () => {
     }
   };
 
-  const handleDialogClose = () => {
-    setOpen(false);        // Close the dialog
-    setCurrentLead(null);  // Reset the selected lead
-  };
-
   function fetchPageDetails() {
     setFetchingPageDetails(true)
 

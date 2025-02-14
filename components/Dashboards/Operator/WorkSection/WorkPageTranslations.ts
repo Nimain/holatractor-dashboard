@@ -279,4 +279,11 @@ export const operatorWorkPageTranslations = {
         qu: "Uraqpiriy",
         gn: "Operadór"
     },
+    negotiate: {
+        en: "Negotiate",
+        es: "Negociar",
+        ay: "Aruskipt’aña",
+        qu: "Rimanakuy",
+        gn: "Ñomongeta"
+      }
 }

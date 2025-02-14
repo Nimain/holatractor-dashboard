@@ -187,7 +187,7 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
                                 </div>
                                 {
                                     booking.bookingStatus === BookingStatus.Open &&
-                                    <AssignOperator selectedRequest={booking.id} storeId={booking.store_id} store={booking.store} />
+                                    <AssignOperator selectedRequest={booking.id} storeId={booking.store_id} />
                                 }
                                 <div className="flex gap-3">
                                     <div className="flex flex-col items-center">

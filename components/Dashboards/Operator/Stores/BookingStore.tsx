@@ -2,25 +2,17 @@
 
 import { renderInstance } from '@/utils/Axios/RenderInstance'
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
-import { Booking, Farm, Store } from '@/utils/Types/types'
+import { Store } from '@/utils/Types/types'
 import Image from 'next/image'
 import { useParams } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { CalendarIcon, Clock, CreditCard, Heart, MapPin, Receipt, Share } from 'lucide-react'
+import { CreditCard, Heart, Share } from 'lucide-react'
 import { FaHotel, FaImage, FaRegCalendarAlt, FaStore } from 'react-icons/fa'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useCookie } from 'next-cookie'
-import { DateRange } from 'react-day-picker'
-import { addDays, format } from 'date-fns'
-import { cn } from '@/lib/utils'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
-import { Calendar } from '@/components/ui/calendar'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
-import { Separator } from '@/components/ui/separator'
 import { Backdrop, CircularProgress } from '@mui/material'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -103,16 +95,8 @@ const BookingStore = () => {
                 textArea: ''
             })
         }).catch((err) => {
-            if (err.response && err.response.status === 404 && err.response.data.message === "User is not found") {
-                errorMessage("User not found")
-            } else if (err.response && err.response.status === 404 && err.response.data.message === "Request not found") {
-                errorMessage("Request not found")
-            } else if (err.response && err.response.status === 404 && err.response.data.message === "Operator not found") {
-                errorMessage("Operator not found")
-            } else if (err.response && err.response.status === 404 && err.response.data.message === "Store not found") {
-                errorMessage("Store not found")
-            } else if (err.response && err.response.status === 400 && err.response.data.message === "The operator and store hasn't make any request") {
-                errorMessage("The operator and store hasn't make any request")
+            if (err.response && err.response.status && err.response.data.message) {
+                errorMessage(err.response.data.message)
             } else {
                 errorMessage("Some error occurred")
             }
@@ -200,10 +184,10 @@ const BookingStore = () => {
                 <Card className='w-[600px] -mt-24 z-10 ml-4'>
                     <CardHeader>
                         <CardTitle className='text-center'>
-                        <TranslatedText greetings={operatorWorkPageTranslations.wantToJoinStore} />
+                            <TranslatedText greetings={operatorWorkPageTranslations.wantToJoinStore} />
                         </CardTitle>
                         <CardDescription className='text-center'>
-                        <TranslatedText greetings={operatorWorkPageTranslations.pleaseFillForm} />
+                            <TranslatedText greetings={operatorWorkPageTranslations.pleaseFillForm} />
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -268,20 +252,20 @@ const BookingStore = () => {
                 <div className='w-full grid gap-6 grid-cols-3'>
 
                     {selectedTab === "Tractor" && store.TractorInStore.length === 0 ? (
-            <Card className="w-full max-w-sm mx-auto text-center p-6">
-              <CardContent className="space-y-6">
-                <div className="bg-gray-50 rounded-lg p-4 mx-auto w-20 h-20 flex items-center justify-center">
-                  <CreditCard className="w-10 h-10 text-gray-400" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-semibold"><TranslatedText greetings={storePageTranslations.noTractorsAvailable} /></h3>
-                  <p className="text-muted-foreground">
-                  <TranslatedText greetings={storePageTranslations.sorryNoTractors} />
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : store.TractorInStore.map((tractor) => (
+                        <Card className="w-full max-w-sm mx-auto text-center p-6">
+                            <CardContent className="space-y-6">
+                                <div className="bg-gray-50 rounded-lg p-4 mx-auto w-20 h-20 flex items-center justify-center">
+                                    <CreditCard className="w-10 h-10 text-gray-400" />
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="text-xl font-semibold"><TranslatedText greetings={storePageTranslations.noTractorsAvailable} /></h3>
+                                    <p className="text-muted-foreground">
+                                        <TranslatedText greetings={storePageTranslations.sorryNoTractors} />
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) : store.TractorInStore.map((tractor) => (
                         <Card className="w-full max-w-sm hover:drop-shadow-lg hover:scale-105 transition-all duration-300" key={tractor.id}>
                             <CardHeader>
                                 <CardTitle className="flex items-center justify-between gap-2 flex-wrap">
@@ -307,20 +291,20 @@ const BookingStore = () => {
                     ))}
 
                     {selectedTab === "Attachment" && store.TractorInStore.length === 0 ? (
-            <Card className="w-full max-w-sm mx-auto text-center p-6">
-              <CardContent className="space-y-6">
-                <div className="bg-gray-50 rounded-lg p-4 mx-auto w-20 h-20 flex items-center justify-center">
-                  <CreditCard className="w-10 h-10 text-gray-400" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-semibold"><TranslatedText greetings={storePageTranslations.noAttachmentsAvailable} /></h3>
-                  <p className="text-muted-foreground">
-                  <TranslatedText greetings={storePageTranslations.sorryNoAttachments} />
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : store.AttachmentInStore.map((tractor) => (
+                        <Card className="w-full max-w-sm mx-auto text-center p-6">
+                            <CardContent className="space-y-6">
+                                <div className="bg-gray-50 rounded-lg p-4 mx-auto w-20 h-20 flex items-center justify-center">
+                                    <CreditCard className="w-10 h-10 text-gray-400" />
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="text-xl font-semibold"><TranslatedText greetings={storePageTranslations.noAttachmentsAvailable} /></h3>
+                                    <p className="text-muted-foreground">
+                                        <TranslatedText greetings={storePageTranslations.sorryNoAttachments} />
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) : store.AttachmentInStore.map((tractor) => (
                         <Card className="w-full max-w-sm hover:drop-shadow-lg hover:scale-105 transition-all duration-300" key={tractor.id}>
                             <CardHeader>
                                 <CardTitle>{tractor.baseAttachment.name}</CardTitle>

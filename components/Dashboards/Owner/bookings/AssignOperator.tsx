@@ -21,21 +21,20 @@ const AssignOperator = ({ selectedRequest, storeId }: { selectedRequest: string;
     const [isAssignOpen, setIsAssignOpen] = useState(false)
     const [fetchingOperators, setFetchingOperators] = useState(false)
     const [allOperators, setAllOperators] = useState<OperatorInStore[]>([])
-    const [assigning, setAssigning] = useState(false)
 
-    const [allRequests, setAllRequests] = useState<string[]>([])
+    const [assigning, setAssigning] = useState<Record<string, boolean>>({})
 
     const { cookie } = useCookie()
     const access_token = cookie.get("access_token")
 
     const handleAssign = (operatorId: string) => {
-        setAssigning(true)
+        setAssigning((prev) => ({ ...prev, [operatorId]: true }))
         renderInstance.patch(`/booking/${selectedRequest}/${operatorId}/request_operator`, {}, {
             headers: {
                 Authorization: `Bearer ${access_token}`,
             },
         }).then((res) => {
-            handleFetchAllOperatorsRequests()
+            handleFetchAllOperators()
             successMessage("Operator assigned")
             setIsAssignOpen(false)
         }).catch((err) => {
@@ -63,13 +62,13 @@ const AssignOperator = ({ selectedRequest, storeId }: { selectedRequest: string;
                 errorMessage("Some error occurred while assigning")
             }
         }).finally(() => {
-            setAssigning(false)
+            setAssigning((prev) => ({ ...prev, [operatorId]: false }))
         })
     }
 
     function handleFetchAllOperators() {
         setFetchingOperators(true)
-        renderInstance.get(`/operator/getOperatorsByStoreId/${storeId}`)
+        renderInstance.get(`/operator/getOperatorsByStoreId/${storeId}/${selectedRequest}`)
             .then((res) => {
                 setAllOperators(res.data)
             }).catch((err) => {
@@ -79,24 +78,8 @@ const AssignOperator = ({ selectedRequest, storeId }: { selectedRequest: string;
             })
     }
 
-    function handleFetchAllOperatorsRequests() {
-        setFetchingOperators(true)
-        renderInstance.get(`/store/all_operator_requests/${selectedRequest}`)
-            .then((res) => {
-                setAllRequests(res.data)
-            }).catch((err) => {
-                errorMessage("Some error occurred in fetching operators")
-            }).finally(() => {
-                setFetchingOperators(false)
-            })
-    }
-
     useEffect(() => {
         handleFetchAllOperators()
-    }, [])
-
-    useEffect(() => {
-        handleFetchAllOperatorsRequests()
     }, [])
 
     return (
@@ -158,9 +141,9 @@ const AssignOperator = ({ selectedRequest, storeId }: { selectedRequest: string;
                                                 )}
                                             </CardContent>
                                             <CardFooter>
-                                                <Button className="w-full" disabled={assigning || allRequests.includes(operator.operator_id)} onClick={() => { handleAssign(operator.operator_id) }}>
+                                                <Button className="w-full" disabled={assigning[operator.operator_id]} onClick={() => { handleAssign(operator.operator_id) }}>
                                                     {
-                                                        assigning ? <TranslatedText greetings={ownerBookingsTranslation.assigning} /> : allRequests.includes(operator.operator_id) ? "Requested" : <TranslatedText greetings={ownerBookingsTranslation.assign} />
+                                                        assigning[operator.operator_id] ? <TranslatedText greetings={ownerBookingsTranslation.assigning} /> : <TranslatedText greetings={ownerBookingsTranslation.assign} />
                                                     }
                                                 </Button>
                                             </CardFooter>
