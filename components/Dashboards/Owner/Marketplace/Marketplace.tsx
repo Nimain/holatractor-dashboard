@@ -55,6 +55,7 @@ const Marketplace = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [open, setOpen] = useState(false)
   const [currentLead, setCurrentLead] = useState(null);
+  const [fetchingNewPageDetails, setFetchingNewPageDetails] = useState(false)
   const [fetchingPageDetails, setFetchingPageDetails] = useState(false)
 
   const [totalReceived, setTotalReceived] = useState(0)
@@ -132,7 +133,7 @@ const Marketplace = () => {
   }
 
   function fetchNewBookings() {
-    setFetchingPageDetails(true)
+    setFetchingNewPageDetails(true)
     
     renderInstance.get(`/booking/get/stand-alone/bookings?lat=${location.latitude}&lng=${location.longitude}&radius=80`)
       .then((res) => {
@@ -140,7 +141,7 @@ const Marketplace = () => {
       }).catch((err) => {
         errorMessage("Error fetching user detaild")
       }).finally(() => {
-        setFetchingPageDetails(false)
+        setFetchingNewPageDetails(false)
       })
   }
 
@@ -237,7 +238,7 @@ const Marketplace = () => {
                   </span>
                 </CardHeader>
               </Card>
-              {fetchingPageDetails ?
+              {fetchingNewPageDetails ?
               <LeadShrimmer />
               : 
               newBookings.length === 0 ? <p><TranslatedText greetings={ownerMarketPlaceTranslations.noOpenBookingsAvailable} /></p> : newBookings.map((lead) => (

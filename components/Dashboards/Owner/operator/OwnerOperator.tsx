@@ -317,44 +317,6 @@ const OwnerOperator = () => {
                 </div>
             </div>
 
-            {/* Filters */}
-            <div className="flex items-center justify-between flex-wrap mb-6 bg-white p-3 rounded-lg shadow-sm">
-                <div className="flex flex-wrap gap-1.5">
-                    {tabs.map((tab) => {
-                        const Icon = tab.icon;
-                        return (
-                            <Button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={cn(
-                                    "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-white",
-                                    "flex items-center gap-2",
-                                    "hover:bg-gray-50 hover:text-gray-900",
-                                    "focus:outline-none focus:ring-2 focus:ring-gray-200 focus:ring-offset-1",
-                                    activeTab === tab.id
-                                        ? "bg-gray-50 text-gray-900 shadow-sm"
-                                        : "text-gray-600"
-                                )}
-                            >
-                                <Icon className="w-4 h-4" />
-                                {tab.label}
-                            </Button>
-                        );
-                    })}
-                    <Button
-                        className={cn(
-                            "p-2 rounded-lg transition-all duration-200 bg-white",
-                            "hover:bg-gray-50 focus:outline-none focus:ring-2",
-                            "focus:ring-gray-200 focus:ring-offset-1",
-                            "text-gray-600 hover:text-gray-900"
-                        )}
-                        aria-label="Add new"
-                    >
-                        <Plus className="w-4 h-4" />
-                    </Button>
-                </div>
-            </div>
-
             {/* Action Bar */}
             <div className="flex justify-between items-start 1000px:items-center flex-col 1000px:flex-row gap-4 mb-4">
                 <div className='flex gap-2 items-center'>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
@@ -61,10 +61,6 @@ const Bookings = () => {
     const [query, setQuery] = useState('');
     const [confirming, setConfirming] = useState(false)
 
-    const [timeRange, setTimeRange] = useState('last30');
-
-    const [selectedRange, setSelectedRange] = useState<TimeRange>("")
-
     const [totalBookings, setTotalBookings] = useState(0)
     const [totalOpen, setTotalOpen] = useState(0)
     const [totalAccepted, setTotalAccepted] = useState(0)
@@ -78,29 +74,13 @@ const Bookings = () => {
     const [itemsPerPage, setItemsPerPage] = useState(10)
     const [page, setPage] = useState(1)
 
+    const [year, setYear] = useState(new Date().getFullYear())
+    const [chartData, setChartData] = useState<ChartData[]>([])
+
+    const [fetchingBookingsChart, setFetchingBookingsChart] = useState(false)
+
     const leftSectionRef = useRef<HTMLDivElement>(null)
     const rightSectionRef = useRef<HTMLDivElement>(null)
-
-    const timeRanges = ["Last 30 Days", "Last 90 Days"] as const
-    type TimeRange = typeof timeRanges[number] | string
-
-    const chartData = {
-        last30: [
-            { time: 'Jan', passengers: 200 },
-            { time: 'Feb', passengers: 600 },
-            { time: 'Mar', passengers: 400 },
-            { time: 'Apr', passengers: 300 },
-            { time: 'May', passengers: 650 },
-            { time: 'Jun', passengers: 450 },
-            { time: 'Jul', passengers: 350 },
-            { time: 'Aug', passengers: 250 },
-            { time: 'Sep', passengers: 450 },
-            { time: 'Oct', passengers: 550 },
-            { time: 'Nov', passengers: 400 },
-            { time: 'Dec', passengers: 300 },
-        ],
-    };
-
 
     const { cookie } = useCookie()
     const user: user = cookie.get("user")
@@ -140,6 +120,31 @@ const Bookings = () => {
     const handlePageChange = (page: number) => {
         setPage(page)
     }
+
+    function fetchBookingCharts(){
+        setFetchingBookingsChart(true)
+
+        renderInstance.get(`/owner/get-booking-chart/${user.userId}?year=${year}`)
+            .then((res) => {
+                setChartData(res.data)
+            }).catch((err) => {
+                errorMessage("Error fetching operator lists")
+            }).finally(() => {
+                setFetchingBookingsChart(false)
+            })
+    }
+
+    // Calculate max bookings dynamically
+    const maxBookings = useMemo(() => {
+        return Math.max(...chartData.map((data) => data.passengers), 200); // Default min 200
+    }, [chartData]);
+
+    // Generate dynamic ticks (intervals of 200 or another step)
+    const yAxisTicks = useMemo(() => {
+        const step = Math.ceil(maxBookings / 4 / 100) * 100; // Adjust step size dynamically
+        return Array.from({ length: 5 }, (_, i) => i * step).filter((tick) => tick <= maxBookings);
+    }, [maxBookings]);
+
 
     useEffect(() => {
         const handleScroll = (e: WheelEvent) => {
@@ -195,6 +200,7 @@ const Bookings = () => {
     useEffect(() => {
         if (user) {
             fetchBookings()
+            fetchBookingCharts()
         }
     }, [selectedFilter, itemsPerPage, page])
 
@@ -363,20 +369,9 @@ const Bookings = () => {
                                     <div className="flex items-center justify-between">
                                         <h2 className="text-2xl font-semibold tracking-tight">Booking</h2>
                                         <div className="flex items-center gap-2">
-                                            {timeRanges.map((range) => (
-                                                <Button
-                                                    key={range}
-                                                    variant={selectedRange === range ? "secondary" : "outline"}
-                                                    size="sm"
-                                                    className="rounded-full"
-                                                    onClick={() => setSelectedRange(range)}
-                                                >
-                                                    {range}
-                                                </Button>
-                                            ))}
                                             <Select
-                                                value={selectedRange}
-                                                onValueChange={(value) => setSelectedRange(value)}
+                                                value={`${year}`}
+                                                onValueChange={(value) => setYear(parseInt(value))}
                                             >
                                                 <SelectTrigger className="w-[120px]">
                                                     <SelectValue placeholder="Select year" />
@@ -396,7 +391,7 @@ const Bookings = () => {
                                     <Card className="p-4 mt-5">
                                         <CardContent className="pt-4">
                                             <ResponsiveContainer width="100%" height={300}>
-                                                <BarChart data={chartData[timeRange as keyof typeof chartData]} barSize={40}>
+                                                <BarChart data={chartData} barSize={40}>
                                                     <CartesianGrid vertical={false} stroke="#f0f0f0" />
                                                     <XAxis
                                                         dataKey="time"
@@ -407,7 +402,7 @@ const Bookings = () => {
                                                     <YAxis
                                                         axisLine={false}
                                                         tickLine={false}
-                                                        ticks={[200, 400, 600, 800]}
+                                                        ticks={yAxisTicks}
                                                         dx={-10}
                                                     />
                                                     <Tooltip
@@ -425,14 +420,14 @@ const Bookings = () => {
                                                                                     {payload[0].value}
                                                                                 </span>
                                                                             </div>
-                                                                            <div className="flex flex-col">
+                                                                            {/* <div className="flex flex-col">
                                                                                 <span className="text-[0.70rem] uppercase text-muted-foreground">
                                                                                     Change
                                                                                 </span>
                                                                                 <span className="font-bold text-emerald-500">
                                                                                     +12%
                                                                                 </span>
-                                                                            </div>
+                                                                            </div> */}
                                                                         </div>
                                                                     </div>
                                                                 );

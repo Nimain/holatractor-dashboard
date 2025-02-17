@@ -198,7 +198,7 @@ const BookingStore = () => {
                                     id="field1"
                                     name="field1"
                                     type="number"
-                                    placeholder="Enter a number"
+                                    placeholder="Enter your amount..."
                                     value={formData.field1}
                                     onChange={handleInputChange}
                                     required
@@ -210,7 +210,7 @@ const BookingStore = () => {
                                     id="field2"
                                     name="field2"
                                     type="number"
-                                    placeholder="Enter a number"
+                                    placeholder="Enter your amount..."
                                     value={formData.field2}
                                     onChange={handleInputChange}
                                     required
@@ -222,7 +222,7 @@ const BookingStore = () => {
                                     id="field3"
                                     name="field3"
                                     type="number"
-                                    placeholder="Enter a number"
+                                    placeholder="Enter your amount..."
                                     value={formData.field3}
                                     onChange={handleInputChange}
                                     required
@@ -233,7 +233,7 @@ const BookingStore = () => {
                                 <Textarea
                                     id="textArea"
                                     name="textArea"
-                                    placeholder="Enter your text here"
+                                    placeholder="Give your message..."
                                     value={formData.textArea}
                                     onChange={handleInputChange}
                                     required

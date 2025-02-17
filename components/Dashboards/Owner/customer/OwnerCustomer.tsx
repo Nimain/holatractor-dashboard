@@ -11,10 +11,12 @@ import {
     Settings,
     HelpCircle,
     Plus,
-    Share, LayoutGrid,
+    LayoutGrid,
     Building2,
     Users,
-    DollarSign
+    DollarSign,
+    X,
+    ChevronUp
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { MoreHorizontal } from "lucide-react";
@@ -33,9 +35,10 @@ import Image from 'next/image';
 import { useCookie } from 'next-cookie';
 import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
-import OwnerShrimmer from '../_components/OwnerShrimmer';
 import TranslatedText from '@/components/Menubar/TranslatedText';
 import { ownerCustomerPageTranslations } from './OwnerCustomerTranslations';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import Pagination from '@/utils/Paginations/Pagination';
 
 
 interface Customer {
@@ -51,10 +54,9 @@ interface user {
     image: string;
     name: string;
     email: string;
-  }
+}
 
 const OwnerCustomer = () => {
-    const [activeTab, setActiveTab] = useState('all');
     const [currentTime, setCurrentTime] = useState<string>("");
     const [currentDate, setCurrentDate] = useState<string>("");
     const [fetchingPageDetails, setFetchingPageDetails] = useState(false)
@@ -65,38 +67,76 @@ const OwnerCustomer = () => {
     const [pendingCustomers, setPendingCustomers] = useState(0)
     const [totalReceived, setTotalReceived] = useState(0)
 
-    const { cookie } = useCookie()
-  const user: user = cookie.get("user")
+    const [sortBy, setSortBy] = useState("first_name")
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc")
 
-    const tabs = [
-        { id: 'all', label: 'All', icon: LayoutGrid },
-        { id: 'company', label: 'Company', icon: Building2 },
-        { id: 'contact', label: 'Contact', icon: Users },
-        { id: 'estimate', label: 'Estimate Value', icon: DollarSign },
-    ];
+    const [searchBy, setSearchBy] = useState("first_name")
+    const [searchTerm, setSearchTerm] = useState("")
+
+    const [page, setPage] = useState(1)
+    const [totalPages, setTotalPages] = useState(1)
+
+    const [hoveredItem, setHoveredItem] = useState(-1)
+
+    const { cookie } = useCookie()
+    const user: user = cookie.get("user")
+
+    const sortOptions = [
+        {
+            label: "First Name",
+            value: "first_name",
+        },
+        {
+            label: "Last Name",
+            value: "last_name",
+        },
+        {
+            label: "Store",
+            value: "store",
+        }
+    ]
+
+    const searchOptions = [
+        {
+            label: "First Name",
+            value: "first_name",
+        },
+        {
+            label: "Last Name",
+            value: "last_name",
+        },
+        {
+            label: "Store",
+            value: "store",
+        },
+    ]
+
+    const handleClear = () => {
+        setSearchTerm("")
+    }
 
     function fetchPageDetails() {
         setFetchingPageDetails(true)
-    
-        renderInstance.get(`/owner/get-owner-customer-page-details/${user.userId}`)
-          .then((res) => {
-            setCustomers(res.data.customers)
-            setActiveCustomers(res.data.activeCustomers.length)
-            setRejectedCustomers(res.data.rejectedCustomers)
-            setPendingCustomers(res.data.pendingCustomers)
-            setTotalReceived(res.data.totalReceived)
-          }).catch((err) => {
-            errorMessage("Error fetching user detaild")
-          }).finally(() => {
-            setFetchingPageDetails(false)
-          })
-      }
-    
-      useEffect(() => {
+
+        renderInstance.get(`/owner/get-owner-customer-page-details/${user.userId}?searchBy=${searchBy}&search=${searchTerm}&sortBy=${sortBy}&sortOrder=${sortOrder}&page=${page}`)
+            .then((res) => {
+                setCustomers(res.data.customers)
+                setActiveCustomers(res.data.activeCustomers.length)
+                setRejectedCustomers(res.data.rejectedCustomers)
+                setPendingCustomers(res.data.pendingCustomers)
+                setTotalReceived(res.data.totalReceived)
+            }).catch((err) => {
+                errorMessage("Error fetching user detaild")
+            }).finally(() => {
+                setFetchingPageDetails(false)
+            })
+    }
+
+    useEffect(() => {
         if (user) {
-          fetchPageDetails()
+            fetchPageDetails()
         }
-      }, [])
+    }, [searchBy, searchTerm, sortBy, sortOrder])
 
     useEffect(() => {
         const updateDateTime = () => {
@@ -129,11 +169,11 @@ const OwnerCustomer = () => {
                 </Breadcrumb>
 
                 <div className="flex items-center gap-4">
-                    
-                        <Bell className="w-5 h-5" />
-                        <Settings className="w-5 h-5" />
-                        <HelpCircle className="w-5 h-5" />
-                    
+
+                    <Bell className="w-5 h-5" />
+                    <Settings className="w-5 h-5" />
+                    <HelpCircle className="w-5 h-5" />
+
                 </div>
             </div>
 
@@ -233,82 +273,65 @@ const OwnerCustomer = () => {
                 </div>
             </div>
 
-
-            {/* Filter Bar */}
-            <div className="flex items-center justify-between flex-wrap mb-6 bg-white p-3 rounded-lg shadow-sm">
-                <div className="flex gap-1.5 flex-wrap">
-                    {tabs.map((tab) => {
-                        const Icon = tab.icon;
-                        return (
-                            <Button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={cn(
-                                    "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-white",
-                                    "flex items-center gap-2",
-                                    "hover:bg-gray-50 hover:text-gray-900",
-                                    "focus:outline-none focus:ring-2 focus:ring-gray-200 focus:ring-offset-1",
-                                    activeTab === tab.id
-                                        ? "bg-gray-50 text-gray-900 shadow-sm"
-                                        : "text-gray-600"
-                                )}
-                            >
-                                <Icon className="w-4 h-4" />
-                                {tab.label}
-                            </Button>
-                        );
-                    })}
-                    <Button
-                        className={cn(
-                            "p-2 rounded-lg transition-all duration-200 bg-white",
-                            "hover:bg-gray-50 focus:outline-none focus:ring-2",
-                            "focus:ring-gray-200 focus:ring-offset-1",
-                            "text-gray-600 hover:text-gray-900"
-                        )}
-                        aria-label="Add new"
-                    >
-                        <Plus className="w-4 h-4" />
-                    </Button>
-                </div>
-            </div>
-
             {/* Action Bar */}
-            <div className="flex justify-between flex-wrap gap-4 items-center mb-4">
-                <div className="relative">
-                    <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
-                    <Input
-                        type="text"
-                        placeholder="Search"
-                        className="pl-10 pr-4 py-2 border rounded-lg w-64 outline-none focus:outline-none"
-                    />
+            <div className="flex justify-between items-start 1000px:items-center flex-col 1000px:flex-row gap-4 mb-4">
+                <div className='flex gap-2 items-center'>
+                    <Select value={searchBy} onValueChange={setSearchBy}>
+                        <SelectTrigger className="w-[200px] bg-transparent">
+                            <SelectValue placeholder={"Search by"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {
+                                searchOptions.map((sortValue, index) => {
+                                    return (
+                                        <SelectItem value={sortValue.value} key={index}>{sortValue.label}</SelectItem>
+                                    )
+                                })
+                            }
+                        </SelectContent>
+                    </Select>
+                    <div className="relative">
+                        <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+                        <Input
+                            type={(searchBy === "per_hour" || searchBy === "per_job" || searchBy === "per_month") ? 'number' : "text"}
+                            placeholder="Search"
+                            className="pl-10 py-2 border rounded-lg w-80 pr-16"
+                            onChange={e => { setSearchTerm(e.target.value) }}
+                            value={searchTerm}
+                        />
+                        {searchTerm && (
+                            <Button
+                                variant="ghost"
+                                onClick={handleClear}
+                                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 ml-16"
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
-                <div className="flex items-center flex-wrap gap-4">
+                <div className="flex items-center gap-4 flex-wrap">
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                        <SelectTrigger className="w-[200px] bg-transparent">
+                            <SelectValue placeholder={"Sort by"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {
+                                sortOptions.map((sortValue, index) => {
+                                    return (
+                                        <SelectItem value={sortValue.value} key={index}>{sortValue.label}</SelectItem>
+                                    )
+                                })
+                            }
+                        </SelectContent>
+                    </Select>
                     <Button
-                    variant={"outline"} 
-                    className="flex items-center gap-2 px-4 py-2 border rounded-lg">
-                        <Import className="w-4 h-4" />
-                        <TranslatedText greetings={ownerCustomerPageTranslations.import} />
-                    </Button>
-                    <Button
-                    variant={"outline"} 
-                    className="flex items-center gap-2 px-4 py-2 border rounded-lg">
-                        <Filter className="w-4 h-4" />
-                        <TranslatedText greetings={ownerCustomerPageTranslations.filter} />
-                    </Button>
-                    <Button
-                    variant={"outline"} 
-                    className="px-4 py-2 bg-primaryColor text-white rounded-lg">List</Button>
-                    <Button
-                    variant={"outline"} 
-                    className="p-2 border rounded-lg">
-                        <Grid className="w-4 h-4" />
-                    </Button>
-                    <Button
-                    variant={"outline"} 
-                    className="flex items-center gap-2 px-4 py-2 border rounded-lg">
-                        <TranslatedText greetings={ownerCustomerPageTranslations.sortBy} />
-                        <ChevronDown className="w-4 h-4" />
+                        variant="outline"
+                        size="icon"
+                        onClick={() => { setSortOrder(sortOrder === "asc" ? "desc" : "asc") }}
+                        className='bg-transparent hover:bg-transparent'>
+                        {sortOrder === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </Button>
                 </div>
             </div>
@@ -329,44 +352,51 @@ const OwnerCustomer = () => {
                     </TableHeader>
                     <TableBody>
                         {fetchingPageDetails ? <CustomerTableShrimmer />
-                        :
-                        customers.length === 0 ?
-                        <p><TranslatedText greetings={ownerCustomerPageTranslations.noCustomersAvailable} /></p>
-                        :
-                        customers.map((customer) => (
-                            <TableRow key={customer.id} className="border-t">
-                                <TableCell className="p-4">
-                                    <Input type="checkbox" className="rounded w-4 h-4 accent-primaryColor" />
-                                </TableCell>
-                                <TableCell className="p-4">
-                                    <div className="flex items-center gap-3">
-                                        <Image
-                                            src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRH87TKQrWcl19xly2VNs0CjBzy8eaKNM-ZpA&s"
-                                            alt={customer.name}
-                                            className="w-10 h-10 rounded-full object-cover"
-                                            width={400}
-                                            height={400}
-                                        />
-                                        <div>
-                                            <p className="font-medium">{customer.name}</p>
-                                        </div>
-                                    </div>
-                                </TableCell>
-                                <TableCell className="p-4">
-                                    <p className="text-sm">{customer.email}</p>
-                                </TableCell>
-                                <TableCell className="p-4">
-                                    <div className="flex items-center gap-3">
-                                        <p className="text-sm">{customer.lastStoreName}</p>
-                                    </div>
-                                </TableCell>
-                                <TableCell className="p-4">
-                                    <p className="font-medium">${customer.totalSpent.toFixed(2)}</p>
-                                </TableCell>
-                            </TableRow>
-                        ))}
+                            :
+                            customers.length === 0 ?
+                                <p><TranslatedText greetings={ownerCustomerPageTranslations.noCustomersAvailable} /></p>
+                                :
+                                customers.map((customer, i) => {
+                                    const name = customer.name
+                                    return (
+                                        <TableRow key={i} className="border-t" onMouseEnter={()=>{setHoveredItem(i)}} onMouseLeave={()=>{setHoveredItem(-1)}}>
+                                            <TableCell className="p-4 w-[4vw]">
+                                                <Input type="checkbox" className="rounded w-4 h-4 accent-primaryColor" />
+                                            </TableCell>
+                                            <TableCell className="p-4 w-[20vw]">
+                                                <div className="flex items-center gap-3">
+                                                    <Image
+                                                        src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRH87TKQrWcl19xly2VNs0CjBzy8eaKNM-ZpA&s"
+                                                        alt={customer.name}
+                                                        className="w-10 h-10 rounded-full object-cover"
+                                                        width={400}
+                                                        height={400}
+                                                    />
+                                                    <div>
+                                                        <p className="font-medium">{hoveredItem === i ? name : name.slice(0, 4) + "..."}</p>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="p-4 w-[40vw]">
+                                                <p className="text-sm">{hoveredItem === i ? customer.email : customer.email.slice(0, 4) + "..."}</p>
+                                            </TableCell>
+                                            <TableCell className="p-4 w-[18vw]">
+                                                <div className="flex items-center gap-3">
+                                                    <p className="text-sm">{hoveredItem === i ? customer.lastStoreName : customer.lastStoreName.slice(0, 4) + "..."}</p>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="p-4 w-[18vw]">
+                                                <p className="font-medium">${customer.totalSpent.toFixed(2)}</p>
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })}
                     </TableBody>
                 </Table>
+                {
+                    (totalPages > 1) && !fetchingPageDetails &&
+                    <Pagination totalPages={totalPages} currentPage={page} onPageChange={(e) => { setPage(e) }} />
+                }
             </div>
         </div>
     );
@@ -374,26 +404,26 @@ const OwnerCustomer = () => {
 
 export default OwnerCustomer
 
-function CustomerTableShrimmer(){
-    return(
+function CustomerTableShrimmer() {
+    return (
         Array.from({ length: 5 }).map((_, index) => (
-          <tr key={index} className="animate-pulse border-b">
-            <td className="p-4">
-              <div className="h-4 w-4 bg-gray-300 rounded"></div>
-            </td>
-            <td className="p-4">
-              <div className="h-4 w-32 bg-gray-300 rounded"></div>
-            </td>
-            <td className="p-4">
-              <div className="h-4 w-32 bg-gray-300 rounded"></div>
-            </td>
-            <td className="p-4">
-              <div className="h-4 w-24 bg-gray-300 rounded"></div>
-            </td>
-            <td className="p-4">
-              <div className="h-4 w-16 bg-gray-300 rounded"></div>
-            </td>
-          </tr>
+            <tr key={index} className="animate-pulse border-b">
+                <td className="p-4">
+                    <div className="h-4 w-4 bg-gray-300 rounded"></div>
+                </td>
+                <td className="p-4">
+                    <div className="h-4 w-32 bg-gray-300 rounded"></div>
+                </td>
+                <td className="p-4">
+                    <div className="h-4 w-32 bg-gray-300 rounded"></div>
+                </td>
+                <td className="p-4">
+                    <div className="h-4 w-24 bg-gray-300 rounded"></div>
+                </td>
+                <td className="p-4">
+                    <div className="h-4 w-16 bg-gray-300 rounded"></div>
+                </td>
+            </tr>
         ))
-      )
-  }
+    )
+}
