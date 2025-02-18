@@ -62,6 +62,9 @@ const BookingStore = () => {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target
+        if(parseInt(value) < 1){
+            return
+        }
         setFormData(prev => ({ ...prev, [name]: value }))
     }
 

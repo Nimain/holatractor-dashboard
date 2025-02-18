@@ -116,7 +116,6 @@ const RequestNewOperator = () => {
               // Logic to fetch all request
               successMessage("Requested")
           }).catch((err) => {
-            console.log(err)
               if (err.response && err.response.status && err.response.data.message) {
                   errorMessage(err.response.data.message)
               }  else {
@@ -215,7 +214,12 @@ const RequestNewOperator = () => {
                                             max="1000"
                                             placeholder="0.00"
                                             value={priceType.value}
-                                            onChange={(e) => updatePriceType(index, 'value', e.target.value)}
+                                            onChange={(e) => {
+                                                if(parseInt(e.target.value) < 1){
+                                                    return
+                                                }
+                                                updatePriceType(index, 'value', e.target.value)
+                                            }}
                                         />
                                         {index > 0 && (
                                             <Button

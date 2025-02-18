@@ -29,6 +29,9 @@ const RejectionForm = ({ request }: { request: OperatorAddStoreReuests; }) => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
+    if(parseInt(value) < 1){
+      return
+  }
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
@@ -68,7 +71,7 @@ const RejectionForm = ({ request }: { request: OperatorAddStoreReuests; }) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline"><TranslatedText greetings={operatorWorkPageTranslations.reject} /></Button>
+        <Button variant="outline"><TranslatedText greetings={operatorWorkPageTranslations.negotiate} /></Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
