@@ -80,6 +80,26 @@ const StoreRequest = () => {
         })
     }
 
+    const handleReject = (id: string) => {
+    
+        setLoading(true)
+        renderInstance.patch(`/operator/finalRejectAddStoreRequest/${id}`, {}, {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+          }
+        }).then(() => {
+          successMessage("Rejected")
+        }).catch((err) => {
+          if (err.response && err.response.status && err.response.data.message) {
+            errorMessage(err.response.data.message)
+          } else {
+            errorMessage("Some error occurred")
+          }
+        }).finally(() => {
+          setLoading(false)
+        })
+      }
+
     useEffect(() => {
         if (user) {
             fetchRequests()
@@ -170,13 +190,13 @@ const StoreRequest = () => {
                                                             <div className="flex items-center">
                                                                 <User className="h-4 w-4 mr-2 text-muted-foreground" />
                                                                 <span>
-                                                                <TranslatedText greetings={operatorWorkPageTranslations.totalOperators} />: {selectedRequest.store.OperatorInStore.length}
+                                                                    <TranslatedText greetings={operatorWorkPageTranslations.totalOperators} />: {selectedRequest.store.OperatorInStore.length}
                                                                 </span>
                                                             </div>
                                                             <div className="flex items-center">
                                                                 <Store className="h-4 w-4 mr-2 text-muted-foreground" />
                                                                 <span>
-                                                                <TranslatedText greetings={operatorWorkPageTranslations.totalBookings} />: {selectedRequest.store.Booking.length}
+                                                                    <TranslatedText greetings={operatorWorkPageTranslations.totalBookings} />: {selectedRequest.store.Booking.length}
                                                                 </span>
                                                             </div>
                                                             {
@@ -184,12 +204,17 @@ const StoreRequest = () => {
                                                                 <div className="flex items-center">
                                                                     <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
                                                                     <span>
-                                                                    <TranslatedText greetings={operatorWorkPageTranslations.closesOn} /> - {selectedRequest.store.closing_days.map((day) => (<span key={day}>{day}</span>))}
+                                                                        <TranslatedText greetings={operatorWorkPageTranslations.closesOn} /> - {selectedRequest.store.closing_days.map((day) => (<span key={day}>{day}</span>))}
                                                                     </span>
                                                                 </div>
                                                             }
                                                         </div>
                                                         <div className="flex justify-end space-x-2 mt-4">
+                                                            <Button onClick={() => handleReject(selectedRequest.id)} disabled={loading}>
+                                                                {
+                                                                    loading ? <TranslatedText greetings={operatorWorkPageTranslations.reject} /> : <TranslatedText greetings={operatorWorkPageTranslations.reject} />
+                                                                }
+                                                            </Button>
                                                             <RejectionForm request={selectedRequest} />
                                                             <Button onClick={() => handleAccept(selectedRequest)} disabled={loading}>
                                                                 {

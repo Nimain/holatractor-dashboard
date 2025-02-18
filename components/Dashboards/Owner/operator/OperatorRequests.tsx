@@ -63,6 +63,28 @@ const OperatorRequests = ({ requests }: { requests: OperatorAddStoreReuests[]; }
         })
     }
 
+    const handleReject = (request: string) => {
+        
+        setLoadingStates((prev) => ({ ...prev, [request]: true }))
+          renderInstance.patch(`/owner/finalRejectAddStoreRequest/${request}`, {}, {
+              headers: {
+                  Authorization: `Bearer ${access_token}`,
+              }
+          }).then((res) => {
+              // Logic to fetch all request
+              fetchAllOperatorRequests()
+              successMessage("Rejected")
+          }).catch((err) => {
+              if (err.response && err.response.status && err.response.data.message) {
+                  errorMessage(err.response.data.message)
+              }  else {
+                  errorMessage("Error in requesting")
+              }
+          }).finally(() => {
+            setLoadingStates((prev) => ({ ...prev, [request]: false }))
+          })
+    }
+
     return (
         <Dialog>
             <DialogTrigger asChild>
@@ -73,7 +95,7 @@ const OperatorRequests = ({ requests }: { requests: OperatorAddStoreReuests[]; }
             <DialogContent className='max-h-[90vh] overflow-auto' style={{ scrollbarWidth: "none" }}>
                 <div className='w-full grid grid-cols-2'>
                     {
-                        requests.map((requset, index) => {
+                        requests.map((requset: OperatorAddStoreReuests, index) => {
                             return (
                                 <Card className="w-full max-w-md" key={index}>
                                     <CardHeader className="flex flex-row items-center gap-4">
@@ -123,6 +145,9 @@ const OperatorRequests = ({ requests }: { requests: OperatorAddStoreReuests[]; }
                                         </div>
                                     </CardContent>
                                     <CardFooter className="flex justify-end space-x-2 mt-4">
+                                    <Button onClick={() => {handleReject(requset.id)}} disabled={loadingStates[requset.id] && fetching}>
+                                            {<TranslatedText greetings={operatorWorkPageTranslations.reject} />}
+                                        </Button>
                                         <FillAcceptanceForm id={requset.id} />
                                         <Button onClick={() => {handleAccept(requset)}} disabled={loadingStates[requset.id] && fetching}>
                                             {(loadingStates[requset.id] || fetching) ? <TranslatedText greetings={operatorWorkPageTranslations.accepting} /> : <TranslatedText greetings={operatorWorkPageTranslations.accept} />}
