@@ -39,6 +39,7 @@ import TranslatedText from '@/components/Menubar/TranslatedText';
 import { ownerCustomerPageTranslations } from './OwnerCustomerTranslations';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Pagination from '@/utils/Paginations/Pagination';
+import { EmptyState } from '@/utils/EmptyStates';
 
 
 interface Customer {
@@ -120,7 +121,7 @@ const OwnerCustomer = () => {
 
         renderInstance.get(`/owner/get-owner-customer-page-details/${user.userId}?searchBy=${searchBy}&search=${searchTerm}&sortBy=${sortBy}&sortOrder=${sortOrder}&page=${page}`)
             .then((res) => {
-                setCustomers(res.data.customers)
+                // setCustomers(res.data.customers)
                 setActiveCustomers(res.data.activeCustomers.length)
                 setRejectedCustomers(res.data.rejectedCustomers)
                 setPendingCustomers(res.data.pendingCustomers)
@@ -354,12 +355,16 @@ const OwnerCustomer = () => {
                         {fetchingPageDetails ? <CustomerTableShrimmer />
                             :
                             customers.length === 0 ?
-                                <p><TranslatedText greetings={ownerCustomerPageTranslations.noCustomersAvailable} /></p>
+                                <TableRow>
+                                    <TableCell colSpan={8}>
+                                        <EmptyState heading='No Customers Found' heading2='It looks like there are no customers available. Add a new customer to get started.' />
+                                    </TableCell>
+                                </TableRow>
                                 :
                                 customers.map((customer, i) => {
                                     const name = customer.name
                                     return (
-                                        <TableRow key={i} className="border-t" onMouseEnter={()=>{setHoveredItem(i)}} onMouseLeave={()=>{setHoveredItem(-1)}}>
+                                        <TableRow key={i} className="border-t" onMouseEnter={() => { setHoveredItem(i) }} onMouseLeave={() => { setHoveredItem(-1) }}>
                                             <TableCell className="p-4 w-[4vw]">
                                                 <Input type="checkbox" className="rounded w-4 h-4 accent-primaryColor" />
                                             </TableCell>

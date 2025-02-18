@@ -322,21 +322,20 @@ const AttendanceDashboard = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {isLoading ? <div className="animate-pulse">
-                                    {[...Array(5)].map((_, rowIndex) => (
-                                        <div key={`row-${rowIndex}`} className="grid grid-cols-9 gap-4 py-4 px-4 border-t">
-                                            <div className="h-4 bg-gray-200 rounded w-12 justify-self-center items-center" />
-                                            <div className="h-4 bg-gray-200 rounded w-16 justify-self-center items-center" />
-                                            <div className="h-4 bg-gray-200 rounded w-24 justify-self-center items-center" />
-                                            <div className="h-4 bg-gray-200 rounded w-16 justify-self-center items-center" />
-                                            <div className="h-4 bg-gray-200 rounded w-16 justify-self-center items-center" />
-                                            <div className="h-4 bg-gray-200 rounded w-16 justify-self-center items-center" />
-                                            <div className="h-4 bg-gray-200 rounded w-20 justify-self-center items-center" />
-                                            <div className="h-4 bg-gray-200 rounded w-20 justify-self-center items-center" />
-                                            <div className="h-4 bg-gray-200 rounded w-8 justify-self-center items-center" />
-                                        </div>
-                                    ))}
-                                </div> : PageDetails && PageDetails.stores.length === 0 ? <p>No data available</p> : PageDetails && PageDetails.stores.map((store, i) => (
+                                {isLoading ? <TableRow className="animate-pulse">
+                                        {[...Array(7)].map((_, rowIndex) => (
+                                            <TableCell
+                                                key={`row-${rowIndex}`}
+                                            >
+                                                {[...Array(8)].map((_, colIndex) => (
+                                                    <div
+                                                        key={`col-${colIndex}`}
+                                                        className="h-4 w-full bg-gray-200 rounded my-2"
+                                                    />
+                                                ))}
+                                            </TableCell>
+                                        ))}
+                                    </TableRow> : PageDetails && PageDetails.stores.length === 0 ? <p>No data available</p> : PageDetails && PageDetails.stores.map((store, i) => (
                                     <TableRow key={i} className="hover:bg-gray-50">
                                         <TableCell className="font-medium text-center">{i + 1}</TableCell>
                                         <TableCell className="font-medium text-gray-600 text-center">{store.storeId}</TableCell>
