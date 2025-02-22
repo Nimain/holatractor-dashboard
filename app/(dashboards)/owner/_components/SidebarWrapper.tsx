@@ -1,5 +1,6 @@
 "use client"
 
+import { AddStoreItemProvider } from '@/components/wrappers/AddStoreItemProvider'
 import { OperatorsRequestToJoinStoreProvider } from '@/components/wrappers/OperatorsRequestToJoinStoreProvider'
 import { OwnerStoreProvider } from '@/components/wrappers/StoreProvider'
 import dynamic from 'next/dynamic'
@@ -21,8 +22,10 @@ const SidebarWrapper = ({
     <div className="flex h-screen bg-[#EAF6FA] gap-4 px-4 md:px-8">
       <OwnerStoreProvider>
         <OperatorsRequestToJoinStoreProvider>
-          <Sidebar />
-          {children}
+          <AddStoreItemProvider>
+            <Sidebar />
+            {children}
+          </AddStoreItemProvider>
         </OperatorsRequestToJoinStoreProvider>
       </OwnerStoreProvider>
     </div>

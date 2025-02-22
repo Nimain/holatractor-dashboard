@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import TranslatedText from "@/components/Menubar/TranslatedText";
 import { singleStoreOwnerTranslations } from "../SingleStoreTranslation";
+import { useAddStoreItemContext } from "@/components/wrappers/AddStoreItemProvider";
 
 const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentInStore[] }) => {
   const [open, setOpen] = useState(false);
@@ -35,6 +36,8 @@ const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentI
   const access_token = cookie.get("access_token");
 
   const { slug } = useParams();
+
+  const { fetchStoreDetails } = useAddStoreItemContext()
 
   function fetchAllAttachments() {
     if (access_token) {
@@ -83,6 +86,7 @@ const AddAttachment = ({ alreadyAttachments }: { alreadyAttachments: AttachmentI
         },
       })
       .then((res) => {
+        fetchStoreDetails()
         successMessage("Attachment added successfully");
       })
       .catch((err) => {

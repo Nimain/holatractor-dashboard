@@ -22,6 +22,7 @@ import { useCookie } from 'next-cookie'
 import { Button } from '@/components/ui/button'
 import { singleStoreOwnerTranslations } from './SingleStoreTranslation'
 import TranslatedText from '@/components/Menubar/TranslatedText'
+import { useAddStoreItemContext } from '@/components/wrappers/AddStoreItemProvider'
 
 interface user {
   userId: string;
@@ -31,53 +32,11 @@ interface user {
 }
 
 export default function StorePage() {
-  const [store, setStore] = useState<Store | null>(null)
-  const [fetchingStoreDetails, setFetchingStoreDetails] = useState(false)
-
   const [selectedTab, setSelectedTab] = useState('Overview'); // Track selected tab
+  
+    const { slug } = useParams()
 
-  const images = [
-    "https://img.freepik.com/premium-photo/tractor-makes-harvesting-hay-animals-farm_627378-1301.jpg",
-    "https://cdn.britannica.com/09/179609-138-D7550199/tractors-GPS-navigation-systems-farming.jpg",
-    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT243T7YIOkC6yRwBVPQ6wPFXfo_Ssl1aYlcQ&s",
-    "https://thumbs.dreamstime.com/b/tractor-modern-agriculture-equipment-14081589.jpg",
-  ];
-
-  const { cookie } = useCookie()
-  const user: user = cookie.get("user")
-
-  const { slug } = useParams()
-
-  function fetchStoreDetails() {
-    setFetchingStoreDetails(true)
-    renderInstance.get(`/store/${slug}`)
-      .then((res) => {
-        setStore(res.data)
-      }).catch((err) => {
-        errorMessage("Error fetching store details")
-      }).finally(() => {
-        setFetchingStoreDetails(false)
-      })
-  }
-
-  useEffect(() => {
-    // Connect to the socket server
-    const newSocket: Socket = io(NestJsBaseURL, {
-      query: {
-        userId: user.userId
-      }
-    });
-
-    // Listen for the 'newFarmerNotification' event
-    newSocket.on('newOwnerStore', (addedStore: Store) => {
-      setStore(addedStore)
-    });
-
-    // Clean up the event listener when the component unmounts
-    return () => {
-      newSocket.disconnect();
-    };
-  }, []);
+    const { fetchStoreDetails, fetchingStoreDetails, store } = useAddStoreItemContext()
 
   useEffect(() => {
     if (slug) {
@@ -215,7 +174,7 @@ export default function StorePage() {
               <TractorCard key={tractor.id} tractor={tractor.baseTractor} />
             ))}
 
-          {selectedTab === "Attachment" && store.TractorInStore.length === 0 && (
+          {selectedTab === "Attachment" && store.AttachmentInStore.length === 0 && (
             <Card className="w-full max-w-sm mx-auto text-center p-6">
               <CardContent className="space-y-6">
                 <div className="bg-gray-50 rounded-lg p-4 mx-auto w-20 h-20 flex items-center justify-center">
@@ -239,7 +198,7 @@ export default function StorePage() {
 
       </div>
 
-      {selectedTab === 'Tractor' && (
+      {/* {selectedTab === 'Tractor' && (
         <div className="container mx-auto p-2 sm:p-4 md:p-6">
           <div className="flex flex-col xl:flex-row gap-3 sm:gap-4 md:gap-6">
             <div className="w-full xl:w-[47%] min-w-[250px] sm:min-w-[300px] md:min-w-[350px] lg:min-w-[400px]">
@@ -286,7 +245,7 @@ export default function StorePage() {
             </div>
           </div>
         </div>
-      )}
+      )} */}
     </div>
   
   )

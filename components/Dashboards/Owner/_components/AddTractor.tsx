@@ -29,6 +29,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { uploadFileToS3 } from "@/utils/AWS/FileUpload";
 import { singleStoreOwnerTranslations } from "../SingleStoreTranslation";
 import TranslatedText from "@/components/Menubar/TranslatedText";
+import { useAddStoreItemContext } from "@/components/wrappers/AddStoreItemProvider";
 
 const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) => {
   const [open, setOpen] = useState(false);
@@ -48,6 +49,8 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
   const access_token = cookie.get("access_token");
 
   const { slug } = useParams();
+
+  const { fetchStoreDetails } = useAddStoreItemContext()
 
   function fetchAllTractors() {
     if (access_token) {
@@ -121,29 +124,12 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
         },
       })
       .then((res) => {
+        fetchStoreDetails()
         successMessage("Tractor added successfully");
       })
       .catch((err) => {
-        if (err.response && err.response.status === 404 && err.response.data.message === "Store not present") {
-          errorMessage("Store not present")
-        } else if (err.response && err.response.status === 404 && err.response.data.message === "Inventory not found") {
-          errorMessage("Inventory not found")
-        } else if (err.response && err.response.status === 404 && err.response.data.message === "User not present") {
-          errorMessage("User not present")
-        } else if (err.response && err.response.status === 400 && err.response.data.message === "No owner is availalable for this store") {
-          errorMessage("No owner is availalable for this store")
-        } else if (err.response && err.response.status === 401 && err.response.data.message === "You are not allowed to modify the store") {
-          errorMessage("You are not allowed to modify the store")
-        } else if (err.response && err.response.status === 409 && err.response.data.message === "No active subscriptions") {
-          errorMessage("No active subscriptions")
-        } else if (err.response && err.response.status === 409 && err.response.data.message === "Maximum tractors reached") {
-          errorMessage("Maximum tractors reached")
-        } else if (err.response && err.response.status === 404 && err.response.data.message === "Tractor not found") {
-          errorMessage("Tractor not found")
-        } else if (err.response && err.response.status === 409 && err.response.data.message === "You have added more price than inventory price") {
-          errorMessage("You have added more price than inventory price")
-        } else if (err.response && err.response.status === 409 && err.response.data.message === "You have entered price less than inventory minimum price") {
-          errorMessage("You have entered price less than inventory minimum price")
+        if (err.response && err.response.status && err.response.data.message) {
+          errorMessage(err.response.data.message)
         } else {
           errorMessage("Some error occurred");
         }
