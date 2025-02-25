@@ -51,25 +51,6 @@ const OwnerDashboardPage = () => {
   }
 
   useEffect(() => {
-    // Connect to the socket server
-    const newSocket: Socket = io(NestJsBaseURL, {
-      query: {
-        userId: user.userId
-      }
-    });
-
-    // Listen for the 'newFarmerNotification' event
-    newSocket.on('newOwnerStore', (addedStore: Store) => {
-      setStores(pre => [...pre, addedStore])
-    });
-
-    // Clean up the event listener when the component unmounts
-    return () => {
-      newSocket.disconnect();
-    };
-  }, []);
-
-  useEffect(() => {
     if (user) {
       fetchOwner()
     }

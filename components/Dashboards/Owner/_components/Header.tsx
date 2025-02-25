@@ -68,27 +68,6 @@ const Header = () => {
     }, [isOpen])
 
     useEffect(() => {
-        // Connect to the socket server
-        const newSocket: Socket = io(NestJsBaseURL, {
-            query: {
-                userId: user.userId
-            }
-        });
-
-        // Listen for the 'newFarmerNotification' event
-        newSocket.on('newOwnerNotification', (notification: OwnerNotification) => {
-            console.log(notification)
-            showBrowserNotification(notification)
-            setNotifications((prev) => [notification, ...prev]);
-        });
-
-        // Clean up the event listener when the component unmounts
-        return () => {
-            newSocket.disconnect();
-        };
-    }, []);
-
-    useEffect(() => {
         if (Notification.permission === 'default') {
             Notification.requestPermission();
         }

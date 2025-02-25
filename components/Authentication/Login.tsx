@@ -4,7 +4,7 @@ import { useCookie } from 'next-cookie'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import CryptoJS from "crypto-js";
 import { decode } from "jsonwebtoken"
 import { renderInstance } from '@/utils/Axios/RenderInstance'
@@ -15,6 +15,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { useGoogleLogin } from '@react-oauth/google'
 import axios from 'axios'
 import { Backdrop, CircularProgress } from '@mui/material';
+import { useLoading } from '../wrappers/LoaderWrappers'
 
 const LogInPage = () => {
 
@@ -22,10 +23,12 @@ const LogInPage = () => {
     const [passwrd, setPassword] = useState("")
     const [passwrdShow, setPasswordShow] = useState(false)
 
-    const [loading, setLoading] = useState(false)
+    // const [loading, setLoading] = useState(false)
     const router = useRouter()
 
     const { cookie } = useCookie();
+
+    const { setLoading, isLoading } = useLoading()
 
     function handleLogin(e: any) {
         e.preventDefault()
@@ -166,7 +169,7 @@ const LogInPage = () => {
                         className='px-[20px] py-[10px] bg-black text-white text-[18px] rounded flex items-center justify-center gap-[10px] w-full mx-auto'
                         onClick={e => handleLogin(e)}>
                         {
-                            loading ?
+                            isLoading ?
                                 <CircularProgress className='text-primaryColor' />
                                 :
                                 "Log in"
@@ -202,11 +205,11 @@ export default LogInPage
 
 const GoogleSignIn = () =>{
 
-    const [loading, setLoading] = useState(false)
-
     const router = useRouter()
 
     const { cookie } = useCookie();
+
+    const { setLoading } = useLoading()
 
     const login = useGoogleLogin({
         onSuccess: (codeResponse) => {
@@ -284,13 +287,6 @@ const GoogleSignIn = () =>{
                 width={40}
                 height={40}
             />
-
-<Backdrop
-                        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-                        open={loading}
-                    >
-                        <CircularProgress />
-                    </Backdrop>
         </div>
     )
 }
