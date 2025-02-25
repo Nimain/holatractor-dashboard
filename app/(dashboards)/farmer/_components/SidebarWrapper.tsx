@@ -1,5 +1,6 @@
 "use client"
 
+import { ConfirmationProvider } from '@/components/wrappers/ConfirmationWrapper';
 import { FarmProvider } from '@/components/wrappers/FarmProvider';
 import dynamic from 'next/dynamic'
 import { ReactNode } from 'react'
@@ -20,8 +21,10 @@ const SidebarWrapper = ({
     return (
         <div className="flex h-screen bg-[#EAF6FA] gap-4 px-4 md:px-8">
             <FarmProvider>
-                <Sidebar />
-                {children}
+                <ConfirmationProvider>
+                    <Sidebar />
+                    {children}
+                </ConfirmationProvider>
             </FarmProvider>
         </div>
     )

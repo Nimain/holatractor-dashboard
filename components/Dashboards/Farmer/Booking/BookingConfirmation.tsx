@@ -13,6 +13,7 @@ import { useCookie } from "next-cookie";
 import { useState } from "react";
 import { newBookingTranslations } from "../FarmerTranslation";
 import TranslatedText from "@/components/Menubar/TranslatedText";
+import { useConfirmation } from "@/components/wrappers/ConfirmationWrapper";
 
 
 const BookingConfirmation = ({ newBooking, updateBookingStatus }: { newBooking: Booking; updateBookingStatus: (id: string, confirmed: boolean) => void }) => {
@@ -21,6 +22,8 @@ const BookingConfirmation = ({ newBooking, updateBookingStatus }: { newBooking: 
 
     const { cookie } = useCookie()
     const access_token = cookie.get("access_token")
+
+    const { StartPlaying } = useConfirmation()
 
     const formatCurrency = (amount: any) => {
         return new Intl.NumberFormat('en-US', {
@@ -46,7 +49,10 @@ const BookingConfirmation = ({ newBooking, updateBookingStatus }: { newBooking: 
             }).then((res) => {
                 successMessage("Successfully booked")
                 updateBookingStatus(newBooking.id, true)
-                setOpen(false)
+                StartPlaying()
+                setTimeout(() => {
+                    setOpen(false)
+                }, 1500);
             }).catch((err) => {
                 if (err.response && err.response.status === 404 && err.response.data.message === "Booking is not valid") {
                     errorMessage("Booking is not valid")
@@ -78,7 +84,7 @@ const BookingConfirmation = ({ newBooking, updateBookingStatus }: { newBooking: 
                     newBooking && <Card className="w-full mx-auto shadow-lg">
                         <CardHeader className="text-center border-b">
                             <CardTitle className="text-2xl font-bold text-primary">
-                            <TranslatedText greetings={newBookingTranslations.bookingConfirmation} />
+                                <TranslatedText greetings={newBookingTranslations.bookingConfirmation} />
                             </CardTitle>
                             <p className="text-gray-500"><TranslatedText greetings={newBookingTranslations.bookingId} />: {newBooking.id}</p>
                         </CardHeader>
@@ -89,7 +95,7 @@ const BookingConfirmation = ({ newBooking, updateBookingStatus }: { newBooking: 
                                 <div className="flex items-center gap-2">
                                     <CalendarIcon className="h-5 w-5 text-primary" />
                                     <h3 className="font-semibold">
-                                    <TranslatedText greetings={newBookingTranslations.bookingPeriod} />
+                                        <TranslatedText greetings={newBookingTranslations.bookingPeriod} />
                                     </h3>
                                 </div>
 
@@ -138,11 +144,11 @@ const BookingConfirmation = ({ newBooking, updateBookingStatus }: { newBooking: 
                                 </div>
 
                                 <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                                <CostItem label={<TranslatedText greetings={newBookingTranslations.attachmentCost} />} value={newBooking.total_attachment_cost?.toFixed(2)} />
-                                        <CostItem label={<TranslatedText greetings={newBookingTranslations.tractorCost} />} value={newBooking.total_tractor_cost?.toFixed(2)} />
-                                        <CostItem label={<TranslatedText greetings={newBookingTranslations.serviceCharge} />} value={newBooking.total_service_charge?.toFixed(2)} />
-                                        <CostItem label={<TranslatedText greetings={newBookingTranslations.distanceCost} />} value={newBooking.total_distance_cost?.toFixed(2)} />
-                                        <CostItem label={<TranslatedText greetings={newBookingTranslations.tax} />} value={newBooking.total_tax?.toFixed(2)} />
+                                    <CostItem label={<TranslatedText greetings={newBookingTranslations.attachmentCost} />} value={newBooking.total_attachment_cost?.toFixed(2)} />
+                                    <CostItem label={<TranslatedText greetings={newBookingTranslations.tractorCost} />} value={newBooking.total_tractor_cost?.toFixed(2)} />
+                                    <CostItem label={<TranslatedText greetings={newBookingTranslations.serviceCharge} />} value={newBooking.total_service_charge?.toFixed(2)} />
+                                    <CostItem label={<TranslatedText greetings={newBookingTranslations.distanceCost} />} value={newBooking.total_distance_cost?.toFixed(2)} />
+                                    <CostItem label={<TranslatedText greetings={newBookingTranslations.tax} />} value={newBooking.total_tax?.toFixed(2)} />
                                     <Separator className="my-2" />
                                     <div className="flex justify-between items-center pt-2 font-bold">
                                         <span><TranslatedText greetings={newBookingTranslations.totalAmount} /></span>

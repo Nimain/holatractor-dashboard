@@ -19,6 +19,7 @@ export const LoadingProvider = ({ children }: { children: ReactNode }) => {
             <Backdrop
                 sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
                 open={isLoading}
+                onClick={e=>{e.stopPropagation()}}
             >
                 <div className="w-64 h-64">
                     <Lottie

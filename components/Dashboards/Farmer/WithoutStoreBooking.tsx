@@ -25,6 +25,7 @@ import { Backdrop, CircularProgress } from '@mui/material';
 import { Separator } from '@/components/ui/separator';
 import TranslatedText from '@/components/Menubar/TranslatedText';
 import { newBookingTranslations } from './FarmerTranslation';
+import { useConfirmation } from '@/components/wrappers/ConfirmationWrapper';
 
 interface user {
     userId: string;
@@ -71,6 +72,8 @@ const WithoutStoreBooking = () => {
     const { cookie } = useCookie()
     const user: user = cookie.get("user")
     const access_token = cookie.get("access_token")
+
+    const { StartPlaying } = useConfirmation()
 
     const fetchData = async () => {
         setFetchingFarms(true)
@@ -139,7 +142,10 @@ const WithoutStoreBooking = () => {
             }).then((res) => {
                 successMessage("Successfully booked")
                 setNewBooking(null)
-                setOpen(false)
+                StartPlaying()
+                setTimeout(() => {
+                    setOpen(false)
+                }, 1500);
             }).catch((err) => {
                 if (err.response && err.response.status === 404 && err.response.data.message === "Booking is not valid") {
                     errorMessage("Booking is not valid")
