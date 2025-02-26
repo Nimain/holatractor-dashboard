@@ -3,8 +3,8 @@
 import { useCookie } from 'next-cookie'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useRef, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
 import CryptoJS from "crypto-js";
 import { decode } from "jsonwebtoken"
 import { renderInstance } from '@/utils/Axios/RenderInstance'
@@ -25,6 +25,32 @@ const LogInPage = () => {
 
     // const [loading, setLoading] = useState(false)
     const router = useRouter()
+
+    const searchParams = useSearchParams()
+
+    const verifyToken = async (token: string) => {
+        setLoading(true)
+        renderInstance.patch(`/user/email_token_verify/${token}`, {}, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            }
+        }).then((res) => {
+            if (res.data === "Verification failed") {
+                errorMessage("Failed to verify email")
+            } else {
+                successMessage("Email verified successfully")
+            }
+        }).catch((err) => {
+            console.log(err)
+            if (err.response && err.response.data && err.response.data.message) {
+                errorMessage(err.response.data.message)
+            } else {
+                errorMessage("Failed to verify email")
+            }
+        }).then(() => {
+            setLoading(false)
+        })
+    }
 
     const { cookie } = useCookie();
 
@@ -77,6 +103,10 @@ const LogInPage = () => {
                 else {
                     router.push("/")
                 }
+            } else if (res.data === "Email verification link sent successfully") {
+                successMessage("Email verification link sent successfully")
+            } else {
+                successMessage("Try again")
             }
         }).catch((err) => {
             if (err.response && err.response.status === 409 && err.response.data.message === "User not found") {
@@ -96,6 +126,13 @@ const LogInPage = () => {
             setLoading(false)
         })
     }
+
+    useEffect(() => {
+        const verificationToken = searchParams.get("verificationToken")
+        if (verificationToken) {
+            verifyToken(verificationToken)
+        }
+    }, [searchParams])
 
     return (
         <div className='w-full min-h-[100vh] max-h-fit flex items-center justify-center text-[18px]'>
@@ -203,7 +240,7 @@ const LogInPage = () => {
 
 export default LogInPage
 
-const GoogleSignIn = () =>{
+const GoogleSignIn = () => {
 
     const router = useRouter()
 
@@ -227,12 +264,12 @@ const GoogleSignIn = () =>{
                         authType: "GOOGLE"
                     }).then((res) => {
                         if (res.status === 201 && res.data.access_token) {
-            
+
                             const user = decode(res.data.access_token)
-            
+
                             const expiryDate = new Date();
                             expiryDate.setDate(expiryDate.getDate() + 1);
-            
+
                             // Set the cookie with the calculated expiry date
                             cookie.set('access_token', res.data.access_token, { path: '/', expires: expiryDate });
                             cookie.set('user', user, { path: '/', expires: expiryDate });
@@ -240,7 +277,7 @@ const GoogleSignIn = () =>{
                             cookie.set('isOperator', res.data.isOperator, { path: '/', expires: expiryDate });
                             cookie.set('isOwner', res.data.isOwner, { path: '/', expires: expiryDate });
                             cookie.set('isDealer', res.data.isDealer, { path: '/', expires: expiryDate });
-            
+
                             successMessage("Log in successfull")
                             if (res.data.isFarmer) {
                                 router.push("/farmer")
@@ -275,7 +312,7 @@ const GoogleSignIn = () =>{
         onError: (error) => errorMessage('Login Failed')
     });
 
-    return(
+    return (
         <div className="flex items-center justify-center gap-[10px]" onClick={() => { login() }}>
             Or continue with
             <Image
