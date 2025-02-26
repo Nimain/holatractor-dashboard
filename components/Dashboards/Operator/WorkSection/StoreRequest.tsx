@@ -22,7 +22,7 @@ interface user {
     email: string;
 }
 
-const StoreRequest = () => {
+const StoreRequest = ({ fetchPageDetails }: { fetchPageDetails?: () => void }) => {
     const [fetchingRequests, setFetchingRequests] = useState(false)
     const [allRequests, setAllRequests] = useState<OperatorAddStoreReuests[]>([])
 
@@ -59,8 +59,11 @@ const StoreRequest = () => {
                 Authorization: `Bearer ${access_token}`,
             }
         }).then(() => {
+            if (fetchPageDetails) {
+                fetchPageDetails()
+            }
+            fetchRequests()
             successMessage("Congratulations")
-            window.location.reload()
         }).catch((err) => {
             if (err.response && err.response.status === 404 && err.response.data.message === "User is not found") {
                 errorMessage("User not found")
@@ -81,24 +84,28 @@ const StoreRequest = () => {
     }
 
     const handleReject = (id: string) => {
-    
+
         setLoading(true)
         renderInstance.patch(`/operator/finalRejectAddStoreRequest/${id}`, {}, {
-          headers: {
-            Authorization: `Bearer ${access_token}`,
-          }
+            headers: {
+                Authorization: `Bearer ${access_token}`,
+            }
         }).then(() => {
-          successMessage("Rejected")
+            if (fetchPageDetails) {
+                fetchPageDetails()
+            }
+            fetchRequests()
+            successMessage("Rejected")
         }).catch((err) => {
-          if (err.response && err.response.status && err.response.data.message) {
-            errorMessage(err.response.data.message)
-          } else {
-            errorMessage("Some error occurred")
-          }
+            if (err.response && err.response.status && err.response.data.message) {
+                errorMessage(err.response.data.message)
+            } else {
+                errorMessage("Some error occurred")
+            }
         }).finally(() => {
-          setLoading(false)
+            setLoading(false)
         })
-      }
+    }
 
     useEffect(() => {
         if (user) {

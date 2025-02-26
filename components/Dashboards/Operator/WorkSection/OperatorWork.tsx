@@ -22,7 +22,6 @@ import { OperatorInStore } from '@/utils/Types/types';
 import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
 import { useCookie } from 'next-cookie';
-import OwnerShrimmer from '../../Owner/_components/OwnerShrimmer';
 import TranslatedText, { TranslatedTaskText } from '@/components/Menubar/TranslatedText';
 import { operatorWorkPageTranslations } from './WorkPageTranslations';
 

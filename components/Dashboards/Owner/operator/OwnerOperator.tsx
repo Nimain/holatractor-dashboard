@@ -54,10 +54,6 @@ interface user {
 }
 
 const OwnerOperator = () => {
-    const [activeTab, setActiveTab] = useState('all');
-    const [currentTime, setCurrentTime] = useState<string>("");
-    const [currentDate, setCurrentDate] = useState<string>("");
-
     const [allOperators, setAllOperators] = useState<OperatorInStore[]>([])
     const [activeOperators, setActiveOperators] = useState(0)
     const [fetchingOperatorDetails, setFetchingOperatorDetails] = useState(false)
@@ -74,13 +70,6 @@ const OwnerOperator = () => {
     const [hoveredItem, setHoveredItem] = useState(-1)
 
     const { operatorRequests, setOperatorRequests, fetchAllOperatorRequests } = useOperatorsRequestToJoinStoreContext()
-
-    const tabs = [
-        { id: 'all', label: 'All', icon: LayoutGrid },
-        { id: 'company', label: 'Company', icon: Building2 },
-        { id: 'contact', label: 'Contact', icon: Users },
-        { id: 'estimate', label: 'Estimate Value', icon: DollarSign },
-    ];
 
     const { cookie } = useCookie()
     const user: user = cookie.get("user")
@@ -159,20 +148,6 @@ const OwnerOperator = () => {
     }, [])
 
     useEffect(() => {
-        const updateDateTime = () => {
-            const now = new Date();
-            setCurrentTime(now.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit' })); // Adjust locale and options as needed
-            setCurrentDate(now.toLocaleDateString("en-GB")); // Format: DD/MM/YYYY
-        };
-
-        // Update every second
-        const intervalId = setInterval(updateDateTime, 1000);
-        updateDateTime(); // Initialize immediately
-
-        return () => clearInterval(intervalId); // Cleanup on component unmount
-    }, []);
-
-    useEffect(() => {
         // Connect to the socket server
         const newSocket: Socket = io(NestJsBaseURL, {
             query: {
@@ -211,7 +186,7 @@ const OwnerOperator = () => {
                 </Breadcrumb>
 
                 <div className='flex items-center gap-3'>
-                    {operatorRequests.length > 0 && <OperatorRequests requests={operatorRequests} />}
+                    {operatorRequests.length > 0 && <OperatorRequests requests={operatorRequests} fetchOperatorTableList={fetchOperators} />}
                     <RequestNewOperator />
                 </div>
 

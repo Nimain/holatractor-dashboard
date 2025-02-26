@@ -18,7 +18,7 @@ import React, { useState } from 'react'
 import { operatorWorkPageTranslations } from '../../Operator/WorkSection/WorkPageTranslations'
 import { useOperatorsRequestToJoinStoreContext } from '@/components/wrappers/OperatorsRequestToJoinStoreProvider'
 
-const OperatorRequests = ({ requests }: { requests: OperatorAddStoreReuests[]; }) => {
+const OperatorRequests = ({ requests, fetchOperatorTableList  }: { requests: OperatorAddStoreReuests[]; fetchOperatorTableList?: () => void }) => {
     const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({})
 
     const { fetchAllOperatorRequests, fetching } = useOperatorsRequestToJoinStoreContext()
@@ -43,6 +43,9 @@ const OperatorRequests = ({ requests }: { requests: OperatorAddStoreReuests[]; }
             }
         }).then(async () => {
             fetchAllOperatorRequests()
+            if(fetchOperatorTableList){
+                fetchOperatorTableList()
+            }
             successMessage("Congratulations")
         }).catch((err) => {
             if (err.response && err.response.status === 404 && err.response.data.message === "User is not found") {
@@ -73,6 +76,9 @@ const OperatorRequests = ({ requests }: { requests: OperatorAddStoreReuests[]; }
           }).then((res) => {
               // Logic to fetch all request
               fetchAllOperatorRequests()
+              if(fetchOperatorTableList){
+                  fetchOperatorTableList()
+              }
               successMessage("Rejected")
           }).catch((err) => {
               if (err.response && err.response.status && err.response.data.message) {
@@ -145,11 +151,11 @@ const OperatorRequests = ({ requests }: { requests: OperatorAddStoreReuests[]; }
                                         </div>
                                     </CardContent>
                                     <CardFooter className="flex justify-end space-x-2 mt-4">
-                                    <Button onClick={() => {handleReject(requset.id)}} disabled={loadingStates[requset.id] && fetching}>
+                                    <Button onClick={() => {handleReject(requset.id)}} disabled={loadingStates[requset.id]}>
                                             {<TranslatedText greetings={operatorWorkPageTranslations.reject} />}
                                         </Button>
                                         <FillAcceptanceForm id={requset.id} />
-                                        <Button onClick={() => {handleAccept(requset)}} disabled={loadingStates[requset.id] && fetching}>
+                                        <Button onClick={() => {handleAccept(requset)}} disabled={loadingStates[requset.id]}>
                                             {(loadingStates[requset.id] || fetching) ? <TranslatedText greetings={operatorWorkPageTranslations.accepting} /> : <TranslatedText greetings={operatorWorkPageTranslations.accept} />}
                                         </Button>
                                     </CardFooter>
