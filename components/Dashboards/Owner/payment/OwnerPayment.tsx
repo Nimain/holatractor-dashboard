@@ -30,7 +30,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Backdrop, CircularProgress } from '@mui/material'
-import OwnerShrimmer from '../_components/OwnerShrimmer'
 import PaymentSheet from './PaymentSheet'
 import { DownloadPDFButton } from './PaymentPDF';
 import { addDays } from 'date-fns'
@@ -746,7 +745,7 @@ function UPIForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: boolean) => 
         Authorization: `Bearer ${access_token}`,
       },
     }).then(() => {
-      successMessage("paypal account added")
+      successMessage("QR account added")
       setIsAddModalOpen(false)
     }).catch((err) => {
       errorMessage("Error adding bank account")

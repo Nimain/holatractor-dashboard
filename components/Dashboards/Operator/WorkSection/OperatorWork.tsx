@@ -18,12 +18,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import StoreRequest from './StoreRequest';
-import { OperatorInStore } from '@/utils/Types/types';
+import { BookingHours, OperatorInStore } from '@/utils/Types/types';
 import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
 import { useCookie } from 'next-cookie';
 import TranslatedText, { TranslatedTaskText } from '@/components/Menubar/TranslatedText';
 import { operatorWorkPageTranslations } from './WorkPageTranslations';
+import { newBookingTranslations } from '../../Farmer/FarmerTranslation';
 
 interface PageDetails {
     operatorId: string,
@@ -33,12 +34,14 @@ interface PageDetails {
     totalAcceptedJobs: number,
     totalRejectedJobs: number,
     totalCompletedJobs: number,
-    stores: {
+    bookings: {
+        booking_id: string,
         storeName: string,
-        storeId: string,
-        acceptedJobs: number,
-        rejectedJobs: number,
-        totalCompletedBookingsCost: number
+        start_date: string,
+        duration: string,
+        status: string,
+        amount: number,
+        bookingHours: string
     }[]
 }
 
@@ -102,6 +105,18 @@ const AttendanceDashboard = () => {
             })
     }
 
+    const filterBookingHours = (val: string) => {
+        let hours = <TranslatedText greetings={newBookingTranslations.hours['1h']} />
+        if (val === BookingHours.EIGHT_HOURS) hours = <TranslatedText greetings={newBookingTranslations.hours['8h']} />
+        else if (val === BookingHours.SEVEN_HOURS) hours = <TranslatedText greetings={newBookingTranslations.hours['7h']} />
+        else if (val === BookingHours.SIX_HOURS) hours = <TranslatedText greetings={newBookingTranslations.hours['6h']} />
+        else if (val === BookingHours.FIVE_HOURS) hours = <TranslatedText greetings={newBookingTranslations.hours['5h']} />
+        else if (val === BookingHours.FOUR_HOURS) hours = <TranslatedText greetings={newBookingTranslations.hours['4h']} />
+        else if (val === BookingHours.THREE_HOURS) hours = <TranslatedText greetings={newBookingTranslations.hours['3h']} />
+        else if (val === BookingHours.TWO_HOURS) hours = <TranslatedText greetings={newBookingTranslations.hours['2h']} />
+        return hours
+      }
+
     useEffect(() => {
         if (user) {
             fetchPageDetails()
@@ -134,7 +149,7 @@ const AttendanceDashboard = () => {
                         </div>
                         <div className="grid grid-cols-3 gap-4">
                             <div className="text-center">
-                                <div className="text-2xl font-semibold mb-1">{PageDetails ? PageDetails.stores.length : 0}</div>
+                                <div className="text-2xl font-semibold mb-1">{PageDetails ? PageDetails.bookings.length : 0}</div>
                                 <div className="text-xs text-gray-500 mb-1"><TranslatedText greetings={operatorWorkPageTranslations.totalStores} /></div>
                             </div>
                             <div className="text-center">
@@ -275,7 +290,7 @@ const AttendanceDashboard = () => {
                                     </TableHead>
                                     <TableHead className="font-semibold text-center">
                                         <div className="flex justify-center items-center space-x-2">
-                                            <span>ID</span>
+                                            <span>Booking ID</span>
                                             <ArrowUpDown className="h-4 w-4 text-gray-500" />
                                         </div>
                                     </TableHead>
@@ -334,18 +349,18 @@ const AttendanceDashboard = () => {
                                                 ))}
                                             </TableCell>
                                         ))}
-                                    </TableRow> : PageDetails && PageDetails.stores.length === 0 ? <p>No data available</p> : PageDetails && PageDetails.stores.map((store, i) => (
+                                    </TableRow> : PageDetails && PageDetails.bookings.length === 0 ? <p>No data available</p> : PageDetails && PageDetails.bookings.map((store, i) => (
                                     <TableRow key={i} className="hover:bg-gray-50">
                                         <TableCell className="font-medium text-center">{i + 1}</TableCell>
-                                        <TableCell className="font-medium text-gray-600 text-center">{store.storeId}</TableCell>
+                                        <TableCell className="font-medium text-gray-600 text-center">{store.booking_id}</TableCell>
                                         <TableCell className="text-center">
                                             <div className="font-medium">{store.storeName}</div>
                                         </TableCell>
-                                        <TableCell className="font-medium text-center">{store.acceptedJobs + store.rejectedJobs}</TableCell>
-                                        <TableCell className=" text-green-600 font-medium text-center">{store.acceptedJobs}</TableCell>
-                                        <TableCell className=" text-red-600 font-medium text-center">{store.rejectedJobs}</TableCell>
-                                        <TableCell className=" font-medium text-center">
-                                            ${store.totalCompletedBookingsCost.toFixed(2)}
+                                        <TableCell className="font-medium text-center">{store.start_date}</TableCell>
+                                        <TableCell className="font-medium text-center">{store.bookingHours ? filterBookingHours(store.duration) : store.duration}</TableCell>
+                                        <TableCell className="font-medium text-center">{store.status}</TableCell>
+                                        <TableCell className="font-medium text-center">
+                                            ${store.amount}
                                         </TableCell>
                                         {/* <TableCell className="text-center">{getStatusBadge(store.status)}</TableCell>
                                         <TableCell className="text-center">

@@ -14,11 +14,11 @@ export const operatorWorkPageTranslations = {
         gn: "Ñemuha"
     },
     totalStores: {
-        en: "Total stores",
-        es: "Tiendas totales",
-        ay: "Thiyjamp amtrata",
-        qu: "Wasipakuq total",
-        gn: "Ñemuhakuéra pavẽ"
+        en: "Total Bookings",
+    es: "Reservas totales",
+    ay: "Taqpach wakichäwinaka",
+    qu: "Tukuy ñananchaykuna",
+    gn: "Ñe’ẽme’ẽita pavẽ"
     },
     requestReviewPending: {
         en: "Request review pending",
@@ -91,25 +91,25 @@ export const operatorWorkPageTranslations = {
         gn: "Ñemuhára réra"
     },
     jobs: {
-        en: "Jobs",
-        es: "Trabajos",
-        ay: "Llamakuna",
-        qu: "Llamkaykuna",
-        gn: "Tembiapo"
+        en: "Start Date",
+    es: "Fecha de inicio",
+    ay: "Qalltañ urupa",
+    qu: "Qallariy p'unchaw",
+    gn: "Ñepyrũ arange"
     },
     accepted: {
-        en: "Accepted",
-        es: "Aceptado",
-        ay: "Yäqtä",
-        qu: "Qatipusqa",
-        gn: "Ñemone'ẽva"
+        en: "Duration",
+    es: "Duración",
+    ay: "Jakaña pachapa",
+    qu: "Sut'iy",
+    gn: "Ary paha"
     },
     rejected: {
-        en: "Rejected",
-        es: "Rechazado",
-        ay: "Jan walinita",
-        qu: "Manapasqa",
-        gn: "Ñemboy'ýva"
+        en: "Status",
+    es: "Estado",
+    ay: "Uñacht'awi",
+    qu: "Kuskan",
+    gn: "Tekovekatu"
     },
     amount: {
         en: "Amount",
