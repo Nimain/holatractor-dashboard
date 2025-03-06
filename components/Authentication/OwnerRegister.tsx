@@ -47,6 +47,11 @@ import { Separator } from '../ui/separator'
 import countryData from './CountryCodeRoles'
 import QRCODE from "@/assets/QRcode.jpg"
 
+interface Location {
+    latitude: number | null;
+    longitude: number | null;
+}
+
 const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => {
     const [open, setOpen] = useState(false)
     const [fetchingContry, setFetchingCountry] = useState(false);
@@ -93,6 +98,9 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
 
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+    const [error, setError] = useState<string | null>(null);
+        const [location, setLocation] = useState<Location>({ latitude: null, longitude: null });
 
     const { cookie } = useCookie()
     const access_token = cookie.get("access_token");
@@ -210,28 +218,8 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
             errorMessage("Please select gender")
             return
         }
-        if (!location_name) {
-            errorMessage("Address line 1 is required")
-            return
-        }
-        if (!location_address) {
-            errorMessage("Address line 2 is required")
-            return
-        }
-        if (!location_city) {
-            errorMessage("City is required")
-            return
-        }
-        if (!location_state) {
-            errorMessage("State is required")
-            return
-        }
-        if (!location_zip_code) {
-            errorMessage("Zip code is required")
-            return
-        }
-        if (!location_country) {
-            errorMessage("Please select your country")
+        if (!location) {
+            errorMessage("Please enable Location access")
             return
         }
         if (!attachment) {
@@ -325,7 +313,9 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
             document_number,
             expiry_date,
             payment_id: "test",
-            paymentScreenshots: paymentProofLink
+            paymentScreenshots: paymentProofLink,
+            lat: location.latitude,
+            lng: location.longitude
         };
 
         inPage ?
@@ -462,6 +452,24 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
         if (location_country) fetchAllCity()
     }, [location_country])
 
+    useEffect(() => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position: GeolocationPosition) => {
+                        setLocation({
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude,
+                        });
+                    },
+                    (error: GeolocationPositionError) => {
+                        setError(error.message);
+                    }
+                );
+            } else {
+                setError("Geolocation is not supported by this browser.");
+            }
+        }, []);
+
     return (
         <Dialog open={open} onOpenChange={setOpen}>
 
@@ -528,24 +536,6 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                                             <Button
                                                 className={`bg-white hover:bg-transparent px-5 ${(date && gender) ? "text-green-400" : "text-black"}`}>
                                                 <VenetianMask />
-                                            </Button>
-                                        </TabsTrigger>
-
-                                    </BreadcrumbItem>
-
-                                    <BreadcrumbSeparator>
-                                        <Separator
-                                            className={`w-24 h-1 rounded-full ${(location_name && location_address && location_city && location_state && location_zip_code && location_country) ? "bg-green-400" : "bg-gray-400"}`} />
-                                    </BreadcrumbSeparator>
-
-                                    <BreadcrumbItem className='w-fit'>
-
-                                        <TabsTrigger
-                                            value="stepthree"
-                                            className='bg-transparent flex items-center px-0'>
-                                            <Button
-                                                className={`bg-white hover:bg-transparent px-5 ${(location_name && location_address && location_city && location_state && location_zip_code && location_country) ? "text-green-400" : "text-black"}`}>
-                                                <MapPinned />
                                             </Button>
                                         </TabsTrigger>
 
@@ -886,208 +876,6 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                                             </Button>
                                         </TabsTrigger>
                                         <TabsTrigger
-                                            value="stepthree"
-                                            className='bg-transparent flex items-center px-0'>
-                                            <Button
-                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
-                                                Next
-                                            </Button>
-                                        </TabsTrigger>
-                                    </TabsList>
-                                </CardFooter>
-                            </Card>
-
-                        </TabsContent>
-
-                        <TabsContent value="stepthree">
-
-                            <Card>
-                                <CardContent className="space-y-2 py-2">
-                                    {
-                                        fetchingContry ?
-                                            <CircularProgress />
-                                            :
-                                            country.length === 0 ?
-                                                <p>No countries are available</p>
-                                                :
-                                                <div className="space-y-1">
-                                                    <Label htmlFor="phonrnumber">Country name</Label>
-                                                    <div className="w-full space-y-2">
-                                                        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                                                            <PopoverTrigger asChild>
-                                                                <Button
-                                                                    variant="outline"
-                                                                    role="combobox"
-                                                                    // aria-expanded={popoverOpen}
-                                                                    className="w-full justify-between"
-                                                                >
-                                                                    {location_country
-                                                                        ? country.find((country) => country.name === location_country) && location_country
-                                                                        : "Select country..."}
-                                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                                </Button>
-                                                            </PopoverTrigger>
-                                                            <PopoverContent className="w-full p-0">
-                                                                <Command>
-                                                                    <CommandInput placeholder="Search country..." />
-                                                                    <CommandList>
-                                                                        <CommandEmpty>No country found.</CommandEmpty>
-                                                                        <CommandGroup className='w-full'>
-                                                                            {country.map((country) => (
-                                                                                <CommandItem
-                                                                                    key={country.name}
-                                                                                    value={country.name}
-                                                                                    onSelect={(currentValue) => {
-                                                                                        set_location_country(country.name)
-                                                                                        setPopoverOpen(false)
-                                                                                    }}
-                                                                                >
-                                                                                    <Check
-                                                                                        className={cn(
-                                                                                            "mr-2 h-4 w-4",
-                                                                                            location_country === country.name ? "opacity-100" : "opacity-0"
-                                                                                        )}
-                                                                                    />
-                                                                                    {country.name}
-                                                                                </CommandItem>
-                                                                            ))}
-                                                                        </CommandGroup>
-                                                                    </CommandList>
-                                                                </Command>
-                                                            </PopoverContent>
-                                                        </Popover>
-                                                    </div>
-                                                </div>
-                                    }
-                                    {
-                                        location_country && <div className="space-y-1">
-                                            <Label htmlFor="location_city">City</Label>
-                                            {
-                                                fetchingCity ?
-                                                    <p>Fetching cities</p>
-                                                    :
-                                                    city.length === 0 ?
-                                                        <p>No cities are available for this country</p>
-                                                        :
-                                                        <div className="w-full space-y-2">
-                                                            <Popover open={popoverOpenCity} onOpenChange={setPopoverOpenCity}>
-                                                                <PopoverTrigger asChild>
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        role="combobox"
-                                                                        // aria-expanded={popoverOpen}
-                                                                        className="w-full justify-between"
-                                                                    >
-                                                                        {location_city
-                                                                            ? city.find((cityDetails) => cityDetails.name === location_city) && location_city
-                                                                            : "Select city..."}
-                                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                                    </Button>
-                                                                </PopoverTrigger>
-                                                                <PopoverContent className="w-full p-0">
-                                                                    <Command>
-                                                                        <CommandInput placeholder="Search country..." />
-                                                                        <CommandList>
-                                                                            <CommandEmpty>No city found.</CommandEmpty>
-                                                                            <CommandGroup className='w-full'>
-                                                                                {city.map((cityDetails) => (
-                                                                                    <CommandItem
-                                                                                        key={cityDetails.name}
-                                                                                        value={cityDetails.name}
-                                                                                        onSelect={(currentValue) => {
-                                                                                            set_location_city(cityDetails.name)
-                                                                                            setPopoverOpenCity(false)
-                                                                                        }}
-                                                                                        className={`${location_country !== cityDetails.country.name && "hidden"}`}
-                                                                                    >
-                                                                                        <Check
-                                                                                            className={cn(
-                                                                                                "mr-2 h-4 w-4",
-                                                                                                location_city === cityDetails.name ? "opacity-100" : "opacity-0"
-                                                                                            )}
-                                                                                        />
-                                                                                        {cityDetails.name}
-                                                                                    </CommandItem>
-                                                                                ))}
-                                                                            </CommandGroup>
-                                                                        </CommandList>
-                                                                    </Command>
-                                                                </PopoverContent>
-                                                            </Popover>
-                                                        </div>
-                                            }
-                                        </div>
-                                    }
-                                    {
-                                        location_city && <div className="space-y-1">
-                                            <Label htmlFor="location_zip_code">Zip code</Label>
-                                            <Input
-                                                id="location_zip_code"
-                                                placeholder='e.g - 757020'
-                                                value={location_zip_code}
-                                                autoComplete='new-zipcode'
-                                                autoCorrect='off'
-                                                spellCheck='false'
-                                                onChange={e => { set_location_zip_code(e.target.value) }} />
-                                        </div>
-                                    }
-                                    {
-                                        location_city && <div className="space-y-1">
-                                            <Label htmlFor="location_name">Address line 1</Label>
-                                            <Input
-                                                id="location_name"
-                                                placeholder='e.g - st mary hiighway'
-                                                value={location_name}
-                                                autoComplete='new-address'
-                                                autoCorrect='off'
-                                                spellCheck='false'
-                                                onChange={e => { set_location_name(e.target.value) }} />
-                                        </div>
-                                    }
-                                    {
-                                        location_city && <div className="space-y-1">
-                                            <Label htmlFor="location_address">Address line 2</Label>
-                                            <Input
-                                                id="location_address"
-                                                placeholder='e.g - st mary hiighway'
-                                                value={location_address}
-                                                autoComplete='new-address2'
-                                                autoCorrect='off'
-                                                spellCheck='false'
-                                                onChange={e => { set_location_address(e.target.value) }} />
-                                        </div>
-                                    }
-
-
-
-                                    {
-                                        location_city && <div className="space-y-1">
-                                            <Label htmlFor="location_state">State</Label>
-                                            <Input
-                                                id="location_state"
-                                                placeholder='e.g - Odisha'
-                                                value={location_state}
-                                                autoComplete='new-state'
-                                                autoCorrect='off'
-                                                spellCheck='false'
-                                                onChange={e => { set_location_state(e.target.value) }} />
-                                        </div>
-                                    }
-
-
-                                </CardContent>
-
-                                <CardFooter>
-                                    <TabsList className='w-full flex items-center justify-between bg-transparent'>
-                                        <TabsTrigger
-                                            value="steptwo"
-                                            className='bg-transparent flex items-center px-0'>
-                                            <Button
-                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
-                                                Back
-                                            </Button>
-                                        </TabsTrigger>
-                                        <TabsTrigger
                                             value="stepfour"
                                             className='bg-transparent flex items-center px-0'>
                                             <Button
@@ -1215,7 +1003,7 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
                                 <CardFooter>
                                     <TabsList className='w-full flex items-center justify-between bg-transparent'>
                                         <TabsTrigger
-                                            value="stepthree"
+                                            value="steptwo"
                                             className='bg-transparent flex items-center px-0'>
                                             <Button
                                                 className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
