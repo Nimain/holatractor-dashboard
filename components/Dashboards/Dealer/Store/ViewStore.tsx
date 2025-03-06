@@ -332,7 +332,7 @@ export default function CoursePlatform() {
                 <Bar
                   dataKey="value"
                   radius={[4, 4, 0, 0]}
-                  fill={(props: any) => props.fill}
+                  // fill={(props: any) => props.fill}
                   maxBarSize={40}
                 />
               </BarChart>
