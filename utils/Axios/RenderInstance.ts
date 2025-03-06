@@ -7,4 +7,4 @@ export const renderInstance = axios.create({
     headers: {
         "Content-Type": "application/json",
     }
-})
+}) 
