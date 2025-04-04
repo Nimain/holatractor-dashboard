@@ -67,7 +67,7 @@ const ProfileComponent = () => {
       cookie.remove("access_token")
       cookie.remove("user")
     }
-    push("/Login")
+    push("/login")
   }
 
   async function handleEmailVerification() {
