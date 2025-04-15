@@ -26,10 +26,10 @@ const AgentSection = () => {
     const [isSignUpCard, setIsSignUpCard] = useState(false)
 
     const splitFullName = (fullName: string) => {
-        const nameParts = fullName.trim().split(/\s+/); // Split by spaces
-        const firstName = nameParts.shift(); // Take the first element as the first name
-        const lastName = nameParts.pop(); // Take the last element as the last name
-        const middleName = nameParts.join(" "); // Join the rest as middle name
+        const nameParts = fullName.trim().split(/\s+/); 
+        const firstName = nameParts.shift(); 
+        const lastName = nameParts.pop(); 
+        const middleName = nameParts.join(" "); 
 
         return { firstName, middleName, lastName };
     };
