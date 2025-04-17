@@ -26,6 +26,7 @@ const Sidebar = () => {
         cookie.remove("user")
         cookie.remove("isFarmer")
         cookie.remove("isOperator")
+        cookie.remove("isAgent")
         cookie.remove("isOwner")
         cookie.remove("isODealer")
         router.push("/login")

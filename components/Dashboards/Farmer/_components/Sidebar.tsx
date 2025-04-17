@@ -36,6 +36,7 @@ const Sidebar = () => {
     cookie.remove("access_token")
     cookie.remove("user")
     cookie.remove("isFarmer")
+    cookie.remove("isAgent")
     cookie.remove("isOperator")
     cookie.remove("isOwner")
     cookie.remove("isODealer")

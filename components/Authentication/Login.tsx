@@ -73,7 +73,7 @@ const LogInPage = () => {
       type: "Cookies Set",
       access_token: cookie.get("access_token"),
       user: cookie.get("user"),
-      isAgent: cookie.get("isAgent"),
+      // isAgent: cookie.get("isAgent"),
       allCookies: {
         isFarmer: cookie.get("isFarmer"),
         isOperator: cookie.get("isOperator"),
@@ -129,7 +129,7 @@ const LogInPage = () => {
         type: "Email Login API Response",
         status: res.status,
         data: res.data,
-        isAgent: res.data.isAgent,
+        // isAgent: res.data.isAgent,
         allRoles: {
           isFarmer: res.data.isFarmer,
           isOperator: res.data.isOperator,
