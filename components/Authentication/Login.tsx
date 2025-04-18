@@ -1,36 +1,35 @@
-"use client"
+"use client"; // Add this at the top
 
-import type React from "react"
-
-import { useCookie } from "next-cookie"
-import Image from "next/image"
-import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
-import { useEffect, useState } from "react"
-import CryptoJS from "crypto-js"
-import { decode } from "jsonwebtoken"
-import { renderInstance } from "@/utils/Axios/RenderInstance"
-import { errorMessage, successMessage } from "@/utils/Toastify/Messages"
-import { Label } from "../ui/label"
-import { Input } from "../ui/input"
-import { Eye, EyeOff } from "lucide-react"
-import { useGoogleLogin } from "@react-oauth/google"
-import axios from "axios"
-import { CircularProgress } from "@mui/material"
-import { useLoading } from "../wrappers/LoaderWrappers"
+import type React from "react";
+import { useCookie } from "next-cookie";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import CryptoJS from "crypto-js";
+import { decode } from "jsonwebtoken";
+import { renderInstance } from "@/utils/Axios/RenderInstance";
+import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
+import { Label } from "../ui/label";
+import { Input } from "../ui/input";
+import { Eye, EyeOff } from "lucide-react";
+import { useGoogleLogin } from "@react-oauth/google";
+import axios from "axios";
+import { CircularProgress } from "@mui/material";
+import { useLoading } from "../wrappers/LoaderWrappers";
 
 const LogInPage = () => {
-  const [email, setEmail] = useState("")
-  const [passwrd, setPassword] = useState("")
-  const [passwrdShow, setPasswordShow] = useState(false)
+  const [email, setEmail] = useState("");
+  const [passwrd, setPassword] = useState("");
+  const [passwrdShow, setPasswordShow] = useState(false);
 
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const { cookie } = useCookie()
-  const { setLoading, isLoading } = useLoading()
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { cookie } = useCookie();
+  const { setLoading, isLoading } = useLoading();
 
   const verifyToken = async (token: string) => {
-    setLoading(true)
+    setLoading(true);
     try {
       const res = await renderInstance.patch(
         `/user/email_token_verify/${token}`,
@@ -40,40 +39,38 @@ const LogInPage = () => {
             Authorization: `Bearer ${token}`,
           },
         },
-      )
+      );
       if (res.data === "Verification failed") {
-        errorMessage("Failed to verify email")
+        errorMessage("Failed to verify email");
       } else {
-        successMessage("Email verified successfully")
+        successMessage("Email verified successfully");
       }
     } catch (err: any) {
-      console.error("Email verification error:", err)
-      errorMessage(err.response?.data?.message || "Failed to verify email")
+      // console.error("Email verification error:", err); // Commented out
+      errorMessage(err.response?.data?.message || "Failed to verify email");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const setCookiesAndRedirect = (data: any) => {
-    const user = decode(data.access_token)
-    const expiryDate = new Date()
-    expiryDate.setDate(expiryDate.getDate() + 1)
+    const user = decode(data.access_token);
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + 1);
 
-    // IMPORTANT: Set boolean values as strings "true" or "false"
-    cookie.set("access_token", data.access_token, { path: "/", expires: expiryDate })
-    cookie.set("user", JSON.stringify(user), { path: "/", expires: expiryDate })
-    cookie.set("isFarmer", data.isFarmer === true ? "true" : "false", { path: "/", expires: expiryDate })
-    cookie.set("isOperator", data.isOperator === true ? "true" : "false", { path: "/", expires: expiryDate })
-    cookie.set("isOwner", data.isOwner === true ? "true" : "false", { path: "/", expires: expiryDate })
-    cookie.set("isDealer", data.isDealer === true ? "true" : "false", { path: "/", expires: expiryDate })
-    cookie.set("isAgent", data.isAgent === true ? "true" : "false", { path: "/", expires: expiryDate })
+    cookie.set("access_token", data.access_token, { path: "/", expires: expiryDate });
+    cookie.set("user", JSON.stringify(user), { path: "/", expires: expiryDate });
+    cookie.set("isFarmer", data.isFarmer === true ? "true" : "false", { path: "/", expires: expiryDate });
+    cookie.set("isOperator", data.isOperator === true ? "true" : "false", { path: "/", expires: expiryDate });
+    cookie.set("isOwner", data.isOwner === true ? "true" : "false", { path: "/", expires: expiryDate });
+    cookie.set("isDealer", data.isDealer === true ? "true" : "false", { path: "/", expires: expiryDate });
+    cookie.set("isAgent", data.isAgent === true ? "true" : "false", { path: "/", expires: expiryDate });
 
-    // Log cookies to console and localStorage
+    // Log cookies to localStorage
     const cookieLog = {
       type: "Cookies Set",
       access_token: cookie.get("access_token"),
       user: cookie.get("user"),
-      // isAgent: cookie.get("isAgent"),
       allCookies: {
         isFarmer: cookie.get("isFarmer"),
         isOperator: cookie.get("isOperator"),
@@ -82,13 +79,11 @@ const LogInPage = () => {
         isAgent: cookie.get("isAgent"),
       },
       timestamp: new Date().toISOString(),
-    }
-    console.log(cookieLog)
-    localStorage.setItem("cookieDebugLog", JSON.stringify(cookieLog))
+    };
+    localStorage.setItem("cookieDebugLog", JSON.stringify(cookieLog));
 
-    successMessage("Log in successful")
+    successMessage("Log in successful");
 
-    // Determine redirect path
     const redirectPath = data.isFarmer
       ? "/farmer"
       : data.isOperator
@@ -99,60 +94,57 @@ const LogInPage = () => {
             ? "/dealer"
             : data.isAgent
               ? "/agent"
-              : "/"
+              : "/";
 
-    console.log(`Redirecting to ${redirectPath}`)
     localStorage.setItem(
       "redirectDebugLog",
       JSON.stringify({ path: redirectPath, timestamp: new Date().toISOString() }),
-    )
+    );
 
-    // Redirect immediately
-    router.push(redirectPath)
-  }
+    router.push(redirectPath);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    setLoading(true);
 
-    const encryptedPassword = CryptoJS.AES.encrypt(passwrd, "m4AfXfQ&1brl3LjQFYO").toString()
+    const encryptedPassword = CryptoJS.AES.encrypt(passwrd, "m4AfXfQ&1brl3LjQFYO").toString();
 
     try {
       const res = await renderInstance.post("/user/login", {
         email: email.trim(),
         password: encryptedPassword,
         authType: "EMAIL",
-      })
+      });
 
-      // Log API response to console and localStorage
+      // Log API response to localStorage
       const apiLog = {
         type: "Email Login API Response",
         status: res.status,
         data: res.data,
-        // isAgent: res.data.isAgent,
         allRoles: {
           isFarmer: res.data.isFarmer,
           isOperator: res.data.isOperator,
           isOwner: res.data.isOwner,
-          isDealer: res.data.isDealer,
-          isAgent: res.data.isAgent,
+          isDealer: res.data.isDealer
+
+,          isAgent: res.data.isAgent,
         },
         timestamp: new Date().toISOString(),
-      }
-      console.log(apiLog)
-      localStorage.setItem("loginDebugLog", JSON.stringify(apiLog))
+      };
+      localStorage.setItem("loginDebugLog", JSON.stringify(apiLog));
 
       if (res.status === 201 && res.data.access_token) {
-        setCookiesAndRedirect(res.data)
-        setEmail("")
-        setPassword("")
+        setCookiesAndRedirect(res.data);
+        setEmail("");
+        setPassword("");
       } else if (res.data === "Email verification link sent successfully") {
-        successMessage("Email verification link sent successfully")
+        successMessage("Email verification link sent successfully");
       } else {
-        errorMessage("Try again")
+        errorMessage("Try again");
       }
     } catch (err: any) {
-      console.error("Email Login Error:", err)
+      // console.error("Email Login Error:", err); // Commented out
       localStorage.setItem(
         "errorDebugLog",
         JSON.stringify({
@@ -161,31 +153,31 @@ const LogInPage = () => {
           response: err.response?.data,
           timestamp: new Date().toISOString(),
         }),
-      )
+      );
       if (err.response?.status === 409 && err.response.data.message === "User not found") {
-        errorMessage("User not found")
-        setEmail("")
-        setPassword("")
+        errorMessage("User not found");
+        setEmail("");
+        setPassword("");
       } else if (err.response?.status === 409 && err.response.data.message === "Wrong password") {
-        errorMessage("Wrong password")
-        setPassword("")
+        errorMessage("Wrong password");
+        setPassword("");
       } else if (err.response?.status === 400 && err.response.data.message === "Account not active") {
-        errorMessage("Account not active")
-        setPassword("")
+        errorMessage("Account not active");
+        setPassword("");
       } else {
-        errorMessage("Some error occurred")
+        errorMessage("Some error occurred");
       }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    const verificationToken = searchParams.get("verificationToken")
+    const verificationToken = searchParams.get("verificationToken");
     if (verificationToken) {
-      verifyToken(verificationToken)
+      verifyToken(verificationToken);
     }
-  }, [searchParams])
+  }, [searchParams]);
 
   return (
     <div className="w-full min-h-[100vh] max-h-fit flex items-center justify-center text-[18px]">
@@ -253,11 +245,11 @@ const LogInPage = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
 const GoogleSignIn = ({ setCookiesAndRedirect }: { setCookiesAndRedirect: (data: any) => void }) => {
-  const { setLoading } = useLoading()
+  const { setLoading } = useLoading();
 
   const login = useGoogleLogin({
     onSuccess: async (codeResponse) => {
@@ -270,16 +262,16 @@ const GoogleSignIn = ({ setCookiesAndRedirect }: { setCookiesAndRedirect: (data:
               Accept: "application/json",
             },
           },
-        )
+        );
 
-        setLoading(true)
+        setLoading(true);
 
         const loginRes = await renderInstance.post("/user/login", {
           email: res.data.email,
           authType: "GOOGLE",
-        })
+        });
 
-        // Log API response to console and localStorage
+        // Log API response to localStorage
         const apiLog = {
           type: "Google Login API Response",
           status: loginRes.status,
@@ -293,15 +285,14 @@ const GoogleSignIn = ({ setCookiesAndRedirect }: { setCookiesAndRedirect: (data:
             isAgent: loginRes.data.isAgent,
           },
           timestamp: new Date().toISOString(),
-        }
-        console.log(apiLog)
-        localStorage.setItem("googleLoginDebugLog", JSON.stringify(apiLog))
+        };
+        localStorage.setItem("googleLoginDebugLog", JSON.stringify(apiLog));
 
         if (loginRes.status === 201 && loginRes.data.access_token) {
-          setCookiesAndRedirect(loginRes.data)
+          setCookiesAndRedirect(loginRes.data);
         }
       } catch (err: any) {
-        console.error("Google Login Error:", err)
+        // console.error("Google Login Error:", err); // Commented out
         localStorage.setItem(
           "googleErrorDebugLog",
           JSON.stringify({
@@ -310,20 +301,20 @@ const GoogleSignIn = ({ setCookiesAndRedirect }: { setCookiesAndRedirect: (data:
             response: err.response?.data,
             timestamp: new Date().toISOString(),
           }),
-        )
+        );
         if (err.response?.status === 409 && err.response.data.message === "User not found") {
-          errorMessage("User not found")
+          errorMessage("User not found");
         } else if (err.response?.status === 409 && err.response.data.message === "Wrong password") {
-          errorMessage("Wrong password")
+          errorMessage("Wrong password");
         } else {
-          errorMessage("Some error occurred")
+          errorMessage("Some error occurred");
         }
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     },
     onError: () => errorMessage("Login Failed"),
-  })
+  });
 
   return (
     <div className="flex items-center justify-center gap-[10px]" onClick={() => login()}>
@@ -336,10 +327,10 @@ const GoogleSignIn = ({ setCookiesAndRedirect }: { setCookiesAndRedirect: (data:
         height={40}
       />
     </div>
-  )
-}
+  );
+};
 
-export default LogInPage
+export default LogInPage;
 
 // "use client"
 

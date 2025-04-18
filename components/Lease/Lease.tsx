@@ -21,10 +21,23 @@ const LeaseSection = () => {
     renderInstance
       .get("/lease")
       .then((res) => {
-        setAllLease(res.data);
+        // Check if res.data is an array before setting it
+        if (Array.isArray(res.data)) {
+          setAllLease(res.data);
+        } else if (res.data && typeof res.data === 'object') {
+          // If res.data is an object with array data inside
+          // This handles cases where the API returns {data: [...]} structure
+          setAllLease(Array.isArray(res.data.data) ? res.data.data : []);
+        } else {
+          // Default to empty array if data is not in expected format
+          setAllLease([]);
+          console.error("API did not return an array:", res.data);
+        }
       })
       .catch((err) => {
         errorMessage("Error fetching booking list");
+        console.error(err);
+        setAllLease([]);
       })
       .finally(() => {
         setLoading(false);
@@ -47,7 +60,7 @@ const LeaseSection = () => {
 
       <div className="w-full flex items-center justify-between gap-[20px] mb-[40px]">
         <p className="text-[20px] font-bold">
-          Total Lease: {allLease.length}
+          Total Lease: {Array.isArray(allLease) ? allLease.length : 0}
         </p>
 
         <NewLease />
@@ -124,39 +137,35 @@ const LeaseSection = () => {
       </div>
 
       <div className="flex flex-col gap-[5px] mt-[20px]">
-        {
-            allLease.length === 0 ? <div className="w-full h-full min-h-[80vh] flex items-center justify-center">
+        {!Array.isArray(allLease) ? (
+          <div className="w-full text-center py-5">Error loading lease data</div>
+        ) : allLease.length === 0 ? (
+          <div className="w-full h-full min-h-[80vh] flex items-center justify-center">
             <Image
-            src={NullImage}
-            alt="No image found"
-            className="w-[400px] lg:w-[700px] h-auto object-cover"
-            width={400}
-            height={400}
-            unoptimized={true} />
-        </div>
-            :
-            allLease.map((details, index)=>{
-                return(
-                    <div
-                    // href={`/ParticularBooking/${details.BookingID}`}
-                    className={`text-[18px] flex items-center justify-between gap-[10px] px-[20px] py-[20px] rounded cursor-pointer bg-[#ededed] hover:bg-white transition-all duration-500`}
-                    key={index}
-                  >
-                    <p className="w-[50px]">{index + 1}</p>
-      
-                    <p className="w-[200px]">{details.id}</p>
-      
-                    <div className="w-[120px]">{`${details.start_date}`}</div>
-      
-                    <p className="w-[140px]">{`${details.end_date}`}</p>
-      
-                    <p className="w-[140px]">${details.total_cost}</p>
-      
-                    {/* <p className="w-[200px]">{details.AgentName}</p> */}
-                  </div>
-                )
-            })
-        }
+              src={NullImage}
+              alt="No image found"
+              className="w-[400px] lg:w-[700px] h-auto object-cover"
+              width={400}
+              height={400}
+              unoptimized={true}
+            />
+          </div>
+        ) : (
+          allLease.map((details, index) => {
+            return (
+              <div
+                className={`text-[18px] flex items-center justify-between gap-[10px] px-[20px] py-[20px] rounded cursor-pointer bg-[#ededed] hover:bg-white transition-all duration-500`}
+                key={index}
+              >
+                <p className="w-[50px]">{index + 1}</p>
+                <p className="w-[200px]">{details.id}</p>
+                <div className="w-[120px]">{`${details.start_date}`}</div>
+                <p className="w-[140px]">{`${details.end_date}`}</p>
+                <p className="w-[140px]">${details.total_cost}</p>
+              </div>
+            );
+          })
+        )}
       </div>
 
     </div>

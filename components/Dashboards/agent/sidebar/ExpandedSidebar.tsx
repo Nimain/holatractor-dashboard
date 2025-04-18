@@ -20,9 +20,7 @@ import {
   AffiliationIcon,
   LogIcon,
   LogOutIcon,
-  PermissionsIcon,
   RolesIcon,
-  UsersIcon,
 } from "@/assets/sidebar/SidebarImages"
 import type { RootState } from "@/redux/store"
 import { usePathname } from "next/navigation"
@@ -59,20 +57,18 @@ const ExpandedSidebar = () => {
   const { language: locale } = useSelector((root: RootState) => root.ActiveLanguage)
 
   const pathMap: { [key: string]: string } = {
-    "/": "Dashboard",
+    "/agent": "Dashboard",
     "/ParticularBooking": "Bookings",
     "/SingleOperator": "Operators",
     "/Operators": "Operators",
     "/Farms": "Farms",
-    "/Bookings": "Bookings",
-    "/Roles": "Roles",
-    "/Permissions": "Permission",
+    "/agent/bookings": "bookings",
     "/Users": "Users",
     "/Subscription": "Subscriptions",
     "/Business": "Business",
     "/Dealers": "Dealers",
     "/Affiliation": "Affiliation",
-    "/Logs": "Logs",
+    "/agent/Logs": "Logs",
     "/Insurance": "Insurance",
     "/Investors": "Investors",
     "/Loans": "Loans",
@@ -265,7 +261,7 @@ const ExpandedSidebar = () => {
         qu: "Qhapaq ñakariy",
         gn: "Tavisa",
       }),
-      route: "/Bookings",
+      route: "/agent/bookings",
     },
     {
       icon: (
@@ -284,7 +280,7 @@ const ExpandedSidebar = () => {
         qu: "Masi",
         gn: "Ipotĩ",
       }),
-      route: "/Lease",
+      route: "/agent/Lease",
     },
     {
       icon: (
@@ -322,7 +318,7 @@ const ExpandedSidebar = () => {
         qu: "Qhatariynin",
         gn: "Ñemity",
       }),
-      route: "/Subscriptions",
+      route: "/agent/Subscription",
     },
     {
       icon: (
@@ -341,87 +337,11 @@ const ExpandedSidebar = () => {
         qu: "",
         gn: "",
       }),
-      route: "/booking-inquiry",
+      route: "/agent/booking-inquiry",
     },
   ]
 
   const SettingsOptions = [
-    {
-      icon: (
-        <Image
-          src={RolesIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Roles"
-        />
-      ),
-      name: getTranslation(locale, {
-        en: "Roles",
-        es: "Roles",
-        ay: "Tukuyani",
-        qu: "Llamk'aqkuna",
-        gn: "Ñangarekóva",
-      }),
-      route: "/Roles",
-    },
-    {
-      icon: (
-        <Image
-          src={PermissionsIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Permission"
-        />
-      ),
-      name: getTranslation(locale, {
-        en: "Permission",
-        es: "Permiso",
-        ay: "Ayniri",
-        qu: "Hap'iy",
-        gn: "Permiso",
-      }),
-      route: "/Permissions",
-    },
-    {
-      icon: (
-        <Image
-          src={UsersIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Country"
-        />
-      ),
-      name: getTranslation(locale, {
-        en: "Country",
-        es: "País",
-        ay: "Marka",
-        qu: "Suyu",
-        gn: "Tetã",
-      }),
-      route: "/Country",
-    },
-    {
-      icon: (
-        <Image
-          src={UsersIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="City"
-        />
-      ),
-      name: getTranslation(locale, {
-        en: "City",
-        es: "",
-        ay: "",
-        qu: "",
-        gn: "",
-      }),
-      route: "/City",
-    },
     {
       icon: (
         <Image
@@ -439,7 +359,7 @@ const ExpandedSidebar = () => {
         qu: "",
         gn: "",
       }),
-      route: "/Logs",
+      route: "/agent/Logs",
     },
   ]
 
@@ -461,9 +381,8 @@ const ExpandedSidebar = () => {
         qu: "",
         gn: "",
       }),
-      route: "/Owner",
+      route: "/agent/owner",
     },
-
     {
       icon: (
         <Image
@@ -481,7 +400,7 @@ const ExpandedSidebar = () => {
         qu: "Haqllaqkuna",
         gn: "Mba'apoha",
       }),
-      route: "/Dealer",
+      route: "/agent/dealer",
     },
     {
       icon: (
@@ -500,26 +419,7 @@ const ExpandedSidebar = () => {
         qu: "Qhapaq ruwariq",
         gn: "Omoñangáva",
       }),
-      route: "/Operator",
-    },
-    {
-      icon: (
-        <Image
-          src={OperatorsIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Admins"
-        />
-      ),
-      name: getTranslation(locale, {
-        en: "Admins",
-        es: "",
-        ay: "",
-        qu: "",
-        gn: "",
-      }),
-      route: "/Admin",
+      route: "/agent/operator",
     },
   ]
 
@@ -565,10 +465,6 @@ const ExpandedSidebar = () => {
         scrollbarWidth: "none",
       }}
     >
-      {/* <p className='text-primaryColor hidden text-[20px] font-[600] w-full 1200px:flex items-center justify-center'>
-                Holatractor
-            </p> */}
-
       <Image alt="Logo" src={LOGO || "/placeholder.svg"} className="w-[80%] h-auto object-cover mx-auto" />
 
       <ToogleButton />
@@ -579,7 +475,7 @@ const ExpandedSidebar = () => {
         {topLeftSideList.map((listItem, index) => {
           return (
             <Link
-              href={`${listItem.route}`}
+              href={listItem.route}
               key={index}
               className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
                 LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
@@ -620,7 +516,7 @@ const ExpandedSidebar = () => {
             UsersOptions.map((listItem, index) => {
               return (
                 <Link
-                  href={`${listItem.route}`}
+                  href={listItem.route}
                   key={index}
                   className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
                     LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
@@ -662,7 +558,7 @@ const ExpandedSidebar = () => {
             bookingList.map((listItem, index) => {
               return (
                 <Link
-                  href={`${listItem.route}`}
+                  href={listItem.route}
                   key={index}
                   className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
                     LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
@@ -704,7 +600,7 @@ const ExpandedSidebar = () => {
             middleLeftSideList.map((listItem, index) => {
               return (
                 <Link
-                  href={`${listItem.route}`}
+                  href={listItem.route}
                   key={index}
                   className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
                     LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
@@ -746,7 +642,7 @@ const ExpandedSidebar = () => {
             SettingsOptions.map((listItem, index) => {
               return (
                 <Link
-                  href={`${listItem.route}`}
+                  href={listItem.route}
                   key={index}
                   className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
                     LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
