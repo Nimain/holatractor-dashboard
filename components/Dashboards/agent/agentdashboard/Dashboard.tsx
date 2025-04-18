@@ -46,7 +46,7 @@ const Dashboard = () => {
 
       <Menubar pagename={'Dashboard'} />
 
-      <div className='w-full grid grid-cols-4 gap-8'>
+      <div className='w-full grid grid-cols-3 gap-8'>
 
         <DetailBox
           count={loading ? "loading..." : `${userCounts?.farmers}`}
@@ -62,14 +62,14 @@ const Dashboard = () => {
           icon={<Tractor />}
           bgcolorCode={"bg-red-200"}
           textcolorCode={"text-red-800"}
-          href={"/Operator"} />
+          href={"/agent/operator"} />
         <DetailBox
           count={loading ? "loading..." : `${userCounts?.owners}`}
           heading={"Total Owners"}
           icon={<Tractor />}
           bgcolorCode={"bg-yellow-200"}
           textcolorCode={"text-yellow-800"}
-          href={"/Owner"} />
+          href={"/agent/owner"} />
 
       </div>
 
