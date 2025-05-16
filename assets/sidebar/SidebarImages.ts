@@ -20,7 +20,8 @@ import OperatorsIcon from './operators.svg';
 import UsersIcon from './users.svg';
 import InvestorsIcon from './investors.svg';
 import LoanssIcon from './loans.svg';
-
+import Farmers from './Farmers.png';
+import FarmerIcon from './FarmerIcon.png';
 export {
   BookingIcon,
   FarmsIcon,
@@ -44,4 +45,6 @@ export {
   UsersIcon,
   InvestorsIcon,
   LoanssIcon,
+  Farmers,
+  FarmerIcon
 };

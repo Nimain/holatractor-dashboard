@@ -1,14 +1,14 @@
-"use client";
+"use client"
 
-import { RootState } from "@/redux/store";
-import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
-import { useSelector } from "react-redux";
-import ExpandedSidebar from "./ExpandedSidebar";
+import type { RootState } from "@/redux/store"
+import Image from "next/image"
+import { useEffect, useRef, useState } from "react"
+import { useSelector } from "react-redux"
+import ExpandedSidebar from "./ExpandedSidebar"
 
-import LOGO from "@/assets/traclog.png";
-import ToogleButton from "./ToogleButton";
-import { usePathname } from "next/navigation";
+import LOGO from "@/assets/traclog.png"
+import ToogleButton from "./ToogleButton"
+import { usePathname } from "next/navigation"
 import {
   AgentIcon,
   BookingIcon,
@@ -32,36 +32,33 @@ import {
   UsersIcon,
   LogIcon,
   LogOutIcon,
-} from "@/assets/sidebar/SidebarImages";
-import Link from "next/link";
-import { Tooltip } from "@mui/material";
-import { ReceiptIcon, SettingsIcon } from "lucide-react";
+  FarmerIcon,
+} from "@/assets/sidebar/SidebarImages"
+import Link from "next/link"
+import { Tooltip } from "@mui/material"
+import { ReceiptIcon, SettingsIcon } from "lucide-react"
 
 const getTranslation = (locale: string, translations: any) => {
-  return translations[locale] || translations["en"];
-};
+  return translations[locale] || translations["en"]
+}
 
 type Translations = {
-  inventory: string;
-  billing: string;
-  settings: string;
-  bookings: string;
+  inventory: string
+  billing: string
+  settings: string
+  bookings: string
   users: string
-};
+}
 
 const Sidebar = () => {
-  const [activeLeftSIdeTag, setActiveLeftSideTag] = useState("Dashboard");
+  const [activeLeftSIdeTag, setActiveLeftSideTag] = useState("Dashboard")
 
   const sectionRef = useRef<HTMLDivElement>(null)
 
-  const pathname = usePathname();
+  const pathname = usePathname()
 
-  const { sidebarShow, activeMenu: LeftSideSctiveItem } = useSelector(
-    (root: RootState) => root.SidebarShow
-  );
-  const { language: locale } = useSelector(
-    (root: RootState) => root.ActiveLanguage
-  );
+  const { sidebarShow, activeMenu: LeftSideSctiveItem } = useSelector((root: RootState) => root.SidebarShow)
+  const { language: locale } = useSelector((root: RootState) => root.ActiveLanguage)
 
   const pathMap: { [key: string]: string } = {
     "/": "Dashboard",
@@ -89,18 +86,14 @@ const Sidebar = () => {
     "/Accounting": "Accounting",
     "/Attachments": "Attachments",
     "/Store": "Store",
-  };
+  }
 
   useEffect(() => {
-    const activeTag = Object.keys(pathMap).find((key) =>
-      pathname.includes(key)
-    );
+    const activeTag = Object.keys(pathMap).find((key) => pathname.includes(key))
     if (activeTag && pathMap[activeTag] !== activeLeftSIdeTag) {
-      setActiveLeftSideTag(pathMap[activeTag]);
+      setActiveLeftSideTag(pathMap[activeTag])
     }
-  }, [pathname]);
-
-  
+  }, [pathname])
 
   useEffect(() => {
     const handleScroll = (e: WheelEvent) => {
@@ -110,12 +103,12 @@ const Sidebar = () => {
 
     const section = sectionRef.current
     if (section) {
-      section.addEventListener('wheel', handleScroll)
+      section.addEventListener("wheel", handleScroll)
     }
 
     return () => {
       if (section) {
-        section.removeEventListener('wheel', handleScroll)
+        section.removeEventListener("wheel", handleScroll)
       }
     }
   }, [])
@@ -124,7 +117,7 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={DashboardIcon}
+          src={DashboardIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -143,7 +136,7 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={FarmsIcon}
+          src={FarmsIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -162,7 +155,7 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={BusinessIcon}
+          src={BusinessIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -178,13 +171,13 @@ const Sidebar = () => {
       }),
       route: "#",
     },
-  ];
+  ]
 
   const inventoryList = [
     {
       icon: (
         <Image
-          src={TractorsIcon}
+          src={TractorsIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -203,7 +196,7 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={LoanssIcon}
+          src={LoanssIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -222,7 +215,7 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={InvestorsIcon}
+          src={InvestorsIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -238,13 +231,13 @@ const Sidebar = () => {
       }),
       route: "/Store",
     },
-  ];
+  ]
 
   const middleLeftSideList = [
     {
       icon: (
         <Image
-          src={StatementsIcon}
+          src={StatementsIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -263,7 +256,7 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={PaymentHistoryIcon}
+          src={PaymentHistoryIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -282,7 +275,7 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={PaymentMethodsIcon}
+          src={PaymentMethodsIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -301,7 +294,7 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={AccountingIcon}
+          src={AccountingIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -317,13 +310,13 @@ const Sidebar = () => {
       }),
       route: "#",
     },
-  ];
+  ]
 
   const bookingList = [
     {
       icon: (
         <Image
-          src={BookingIcon}
+          src={BookingIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -342,7 +335,7 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={LogIcon}
+          src={LogIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -361,7 +354,7 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={LogOutIcon}
+          src={LogOutIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -380,7 +373,7 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={SubcriptionsIcon}
+          src={SubcriptionsIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -399,7 +392,7 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={SubcriptionsIcon}
+          src={SubcriptionsIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -415,13 +408,13 @@ const Sidebar = () => {
       }),
       route: "/booking-inquiry",
     },
-  ];
+  ]
 
   const SettingsOptions = [
     {
       icon: (
         <Image
-          src={RolesIcon}
+          src={RolesIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -440,7 +433,7 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={PermissionsIcon}
+          src={PermissionsIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -459,7 +452,7 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={UsersIcon}
+          src={UsersIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -478,7 +471,7 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={UsersIcon}
+          src={UsersIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -497,7 +490,7 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={AffiliationIcon}
+          src={AffiliationIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -513,13 +506,13 @@ const Sidebar = () => {
       }),
       route: "/Logs",
     },
-  ];
-  
+  ]
+
   const UsersOptions = [
     {
       icon: (
         <Image
-          src={RolesIcon}
+          src={RolesIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -538,7 +531,26 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={AgentIcon}
+          src={FarmerIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Farmers"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Farmers",
+        es: "Agricultores",
+        ay: "Yapuchirinaka",
+        qu: "Chakra runas",
+        gn: "Kokue jára",
+      }),
+      route: "/Farmers",
+    },
+    {
+      icon: (
+        <Image
+          src={AgentIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -557,7 +569,7 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={DealersIcon}
+          src={DealersIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -576,7 +588,7 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={OperatorsIcon}
+          src={OperatorsIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -595,7 +607,7 @@ const Sidebar = () => {
     {
       icon: (
         <Image
-          src={OperatorsIcon}
+          src={OperatorsIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
@@ -611,7 +623,7 @@ const Sidebar = () => {
       }),
       route: "/Admin",
     },
-  ];
+  ]
 
   // Define translations for "Inventory", "Billing", and "Settings"
   const translations: Record<string, Translations> = {
@@ -620,236 +632,223 @@ const Sidebar = () => {
       billing: "Billing",
       settings: "Settings",
       bookings: "Bookings",
-      users: "Users"
+      users: "Users",
     },
     es: {
       inventory: "Inventario",
       billing: "Facturación",
       settings: "Configuraciones",
       bookings: "Reservas",
-      users: "Usuarios"
+      users: "Usuarios",
     },
     ay: {
       inventory: "Lurawi utanaka",
       billing: "Jisk'a qallta",
       settings: "Qillqatanaka",
       bookings: "Qillqatapxañani",
-      users: "Jach'a uywiri"
+      users: "Jach'a uywiri",
     },
     qu: {
       inventory: "Hawa llaqtaqmasi",
       billing: "Wasiwi",
       settings: "Chaskiykuna",
       bookings: "Llamk'apay",
-      users: "Runa"
+      users: "Runa",
     },
     gn: {
       inventory: "Ñemitype",
       billing: "Kamby rehegua",
       settings: "Ñemohenda",
       bookings: "Jehechauka",
-      users: "Póry"
+      users: "Póry",
     },
-  };
-  
+  }
 
   return (
     <div
       className={`w-[36px] p-[10px] h-screen overflow-auto transition-all duration-500 box-content bg-[#ededed]`}
       ref={sectionRef}
       style={{
-        scrollbarWidth: "none"
+        scrollbarWidth: "none",
       }}
     >
-      <div className={`w-full transition-all duration-500 box-content bg-[#ededed] ${sidebarShow ? "hidden" : "flex flex-col gap-[20px]"}`}>
-      <Image
-        alt="Logo"
-        src={LOGO}
-        className="w-[80%] h-auto object-cover mx-auto"
-      />
+      <div
+        className={`w-full transition-all duration-500 box-content bg-[#ededed] ${sidebarShow ? "hidden" : "flex flex-col gap-[20px]"}`}
+      >
+        <Image alt="Logo" src={LOGO || "/placeholder.svg"} className="w-[80%] h-auto object-cover mx-auto" />
 
-      <ToogleButton />
+        <ToogleButton />
 
-      <div className="w-full h-[2px] bg-gray-300 rounded-full" />
+        <div className="w-full h-[2px] bg-gray-300 rounded-full" />
 
-      <ul className="flex flex-col gap-[8px]">
-        {topLeftSideList.map((listItem, index) => {
-          return (
-            <Link
-              href={`${listItem.route}`}
-              key={index}
-              className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
-                LeftSideSctiveItem === listItem.name
-                  ? "bg-[#d5ebd6]"
-                  : "hover:bg-gray-200"
-              } drop-shadow-md rounded transition-all duration-500 relative`}
-              onClick={() => {
-                setActiveLeftSideTag(listItem.name);
-              }}
-            >
-              <Tooltip title={listItem.name} placement="right">
-                {listItem.icon}
-              </Tooltip>
-            </Link>
-          );
-        })}
-      </ul>
-
-      <div className="w-full h-[2px] bg-gray-300 rounded-full" />
-
-      <div>
-        <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
-          <Tooltip title={translations[locale]?.users || translations.en.users} placement="right">
-            <Image
-              src={InsuranceIcon}
-              className="w-[20px] h-auto object-cover"
-              width={20}
-              height={20}
-              alt="Bookings"
-            />
-          </Tooltip>
-        </div>
-
-        <ul className="flex flex-col gap-[8px] mt-[8px]">
-          {UsersOptions.map((listItem, index) => {
+        <ul className="flex flex-col gap-[8px]">
+          {topLeftSideList.map((listItem, index) => {
             return (
               <Link
                 href={`${listItem.route}`}
                 key={index}
                 className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
-                  LeftSideSctiveItem === listItem.name
-                    ? "bg-[#d5ebd6]"
-                    : "hover:bg-gray-200"
+                  LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
                 } drop-shadow-md rounded transition-all duration-500 relative`}
                 onClick={() => {
-                  setActiveLeftSideTag(listItem.name);
+                  setActiveLeftSideTag(listItem.name)
                 }}
               >
                 <Tooltip title={listItem.name} placement="right">
                   {listItem.icon}
                 </Tooltip>
               </Link>
-            );
+            )
           })}
         </ul>
-      </div>
 
-      <div className="w-full h-[2px] bg-gray-300 rounded-full" />
+        <div className="w-full h-[2px] bg-gray-300 rounded-full" />
 
-      <div>
-        <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
-          <Tooltip title={translations[locale]?.bookings || translations.en.bookings} placement="right">
-            <Image
-              src={InsuranceIcon}
-              className="w-[20px] h-auto object-cover"
-              width={20}
-              height={20}
-              alt="Bookings"
-            />
-          </Tooltip>
+        <div>
+          <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
+            <Tooltip title={translations[locale]?.users || translations.en.users} placement="right">
+              <Image
+                src={InsuranceIcon || "/placeholder.svg"}
+                className="w-[20px] h-auto object-cover"
+                width={20}
+                height={20}
+                alt="Bookings"
+              />
+            </Tooltip>
+          </div>
+
+          <ul className="flex flex-col gap-[8px] mt-[8px]">
+            {UsersOptions.map((listItem, index) => {
+              return (
+                <Link
+                  href={`${listItem.route}`}
+                  key={index}
+                  className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
+                    LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
+                  } drop-shadow-md rounded transition-all duration-500 relative`}
+                  onClick={() => {
+                    setActiveLeftSideTag(listItem.name)
+                  }}
+                >
+                  <Tooltip title={listItem.name} placement="right">
+                    {listItem.icon}
+                  </Tooltip>
+                </Link>
+              )
+            })}
+          </ul>
         </div>
 
-        <ul className="flex flex-col gap-[8px] mt-[8px]">
-          {bookingList.map((listItem, index) => {
-            return (
-              <Link
-                href={`${listItem.route}`}
-                key={index}
-                className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
-                  LeftSideSctiveItem === listItem.name
-                    ? "bg-[#d5ebd6]"
-                    : "hover:bg-gray-200"
-                } drop-shadow-md rounded transition-all duration-500 relative`}
-                onClick={() => {
-                  setActiveLeftSideTag(listItem.name);
-                }}
-              >
-                <Tooltip title={listItem.name} placement="right">
-                  {listItem.icon}
-                </Tooltip>
-              </Link>
-            );
-          })}
-        </ul>
-      </div>
+        <div className="w-full h-[2px] bg-gray-300 rounded-full" />
 
-      <div className="w-full h-[2px] bg-gray-300 rounded-full" />
+        <div>
+          <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
+            <Tooltip title={translations[locale]?.bookings || translations.en.bookings} placement="right">
+              <Image
+                src={InsuranceIcon || "/placeholder.svg"}
+                className="w-[20px] h-auto object-cover"
+                width={20}
+                height={20}
+                alt="Bookings"
+              />
+            </Tooltip>
+          </div>
 
-      <div>
-        <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
-          <Tooltip title={translations[locale]?.inventory || translations.en.inventory} placement="right">
-            <Image
-              src={InsuranceIcon}
-              className="w-[20px] h-auto object-cover"
-              width={20}
-              height={20}
-              alt="Statements"
-            />
-          </Tooltip>
+          <ul className="flex flex-col gap-[8px] mt-[8px]">
+            {bookingList.map((listItem, index) => {
+              return (
+                <Link
+                  href={`${listItem.route}`}
+                  key={index}
+                  className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
+                    LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
+                  } drop-shadow-md rounded transition-all duration-500 relative`}
+                  onClick={() => {
+                    setActiveLeftSideTag(listItem.name)
+                  }}
+                >
+                  <Tooltip title={listItem.name} placement="right">
+                    {listItem.icon}
+                  </Tooltip>
+                </Link>
+              )
+            })}
+          </ul>
         </div>
 
-        <ul className="flex flex-col gap-[8px] mt-[8px]">
-          {inventoryList.map((listItem, index) => {
-            return (
-              <Link
-                href={`${listItem.route}`}
-                key={index}
-                className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
-                  LeftSideSctiveItem === listItem.name
-                    ? "bg-[#d5ebd6]"
-                    : "hover:bg-gray-200"
-                } drop-shadow-md rounded transition-all duration-500 relative`}
-                onClick={() => {
-                  setActiveLeftSideTag(listItem.name);
-                }}
-              >
-                <Tooltip title={listItem.name} placement="right">
-                  {listItem.icon}
-                </Tooltip>
-              </Link>
-            );
-          })}
-        </ul>
-      </div>
+        <div className="w-full h-[2px] bg-gray-300 rounded-full" />
 
-      <div>
+        <div>
+          <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
+            <Tooltip title={translations[locale]?.inventory || translations.en.inventory} placement="right">
+              <Image
+                src={InsuranceIcon || "/placeholder.svg"}
+                className="w-[20px] h-auto object-cover"
+                width={20}
+                height={20}
+                alt="Statements"
+              />
+            </Tooltip>
+          </div>
+
+          <ul className="flex flex-col gap-[8px] mt-[8px]">
+            {inventoryList.map((listItem, index) => {
+              return (
+                <Link
+                  href={`${listItem.route}`}
+                  key={index}
+                  className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
+                    LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
+                  } drop-shadow-md rounded transition-all duration-500 relative`}
+                  onClick={() => {
+                    setActiveLeftSideTag(listItem.name)
+                  }}
+                >
+                  <Tooltip title={listItem.name} placement="right">
+                    {listItem.icon}
+                  </Tooltip>
+                </Link>
+              )
+            })}
+          </ul>
+        </div>
+
+        <div>
           <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
             <Tooltip title={translations[locale]?.billing || translations.en.billing} placement="right">
               <ReceiptIcon />
             </Tooltip>
           </div>
 
-        <ul className="flex flex-col gap-[8px] mt-[8px]">
-          {middleLeftSideList.map((listItem, index) => {
-            return (
-              <Link
-                href={`${listItem.route}`}
-                key={index}
-                className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
-                  LeftSideSctiveItem === listItem.name
-                    ? "bg-[#d5ebd6]"
-                    : "hover:bg-gray-200"
-                } drop-shadow-md rounded transition-all duration-500 relative`}
-                onClick={() => {
-                  setActiveLeftSideTag(listItem.name);
-                }}
-              >
-                <Tooltip title={listItem.name} placement="right">
-                  {listItem.icon}
-                </Tooltip>
-              </Link>
-            );
-          })}
-        </ul>
-      </div>
+          <ul className="flex flex-col gap-[8px] mt-[8px]">
+            {middleLeftSideList.map((listItem, index) => {
+              return (
+                <Link
+                  href={`${listItem.route}`}
+                  key={index}
+                  className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
+                    LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
+                  } drop-shadow-md rounded transition-all duration-500 relative`}
+                  onClick={() => {
+                    setActiveLeftSideTag(listItem.name)
+                  }}
+                >
+                  <Tooltip title={listItem.name} placement="right">
+                    {listItem.icon}
+                  </Tooltip>
+                </Link>
+              )
+            })}
+          </ul>
+        </div>
 
-      <div className="w-full h-[2px] bg-gray-300 rounded-full" />
+        <div className="w-full h-[2px] bg-gray-300 rounded-full" />
 
-          <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
-            <Tooltip title={translations[locale]?.settings || translations.en.settings} placement="right">
-              <SettingsIcon />
-            </Tooltip>
-          </div>
+        <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
+          <Tooltip title={translations[locale]?.settings || translations.en.settings} placement="right">
+            <SettingsIcon />
+          </Tooltip>
+        </div>
 
         <ul className="flex flex-col gap-[8px] mt-[8px]">
           {SettingsOptions.map((listItem, index) => {
@@ -858,25 +857,23 @@ const Sidebar = () => {
                 href={`${listItem.route}`}
                 key={index}
                 className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
-                  LeftSideSctiveItem === listItem.name
-                    ? "bg-[#d5ebd6]"
-                    : "hover:bg-gray-200"
+                  LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
                 } drop-shadow-md rounded transition-all duration-500 relative`}
                 onClick={() => {
-                  setActiveLeftSideTag(listItem.name);
+                  setActiveLeftSideTag(listItem.name)
                 }}
               >
                 <Tooltip title={listItem.name} placement="right">
                   {listItem.icon}
                 </Tooltip>
               </Link>
-            );
+            )
           })}
         </ul>
-        </div>
-        <ExpandedSidebar />
+      </div>
+      <ExpandedSidebar />
     </div>
-  );
-};
+  )
+}
 
-export default Sidebar;
+export default Sidebar
