@@ -56,6 +56,8 @@
     "humanparser": "^2.7.0",
     "i18next": "^23.12.3",
     "jsonwebtoken": "^9.0.2",
+    "jspdf": "^3.0.1",
+    "jspdf-autotable": "^5.0.2",
     "keen-slider": "^6.8.6",
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",

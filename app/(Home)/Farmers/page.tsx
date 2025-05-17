@@ -1,8 +1,7 @@
-import FarmerSection from '@/components/Farmers/Farmer'
 import dynamic from 'next/dynamic'
 
-const Agent = dynamic(
-    ()=> import('@/components/Farmers/Farmer'),
+const Farmers = dynamic(
+    ()=> import('@/components/Farmers/FarmerContainer'),
     {
         ssr: false,
         loading: () => (
@@ -13,10 +12,10 @@ const Agent = dynamic(
       }
   )
 
-const AgentPage = () => {
+const FarmerPage = () => {
   return (
-    <FarmerSection />
+    <Farmers />
   )
 }
 
-export default AgentPage
+export default FarmerPage

@@ -1,7 +1,8 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { CartesianGrid, Line, LineChart, XAxis } from "recharts"
+import { useEffect, useMemo, useState } from "react"
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import { Check, ChevronsUpDown, RefreshCw, TrendingUp, Tractor, CalendarCheck2 } from 'lucide-react'
 
 import {
   Card,
@@ -13,234 +14,447 @@ import {
 import {
   ChartConfig,
   ChartContainer,
-  ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
-import { Button } from "../ui/button"
-import { Check, ChevronsUpDown } from "lucide-react"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../ui/command"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Button } from "@/components/ui/button"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
+import { renderInstance } from "@/utils/Axios/RenderInstance"
+import { errorMessage } from "@/utils/Toastify/Messages"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-export const description = "An interactive line chart"
+// Types definitions
+interface Booking {
+  id: string
+  user_id: string
+  store_id: string | null
+  start_date: string
+  end_date: string | null
+  base_id: string
+  total_cost: number
+  total_tractor_cost: number
+  total_attachment_cost: number
+  total_service_charge: number
+  total_tax: number | null
+  total_distance_cost: number
+  booking_hours: string
+  booking_location_lan: string | null
+  booking_location_lat: string | null
+  farm_id: string
+  confirm: boolean
+  owner_confirm: boolean
+  distance: number | null
+  location_id: string | null
+  created_by: string
+  bookingType: string
+  bookingStatus: string
+  createdAt: string
+  updatedAt: string
+  attachments: any[]
+  tractors: any[]
+  payment: any[]
+}
 
-const chartData = [
-  { date: "2024-04-01", farmer: 222, booking: 150 },
-  { date: "2024-04-02", farmer: 97, booking: 180 },
-  { date: "2024-04-03", farmer: 167, booking: 120 },
-  { date: "2024-04-04", farmer: 242, booking: 260 },
-  { date: "2024-04-05", farmer: 373, booking: 290 },
-  { date: "2024-04-06", farmer: 301, booking: 340 },
-  { date: "2024-04-07", farmer: 245, booking: 180 },
-  { date: "2024-04-08", farmer: 409, booking: 320 },
-  { date: "2024-04-09", farmer: 59, booking: 110 },
-  { date: "2024-04-10", farmer: 261, booking: 190 },
-  { date: "2024-04-11", farmer: 327, booking: 350 },
-  { date: "2024-04-12", farmer: 292, booking: 210 },
-  { date: "2024-04-13", farmer: 342, booking: 380 },
-  { date: "2024-04-14", farmer: 137, booking: 220 },
-  { date: "2024-04-15", farmer: 120, booking: 170 },
-  { date: "2024-04-16", farmer: 138, booking: 190 },
-  { date: "2024-04-17", farmer: 446, booking: 360 },
-  { date: "2024-04-18", farmer: 364, booking: 410 },
-  { date: "2024-04-19", farmer: 243, booking: 180 },
-  { date: "2024-04-20", farmer: 89, booking: 150 },
-  { date: "2024-04-21", farmer: 137, booking: 200 },
-  { date: "2024-04-22", farmer: 224, booking: 170 },
-  { date: "2024-04-23", farmer: 138, booking: 230 },
-  { date: "2024-04-24", farmer: 387, booking: 290 },
-  { date: "2024-04-25", farmer: 215, booking: 250 },
-  { date: "2024-04-26", farmer: 75, booking: 130 },
-  { date: "2024-04-27", farmer: 383, booking: 420 },
-  { date: "2024-04-28", farmer: 122, booking: 180 },
-  { date: "2024-04-29", farmer: 315, booking: 240 },
-  { date: "2024-04-30", farmer: 454, booking: 380 },
-  { date: "2024-05-01", farmer: 165, booking: 220 },
-  { date: "2024-05-02", farmer: 293, booking: 310 },
-  { date: "2024-05-03", farmer: 247, booking: 190 },
-  { date: "2024-05-04", farmer: 385, booking: 420 },
-  { date: "2024-05-05", farmer: 481, booking: 390 },
-  { date: "2024-05-06", farmer: 498, booking: 520 },
-  { date: "2024-05-07", farmer: 388, booking: 300 },
-  { date: "2024-05-08", farmer: 149, booking: 210 },
-  { date: "2024-05-09", farmer: 227, booking: 180 },
-  { date: "2024-05-10", farmer: 293, booking: 330 },
-  { date: "2024-05-11", farmer: 335, booking: 270 },
-  { date: "2024-05-12", farmer: 197, booking: 240 },
-  { date: "2024-05-13", farmer: 197, booking: 160 },
-  { date: "2024-05-14", farmer: 448, booking: 490 },
-  { date: "2024-05-15", farmer: 473, booking: 380 },
-  { date: "2024-05-16", farmer: 338, booking: 400 },
-  { date: "2024-05-17", farmer: 499, booking: 420 },
-  { date: "2024-05-18", farmer: 315, booking: 350 },
-  { date: "2024-05-19", farmer: 235, booking: 180 },
-  { date: "2024-05-20", farmer: 177, booking: 230 },
-  { date: "2024-05-21", farmer: 82, booking: 140 },
-  { date: "2024-05-22", farmer: 81, booking: 120 },
-  { date: "2024-05-23", farmer: 252, booking: 290 },
-  { date: "2024-05-24", farmer: 294, booking: 220 },
-  { date: "2024-05-25", farmer: 201, booking: 250 },
-  { date: "2024-05-26", farmer: 213, booking: 170 },
-  { date: "2024-05-27", farmer: 420, booking: 460 },
-  { date: "2024-05-28", farmer: 233, booking: 190 },
-  { date: "2024-05-29", farmer: 78, booking: 130 },
-  { date: "2024-05-30", farmer: 340, booking: 280 },
-  { date: "2024-05-31", farmer: 178, booking: 230 },
-  { date: "2024-06-01", farmer: 178, booking: 200 },
-  { date: "2024-06-02", farmer: 470, booking: 410 },
-  { date: "2024-06-03", farmer: 103, booking: 160 },
-  { date: "2024-06-04", farmer: 439, booking: 380 },
-  { date: "2024-06-05", farmer: 88, booking: 140 },
-  { date: "2024-06-06", farmer: 294, booking: 250 },
-  { date: "2024-06-07", farmer: 323, booking: 370 },
-  { date: "2024-06-08", farmer: 385, booking: 320 },
-  { date: "2024-06-09", farmer: 438, booking: 480 },
-  { date: "2024-06-10", farmer: 155, booking: 200 },
-  { date: "2024-06-11", farmer: 92, booking: 150 },
-  { date: "2024-06-12", farmer: 492, booking: 420 },
-  { date: "2024-06-13", farmer: 81, booking: 130 },
-  { date: "2024-06-14", farmer: 426, booking: 380 },
-  { date: "2024-06-15", farmer: 307, booking: 350 },
-  { date: "2024-06-16", farmer: 371, booking: 310 },
-  { date: "2024-06-17", farmer: 475, booking: 520 },
-  { date: "2024-06-18", farmer: 107, booking: 170 },
-  { date: "2024-06-19", farmer: 341, booking: 290 },
-  { date: "2024-06-20", farmer: 408, booking: 450 },
-  { date: "2024-06-21", farmer: 169, booking: 210 },
-  { date: "2024-06-22", farmer: 317, booking: 270 },
-  { date: "2024-06-23", farmer: 480, booking: 530 },
-  { date: "2024-06-24", farmer: 132, booking: 180 },
-  { date: "2024-06-25", farmer: 141, booking: 190 },
-  { date: "2024-06-26", farmer: 434, booking: 380 },
-  { date: "2024-06-27", farmer: 448, booking: 490 },
-  { date: "2024-06-28", farmer: 149, booking: 200 },
-  { date: "2024-06-29", farmer: 103, booking: 160 },
-  { date: "2024-06-30", farmer: 446, booking: 400 },
-]
+interface Farmer {
+  id: string
+  user_id: string
+  role_id: string
+  created_by: string
+  Status: number
+  base_id: string
+  device_type: string | null
+  device_id: string | null
+  home_location_id: string | null
+  farm_location_id: string | null
+  currency: string
+  currency_code: string
+  createdAt: string
+  updatedAt: string
+  user: {
+    id: string
+    first_name: string
+    middle_name: string
+    last_name: string
+    authType: string
+    gender: string
+    emailVerified: boolean
+    image: string | null
+  }
+}
+
+interface ChartDataPoint {
+  date: string
+  farmer: number
+  booking: number
+}
 
 const chartConfig = {
-  views: {
-    label: "Page Views",
-  },
   farmer: {
-    label: "farmer",
-    color: "hsl(var(--chart-1))",
+    label: "Farmers",
+    color: "#6366f1", // Indigo color
   },
   booking: {
-    label: "booking",
-    color: "hsl(var(--chart-2))",
+    label: "Bookings",
+    color: "#ec4899", // Pink color
   },
 } satisfies ChartConfig
 
-const frameworks = [
-  {
-    value: "next.js",
-    label: "2024",
-  },
+const years = [
+  { value: "2024", label: "2024" },
+  { value: "2025", label: "2025" },
 ]
 
 export function FarmerAndBookingChart() {
-  const [activeChart, setActiveChart] = useState<keyof typeof chartConfig>("farmer")
-    const [open, setOpen] = useState(false)
-    const [value, setValue] = useState("")
+  const [activeTab, setActiveTab] = useState<keyof typeof chartConfig>("farmer")
+  const [open, setOpen] = useState(false)
+  const [value, setValue] = useState("2025")
+  const [chartData, setChartData] = useState<ChartDataPoint[]>([])
+  const [loading, setLoading] = useState(false)
+  const [totalFarmers, setTotalFarmers] = useState(0)
+  const [totalBookings, setTotalBookings] = useState(0)
+  const [growthRate, setGrowthRate] = useState({ farmer: 0, booking: 0 })
+
+  // Custom gradient for chart areas
+  const gradientFarmer = "url(#colorFarmer)"
+  const gradientBooking = "url(#colorBooking)"
+
+  useEffect(() => {
+    fetchData()
+  }, [value])
+
+  const fetchData = async () => {
+    setLoading(true)
+    try {
+      // Fetch farmers data
+      const farmersResponse = await renderInstance.get("/farmer")
+      const farmers: Farmer[] = farmersResponse.data
+
+      // Fetch bookings data
+      const bookingsResponse = await renderInstance.get("/booking")
+      const bookings: Booking[] = bookingsResponse.data
+
+      // Process data for the chart
+      const processedData = processChartData(farmers, bookings)
+      setChartData(processedData)
+
+      // Set totals
+      setTotalFarmers(farmers.length)
+      setTotalBookings(bookings.length)
+
+      // Calculate growth rates (comparing to previous month)
+      calculateGrowthRates(farmers, bookings)
+    } catch (err) {
+      errorMessage("Error fetching data for chart")
+      console.error("Error fetching data:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const calculateGrowthRates = (farmers: Farmer[], bookings: Booking[]) => {
+    const currentDate = new Date()
+    const currentMonth = currentDate.getMonth()
+    const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1
+    const currentYear = parseInt(value)
+    
+    // Count farmers by month
+    const farmersByMonth = [0, 0] // [previousMonth, currentMonth]
+    farmers.forEach(farmer => {
+      const createdAt = new Date(farmer.createdAt)
+      if (createdAt.getFullYear() === currentYear) {
+        const month = createdAt.getMonth()
+        if (month === currentMonth) farmersByMonth[1]++
+        else if (month === previousMonth) farmersByMonth[0]++
+      }
+    })
+    
+    // Count bookings by month
+    const bookingsByMonth = [0, 0] // [previousMonth, currentMonth]
+    bookings.forEach(booking => {
+      const createdAt = new Date(booking.createdAt)
+      if (createdAt.getFullYear() === currentYear) {
+        const month = createdAt.getMonth()
+        if (month === currentMonth) bookingsByMonth[1]++
+        else if (month === previousMonth) bookingsByMonth[0]++
+      }
+    })
+    
+    // Calculate growth rates
+    const farmerGrowthRate = farmersByMonth[0] === 0 
+      ? 100 
+      : ((farmersByMonth[1] - farmersByMonth[0]) / farmersByMonth[0]) * 100
+    
+    const bookingGrowthRate = bookingsByMonth[0] === 0 
+      ? 100 
+      : ((bookingsByMonth[1] - bookingsByMonth[0]) / bookingsByMonth[0]) * 100
+    
+    setGrowthRate({
+      farmer: Math.round(farmerGrowthRate * 10) / 10,
+      booking: Math.round(bookingGrowthRate * 10) / 10
+    })
+  }
+
+  const processChartData = (farmers: Farmer[], bookings: Booking[]): ChartDataPoint[] => {
+    // Create a map to store counts by date
+    const dateMap = new Map<string, { farmer: number; booking: number }>()
+
+    // Get the selected year
+    const selectedYear = parseInt(value)
+    
+    // Process farmers data
+    farmers.forEach((farmer) => {
+      const createdAt = new Date(farmer.createdAt)
+      // Only include data from the selected year
+      if (createdAt.getFullYear() === selectedYear) {
+        const dateStr = createdAt.toISOString().split('T')[0]
+        const existingData = dateMap.get(dateStr) || { farmer: 0, booking: 0 }
+        existingData.farmer += 1
+        dateMap.set(dateStr, existingData)
+      }
+    })
+
+    // Process bookings data
+    bookings.forEach((booking) => {
+      const createdAt = new Date(booking.createdAt)
+      // Only include data from the selected year
+      if (createdAt.getFullYear() === selectedYear) {
+        const dateStr = createdAt.toISOString().split('T')[0]
+        const existingData = dateMap.get(dateStr) || { farmer: 0, booking: 0 }
+        existingData.booking += 1
+        dateMap.set(dateStr, existingData)
+      }
+    })
+
+    // Convert map to array and sort by date
+    const result = Array.from(dateMap.entries()).map(([date, data]) => ({
+      date,
+      farmer: data.farmer,
+      booking: data.booking,
+    }))
+
+    return result.sort((a, b) => a.date.localeCompare(b.date))
+  }
 
   const total = useMemo(
     () => ({
-      farmer: chartData.reduce((acc, curr) => acc + curr.farmer, 0),
-      booking: chartData.reduce((acc, curr) => acc + curr.booking, 0),
+      farmer: totalFarmers,
+      booking: totalBookings,
     }),
-    []
+    [totalFarmers, totalBookings]
   )
 
-  return (
-    <Card>
-      <CardHeader className="flex flex-col items-stretch space-y-0 border-b p-0 sm:flex-row">
-        <div className="flex flex-1 flex-col justify-center gap-1 px-6 py-5 sm:py-6">
-        <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-[200px] justify-between"
-        >
-          {value
-            ? frameworks.find((framework) => framework.value === value)?.label
-            : "Select year..."}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0">
-        <Command>
-          <CommandInput placeholder="Search year..." />
-          <CommandList>
-            <CommandEmpty>Year is not available.</CommandEmpty>
-            <CommandGroup>
-              {frameworks.map((framework) => (
-                <CommandItem
-                  key={framework.value}
-                  value={framework.value}
-                  onSelect={(currentValue) => {
-                    setValue(currentValue === value ? "" : currentValue)
-                    setOpen(false)
-                  }}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === framework.value ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {framework.label}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-4">
+          <p className="font-medium">
+            {new Date(label).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })}
+          </p>
+          <div className="mt-2 space-y-1">
+            <p className="text-sm flex items-center gap-2">
+              <span className="w-3 h-3 inline-block rounded-full" style={{ backgroundColor: chartConfig.farmer.color }}></span>
+              <span className="font-medium">Farmers:</span> {payload[0]?.value}
+            </p>
+            <p className="text-sm flex items-center gap-2">
+              <span className="w-3 h-3 inline-block rounded-full" style={{ backgroundColor: chartConfig.booking.color }}></span>
+              <span className="font-medium">Bookings:</span> {payload[1]?.value}
+            </p>
+          </div>
         </div>
-        <div className="flex">
-          {["farmer", "booking"].map((key) => {
-            const chart = key as keyof typeof chartConfig
-            return (
-              <button
-                key={chart}
-                data-active={activeChart === chart}
-                className="flex flex-1 flex-col justify-center gap-1 border-t px-6 py-4 text-left even:border-l data-[active=true]:bg-muted/50 sm:border-l sm:border-t-0 sm:px-8 sm:py-6"
-                onClick={() => setActiveChart(chart)}
-              >
-                <span className="text-xs text-muted-foreground">
-                  {chartConfig[chart].label}
-                </span>
-                <span className="text-lg font-bold leading-none sm:text-3xl">
-                  {total[key as keyof typeof total].toLocaleString()}
-                </span>
-              </button>
-            )
-          })}
+      )
+    }
+    return null
+  }
+
+  const GrowthIndicator = ({ value }: { value: number }) => {
+    const isPositive = value >= 0
+    return (
+      <Badge variant={isPositive ? "default" : "destructive"} className={cn("ml-2", isPositive ? "bg-green-100 text-green-800 hover:bg-green-100" : "")}>
+        <TrendingUp className={cn("h-3 w-3 mr-1", !isPositive && "rotate-180")} />
+        {isPositive ? "+" : ""}{value}%
+      </Badge>
+    )
+  }
+
+  return (
+    <Card className="overflow-hidden border-none shadow-lg bg-gradient-to-br from-background to-background/80 backdrop-blur-sm">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+              Farmers & Bookings Analytics
+            </CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Real-time performance metrics
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Popover open={open} onOpenChange={setOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={open}
+                  className="w-[120px] justify-between border-border/40 bg-background/50 backdrop-blur-sm"
+                >
+                  {value
+                    ? years.find((year) => year.value === value)?.label
+                    : "Select year..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[120px] p-0">
+                <Command>
+                  <CommandInput placeholder="Search year..." />
+                  <CommandList>
+                    <CommandEmpty>Year is not available.</CommandEmpty>
+                    <CommandGroup>
+                      {years.map((year) => (
+                        <CommandItem
+                          key={year.value}
+                          value={year.value}
+                          onSelect={(currentValue) => {
+                            setValue(currentValue === value ? "" : currentValue)
+                            setOpen(false)
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              value === year.value ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {year.label}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={fetchData}
+              disabled={loading}
+              className="border-border/40 bg-background/50 backdrop-blur-sm"
+            >
+              <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+            </Button>
+          </div>
         </div>
       </CardHeader>
-      <CardContent className="px-2 sm:p-6">
-        <ChartContainer
-          config={chartConfig}
-          className="aspect-auto h-[250px] w-full"
-        >
+
+      <div className="px-6 py-1">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Card className="border-border/30 bg-background/50 backdrop-blur-sm hover:shadow-md transition-shadow">
+            <div className="p-6 flex items-center">
+              <div className="rounded-full p-3 bg-indigo-100 mr-4">
+                <Tractor className="h-6 w-6 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Farmers</p>
+                <div className="flex items-center">
+                  <h3 className="text-2xl font-bold">{total.farmer.toLocaleString()}</h3>
+                  <GrowthIndicator value={growthRate.farmer} />
+                </div>
+              </div>
+            </div>
+          </Card>
+          
+          <Card className="border-border/30 bg-background/50 backdrop-blur-sm hover:shadow-md transition-shadow">
+            <div className="p-6 flex items-center">
+              <div className="rounded-full p-3 bg-pink-100 mr-4">
+                <CalendarCheck2 className="h-6 w-6 text-pink-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Bookings</p>
+                <div className="flex items-center">
+                  <h3 className="text-2xl font-bold">{total.booking.toLocaleString()}</h3>
+                  <GrowthIndicator value={growthRate.booking} />
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+      
+      <CardContent className="px-1 pt-3 pb-6">
+        <Tabs defaultValue="farmer" value={activeTab} onValueChange={(v) => setActiveTab(v as keyof typeof chartConfig)} className="w-full px-5">
+          <TabsList className="grid w-64 grid-cols-2 mb-4">
+            <TabsTrigger value="farmer" className="data-[state=active]:bg-indigo-100 data-[state=active]:text-indigo-700">
+              Farmers
+            </TabsTrigger>
+            <TabsTrigger value="booking" className="data-[state=active]:bg-pink-100 data-[state=active]:text-pink-700">
+              Bookings
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="farmer" className="mt-0">
+            {renderChart("farmer")}
+          </TabsContent>
+          
+          <TabsContent value="booking" className="mt-0">
+            {renderChart("booking")}
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
+  )
+
+  function renderChart(dataKey: keyof typeof chartConfig) {
+    if (loading) {
+      return (
+        <div className="flex justify-center items-center h-[350px]">
+          <div className="flex flex-col items-center">
+            <RefreshCw className="h-8 w-8 mb-2 animate-spin text-muted-foreground" />
+            <p className="text-muted-foreground">Loading chart data...</p>
+          </div>
+        </div>
+      )
+    }
+
+    if (chartData.length === 0) {
+      return (
+        <div className="flex justify-center items-center h-[350px]">
+          <p className="text-muted-foreground text-center">
+            No data available for {value}<br />
+            <span className="text-sm">Try selecting a different year or refresh data</span>
+          </p>
+        </div>
+      )
+    }
+
+    return (
+      <div className="h-[350px] w-full">
+        <ResponsiveContainer width="100%" height="100%">
           <LineChart
-            accessibilityLayer
             data={chartData}
-            margin={{
-              left: 12,
-              right: 12,
-            }}
+            margin={{ top: 10, right: 30, left: 10, bottom: 10 }}
           >
-            <CartesianGrid vertical={false} />
-            <XAxis
-              dataKey="date"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              minTickGap={32}
+            <defs>
+              <linearGradient id="colorFarmer" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="colorBooking" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#ec4899" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#ec4899" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.3} />
+            <XAxis 
+              dataKey="date" 
+              tickLine={false} 
+              axisLine={false} 
+              tickMargin={10}
+              minTickGap={50}
               tickFormatter={(value) => {
                 const date = new Date(value)
                 return date.toLocaleDateString("en-US", {
@@ -248,32 +462,49 @@ export function FarmerAndBookingChart() {
                   day: "numeric",
                 })
               }}
+              stroke="#9ca3af"
+              fontSize={12}
             />
-            <ChartTooltip
-              content={
-                <ChartTooltipContent
-                  className="w-[150px]"
-                  nameKey="views"
-                  labelFormatter={(value) => {
-                    return new Date(value).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })
-                  }}
-                />
-              }
+            <YAxis 
+              tickLine={false}
+              axisLine={false}
+              tickMargin={10}
+              stroke="#9ca3af"
+              fontSize={12}
+              width={30}
             />
-            <Line
-              dataKey={activeChart}
-              type="monotone"
-              stroke={`var(--color-${activeChart})`}
-              strokeWidth={2}
-              dot={false}
-            />
+            <Tooltip content={<CustomTooltip />} />
+            
+            {dataKey === "farmer" && (
+              <Line
+                type="monotone"
+                dataKey="farmer"
+                stroke={chartConfig.farmer.color}
+                strokeWidth={3}
+                dot={false}
+                activeDot={{ r: 6, stroke: "#fff", strokeWidth: 2 }}
+                name="Farmers"
+                fill={gradientFarmer}
+              />
+            )}
+            
+            {dataKey === "booking" && (
+              <Line
+                type="monotone"
+                dataKey="booking"
+                stroke={chartConfig.booking.color}
+                strokeWidth={3}
+                dot={false}
+                activeDot={{ r: 6, stroke: "#fff", strokeWidth: 2 }}
+                name="Bookings"
+                fill={gradientBooking}
+              />
+            )}
           </LineChart>
-        </ChartContainer>
-      </CardContent>
-    </Card>
-  )
+        </ResponsiveContainer>
+      </div>
+    )
+  }
 }
+
+export default FarmerAndBookingChart

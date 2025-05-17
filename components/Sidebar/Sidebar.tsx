@@ -86,6 +86,7 @@ const Sidebar = () => {
     "/Accounting": "Accounting",
     "/Attachments": "Attachments",
     "/Store": "Store",
+    "/Farmers": "Farmer",
   }
 
   useEffect(() => {

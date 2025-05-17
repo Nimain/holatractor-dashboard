@@ -55,7 +55,7 @@ const AdminSection = () => {
             <div className='mb-[20px] w-full flex items-center justify-between'>
 
                 <p className='text-[22px] font-[600]'>
-                    Total dealers: {users.length}
+                    Total Admin: {users.length}
                 </p>
 
 <Link href={"/create_admin"}>
