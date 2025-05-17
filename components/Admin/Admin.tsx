@@ -49,8 +49,8 @@ const AdminSection = () => {
         return dateObj.toLocaleDateString(undefined, options);
     };
 
-  return (
-    <div className='mt-[40px] text-[18px]'>
+    return (
+        <div className='mt-[40px] text-[18px]'>
 
             <div className='mb-[20px] w-full flex items-center justify-between'>
 
@@ -58,16 +58,16 @@ const AdminSection = () => {
                     Total Admin: {users.length}
                 </p>
 
-<Link href={"/create_admin"}>
-                        <Button
-                            name="Name_next_button"
-                            onClick={() => {
-                                setOpen(true)
-                            }}
-                        >
-                            New Admin
-                        </Button>
-                        </Link>
+                <Link href={"/create_admin"}>
+                    <Button
+                        name="Name_next_button"
+                        onClick={() => {
+                            setOpen(true)
+                        }}
+                    >
+                        New Admin
+                    </Button>
+                </Link>
 
             </div>
 
@@ -267,7 +267,7 @@ const AdminSection = () => {
 
 
         </div>
-  )
+    )
 }
 
 export default AdminSection
