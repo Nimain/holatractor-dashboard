@@ -59,24 +59,67 @@ function BookingChart() {
   const [loading, setLoading] = useState(false)
   const [totalMale, setTotalMale] = useState(0)
   const [totalFemale, setTotalFemale] = useState(0)
+  const [farmers, setFarmers] = useState<Farmer[]>([])
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  
+  // Generate a range of years dynamically (from 2022 to current year)
+  const currentYear = new Date().getFullYear()
+  const availableYears = Array.from(
+    { length: currentYear - 2022 + 1 }, 
+    (_, index) => 2022 + index
+  )
 
   useEffect(() => {
     fetchFarmerData()
   }, [])
 
+  useEffect(() => {
+    // Update chart when year selection changes
+    if (farmers.length > 0) {
+      const filteredData = processChartData(farmers, selectedYear)
+      setChartData(filteredData)
+      
+      // Recalculate totals for the selected year
+      const farmersForYear = farmers.filter(farmer => 
+        new Date(farmer.createdAt).getFullYear() === selectedYear
+      )
+      
+      const maleCount = farmersForYear.filter(farmer => 
+        farmer.user.gender?.toLowerCase() === "male"
+      ).length
+      
+      const femaleCount = farmersForYear.filter(farmer => 
+        farmer.user.gender?.toLowerCase() === "female"
+      ).length
+      
+      setTotalMale(maleCount)
+      setTotalFemale(femaleCount)
+    }
+  }, [selectedYear, farmers])
+
   const fetchFarmerData = async () => {
     setLoading(true)
     try {
       const response = await renderInstance.get("/farmer")
-      const farmers: Farmer[] = response.data
+      const fetchedFarmers: Farmer[] = response.data
+      setFarmers(fetchedFarmers)
 
-      // Process data for the chart
-      const processedData = processChartData(farmers)
+      // Process data for the chart with the selected year
+      const processedData = processChartData(fetchedFarmers, selectedYear)
       setChartData(processedData)
 
-      // Calculate totals
-      const maleCount = farmers.filter((farmer) => farmer.user.gender?.toLowerCase() === "male").length
-      const femaleCount = farmers.filter((farmer) => farmer.user.gender?.toLowerCase() === "female").length
+      // Calculate totals for the selected year
+      const farmersForYear = fetchedFarmers.filter(farmer => 
+        new Date(farmer.createdAt).getFullYear() === selectedYear
+      )
+      
+      const maleCount = farmersForYear.filter(farmer => 
+        farmer.user.gender?.toLowerCase() === "male"
+      ).length
+      
+      const femaleCount = farmersForYear.filter(farmer => 
+        farmer.user.gender?.toLowerCase() === "female"
+      ).length
 
       setTotalMale(maleCount)
       setTotalFemale(femaleCount)
@@ -88,7 +131,7 @@ function BookingChart() {
     }
   }
 
-  const processChartData = (farmers: Farmer[]): ChartDataPoint[] => {
+  const processChartData = (farmers: Farmer[], year: number): ChartDataPoint[] => {
     // Create a map to store counts by month
     const monthsData = new Map<string, { male: number; female: number }>()
 
@@ -112,20 +155,22 @@ function BookingChart() {
       monthsData.set(month, { male: 0, female: 0 })
     })
 
-    // Count farmers by gender and month they joined
-    farmers.forEach((farmer) => {
-      const joinDate = new Date(farmer.createdAt)
-      const monthName = months[joinDate.getMonth()]
-      const currentMonthData = monthsData.get(monthName) || { male: 0, female: 0 }
+    // Filter farmers by the selected year and count by gender and month
+    farmers
+      .filter(farmer => new Date(farmer.createdAt).getFullYear() === year)
+      .forEach((farmer) => {
+        const joinDate = new Date(farmer.createdAt)
+        const monthName = months[joinDate.getMonth()]
+        const currentMonthData = monthsData.get(monthName) || { male: 0, female: 0 }
 
-      if (farmer.user.gender?.toLowerCase() === "male") {
-        currentMonthData.male += 1
-      } else if (farmer.user.gender?.toLowerCase() === "female") {
-        currentMonthData.female += 1
-      }
+        if (farmer.user.gender?.toLowerCase() === "male") {
+          currentMonthData.male += 1
+        } else if (farmer.user.gender?.toLowerCase() === "female") {
+          currentMonthData.female += 1
+        }
 
-      monthsData.set(monthName, currentMonthData)
-    })
+        monthsData.set(monthName, currentMonthData)
+      })
 
     // Convert map to array for chart
     return months.map((month) => ({
@@ -138,16 +183,36 @@ function BookingChart() {
   return (
     <Card className="w-full md:w-[70%]">
       <CardHeader>
-        <CardTitle>Farmers Joined</CardTitle>
-        <CardDescription>{new Date().getFullYear()}</CardDescription>
-        <div className="flex flex-wrap gap-4 mt-2">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-3 rounded bg-[hsl(var(--chart-1))]" />
-            <p>Male ({totalMale})</p>
+        <div className="flex flex-wrap justify-between items-center">
+          <div>
+            <CardTitle>Farmers Joined</CardTitle>
+            <div className="flex items-center gap-2 mt-1">
+              <label htmlFor="year-select" className="text-sm font-medium">
+                Year:
+              </label>
+              <select 
+                id="year-select"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="px-2 py-1 rounded border border-gray-300 text-sm"
+              >
+                {availableYears.map(year => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-3 rounded bg-[hsl(var(--chart-2))]" />
-            <p>Female ({totalFemale})</p>
+          <div className="flex flex-wrap gap-4 mt-2">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-3 rounded bg-[hsl(var(--chart-1))]" />
+              <p>Male ({totalMale})</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-3 rounded bg-[hsl(var(--chart-2))]" />
+              <p>Female ({totalFemale})</p>
+            </div>
           </div>
         </div>
       </CardHeader>

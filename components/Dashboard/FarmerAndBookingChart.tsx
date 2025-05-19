@@ -2,20 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-import { Check, ChevronsUpDown, RefreshCw, TrendingUp, Tractor, CalendarCheck2 } from 'lucide-react'
+import { Check, ChevronsUpDown, RefreshCw, TrendingUp, Tractor, CalendarCheck2 } from "lucide-react"
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltipContent,
-} from "@/components/ui/chart"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import type { ChartConfig } from "@/components/ui/chart"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
@@ -86,6 +76,7 @@ interface Farmer {
 
 interface ChartDataPoint {
   date: string
+  month: string // Added month name for better display
   farmer: number
   booking: number
 }
@@ -101,20 +92,36 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-const years = [
-  { value: "2024", label: "2024" },
-  { value: "2025", label: "2025" },
-]
+// Generate years array dynamically to ensure future compatibility
+const generateYearOptions = () => {
+  const currentYear = new Date().getFullYear()
+  const startYear = 2022 // Start from 2022
+
+  const years = []
+  for (let year = startYear; year <= currentYear; year++) {
+    years.push({ value: year.toString(), label: year.toString() })
+  }
+
+  return years.reverse() // Most recent years first
+}
+
+// Array of month names for display
+const monthNames = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
 
 export function FarmerAndBookingChart() {
   const [activeTab, setActiveTab] = useState<keyof typeof chartConfig>("farmer")
   const [open, setOpen] = useState(false)
-  const [value, setValue] = useState("2025")
+  const currentYear = new Date().getFullYear().toString()
+  const [value, setValue] = useState(currentYear)
   const [chartData, setChartData] = useState<ChartDataPoint[]>([])
   const [loading, setLoading] = useState(false)
   const [totalFarmers, setTotalFarmers] = useState(0)
   const [totalBookings, setTotalBookings] = useState(0)
   const [growthRate, setGrowthRate] = useState({ farmer: 0, booking: 0 })
+  const yearOptions = useMemo(() => generateYearOptions(), [])
 
   // Custom gradient for chart areas
   const gradientFarmer = "url(#colorFarmer)"
@@ -157,11 +164,11 @@ export function FarmerAndBookingChart() {
     const currentDate = new Date()
     const currentMonth = currentDate.getMonth()
     const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1
-    const currentYear = parseInt(value)
-    
+    const currentYear = Number.parseInt(value)
+
     // Count farmers by month
     const farmersByMonth = [0, 0] // [previousMonth, currentMonth]
-    farmers.forEach(farmer => {
+    farmers.forEach((farmer) => {
       const createdAt = new Date(farmer.createdAt)
       if (createdAt.getFullYear() === currentYear) {
         const month = createdAt.getMonth()
@@ -169,10 +176,10 @@ export function FarmerAndBookingChart() {
         else if (month === previousMonth) farmersByMonth[0]++
       }
     })
-    
+
     // Count bookings by month
     const bookingsByMonth = [0, 0] // [previousMonth, currentMonth]
-    bookings.forEach(booking => {
+    bookings.forEach((booking) => {
       const createdAt = new Date(booking.createdAt)
       if (createdAt.getFullYear() === currentYear) {
         const month = createdAt.getMonth()
@@ -180,38 +187,59 @@ export function FarmerAndBookingChart() {
         else if (month === previousMonth) bookingsByMonth[0]++
       }
     })
-    
+
     // Calculate growth rates
-    const farmerGrowthRate = farmersByMonth[0] === 0 
-      ? 100 
-      : ((farmersByMonth[1] - farmersByMonth[0]) / farmersByMonth[0]) * 100
-    
-    const bookingGrowthRate = bookingsByMonth[0] === 0 
-      ? 100 
-      : ((bookingsByMonth[1] - bookingsByMonth[0]) / bookingsByMonth[0]) * 100
-    
+    const farmerGrowthRate =
+      farmersByMonth[0] === 0 ? 100 : ((farmersByMonth[1] - farmersByMonth[0]) / farmersByMonth[0]) * 100
+
+    const bookingGrowthRate =
+      bookingsByMonth[0] === 0 ? 100 : ((bookingsByMonth[1] - bookingsByMonth[0]) / bookingsByMonth[0]) * 100
+
     setGrowthRate({
       farmer: Math.round(farmerGrowthRate * 10) / 10,
-      booking: Math.round(bookingGrowthRate * 10) / 10
+      booking: Math.round(bookingGrowthRate * 10) / 10,
     })
   }
 
   const processChartData = (farmers: Farmer[], bookings: Booking[]): ChartDataPoint[] => {
-    // Create a map to store counts by date
-    const dateMap = new Map<string, { farmer: number; booking: number }>()
-
     // Get the selected year
-    const selectedYear = parseInt(value)
-    
+    const selectedYear = Number.parseInt(value)
+    const currentYear = new Date().getFullYear()
+    const currentMonth = new Date().getMonth() // 0-11
+
+    // Create an array to store monthly data in order
+    const monthlyData: ChartDataPoint[] = []
+
+    // Initialize all months for the selected year
+    // For current year, only initialize up to current month
+    // For past years, initialize all 12 months
+    const monthsToInclude = selectedYear < currentYear ? 11 : currentMonth
+
+    // Start from January (0) and go through all months
+    for (let month = 0; month <= monthsToInclude; month++) {
+      // Create a date for the first day of each month in the selected year
+      const date = new Date(selectedYear, month, 1)
+      const dateStr = date.toISOString().split("T")[0]
+
+      monthlyData.push({
+        date: dateStr,
+        month: monthNames[month], // Add month name for clearer display
+        farmer: 0,
+        booking: 0,
+      })
+    }
+
     // Process farmers data
     farmers.forEach((farmer) => {
       const createdAt = new Date(farmer.createdAt)
       // Only include data from the selected year
       if (createdAt.getFullYear() === selectedYear) {
-        const dateStr = createdAt.toISOString().split('T')[0]
-        const existingData = dateMap.get(dateStr) || { farmer: 0, booking: 0 }
-        existingData.farmer += 1
-        dateMap.set(dateStr, existingData)
+        const month = createdAt.getMonth()
+
+        // Only count if this month should be included
+        if (month <= monthsToInclude) {
+          monthlyData[month].farmer += 1
+        }
       }
     })
 
@@ -220,21 +248,16 @@ export function FarmerAndBookingChart() {
       const createdAt = new Date(booking.createdAt)
       // Only include data from the selected year
       if (createdAt.getFullYear() === selectedYear) {
-        const dateStr = createdAt.toISOString().split('T')[0]
-        const existingData = dateMap.get(dateStr) || { farmer: 0, booking: 0 }
-        existingData.booking += 1
-        dateMap.set(dateStr, existingData)
+        const month = createdAt.getMonth()
+
+        // Only count if this month should be included
+        if (month <= monthsToInclude) {
+          monthlyData[month].booking += 1
+        }
       }
     })
 
-    // Convert map to array and sort by date
-    const result = Array.from(dateMap.entries()).map(([date, data]) => ({
-      date,
-      farmer: data.farmer,
-      booking: data.booking,
-    }))
-
-    return result.sort((a, b) => a.date.localeCompare(b.date))
+    return monthlyData
   }
 
   const total = useMemo(
@@ -242,27 +265,32 @@ export function FarmerAndBookingChart() {
       farmer: totalFarmers,
       booking: totalBookings,
     }),
-    [totalFarmers, totalBookings]
+    [totalFarmers, totalBookings],
   )
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      // Extract month name from the payload directly
+      const monthName = payload[0]?.payload?.month || "";
+      
       return (
         <div className="bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-4">
           <p className="font-medium">
-            {new Date(label).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}
+            {monthName} {new Date(label).getFullYear()}
           </p>
           <div className="mt-2 space-y-1">
             <p className="text-sm flex items-center gap-2">
-              <span className="w-3 h-3 inline-block rounded-full" style={{ backgroundColor: chartConfig.farmer.color }}></span>
+              <span
+                className="w-3 h-3 inline-block rounded-full"
+                style={{ backgroundColor: chartConfig.farmer.color }}
+              ></span>
               <span className="font-medium">Farmers:</span> {payload[0]?.value}
             </p>
             <p className="text-sm flex items-center gap-2">
-              <span className="w-3 h-3 inline-block rounded-full" style={{ backgroundColor: chartConfig.booking.color }}></span>
+              <span
+                className="w-3 h-3 inline-block rounded-full"
+                style={{ backgroundColor: chartConfig.booking.color }}
+              ></span>
               <span className="font-medium">Bookings:</span> {payload[1]?.value}
             </p>
           </div>
@@ -275,9 +303,13 @@ export function FarmerAndBookingChart() {
   const GrowthIndicator = ({ value }: { value: number }) => {
     const isPositive = value >= 0
     return (
-      <Badge variant={isPositive ? "default" : "destructive"} className={cn("ml-2", isPositive ? "bg-green-100 text-green-800 hover:bg-green-100" : "")}>
+      <Badge
+        variant={isPositive ? "default" : "destructive"}
+        className={cn("ml-2", isPositive ? "bg-green-100 text-green-800 hover:bg-green-100" : "")}
+      >
         <TrendingUp className={cn("h-3 w-3 mr-1", !isPositive && "rotate-180")} />
-        {isPositive ? "+" : ""}{value}%
+        {isPositive ? "+" : ""}
+        {value}%
       </Badge>
     )
   }
@@ -290,9 +322,7 @@ export function FarmerAndBookingChart() {
             <CardTitle className="text-2xl font-bold bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
               Farmers & Bookings Analytics
             </CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Real-time performance metrics
-            </CardDescription>
+            <CardDescription className="text-muted-foreground">Real-time performance metrics</CardDescription>
           </div>
           <div className="flex items-center gap-2">
             <Popover open={open} onOpenChange={setOpen}>
@@ -303,19 +333,17 @@ export function FarmerAndBookingChart() {
                   aria-expanded={open}
                   className="w-[120px] justify-between border-border/40 bg-background/50 backdrop-blur-sm"
                 >
-                  {value
-                    ? years.find((year) => year.value === value)?.label
-                    : "Select year..."}
+                  {value ? yearOptions.find((year) => year.value === value)?.label : "Select year..."}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[120px] p-0">
+              <PopoverContent className="w-[150px] p-0">
                 <Command>
                   <CommandInput placeholder="Search year..." />
                   <CommandList>
                     <CommandEmpty>Year is not available.</CommandEmpty>
                     <CommandGroup>
-                      {years.map((year) => (
+                      {yearOptions.map((year) => (
                         <CommandItem
                           key={year.value}
                           value={year.value}
@@ -324,12 +352,7 @@ export function FarmerAndBookingChart() {
                             setOpen(false)
                           }}
                         >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              value === year.value ? "opacity-100" : "opacity-0"
-                            )}
-                          />
+                          <Check className={cn("mr-2 h-4 w-4", value === year.value ? "opacity-100" : "opacity-0")} />
                           {year.label}
                         </CommandItem>
                       ))}
@@ -338,9 +361,9 @@ export function FarmerAndBookingChart() {
                 </Command>
               </PopoverContent>
             </Popover>
-            <Button 
-              variant="outline" 
-              size="icon" 
+            <Button
+              variant="outline"
+              size="icon"
               onClick={fetchData}
               disabled={loading}
               className="border-border/40 bg-background/50 backdrop-blur-sm"
@@ -367,7 +390,7 @@ export function FarmerAndBookingChart() {
               </div>
             </div>
           </Card>
-          
+
           <Card className="border-border/30 bg-background/50 backdrop-blur-sm hover:shadow-md transition-shadow">
             <div className="p-6 flex items-center">
               <div className="rounded-full p-3 bg-pink-100 mr-4">
@@ -384,22 +407,30 @@ export function FarmerAndBookingChart() {
           </Card>
         </div>
       </div>
-      
+
       <CardContent className="px-1 pt-3 pb-6">
-        <Tabs defaultValue="farmer" value={activeTab} onValueChange={(v) => setActiveTab(v as keyof typeof chartConfig)} className="w-full px-5">
+        <Tabs
+          defaultValue="farmer"
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as keyof typeof chartConfig)}
+          className="w-full px-5"
+        >
           <TabsList className="grid w-64 grid-cols-2 mb-4">
-            <TabsTrigger value="farmer" className="data-[state=active]:bg-indigo-100 data-[state=active]:text-indigo-700">
+            <TabsTrigger
+              value="farmer"
+              className="data-[state=active]:bg-indigo-100 data-[state=active]:text-indigo-700"
+            >
               Farmers
             </TabsTrigger>
             <TabsTrigger value="booking" className="data-[state=active]:bg-pink-100 data-[state=active]:text-pink-700">
               Bookings
             </TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="farmer" className="mt-0">
             {renderChart("farmer")}
           </TabsContent>
-          
+
           <TabsContent value="booking" className="mt-0">
             {renderChart("booking")}
           </TabsContent>
@@ -424,7 +455,8 @@ export function FarmerAndBookingChart() {
       return (
         <div className="flex justify-center items-center h-[350px]">
           <p className="text-muted-foreground text-center">
-            No data available for {value}<br />
+            No data available for {value}
+            <br />
             <span className="text-sm">Try selecting a different year or refresh data</span>
           </p>
         </div>
@@ -434,10 +466,7 @@ export function FarmerAndBookingChart() {
     return (
       <div className="h-[350px] w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={chartData}
-            margin={{ top: 10, right: 30, left: 10, bottom: 10 }}
-          >
+          <LineChart data={chartData} margin={{ top: 10, right: 30, left: 10, bottom: 10 }}>
             <defs>
               <linearGradient id="colorFarmer" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
@@ -449,32 +478,18 @@ export function FarmerAndBookingChart() {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" opacity={0.3} />
-            <XAxis 
-              dataKey="date" 
-              tickLine={false} 
-              axisLine={false} 
-              tickMargin={10}
-              minTickGap={50}
-              tickFormatter={(value) => {
-                const date = new Date(value)
-                return date.toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })
-              }}
-              stroke="#9ca3af"
-              fontSize={12}
-            />
-            <YAxis 
+            <XAxis
+              dataKey="month"  // Use month name instead of date
               tickLine={false}
               axisLine={false}
               tickMargin={10}
+              minTickGap={30}
               stroke="#9ca3af"
               fontSize={12}
-              width={30}
             />
+            <YAxis tickLine={false} axisLine={false} tickMargin={10} stroke="#9ca3af" fontSize={12} width={30} />
             <Tooltip content={<CustomTooltip />} />
-            
+
             {dataKey === "farmer" && (
               <Line
                 type="monotone"
@@ -487,7 +502,7 @@ export function FarmerAndBookingChart() {
                 fill={gradientFarmer}
               />
             )}
-            
+
             {dataKey === "booking" && (
               <Line
                 type="monotone"
