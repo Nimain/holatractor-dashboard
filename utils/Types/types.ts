@@ -1,5 +1,6 @@
 
 export interface User {
+  location_id: string;
   id: string;
   first_name: string;
   middle_name?: string | null;
