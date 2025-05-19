@@ -44,6 +44,8 @@ interface Farmer {
     gender: string | null
     emailVerified: boolean
     image: string | null
+    mobile: string | null
+    country_code: string | null
   }
 }
 
@@ -412,6 +414,14 @@ const FarmerSection = () => {
             </div>
           </div>
         </div>
+        <div className="w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
+          Mobile
+          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
+            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+              <MoreVertIcon />
+            </div>
+          </div>
+        </div>
         <div
           className="w-[180px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
           onClick={() => handleSort("createdAt")}
@@ -484,6 +494,24 @@ const FarmerSection = () => {
                     <span className={details.Status === 1 ? "text-green-500" : "text-red-500"}>
                       {details.Status === 1 ? "Active" : "Inactive"}
                     </span>
+                  </div>
+                  <div className="w-[140px] truncate">
+                    {details.user.mobile && details.user.country_code ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="text-blue-600 hover:underline">
+                            {details.user.country_code} {details.user.mobile}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-white text-black p-3 rounded shadow-lg border border-gray-200">
+                          <p>
+                            Call: {details.user.country_code} {details.user.mobile}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <span className="text-gray-400 italic">No number</span>
+                    )}
                   </div>
                   <div className="w-[180px] truncate">{formatDate(details.createdAt)}</div>
                 </div>
