@@ -283,7 +283,7 @@ const AgentSection = () => {
                   updateDate={formatDate(details.updatedAt)}
                   status={details.status}
                   id={details.id}
-                  image={details.user.image}
+                  image={details.user.image ?? undefined}
                   location_id={details.loaction_id || details.user.location_id}
                   document_id={details.document_id}
                 />
