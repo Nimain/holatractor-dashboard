@@ -78,6 +78,10 @@ const FarmerSection = () => {
     direction: "asc" | "desc"
   } | null>(null)
 
+  const [pdfYearDialogOpen, setPdfYearDialogOpen] = useState(false)
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+  const [availableYears, setAvailableYears] = useState<number[]>([])
+
   const splitFullName = (fullName: string) => {
     const nameParts = fullName.trim().split(/\s+/)
     const firstName = nameParts.shift() ?? ""
@@ -198,10 +202,34 @@ const FarmerSection = () => {
     return dateObj.toLocaleDateString(undefined, options)
   }
 
+  const calculateAvailableYears = () => {
+    const currentYear = new Date().getFullYear()
+    const years: number[] = []
+    for (let year = 2022; year <= currentYear; year++) {
+      years.push(year)
+    }
+    return years
+  }
+
+  useEffect(() => {
+    setAvailableYears(calculateAvailableYears())
+  }, [])
+
   const handleDownloadPDF = async () => {
     try {
       // Show loading message
       successMessage("Generating PDF, please wait...")
+
+      // Filter farmers by selected year
+      const filteredByYear = allFarmers.filter((farmer) => {
+        const joinedDate = new Date(farmer.createdAt)
+        return joinedDate.getFullYear() === selectedYear
+      })
+
+      if (filteredByYear.length === 0) {
+        errorMessage(`No farmers joined in ${selectedYear}. Please select a different year.`)
+        return
+      }
 
       // Dynamically import jsPDF and jspdf-autotable
       const jspdfModule = await import("jspdf")
@@ -218,16 +246,16 @@ const FarmerSection = () => {
 
       // Add title and metadata
       doc.setFontSize(18)
-      doc.text("Farmers Report - Holatractor", 14, 22)
+      doc.text(`Farmers Report ${selectedYear} - Holatractor`, 14, 22)
       doc.setFontSize(11)
       doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30)
-      doc.text(`Total Farmers: ${allFarmers.length}`, 14, 36)
+      doc.text(`Total Farmers in ${selectedYear}: ${filteredByYear.length}`, 14, 36)
 
       // Define the columns for the table - now including Mobile
       const tableColumn = ["S.No", "ID", "Name", "Gender", "Mobile", "Verified", "Status", "Joined Date"]
 
       // Define the rows for the table - now including Mobile
-      const tableRows = allFarmers.map((farmer, index) => {
+      const tableRows = filteredByYear.map((farmer, index) => {
         const name = `${farmer.user.first_name} ${farmer.user.middle_name ?? ""} ${farmer.user.last_name ?? ""}`.trim()
         const mobile =
           farmer.user.mobile && farmer.user.country_code
@@ -267,8 +295,8 @@ const FarmerSection = () => {
       })
 
       // Save the PDF
-      doc.save("farmers-report.pdf")
-      successMessage("PDF generated successfully!")
+      doc.save(`farmers-report-${selectedYear}.pdf`)
+      successMessage(`PDF for ${selectedYear} generated successfully!`)
     } catch (error) {
       console.error("Error generating PDF:", error)
       errorMessage("Failed to generate PDF report. Please try again.")
@@ -291,7 +319,7 @@ const FarmerSection = () => {
           <Button
             variant="outline"
             className="ml-2 bg-white border-gray-200 hover:bg-gray-50"
-            onClick={handleDownloadPDF}
+            onClick={() => setPdfYearDialogOpen(true)}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -364,6 +392,42 @@ const FarmerSection = () => {
                 }}
               >
                 Create Farmer
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={pdfYearDialogOpen} onOpenChange={setPdfYearDialogOpen}>
+          <DialogContent className="bg-white h-fit min-w-[400px] max-w-[400px] overflow-auto">
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold mb-2">Select Year</h2>
+              <p className="text-gray-500 text-sm">Choose which year's data to include in the PDF report.</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 my-4">
+              {availableYears.map((year) => (
+                <Button
+                  key={year}
+                  variant={selectedYear === year ? "default" : "outline"}
+                  className={selectedYear === year ? "bg-green-600 hover:bg-green-700" : ""}
+                  onClick={() => setSelectedYear(year)}
+                >
+                  {year}
+                </Button>
+              ))}
+            </div>
+
+            <DialogFooter className="mt-4">
+              <DialogClose asChild>
+                <Button variant="outline">Cancel</Button>
+              </DialogClose>
+              <Button
+                onClick={() => {
+                  setPdfYearDialogOpen(false)
+                  handleDownloadPDF()
+                }}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                Generate Report
               </Button>
             </DialogFooter>
           </DialogContent>
