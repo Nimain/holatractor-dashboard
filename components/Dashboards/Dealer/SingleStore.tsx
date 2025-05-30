@@ -1,56 +1,74 @@
-'use client'
+"use client"
 
-import { useEffect, useState } from 'react'
-import Image from 'next/image'
-import { Camera, MapPin, Clock, Calendar, Plus, Search } from 'lucide-react'
+import { useEffect, useState } from "react"
+import {
+  Share,
+  CreditCard,
+  Camera,
+  MapPin,
+  Clock,
+  Calendar,
+  Plus,
+  Search,
+  Sparkles,
+  Zap,
+  TrendingUp,
+} from "lucide-react"
+import { FaHotel, FaRegCalendarAlt } from "react-icons/fa"
+import { TractorCard } from "@/components/Dashboards/Dealer/_components/TractorCard"
+import { AttachmentCard } from "@/components/Dashboards/Dealer/_components/AttachmentCard"
+import AddTractor from "@/components/Dashboards/Dealer/_components/AddTractor"
+import AddAttachment from "@/components/Dashboards/Dealer/_components/AddAttachment"
+import AlternatingAddForm from "@/components/Dashboards/Dealer/_components/AlternatingAddForm"
+import Image from "next/image"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { renderInstance } from '@/utils/Axios/RenderInstance'
-import { Attachment, DealerStore, Tractor } from '@/utils/Types/types'
-import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
-import { useCookie } from 'next-cookie'
-import { CircularProgress } from '@mui/material'
-import { useParams } from 'next/navigation'
+import { renderInstance } from "@/utils/Axios/RenderInstance"
+import type { Attachment, DealerStore, Tractor } from "@/utils/Types/types"
+import { errorMessage, successMessage } from "@/utils/Toastify/Messages"
+import { useCookie } from "next-cookie"
+import { CircularProgress } from "@mui/material"
+import { useParams } from "next/navigation"
 
-// Mock data (replace with actual data fetching in a real application)
-const store = {
-  id: '1',
-  owner_id: 'owner123',
-  name: 'Green Fields Equipment',
-  description: 'Your one-stop shop for all farming equipment needs.',
-  banner: 'https://wallpapercave.com/wp/wp12501858.jpg',
-  logo: 'https://wallpapercave.com/wp/wp13520400.jpg',
-  opening_time: '08:00',
-  closing_time: '18:00',
-  closing_days: ['Sunday'],
-  location: {
-    address: '123 Farm Road',
-    city: 'Agricity',
-    state: 'AG',
-    zip_code: '12345',
-    country: 'USA'
-  },
-  tractors: [
-    { id: 't1', name: 'Heavy Duty Tractor', model: 'HD-2000', price: 50000 },
-    { id: 't2', name: 'Compact Tractor', model: 'CT-500', price: 25000 },
-  ],
-  attachments: [
-    { id: 'a1', name: 'Plow', type: 'Tillage', price: 5000 },
-    { id: 'a2', name: 'Seeder', type: 'Planting', price: 7500 },
-  ]
-}
+const EmptyStateCard = ({ title, description }: { title: any; description: any }) => (
+  <div className="relative group">
+    <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-3xl blur-xl opacity-10 group-hover:opacity-20 transition-opacity duration-500"></div>
+    <Card className="relative w-full max-w-sm mx-auto text-center p-8 bg-slate-800/90 backdrop-blur-sm border border-slate-700/50 rounded-3xl shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-105">
+      <CardContent className="space-y-8">
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl blur-lg opacity-30"></div>
+          <div className="relative bg-slate-700/80 rounded-2xl p-6 mx-auto w-24 h-24 flex items-center justify-center shadow-xl border border-slate-600/50">
+            <CreditCard className="w-12 h-12 text-purple-400" />
+          </div>
+        </div>
+        <div className="space-y-3">
+          <h3 className="text-2xl font-bold text-white">{title}</h3>
+          <p className="text-slate-300 leading-relaxed">{description}</p>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+)
 
 export default function StorePage() {
-  const [activeTab, setActiveTab] = useState('tractors')
+  const [selectedTab, setSelectedTab] = useState("overview")
+  const [showAddDialog, setShowAddDialog] = useState(false)
 
+  // API State Management
   const [showAllTractors, setShowAllTractors] = useState(false)
   const [showAllAttachments, setShowAllAttachments] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
+  const [searchTerm, setSearchTerm] = useState("")
 
   const [store, setStore] = useState<DealerStore | null>(null)
   const [fetchingStore, setFetchingStore] = useState(false)
@@ -69,60 +87,80 @@ export default function StorePage() {
   const [adding, setAdding] = useState(false)
 
   const { slug } = useParams()
-
   const { cookie } = useCookie()
   const access_token = cookie.get("access_token")
 
-  const filteredTractors = allTractors.filter(tractor =>
-    tractor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    tractor.model?.toLowerCase().includes(searchTerm.toLowerCase())
+  // Filter functions
+  const filteredTractors = allTractors.filter(
+    (tractor) =>
+      tractor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      tractor.model?.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
-  const filteredAttachments = allAttachments.filter(attachment =>
-    attachment.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredAttachments = allAttachments.filter((attachment) =>
+    attachment.name.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
+  // API Functions
   function fetchStore() {
     setFetchingStore(true)
-    renderInstance.get(`/dealer/store/${slug}`)
-      .then((res) => { setStore(res.data) })
+    renderInstance
+      .get(`/dealer/store/${slug}`)
+      .then((res) => {
+        setStore(res.data)
+      })
       .catch((err) => {
         if (err.response && err.response.status === 404 && err.response.data.message === "Store not found") {
           errorMessage("Store not found")
         } else {
           errorMessage("Error fetching store details")
         }
-      }).finally(() => {
+      })
+      .finally(() => {
         setFetchingStore(false)
       })
   }
 
   function fetchTractors() {
     setFetchingTractors(true)
-    renderInstance.get("/tractor")
-      .then((res) => { setAllTractors(res.data) })
-      .catch((err) => { errorMessage("Error fetching tractor details") })
-      .finally(() => { setFetchingTractors(false) })
+    renderInstance
+      .get("/tractor")
+      .then((res) => {
+        setAllTractors(res.data)
+      })
+      .catch((err) => {
+        errorMessage("Error fetching tractor details")
+      })
+      .finally(() => {
+        setFetchingTractors(false)
+      })
   }
 
   function fetchAttachments() {
     setFetchingAttachments(true)
-    renderInstance.get("/attachment", {
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-      },
-    })
-      .then((res) => { setAllAttachments(res.data) })
-      .catch((err) => { errorMessage("Error fetching attachment details") })
-      .finally(() => { setFetchingAttachments(false) })
+    renderInstance
+      .get("/attachment", {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      })
+      .then((res) => {
+        setAllAttachments(res.data)
+      })
+      .catch((err) => {
+        errorMessage("Error fetching attachment details")
+      })
+      .finally(() => {
+        setFetchingAttachments(false)
+      })
   }
 
   function formatTimeOnly(dateTimeStr: string | number | Date) {
-    const date = new Date(dateTimeStr);
-    const hours = date.getUTCHours().toString().padStart(2, '0');
-    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-    const seconds = date.getUTCSeconds().toString().padStart(2, '0');
-    return `${hours}:${minutes}:${seconds}`;
+    const date = new Date(dateTimeStr)
+    const hours = date.getUTCHours().toString().padStart(2, "0")
+    const minutes = date.getUTCMinutes().toString().padStart(2, "0")
+    const seconds = date.getUTCSeconds().toString().padStart(2, "0")
+    return `${hours}:${minutes}:${seconds}`
   }
 
   function handleAddTractor() {
@@ -142,42 +180,46 @@ export default function StorePage() {
     const addTractorBody = {
       tractor_id: activeTractor,
       price: `${tractorPrice}`,
-      store_id: slug
+      store_id: slug,
     }
 
     setAdding(true)
-    renderInstance.patch("/dealer/store/addTractorToDealerStore", addTractorBody, {
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-      },
-    }).then(()=>{ 
-      successMessage("Added")
-      fetchStore()
-      setTractorPrice(0)
-      setShowAllTractors(false)
-    }).catch((err)=>{
-      console.log(err)
-      if (err.response && err.response.status === 404) {
-        if(err.response.data.message === "Store not found"){
-          errorMessage("Store not found")
+    renderInstance
+      .patch("/dealer/store/addTractorToDealerStore", addTractorBody, {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      })
+      .then(() => {
+        successMessage("Added")
+        fetchStore()
+        setTractorPrice(0)
+        setShowAllTractors(false)
+      })
+      .catch((err) => {
+        console.log(err)
+        if (err.response && err.response.status === 404) {
+          if (err.response.data.message === "Store not found") {
+            errorMessage("Store not found")
+          }
+          if (err.response.data.message === "Tractor is not valid") {
+            errorMessage("Tractor is not valid")
+          }
+          if (err.response.data.message === "Login user not found") {
+            errorMessage("Login user not found")
+          }
+        } else if (err.response && err.response.status === 400) {
+          if (err.response.data.message === "You are not allowed for this task") {
+            errorMessage("You are not allowed for this task")
+          }
+        } else {
+          errorMessage("Error updating store details")
         }
-        if(err.response.data.message === "Tractor is not valid"){
-          errorMessage("Tractor is not valid")
-        }
-        if(err.response.data.message === "Login user not found"){
-          errorMessage("Login user not found")
-        }
-      } else if (err.response && err.response.status === 400) {
-        if(err.response.data.message === "You are not allowed for this task"){
-          errorMessage("You are not allowed for this task")
-        }
-      } else {
-        errorMessage("Error updating store details")
-      }
-    }).finally(()=>{
-      setActiveTractor("")
-      setAdding(false)
-    })
+      })
+      .finally(() => {
+        setActiveTractor("")
+        setAdding(false)
+      })
   }
 
   function handleAddAttachment() {
@@ -194,46 +236,51 @@ export default function StorePage() {
       return
     }
 
-    const addTractorBody = {
+    const addAttachmentBody = {
       attachment_id: activeAttachment,
-      price: `${tractorPrice}`,
-      store_id: slug
+      price: `${attachmentPrice}`,
+      store_id: slug,
     }
 
     setAdding(true)
-    renderInstance.patch("/dealer/store/addAttachmentToDealerStore", addTractorBody, {
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-      },
-    }).then(()=>{ 
-      successMessage("Added")
-      fetchStore()
-      setAttachmentPrice(0)
-      setShowAllAttachments(false)
-    }).catch((err)=>{
-      if (err.response && err.response.status === 404) {
-        if(err.response.data.message === "Store not found"){
-          errorMessage("Store not found")
+    renderInstance
+      .patch("/dealer/store/addAttachmentToDealerStore", addAttachmentBody, {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      })
+      .then(() => {
+        successMessage("Added")
+        fetchStore()
+        setAttachmentPrice(0)
+        setShowAllAttachments(false)
+      })
+      .catch((err) => {
+        if (err.response && err.response.status === 404) {
+          if (err.response.data.message === "Store not found") {
+            errorMessage("Store not found")
+          }
+          if (err.response.data.message === "Attachment is not valid") {
+            errorMessage("Attachment is not valid")
+          }
+          if (err.response.data.message === "Login user not found") {
+            errorMessage("Login user not found")
+          }
+        } else if (err.response && err.response.status === 400) {
+          if (err.response.data.message === "You are not allowed for this task") {
+            errorMessage("You are not allowed for this task")
+          }
+        } else {
+          errorMessage("Error updating store details")
         }
-        if(err.response.data.message === "Attachment is not valid"){
-          errorMessage("Attachment is not valid")
-        }
-        if(err.response.data.message === "Login user not found"){
-          errorMessage("Login user not found")
-        }
-      } else if (err.response && err.response.status === 400) {
-        if(err.response.data.message === "You are not allowed for this task"){
-          errorMessage("You are not allowed for this task")
-        }
-      } else {
-        errorMessage("Error updating store details")
-      }
-    }).finally(()=>{
-      setActiveAttachment("")
-      setAdding(false)
-    })
+      })
+      .finally(() => {
+        setActiveAttachment("")
+        setAdding(false)
+      })
   }
 
+  // useEffect hooks
   useEffect(() => {
     if (slug) {
       fetchStore()
@@ -245,292 +292,502 @@ export default function StorePage() {
     fetchTractors()
   }, [])
 
-  if (fetchingStore) return <p>Getting store details</p>
-
-  if (!store) return <p>Store not found</p>
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="relative">
-        <Image
-          src={store.banner ? store.banner : 'https://wallpapercave.com/wp/wp12501858.jpg'}
-          alt={`${store.name} banner`}
-          width={1200}
-          height={300}
-          className="w-full h-[300px] object-cover rounded-t-lg"
-        />
-        <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black to-transparent h-1/2"></div>
-      </div>
-
-      <div className="flex items-end -mt-16 mb-4 relative z-10 px-4">
-        <Image
-          src={store.logo ? store.logo : 'https://wallpapercave.com/wp/wp13520400.jpg'}
-          alt={`${store.name} logo`}
-          width={150}
-          height={150}
-          className="rounded-full border-4 w-[160px] h-[160px] border-white"
-        />
-        <div className="ml-4">
-          <h1 className="text-3xl font-bold">{store.name}</h1>
-          <p className="text-sm">{store.description}</p>
+  // Loading and error states
+  if (fetchingStore)
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <div className="absolute inset-0 bg-slate-900/50"></div>
+        <div className="container mx-auto px-4 py-8 relative z-10">
+          <div className="flex items-center justify-center h-96">
+            <div className="text-center">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full blur-xl opacity-50 animate-pulse"></div>
+                <div className="relative animate-spin rounded-full h-16 w-16 border-4 border-transparent bg-gradient-to-r from-purple-500 to-pink-500 mx-auto mb-6">
+                  <div className="absolute inset-2 bg-slate-900 rounded-full"></div>
+                </div>
+              </div>
+              <p className="text-white text-xl font-medium">Getting store details...</p>
+            </div>
+          </div>
         </div>
       </div>
+    )
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle>Store Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex items-center">
-                <MapPin className="mr-2 h-4 w-4" />
-                <span>{`${store.location.address ?? ""} ${store.location.city ?? ""} ${store.location.state ?? ""} ${store.location.zip_code ?? ""} ${store.location.country ?? ""}`}</span>
-              </div>
-              <div className="flex items-center">
-                <Clock className="mr-2 h-4 w-4" />
-                <span>{`Open: ${formatTimeOnly(store.opening_time)} - ${formatTimeOnly(store.closing_time)}`}</span>
-              </div>
-              <div className="flex items-center">
-                <Calendar className="mr-2 h-4 w-4" />
-                <span>{`Closed on: ${store.closing_days.join(', ')}`}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="w-full">
-                  <Camera className="mr-2 h-4 w-4" /> Update Photos
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Update Store Photos</DialogTitle>
-                  <DialogDescription>
-                    Upload a new banner or logo for your store.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="banner">Banner Image</Label>
-                    <Input id="banner" type="file" accept="image/*" />
-                  </div>
-                  <div>
-                    <Label htmlFor="logo">Logo Image</Label>
-                    <Input id="logo" type="file" accept="image/*" />
-                  </div>
-                  <Button type="submit">Upload Photos</Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-            <Button variant="outline" className="w-full">Edit Store Details</Button>
-          </CardContent>
-        </Card>
+  if (!store)
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <div className="absolute inset-0 bg-slate-900/50"></div>
+        <div className="container mx-auto px-4 py-8 relative z-10">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-red-400 mb-4">Store Not Found</h1>
+            <p className="text-gray-300">The requested store could not be found.</p>
+          </div>
+        </div>
       </div>
+    )
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="tractors">Tractors</TabsTrigger>
-          <TabsTrigger value="attachments">Attachments</TabsTrigger>
-        </TabsList>
-        <TabsContent value="tractors">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Tractors</CardTitle>
-              <Button onClick={() => setShowAllTractors(true)}>
-                <Plus className="mr-2 h-4 w-4" /> Add Tractor
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {
-                store.TractorInDealerStore.length === 0 ?
-                  <p>No tractors available in this store</p>
-                  :
-                  <div className="space-y-4">
-                    {store.TractorInDealerStore.map((tractor) => (
-                      <Card key={tractor.id}>
-                        <CardHeader>
-                          <CardTitle>{tractor.baseTractor.name}</CardTitle>
-                          <CardDescription>Model: {tractor.baseTractor.model}</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <p>Price: ${tractor.price.toLocaleString()}</p>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-              }
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="attachments">
-          <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Attachments</CardTitle>
-              <Button onClick={() => setShowAllAttachments(true)}>
-                <Plus className="mr-2 h-4 w-4" /> Add Attachment
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {
-                store.AttachmentInDealerStore.length === 0 ?
-                  <p>No attachments available.</p>
-                  :
-                  <div className="space-y-4">
-                    {store.AttachmentInDealerStore.map((attachment) => (
-                      <Card key={attachment.id}>
-                        <CardHeader>
-                          <CardTitle>{attachment.baseAttachment.name}</CardTitle>
-                          {/* <CardDescription>Type: {attachment.baseAttachment.type}</CardDescription> */}
-                        </CardHeader>
-                        <CardContent>
-                          <p>Price: ${attachment.price.toLocaleString()}</p>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-              }
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+  const renderContent = () => {
+    const isEmptyOverview =
+      selectedTab === "overview" &&
+      store.TractorInDealerStore.length === 0 &&
+      store.AttachmentInDealerStore.length === 0
 
-      {showAllTractors && (
-        <Dialog open={showAllTractors} onOpenChange={setShowAllTractors}>
-          <DialogContent className="max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>Add Tractor to Store</DialogTitle>
-              <DialogDescription>
-                Select a tractor to add to your store inventory.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Search className="w-4 h-4 text-gray-400" />
-                <Input
-                  placeholder="Search tractors..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="flex-grow"
-                />
+    const isEmptyTractor = selectedTab === "tractors" && store.TractorInDealerStore.length === 0
+    const isEmptyAttachment = selectedTab === "attachments" && store.AttachmentInDealerStore.length === 0
+
+    if (isEmptyOverview) {
+      return (
+        <EmptyStateCard title="No Equipments Available" description="This store doesn't have any equipments yet." />
+      )
+    }
+
+    if (isEmptyTractor) {
+      return <EmptyStateCard title="No Tractors Available" description="This store doesn't have any tractors yet." />
+    }
+
+    if (isEmptyAttachment) {
+      return (
+        <EmptyStateCard title="No Attachments Available" description="This store doesn't have any attachments yet." />
+      )
+    }
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {selectedTab === "overview" &&
+          store && [
+            ...store.TractorInDealerStore.map((tractor, index) => (
+              <div
+                key={`tractor-${tractor.id}-${index}`}
+                className="transform hover:scale-105 transition-all duration-300"
+              >
+                <TractorCard tractor={tractor.baseTractor} />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto">
-                {filteredTractors.map((tractor) => (
-                  <Card key={tractor.id}>
-                    <CardHeader>
-                      <CardTitle>{tractor.name}</CardTitle>
-                      <CardDescription>Model: {tractor.model}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-gray-600 mb-2">{tractor.description}</p>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button onClick={()=>{ setActiveTractor(tractor.id) }}>Add to Store</Button>
-                        </DialogTrigger>
-                        {
-                          activeTractor &&
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Add {tractor.name} to Store</DialogTitle>
-                            <DialogDescription>
-                              Set the price for this tractor in your store.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div>
-                              <Label htmlFor="tractor-price">Price</Label>
-                              <Input id="tractor-price" type="number" placeholder="Enter price" value={tractorPrice} onChange={e=>{setTractorPrice(parseFloat(e.target.value))}} />
-                            </div>
-                            {
-                              adding ?
-                              <CircularProgress />
-                              :
-                            <Button onClick={() => { handleAddTractor() }}>Add to Store</Button>
-                            }
-                          </div>
-                        </DialogContent>
-                        }
-                      </Dialog>
-                    </CardContent>
-                  </Card>
-                ))}
+            )),
+            ...store.AttachmentInDealerStore.map((attachment, index) => (
+              <div
+                key={`attachment-${attachment.id}-${index}`}
+                className="transform hover:scale-105 transition-all duration-300"
+              >
+                <AttachmentCard attachment={attachment.baseAttachment} />
+              </div>
+            )),
+          ]}
+        {selectedTab === "tractors" &&
+          store &&
+          store.TractorInDealerStore.map((tractor) => (
+            <div key={tractor.id} className="transform hover:scale-105 transition-all duration-300">
+              <TractorCard tractor={tractor.baseTractor} />
+            </div>
+          ))}
+        {selectedTab === "attachments" &&
+          store &&
+          store.AttachmentInDealerStore.map((attachment) => (
+            <div key={attachment.id} className="transform hover:scale-105 transition-all duration-300">
+              <AttachmentCard attachment={attachment.baseAttachment} />
+            </div>
+          ))}
+      </div>
+    )
+  }
+
+  const getAddComponent = () => {
+    switch (selectedTab) {
+      case "overview":
+        return <AlternatingAddForm tractors={store.TractorInDealerStore} attachments={store.AttachmentInDealerStore} />
+      case "tractors":
+        return <AddTractor alreadyTractors={store.TractorInDealerStore} />
+      case "attachments":
+        return <AddAttachment alreadyAttachments={store.AttachmentInDealerStore} />
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Background Pattern - positioned behind content */}
+      <div className="fixed inset-0 bg-slate-900/30 pointer-events-none -z-10"></div>
+
+      <div className="container mx-auto px-4 py-8 relative">
+        {/* Hero Banner Section */}
+        <div className="relative mb-12">
+          <div className="relative overflow-hidden rounded-3xl shadow-2xl">
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-600/30 via-pink-600/30 to-blue-600/30"></div>
+            <Image
+              src={store.banner?.[0] || store.logo || "/placeholder.svg?height=400&width=1200"}
+              alt={`${store.name} banner`}
+              width={1200}
+              height={400}
+              className="w-full h-[400px] object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
+
+            {/* Floating Share Button */}
+            <div className="absolute top-6 right-6">
+              <Button
+                variant="secondary"
+                size="icon"
+                className="rounded-full bg-slate-800/90 backdrop-blur-sm border border-slate-700/50 hover:bg-slate-700/90 transition-all duration-300 hover:scale-110 shadow-xl text-white"
+              >
+                <Share className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {/* Store Header with Logo */}
+            <div className="absolute bottom-0 left-0 w-full p-8">
+              <div className="flex items-end space-x-6">
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full blur-xl opacity-40 group-hover:opacity-60 transition-opacity duration-500"></div>
+                  <div className="relative transform group-hover:scale-110 transition-transform duration-500">
+                    <Image
+                      src={store.logo || "/placeholder.svg?height=180&width=180"}
+                      alt={`${store.name} logo`}
+                      width={180}
+                      height={180}
+                      className="rounded-full border-4 w-[180px] h-[180px] border-white/50 object-cover shadow-2xl"
+                    />
+                  </div>
+                </div>
+                <div className="text-white space-y-2">
+                  <h1 className="text-5xl font-bold text-white drop-shadow-lg">{store.name}</h1>
+                  <p className="text-xl text-gray-200 max-w-2xl leading-relaxed drop-shadow-md">{store.description}</p>
+                </div>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
-      )}
+          </div>
+        </div>
 
-      {showAllAttachments && (
-        <Dialog open={showAllAttachments} onOpenChange={setShowAllAttachments}>
-          <DialogContent className="max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>Add Attachment to Store</DialogTitle>
-              <DialogDescription>
-                Select a attachment to add to your store inventory.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Search className="w-4 h-4 text-gray-400" />
-                <Input
-                  placeholder="Search tractors..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="flex-grow"
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto">
-                {filteredAttachments.map((tractor) => (
-                  <Card key={tractor.id}>
-                    <CardHeader>
-                      <CardTitle>{tractor.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-gray-600 mb-2">{tractor.description}</p>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button onClick={()=>{ setActiveAttachment(tractor.id) }}>Add to Store</Button>
-                        </DialogTrigger>
-                        {
-                          activeAttachment &&
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Add {tractor.name} to Store</DialogTitle>
-                            <DialogDescription>
-                              Set the price for this tractor in your store.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div>
-                              <Label htmlFor="tractor-price">Price</Label>
-                              <Input id="tractor-price" type="number" placeholder="Enter price" value={attachmentPrice} onChange={e=>{setAttachmentPrice(parseFloat(e.target.value))}} />
-                            </div>
-                            {
-                              adding ?
-                              <CircularProgress />
-                              :
-                            <Button onClick={() => { handleAddAttachment() }}>Add to Store</Button>
-                            }
-                          </div>
-                        </DialogContent>
-                        }
-                      </Dialog>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+        {/* Store Information Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+          {/* Store Information Card */}
+          <div className="lg:col-span-2 relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-3xl blur-xl opacity-10 group-hover:opacity-20 transition-opacity duration-500"></div>
+            <Card className="relative bg-slate-800/90 backdrop-blur-sm border border-slate-700/50 rounded-3xl shadow-2xl hover:shadow-purple-500/20 transition-all duration-500">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-2xl font-bold text-white flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl">
+                    <MapPin className="h-6 w-6 text-white" />
+                  </div>
+                  Store Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center p-4 bg-slate-700/50 rounded-2xl border border-slate-600/50 hover:bg-slate-700/70 transition-all duration-300">
+                    <div className="p-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl mr-4">
+                      <MapPin className="h-5 w-5 text-white" />
+                    </div>
+                    <span className="text-slate-200 text-lg">
+                      {[
+                        store.location.address,
+                        store.location.city,
+                        store.location.state,
+                        store.location.zip_code,
+                        store.location.country,
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    </span>
+                  </div>
+                  <div className="flex items-center p-4 bg-slate-700/50 rounded-2xl border border-slate-600/50 hover:bg-slate-700/70 transition-all duration-300">
+                    <div className="p-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl mr-4">
+                      <Clock className="h-5 w-5 text-white" />
+                    </div>
+                    <span className="text-slate-200 text-lg">{`Open: ${formatTimeOnly(store.opening_time)} - ${formatTimeOnly(store.closing_time)}`}</span>
+                  </div>
+                  <div className="flex items-center p-4 bg-slate-700/50 rounded-2xl border border-slate-600/50 hover:bg-slate-700/70 transition-all duration-300">
+                    <div className="p-3 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl mr-4">
+                      <Calendar className="h-5 w-5 text-white" />
+                    </div>
+                    <span className="text-slate-200 text-lg">{`Closed on: ${store.closing_days.join(", ")}`}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
+          {/* Quick Actions Card */}
+          <div className="relative group">
+            <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-3xl blur-xl opacity-10 group-hover:opacity-20 transition-opacity duration-500"></div>
+            <Card className="relative bg-slate-800/90 backdrop-blur-sm border border-slate-700/50 rounded-3xl shadow-2xl hover:shadow-purple-500/20 transition-all duration-500">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-2xl font-bold text-white flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl">
+                    <Zap className="h-6 w-6 text-white" />
+                  </div>
+                  Quick Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button className="w-full h-14 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-2xl shadow-lg hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105">
+                      <Camera className="mr-3 h-5 w-5" />
+                      Update Photos
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 rounded-3xl">
+                    <DialogHeader>
+                      <DialogTitle className="text-white text-xl">Update Store Photos</DialogTitle>
+                      <DialogDescription className="text-slate-300">
+                        Upload a new banner or logo for your store.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-6">
+                      <div>
+                        <Label htmlFor="banner" className="text-white font-medium">
+                          Banner Image
+                        </Label>
+                        <Input
+                          id="banner"
+                          type="file"
+                          accept="image/*"
+                          className="mt-2 bg-slate-700/50 border-slate-600/50 text-white rounded-xl"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="logo" className="text-white font-medium">
+                          Logo Image
+                        </Label>
+                        <Input
+                          id="logo"
+                          type="file"
+                          accept="image/*"
+                          className="mt-2 bg-slate-700/50 border-slate-600/50 text-white rounded-xl"
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-xl"
+                      >
+                        Upload Photos
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full h-14 bg-slate-700/50 border-slate-600/50 text-white hover:bg-slate-700/70 font-semibold rounded-2xl shadow-lg hover:shadow-white/10 transition-all duration-300 hover:scale-105"
+                    >
+                      <Plus className="mr-3 h-5 w-5" />
+                      Add Equipment
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 rounded-3xl">
+                    <DialogHeader>
+                      <DialogTitle className="text-white text-xl">Add Equipment</DialogTitle>
+                      <DialogDescription className="text-slate-300">
+                        Add new tractors or attachments to your store.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="p-4">{getAddComponent()}</div>
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Equipment Tabs */}
+        <div className="relative group">
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-3xl blur-xl opacity-10 group-hover:opacity-20 transition-opacity duration-500"></div>
+          <Card className="relative bg-slate-800/90 backdrop-blur-sm border border-slate-700/50 rounded-3xl shadow-2xl">
+            <Tabs value={selectedTab} onValueChange={setSelectedTab} className="p-6">
+              <TabsList className="grid w-full grid-cols-3 bg-slate-700/50 border border-slate-600/50 rounded-2xl p-1 gap-1">
+                <TabsTrigger
+                  value="overview"
+                  className="flex items-center justify-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-300 rounded-xl transition-all duration-300 hover:text-white hover:bg-slate-600/50 py-3 px-4 font-medium"
+                >
+                  <TrendingUp className="h-4 w-4" />
+                  <span>Overview</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="tractors"
+                  className="flex items-center justify-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-300 rounded-xl transition-all duration-300 hover:text-white hover:bg-slate-600/50 py-3 px-4 font-medium"
+                >
+                  <FaHotel className="h-4 w-4" />
+                  <span>Tractors</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="attachments"
+                  className="flex items-center justify-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-300 rounded-xl transition-all duration-300 hover:text-white hover:bg-slate-600/50 py-3 px-4 font-medium"
+                >
+                  <FaRegCalendarAlt className="h-4 w-4" />
+                  <span>Attachments</span>
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="overview" className="mt-8">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-3xl font-bold text-white flex items-center gap-3">
+                        <Sparkles className="h-8 w-8 text-purple-400" />
+                        All Equipment
+                      </h3>
+                      <p className="text-slate-300 text-lg mt-2">
+                        Overview of all tractors and attachments in your store
+                      </p>
+                    </div>
+                  </div>
+                  <div className="p-8 bg-slate-700/30 rounded-3xl border border-slate-600/30">{renderContent()}</div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="tractors" className="mt-8">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-3xl font-bold text-white flex items-center gap-3">
+                        <FaHotel className="h-8 w-8 text-blue-400" />
+                        Tractors
+                      </h3>
+                      <p className="text-slate-300 text-lg mt-2">Manage your tractor inventory</p>
+                    </div>
+                    <Button
+                      onClick={() => setShowAllTractors(true)}
+                      className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold rounded-2xl px-6 py-3 shadow-lg hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105"
+                    >
+                      <Plus className="mr-2 h-5 w-5" /> Add Tractor
+                    </Button>
+                  </div>
+                  <div className="p-8 bg-slate-700/30 rounded-3xl border border-slate-600/30">{renderContent()}</div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="attachments" className="mt-8">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-3xl font-bold text-white flex items-center gap-3">
+                        <FaRegCalendarAlt className="h-8 w-8 text-green-400" />
+                        Attachments
+                      </h3>
+                      <p className="text-slate-300 text-lg mt-2">Manage your attachment inventory</p>
+                    </div>
+                    <Button
+                      onClick={() => setShowAllAttachments(true)}
+                      className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-2xl px-6 py-3 shadow-lg hover:shadow-green-500/25 transition-all duration-300 hover:scale-105"
+                    >
+                      <Plus className="mr-2 h-5 w-5" /> Add Attachment
+                    </Button>
+                  </div>
+                  <div className="p-8 bg-slate-700/30 rounded-3xl border border-slate-600/30">{renderContent()}</div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </Card>
+        </div>
+
+        {/* Add Tractor Modal */}
+        {showAllTractors && (
+          <Dialog open={showAllTractors} onOpenChange={setShowAllTractors}>
+            <DialogContent className="p-0 bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 rounded-3xl max-w-4xl">
+              <div className="p-6">
+                <AddTractor alreadyTractors={store.TractorInDealerStore} />
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Add Attachment Modal */}
+        {showAllAttachments && (
+          <Dialog open={showAllAttachments} onOpenChange={setShowAllAttachments}>
+            <DialogContent className="max-w-4xl bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 rounded-3xl">
+              <DialogHeader>
+                <DialogTitle className="text-white text-2xl">Add Attachment to Store</DialogTitle>
+                <DialogDescription className="text-slate-300 text-lg">
+                  Select an attachment to add to your store inventory.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-6">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <Input
+                    placeholder="Search attachments..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-12 bg-slate-700/50 border-slate-600/50 text-white placeholder-slate-400 rounded-2xl h-14 text-lg"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[60vh] overflow-y-auto pr-2">
+                  {filteredAttachments.map((attachment) => (
+                    <div key={attachment.id} className="relative group">
+                      <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl blur-lg opacity-10 group-hover:opacity-20 transition-opacity duration-300"></div>
+                      <Card className="relative bg-slate-700/50 border border-slate-600/50 rounded-2xl hover:bg-slate-700/70 transition-all duration-300 hover:scale-105">
+                        <CardHeader>
+                          <CardTitle className="text-white text-xl">{attachment.name}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-slate-300 mb-4 leading-relaxed">{attachment.description}</p>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button
+                                onClick={() => {
+                                  setActiveAttachment(attachment.id)
+                                }}
+                                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-xl"
+                              >
+                                Add to Store
+                              </Button>
+                            </DialogTrigger>
+                            {activeAttachment && (
+                              <DialogContent className="bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 rounded-3xl">
+                                <DialogHeader>
+                                  <DialogTitle className="text-white text-xl">
+                                    Add {attachment.name} to Store
+                                  </DialogTitle>
+                                  <DialogDescription className="text-slate-300">
+                                    Set the price for this attachment in your store.
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-6">
+                                  <div>
+                                    <Label htmlFor="attachment-price" className="text-white font-medium">
+                                      Price
+                                    </Label>
+                                    <Input
+                                      id="attachment-price"
+                                      type="number"
+                                      placeholder="Enter price"
+                                      value={attachmentPrice}
+                                      onChange={(e) => {
+                                        setAttachmentPrice(Number.parseFloat(e.target.value))
+                                      }}
+                                      className="mt-2 bg-slate-700/50 border-slate-600/50 text-white rounded-xl h-12"
+                                    />
+                                  </div>
+                                  {adding ? (
+                                    <div className="flex justify-center">
+                                      <CircularProgress sx={{ color: "#a855f7" }} size={24} />
+                                    </div>
+                                  ) : (
+                                    <Button
+                                      onClick={() => {
+                                        handleAddAttachment()
+                                      }}
+                                      className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-xl h-12"
+                                    >
+                                      Add to Store
+                                    </Button>
+                                  )}
+                                </div>
+                              </DialogContent>
+                            )}
+                          </Dialog>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
     </div>
   )
 }

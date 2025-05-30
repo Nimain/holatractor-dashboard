@@ -406,7 +406,7 @@ export default function DealerDashboard() {
 
           <div className="bg-[#F8F7FF] p-6 rounded-[20px]">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold">Quick Actions</h2>
+              {/* <h2 className="text-xl font-bold">Quick Actions</h2> */}
               <button className="text-[#7C5CFC] hover:bg-white p-1 rounded-full transition-colors">
                 <Plus size={20} />
               </button>
