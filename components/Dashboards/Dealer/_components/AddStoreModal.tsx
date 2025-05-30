@@ -1,321 +1,483 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
-import { X, Upload, Store, Clock, Info, ImageIcon, FileText } from 'lucide-react'
-import Image from 'next/image'
+import { uploadFileToS3 } from "@/utils/AWS/FileUpload"
+import { renderInstance } from "@/utils/Axios/RenderInstance"
+import { errorMessage, successMessage } from "@/utils/Toastify/Messages"
+import { useCookie } from "next-cookie"
+import { useState, useEffect, type ChangeEvent, useRef } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
+import { FeatureGroup, MapContainer, TileLayer } from "react-leaflet"
+import { EditControl } from "react-leaflet-draw"
+import { Button } from "@/components/ui/button"
+import { MapPin, Trash2, Upload } from "lucide-react"
+import { Backdrop, CircularProgress } from "@mui/material"
+import { Card, CardContent } from "@/components/ui/card"
 
-interface AddStoreModalProps {
+interface Location {
+  latitude: number | null
+  longitude: number | null
+}
+
+interface User {
+  userId: string
+  image: string
+  name: string
+  email: string
+}
+
+interface DealerStoreModalProps {
   isOpen: boolean
   onClose: () => void
+  onStoreCreated?: (store: any) => void
 }
 
-export default function AddStoreModal({ isOpen, onClose }: AddStoreModalProps) {
-  const [storeName, setStoreName] = useState('')
-  const [description, setDescription] = useState('')
-  const [country, setCountry] = useState('')
-  const [openingTime, setOpeningTime] = useState('')
-  const [closingTime, setClosingTime] = useState('')
-  const [closingDay, setClosingDay] = useState('')
-  const [logo, setLogo] = useState<string | null>(null)
-  const [banner, setBanner] = useState<string | null>(null)
-  const [instructions, setInstructions] = useState<string[]>([])
+const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalProps) => {
+  const [locationOpen, setLocationOpen] = useState(false)
+  const [step, setStep] = useState(1)
+  const [files, setFiles] = useState<File[]>([])
+  const [mainImage, setMainImage] = useState<File | null>(null)
+
+  const [error, setError] = useState<string | null>(null)
+  const [location, setLocation] = useState<Location>({ latitude: null, longitude: null })
+
+  const [name, setName] = useState("")
+  const [description, setDescription] = useState("")
+  const [openingTime, setOpeningTime] = useState("")
+  const [closingTime, setClosingTime] = useState("")
+  const [closingDays, setClosingDays] = useState<string[]>([])
+
+  const [creating, setCreating] = useState(false)
+  const [creatingMessage, setCreatingMessage] = useState("")
+
+  const { cookie } = useCookie()
+  const user: User = cookie.get("user")
+  const access_token = cookie.get("access_token")
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const additionalImagesInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFiles((prev) => [...prev, ...Array.from(e.target.files as FileList)])
+    }
+  }
+
+  const handleMainImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      setMainImage(e.target.files[0])
+    }
+  }
+
+  const removeFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const removeMainImage = () => {
+    setMainImage(null)
+  }
+
+  const nextStep = () => setStep((prev) => Math.min(prev + 1, 3))
+  const prevStep = () => setStep((prev) => Math.max(prev - 1, 1))
+
+  const _created = (e: any) => {
+    const locDet: Location = {
+      latitude: e.layer._latlng.lat,
+      longitude: e.layer._latlng.lng,
+    }
+    setLocation(locDet)
+    setLocationOpen(false)
+  }
+
+  async function handleAddStore() {
+    if (!name) {
+      errorMessage("Store name can't be empty")
+      return
+    }
+    if (!description) {
+      errorMessage("Store description can't be empty")
+      return
+    }
+
+    if (!location.latitude || !location.longitude) {
+      errorMessage("Please select store location")
+      return
+    }
+
+    setCreating(true)
+
+    let logoUrl = ""
+    const bannerImages: string[] = []
+
+    if (mainImage) {
+      setCreatingMessage("Uploading logo image")
+      const buffer = Buffer.from(await mainImage.arrayBuffer())
+      logoUrl = await uploadFileToS3(buffer, mainImage.name)
+      setCreatingMessage("")
+    }
+
+    if (files.length > 0) {
+      setCreatingMessage("Uploading banner images")
+      for (const image of files) {
+        const buffer = Buffer.from(await image.arrayBuffer())
+        const imageLink = await uploadFileToS3(buffer, image.name)
+        bannerImages.push(imageLink)
+      }
+      setCreatingMessage("")
+    }
+
+    const storeData = {
+      store_lat: `${location.latitude}`,
+      store_lan: `${location.longitude}`,
+      owner_id: user.userId,
+      name,
+      description,
+      banner: bannerImages.length > 0 ? bannerImages : [""],
+      logo: logoUrl,
+      opening_time: new Date(`1970-01-01T${openingTime}:00.000Z`),
+      closing_time: new Date(`1970-01-01T${closingTime}:00.000Z`),
+      closing_days: closingDays,
+    }
+console.log("Submitting store data:", storeData)
+    renderInstance
+      .post("/dealer/store", storeData, {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      })
+      .then((res) => {
+        if (res.status === 201) {
+          successMessage("Store created successfully")
+          // Reset state variables
+          setName("")
+          setDescription("")
+          setOpeningTime("")
+          setClosingTime("")
+          setClosingDays([])
+          setFiles([])
+          setMainImage(null)
+          setStep(1)
+          onClose()
+          if (onStoreCreated) {
+            onStoreCreated(res.data)
+          }
+        }
+      })
+      .catch((err) => {
+        if (err.response && err.response.status === 409) {
+          if (err.response.data.message === "Log in user not found") {
+            errorMessage("Log in user not found")
+          } else if (err.response.data.message === "Wrong owner id") {
+            errorMessage("Wrong owner id")
+          } else if (err.response.data.message === "No active subscriptions") {
+            errorMessage("No active subscriptions")
+          } else if (err.response.data.message === "Maximum store count reached") {
+            errorMessage("Maximum store count reached")
+          } else {
+            errorMessage(err.response.data.message || "Failed to create store")
+          }
+        } else {
+          errorMessage("Some error occurred")
+        }
+      })
+      .finally(() => {
+        setCreating(false)
+        setCreatingMessage("")
+      })
+  }
 
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position: GeolocationPosition) => {
+          setLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          })
+        },
+        (error: GeolocationPositionError) => {
+          setError(error.message)
+        },
+      )
+    } else {
+      setError("Geolocation is not supported by this browser.")
     }
-    window.addEventListener('keydown', handleEscape)
-    return () => window.removeEventListener('keydown', handleEscape)
-  }, [onClose])
+  }, [])
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setLogo(reader.result as string)
-      }
-      reader.readAsDataURL(file)
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setStep(1)
+      setName("")
+      setDescription("")
+      setOpeningTime("")
+      setClosingTime("")
+      setClosingDays([])
+      setFiles([])
+      setMainImage(null)
+      setCreatingMessage("")
     }
-  }
-
-  const handleBannerUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setBanner(reader.result as string)
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
-  if (!isOpen) return null
+  }, [isOpen])
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div 
-        className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl transform transition-all duration-300 ease-out"
-        style={{ opacity: isOpen ? 1 : 0, transform: isOpen ? 'scale(1)' : 'scale(0.95)' }}
-      >
-        <div className="flex justify-between items-center p-6 border-b bg-gray-50">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Store size={24} className="text-blue-600" />
-            Add New Store
-          </h2>
-          <button 
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 transition-colors duration-200"
-          >
-            <X size={24} />
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
+        <Backdrop sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }} open={creating}>
+          <div className="flex flex-col items-center gap-4">
+            <CircularProgress />
+            {creatingMessage && <p className="text-white">{creatingMessage}</p>}
+          </div>
+        </Backdrop>
 
-        <div className="flex-1 overflow-y-auto p-6">
-          <form className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="storeName" className="block text-sm font-medium text-gray-700 mb-1">
-                  Store Name
-                </label>
-                <input
-                  type="text"
-                  id="storeName"
-                  value={storeName}
-                  onChange={(e) => setStoreName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow duration-200"
-                  placeholder="Enter store name"
-                />
-              </div>
-              <div>
-                <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-1">
-                  Country
-                </label>
-                <input
-                  type="text"
-                  id="country"
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow duration-200"
-                  placeholder="Enter country name"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow duration-200"
-                placeholder="Enter store description"
-                rows={4}
-              />
-            </div>
-
-            {/* Store Hours Section */}
-            <div className="bg-gray-50 rounded-xl p-6 space-y-6">
-              <div className="flex items-center gap-2 text-gray-800">
-                <Clock size={20} />
-                <h3 className="text-lg font-semibold">Store Hours</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label htmlFor="openingTime" className="block text-sm font-medium text-gray-700 mb-1">
-                    Opening Time
-                  </label>
-                  <input
-                    type="time"
-                    id="openingTime"
-                    value={openingTime}
-                    onChange={(e) => setOpeningTime(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow duration-200"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="closingTime" className="block text-sm font-medium text-gray-700 mb-1">
-                    Closing Time
-                  </label>
-                  <input
-                    type="time"
-                    id="closingTime"
-                    value={closingTime}
-                    onChange={(e) => setClosingTime(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow duration-200"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="closingDay" className="block text-sm font-medium text-gray-700 mb-1">
-                    Closing Day
-                  </label>
-                  <select
-                    id="closingDay"
-                    value={closingDay}
-                    onChange={(e) => setClosingDay(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow duration-200"
-                  >
-                    <option value="">Select a day</option>
-                    <option value="monday">Monday</option>
-                    <option value="tuesday">Tuesday</option>
-                    <option value="wednesday">Wednesday</option>
-                    <option value="thursday">Thursday</option>
-                    <option value="friday">Friday</option>
-                    <option value="saturday">Saturday</option>
-                    <option value="sunday">Sunday</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Store Media Section */}
-            <div className="bg-gray-50 rounded-xl p-6 space-y-6">
-              <div className="flex items-center gap-2 text-gray-800">
-                <ImageIcon size={20} />
-                <h3 className="text-lg font-semibold">Store Media</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <DialogHeader>
+          <DialogTitle>
+            {step === 1 ? "Store Details" : step === 2 ? "Operating Hours" : "Additional Information"}
+          </DialogTitle>
+        </DialogHeader>
+        <Card>
+          <CardContent>
+            <div className="space-y-4">
+              {step === 1 && (
                 <div className="space-y-4">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Store Logo
-                  </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-500 transition-colors duration-200">
-                    {logo ? (
-                      <div className="relative w-32 h-32 mx-auto">
-                        <Image
-                          src={logo}
-                          alt="Logo preview"
-                          layout="fill"
-                          objectFit="cover"
-                          className="rounded-lg"
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Store Name</Label>
+                    <Input
+                      id="name"
+                      value={name}
+                      onChange={(e) => {
+                        setName(e.target.value)
+                      }}
+                      placeholder="Enter store name"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={description}
+                      onChange={(e) => {
+                        setDescription(e.target.value)
+                      }}
+                      placeholder="Describe your store"
+                      className="min-h-[100px] resize-none"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="mainImage">Store Logo</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="mainImage"
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleMainImageChange}
+                        ref={fileInputRef}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          fileInputRef.current?.click()
+                        }}
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload Logo
+                      </Button>
+                    </div>
+                    {mainImage && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <img
+                          src={URL.createObjectURL(mainImage) || "/placeholder.svg"}
+                          alt="Store logo"
+                          className="w-20 h-20 object-cover rounded"
                         />
-                        <button
-                          onClick={() => setLogo(null)}
-                          className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                        >
-                          <X size={16} />
-                        </button>
+                        <span className="text-sm">{mainImage.name}</span>
+                        <Button type="button" variant="ghost" size="icon" onClick={removeMainImage}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
-                    ) : (
-                      <label className="cursor-pointer">
-                        <div className="flex flex-col items-center gap-2">
-                          <Upload size={24} className="text-gray-400" />
-                          <span className="text-sm text-gray-600">Click to upload logo</span>
-                          <span className="text-xs text-gray-400">SVG, PNG, JPG (max. 800x800px)</span>
-                        </div>
-                        <input
-                          type="file"
-                          id="logo"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleLogoUpload}
-                        />
-                      </label>
                     )}
                   </div>
-                </div>
 
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="openingTime">Opening Time</Label>
+                      <Input
+                        id="openingTime"
+                        type="time"
+                        value={openingTime}
+                        onChange={(e) => {
+                          setOpeningTime(e.target.value)
+                        }}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="closingTime">Closing Time</Label>
+                      <Input
+                        id="closingTime"
+                        type="time"
+                        value={closingTime}
+                        onChange={(e) => {
+                          setClosingTime(e.target.value)
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {step === 2 && (
                 <div className="space-y-4">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Store Banner
-                  </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-500 transition-colors duration-200">
-                    {banner ? (
-                      <div className="relative w-full h-32">
-                        <Image
-                          src={banner}
-                          alt="Banner preview"
-                          layout="fill"
-                          objectFit="cover"
-                          className="rounded-lg"
-                        />
-                        <button
-                          onClick={() => setBanner(null)}
-                          className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                        >
-                          <X size={16} />
-                        </button>
+                  <div className="space-y-2">
+                    <Label>Closing Days</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {DAYS_OF_WEEK.map((day) => (
+                        <label key={day} className="flex items-center space-x-2 border rounded-md p-2">
+                          <Checkbox
+                            checked={closingDays.includes(day)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setClosingDays((current) => [...current, day])
+                              } else {
+                                setClosingDays((current) => current.filter((d) => d !== day))
+                              }
+                            }}
+                          />
+                          <span>{day}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Banner Images</Label>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          additionalImagesInputRef.current?.click()
+                        }}
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Add Banner Images
+                      </Button>
+                      <input
+                        type="file"
+                        className="hidden"
+                        ref={additionalImagesInputRef}
+                        multiple
+                        accept="image/*"
+                        onChange={handleFileChange}
+                      />
+                    </div>
+                    {files.length > 0 && (
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        {files.map((file, index) => (
+                          <div key={index} className="flex items-center justify-between border rounded-md p-2">
+                            <span className="text-sm truncate">{file.name}</span>
+                            <Button type="button" variant="ghost" size="icon" onClick={() => removeFile(index)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
                       </div>
-                    ) : (
-                      <label className="cursor-pointer">
-                        <div className="flex flex-col items-center gap-2">
-                          <Upload size={24} className="text-gray-400" />
-                          <span className="text-sm text-gray-600">Click to upload banner</span>
-                          <span className="text-xs text-gray-400">SVG, PNG, JPG (max. 1920x1080px)</span>
-                        </div>
-                        <input
-                          type="file"
-                          id="banner"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleBannerUpload}
-                        />
-                      </label>
                     )}
                   </div>
+
+                  <div className="space-y-2">
+                    <Label>Store Location</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Select store location"
+                        value={
+                          location.latitude && location.longitude
+                            ? `lat: ${location.latitude.toFixed(6)}, lng: ${location.longitude.toFixed(6)}`
+                            : "Location not selected"
+                        }
+                        readOnly
+                      />
+                      <Dialog open={locationOpen} onOpenChange={setLocationOpen}>
+                        <Button type="button" variant="outline" onClick={() => setLocationOpen(true)}>
+                          <MapPin className="w-4 h-4 mr-2" />
+                          Pick Location
+                        </Button>
+                        <DialogContent className="max-w-4xl max-h-[80vh]">
+                          <DialogHeader>
+                            <DialogTitle>Select Store Location</DialogTitle>
+                          </DialogHeader>
+                          {error ? (
+                            <p>Error: {error}</p>
+                          ) : location.latitude && location.longitude ? (
+                            <div style={{ height: "60vh", width: "100%" }}>
+                              <MapContainer
+                                center={[location.latitude, location.longitude]}
+                                zoom={13}
+                                scrollWheelZoom={false}
+                                style={{ width: "100%", height: "100%", zIndex: 1 }}
+                              >
+                                <TileLayer
+                                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                />
+                                <FeatureGroup>
+                                  <EditControl
+                                    position="topright"
+                                    onCreated={_created}
+                                    draw={{
+                                      rectangle: false,
+                                      circle: false,
+                                      circlemarker: false,
+                                      polyline: false,
+                                      polygon: false,
+                                    }}
+                                  />
+                                </FeatureGroup>
+                              </MapContainer>
+                            </div>
+                          ) : (
+                            <p>Latitude and longitude not available</p>
+                          )}
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </div>
                 </div>
+              )}
+
+              <div className="flex justify-between pt-4">
+                {step > 1 ? (
+                  <Button type="button" variant="outline" onClick={prevStep}>
+                    Back
+                  </Button>
+                ) : (
+                  <Button type="button" variant="outline" onClick={onClose}>
+                    Cancel
+                  </Button>
+                )}
+                {step < 2 ? (
+                  <Button type="button" onClick={nextStep}>
+                    Next
+                  </Button>
+                ) : (
+                  <Button onClick={handleAddStore} disabled={creating}>
+                    {creating ? "Creating..." : "Create Store"}
+                  </Button>
+                )}
               </div>
             </div>
-
-            {/* Store Instructions Section */}
-            <div className="bg-gray-50 rounded-xl p-6 space-y-6">
-              <div className="flex items-center gap-2 text-gray-800">
-                <FileText size={20} />
-                <h3 className="text-lg font-semibold">Store Instructions</h3>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg">
-                  <Info size={20} className="text-blue-500 mt-0.5" />
-                  <div>
-                    <h4 className="font-medium text-blue-900">Important Information</h4>
-                    <p className="text-sm text-blue-700 mt-1">
-                      Please ensure all store information is accurate and up-to-date. This information will be displayed to customers.
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 bg-white rounded-lg border border-gray-200">
-                    <h5 className="font-medium text-gray-900 mb-2">Image Requirements</h5>
-                    <ul className="text-sm text-gray-600 space-y-2">
-                      <li>• Logo: Maximum size 800x800px</li>
-                      <li>• Banner: Maximum size 1920x1080px</li>
-                      <li>• Accepted formats: SVG, PNG, JPG</li>
-                    </ul>
-                  </div>
-                  <div className="p-4 bg-white rounded-lg border border-gray-200">
-                    <h5 className="font-medium text-gray-900 mb-2">Store Hours Format</h5>
-                    <ul className="text-sm text-gray-600 space-y-2">
-                      <li>• Use 24-hour format</li>
-                      <li>• Select one closing day per week</li>
-                      <li>• Hours will be displayed in local time</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </form>
-        </div>
-
-        <div className="flex justify-end items-center gap-4 p-6 bg-gray-50 border-t">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors duration-200"
-          >
-            Create Store
-          </button>
-        </div>
-      </div>
-    </div>
+          </CardContent>
+        </Card>
+      </DialogContent>
+    </Dialog>
   )
 }
+
+export default DealerStoreModal
