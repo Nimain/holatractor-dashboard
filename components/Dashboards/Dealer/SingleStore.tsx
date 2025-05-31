@@ -15,7 +15,7 @@ import {
   TrendingUp,
 } from "lucide-react"
 import { FaHotel, FaRegCalendarAlt } from "react-icons/fa"
-import { TractorCard } from "@/components/Dashboards/Dealer/_components/TractorCard"
+import { EnhancedTractorCard } from "./Modals/EnhancedTractorCard"
 import { AttachmentCard } from "@/components/Dashboards/Dealer/_components/AttachmentCard"
 import AddTractor from "@/components/Dashboards/Dealer/_components/AddTractor"
 import AddAttachment from "@/components/Dashboards/Dealer/_components/AddAttachment"
@@ -35,7 +35,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { renderInstance } from "@/utils/Axios/RenderInstance"
-import type { Attachment, DealerStore, Tractor } from "@/utils/Types/types"
+import type { Attachment, DealerStore } from "@/utils/Types/types"
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages"
 import { useCookie } from "next-cookie"
 import { CircularProgress } from "@mui/material"
@@ -73,15 +73,10 @@ export default function StorePage() {
   const [store, setStore] = useState<DealerStore | null>(null)
   const [fetchingStore, setFetchingStore] = useState(false)
 
-  const [allTractors, setAllTractors] = useState<Tractor[]>([])
-  const [fetchingTractors, setFetchingTractors] = useState(false)
-
   const [allAttachments, setAllAttachments] = useState<Attachment[]>([])
   const [fetchingAttachments, setFetchingAttachments] = useState(false)
 
-  const [activeTractor, setActiveTractor] = useState("")
   const [activeAttachment, setActiveAttachment] = useState("")
-  const [tractorPrice, setTractorPrice] = useState(0)
   const [attachmentPrice, setAttachmentPrice] = useState(0)
 
   const [adding, setAdding] = useState(false)
@@ -91,12 +86,6 @@ export default function StorePage() {
   const access_token = cookie.get("access_token")
 
   // Filter functions
-  const filteredTractors = allTractors.filter(
-    (tractor) =>
-      tractor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tractor.model?.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
-
   const filteredAttachments = allAttachments.filter((attachment) =>
     attachment.name.toLowerCase().includes(searchTerm.toLowerCase()),
   )
@@ -107,9 +96,11 @@ export default function StorePage() {
     renderInstance
       .get(`/dealer/store/${slug}`)
       .then((res) => {
+        console.log("Store data:", res.data)
         setStore(res.data)
       })
       .catch((err) => {
+        console.error("Error fetching store:", err)
         if (err.response && err.response.status === 404 && err.response.data.message === "Store not found") {
           errorMessage("Store not found")
         } else {
@@ -118,21 +109,6 @@ export default function StorePage() {
       })
       .finally(() => {
         setFetchingStore(false)
-      })
-  }
-
-  function fetchTractors() {
-    setFetchingTractors(true)
-    renderInstance
-      .get("/tractor")
-      .then((res) => {
-        setAllTractors(res.data)
-      })
-      .catch((err) => {
-        errorMessage("Error fetching tractor details")
-      })
-      .finally(() => {
-        setFetchingTractors(false)
       })
   }
 
@@ -161,65 +137,6 @@ export default function StorePage() {
     const minutes = date.getUTCMinutes().toString().padStart(2, "0")
     const seconds = date.getUTCSeconds().toString().padStart(2, "0")
     return `${hours}:${minutes}:${seconds}`
-  }
-
-  function handleAddTractor() {
-    if (tractorPrice <= 0) {
-      errorMessage("Please give the tractor price")
-      return
-    }
-    if (!activeTractor) {
-      errorMessage("Please select the tractor")
-      return
-    }
-    if (!slug) {
-      errorMessage("Store not available")
-      return
-    }
-
-    const addTractorBody = {
-      tractor_id: activeTractor,
-      price: `${tractorPrice}`,
-      store_id: slug,
-    }
-
-    setAdding(true)
-    renderInstance
-      .patch("/dealer/store/addTractorToDealerStore", addTractorBody, {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      })
-      .then(() => {
-        successMessage("Added")
-        fetchStore()
-        setTractorPrice(0)
-        setShowAllTractors(false)
-      })
-      .catch((err) => {
-        console.log(err)
-        if (err.response && err.response.status === 404) {
-          if (err.response.data.message === "Store not found") {
-            errorMessage("Store not found")
-          }
-          if (err.response.data.message === "Tractor is not valid") {
-            errorMessage("Tractor is not valid")
-          }
-          if (err.response.data.message === "Login user not found") {
-            errorMessage("Login user not found")
-          }
-        } else if (err.response && err.response.status === 400) {
-          if (err.response.data.message === "You are not allowed for this task") {
-            errorMessage("You are not allowed for this task")
-          }
-        } else {
-          errorMessage("Error updating store details")
-        }
-      })
-      .finally(() => {
-        setActiveTractor("")
-        setAdding(false)
-      })
   }
 
   function handleAddAttachment() {
@@ -280,6 +197,12 @@ export default function StorePage() {
       })
   }
 
+  // Callback function to refresh store data when tractor is added
+  const handleTractorAdded = () => {
+    fetchStore()
+    setShowAllTractors(false)
+  }
+
   // useEffect hooks
   useEffect(() => {
     if (slug) {
@@ -289,8 +212,17 @@ export default function StorePage() {
 
   useEffect(() => {
     fetchAttachments()
-    fetchTractors()
   }, [])
+
+  // Get all tractors from both TractorInDealerStore and SellTractor arrays
+  const getAllTractors = () => {
+    if (!store) return []
+
+    const dealerStoreTractors = store.TractorInDealerStore || []
+    const sellTractors = store.SellTractor || []
+
+    return [...dealerStoreTractors, ...sellTractors]
+  }
 
   // Loading and error states
   if (fetchingStore)
@@ -326,13 +258,13 @@ export default function StorePage() {
       </div>
     )
 
+  const allStoreTractors = getAllTractors()
+
   const renderContent = () => {
     const isEmptyOverview =
-      selectedTab === "overview" &&
-      store.TractorInDealerStore.length === 0 &&
-      store.AttachmentInDealerStore.length === 0
+      selectedTab === "overview" && allStoreTractors.length === 0 && store.AttachmentInDealerStore.length === 0
 
-    const isEmptyTractor = selectedTab === "tractors" && store.TractorInDealerStore.length === 0
+    const isEmptyTractor = selectedTab === "tractors" && allStoreTractors.length === 0
     const isEmptyAttachment = selectedTab === "attachments" && store.AttachmentInDealerStore.length === 0
 
     if (isEmptyOverview) {
@@ -355,12 +287,12 @@ export default function StorePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {selectedTab === "overview" &&
           store && [
-            ...store.TractorInDealerStore.map((tractor, index) => (
+            ...allStoreTractors.map((tractor, index) => (
               <div
                 key={`tractor-${tractor.id}-${index}`}
                 className="transform hover:scale-105 transition-all duration-300"
               >
-                <TractorCard tractor={tractor.baseTractor} />
+                <EnhancedTractorCard tractor={tractor} />
               </div>
             )),
             ...store.AttachmentInDealerStore.map((attachment, index) => (
@@ -374,9 +306,12 @@ export default function StorePage() {
           ]}
         {selectedTab === "tractors" &&
           store &&
-          store.TractorInDealerStore.map((tractor) => (
-            <div key={tractor.id} className="transform hover:scale-105 transition-all duration-300">
-              <TractorCard tractor={tractor.baseTractor} />
+          allStoreTractors.map((tractor, index) => (
+            <div
+              key={`tractor-${tractor.id}-${index}`}
+              className="transform hover:scale-105 transition-all duration-300"
+            >
+              <EnhancedTractorCard tractor={tractor} />
             </div>
           ))}
         {selectedTab === "attachments" &&
@@ -393,9 +328,9 @@ export default function StorePage() {
   const getAddComponent = () => {
     switch (selectedTab) {
       case "overview":
-        return <AlternatingAddForm tractors={store.TractorInDealerStore} attachments={store.AttachmentInDealerStore} />
+        return <AlternatingAddForm tractors={allStoreTractors} attachments={store.AttachmentInDealerStore} />
       case "tractors":
-        return <AddTractor alreadyTractors={store.TractorInDealerStore} />
+        return <AddTractor alreadyTractors={allStoreTractors} onTractorAdded={handleTractorAdded} />
       case "attachments":
         return <AddAttachment alreadyAttachments={store.AttachmentInDealerStore} />
       default:
@@ -609,14 +544,14 @@ export default function StorePage() {
                   className="flex items-center justify-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-300 rounded-xl transition-all duration-300 hover:text-white hover:bg-slate-600/50 py-3 px-4 font-medium"
                 >
                   <FaHotel className="h-4 w-4" />
-                  <span>Tractors</span>
+                  <span>Tractors ({allStoreTractors.length})</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="attachments"
                   className="flex items-center justify-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-300 rounded-xl transition-all duration-300 hover:text-white hover:bg-slate-600/50 py-3 px-4 font-medium"
                 >
                   <FaRegCalendarAlt className="h-4 w-4" />
-                  <span>Attachments</span>
+                  <span>Attachments ({store.AttachmentInDealerStore.length})</span>
                 </TabsTrigger>
               </TabsList>
 
@@ -687,7 +622,7 @@ export default function StorePage() {
           <Dialog open={showAllTractors} onOpenChange={setShowAllTractors}>
             <DialogContent className="p-0 bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 rounded-3xl max-w-4xl">
               <div className="p-6">
-                <AddTractor alreadyTractors={store.TractorInDealerStore} />
+                <AddTractor alreadyTractors={allStoreTractors} onTractorAdded={handleTractorAdded} />
               </div>
             </DialogContent>
           </Dialog>
