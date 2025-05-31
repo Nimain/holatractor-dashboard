@@ -1,14 +1,14 @@
 "use client"
-import { useState, useEffect } from 'react'
-import { Search } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import Image from 'next/image'
-import { renderInstance } from '@/utils/Axios/RenderInstance'
-import { errorMessage } from '@/utils/Toastify/Messages'
-import { CircularProgress } from '@mui/material'
-import { AddTractorModal } from '../Modals/AddTractorModal'
+import { useState, useEffect } from "react"
+import { Search } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import Image from "next/image"
+import { renderInstance } from "@/utils/Axios/RenderInstance"
+import { errorMessage } from "@/utils/Toastify/Messages"
+import { CircularProgress } from "@mui/material"
+import { AddTractorModal } from "../Modals/AddTractorModal"
 
 interface Tractor {
   id: string
@@ -23,13 +23,14 @@ interface Tractor {
 
 interface AddTractorProps {
   alreadyTractors: any[]
+  onTractorAdded?: () => void // Callback to refresh store data
 }
 
-export default function AddTractor({ alreadyTractors }: AddTractorProps) {
+export default function AddTractor({ alreadyTractors, onTractorAdded }: AddTractorProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [tractors, setTractors] = useState<Tractor[]>([])
   const [fetchingTractors, setFetchingTractors] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
+  const [searchTerm, setSearchTerm] = useState("")
   const [selectedTractor, setSelectedTractor] = useState<Tractor | null>(null)
 
   // Fetch tractors from the /tractor endpoint
@@ -37,10 +38,10 @@ export default function AddTractor({ alreadyTractors }: AddTractorProps) {
     async function fetchTractors() {
       setFetchingTractors(true)
       try {
-        const response = await renderInstance.get('/tractor')
+        const response = await renderInstance.get("/tractor")
         setTractors(response.data)
       } catch (err) {
-        errorMessage('Error fetching tractor details')
+        errorMessage("Error fetching tractor details")
       } finally {
         setFetchingTractors(false)
       }
@@ -52,9 +53,19 @@ export default function AddTractor({ alreadyTractors }: AddTractorProps) {
   const filteredTractors = tractors.filter(
     (tractor) =>
       (tractor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       tractor.model.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      !alreadyTractors.some((added) => added.baseTractor.id === tractor.id)
+        tractor.model.toLowerCase().includes(searchTerm.toLowerCase())) &&
+      !alreadyTractors.some((added) => added.baseTractor.id === tractor.id),
   )
+
+  const handleModalClose = (tractorAdded = false) => {
+    setIsModalOpen(false)
+    setSelectedTractor(null)
+
+    // If a tractor was successfully added, call the callback to refresh store data
+    if (tractorAdded && onTractorAdded) {
+      onTractorAdded()
+    }
+  }
 
   return (
     <>
@@ -87,18 +98,19 @@ export default function AddTractor({ alreadyTractors }: AddTractorProps) {
                       <div className="space-y-2">
                         {tractor.images[0] && (
                           <Image
-                            src={tractor.images[0]}
+                            src={tractor.images[0] || "/placeholder.svg"}
                             alt={tractor.name}
                             width={100}
                             height={100}
                             className="w-24 h-24 object-cover rounded"
                           />
                         )}
-                        {/* <p className="text-sm text-gray-600"><strong>Description:</strong> {tractor.description}</p> */}
-                        <p className="text-sm text-gray-600"><strong>Model:</strong> {tractor.model}</p>
-                        <p className="text-sm text-gray-600"><strong>Type:</strong> {tractor.type}</p>
-                        {/* <p className="text-sm text-gray-600"><strong>Year:</strong> {new Date(tractor.year).getFullYear()}</p> */}
-                        {/* <p className="text-sm text-gray-600"><strong>Fixed Price:</strong> ${tractor.inventory[0]?.fixedPrice || 'N/A'}</p> */}
+                        <p className="text-sm text-gray-600">
+                          <strong>Model:</strong> {tractor.model}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          <strong>Type:</strong> {tractor.type}
+                        </p>
                       </div>
                       <Button
                         onClick={() => {
@@ -118,11 +130,7 @@ export default function AddTractor({ alreadyTractors }: AddTractorProps) {
         </CardContent>
       </Card>
 
-      <AddTractorModal
-        open={isModalOpen}
-        onOpenChange={setIsModalOpen}
-        selectedTractor={selectedTractor}
-      />
+      <AddTractorModal open={isModalOpen} onOpenChange={handleModalClose} selectedTractor={selectedTractor} />
     </>
   )
 }

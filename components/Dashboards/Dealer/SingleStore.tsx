@@ -35,7 +35,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { renderInstance } from "@/utils/Axios/RenderInstance"
-import type { Attachment, DealerStore, Tractor } from "@/utils/Types/types"
+import type { Attachment, DealerStore } from "@/utils/Types/types"
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages"
 import { useCookie } from "next-cookie"
 import { CircularProgress } from "@mui/material"
@@ -73,15 +73,10 @@ export default function StorePage() {
   const [store, setStore] = useState<DealerStore | null>(null)
   const [fetchingStore, setFetchingStore] = useState(false)
 
-  const [allTractors, setAllTractors] = useState<Tractor[]>([])
-  const [fetchingTractors, setFetchingTractors] = useState(false)
-
   const [allAttachments, setAllAttachments] = useState<Attachment[]>([])
   const [fetchingAttachments, setFetchingAttachments] = useState(false)
 
-  const [activeTractor, setActiveTractor] = useState("")
   const [activeAttachment, setActiveAttachment] = useState("")
-  const [tractorPrice, setTractorPrice] = useState(0)
   const [attachmentPrice, setAttachmentPrice] = useState(0)
 
   const [adding, setAdding] = useState(false)
@@ -91,12 +86,6 @@ export default function StorePage() {
   const access_token = cookie.get("access_token")
 
   // Filter functions
-  const filteredTractors = allTractors.filter(
-    (tractor) =>
-      tractor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tractor.model?.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
-
   const filteredAttachments = allAttachments.filter((attachment) =>
     attachment.name.toLowerCase().includes(searchTerm.toLowerCase()),
   )
@@ -118,21 +107,6 @@ export default function StorePage() {
       })
       .finally(() => {
         setFetchingStore(false)
-      })
-  }
-
-  function fetchTractors() {
-    setFetchingTractors(true)
-    renderInstance
-      .get("/tractor")
-      .then((res) => {
-        setAllTractors(res.data)
-      })
-      .catch((err) => {
-        errorMessage("Error fetching tractor details")
-      })
-      .finally(() => {
-        setFetchingTractors(false)
       })
   }
 
@@ -161,65 +135,6 @@ export default function StorePage() {
     const minutes = date.getUTCMinutes().toString().padStart(2, "0")
     const seconds = date.getUTCSeconds().toString().padStart(2, "0")
     return `${hours}:${minutes}:${seconds}`
-  }
-
-  function handleAddTractor() {
-    if (tractorPrice <= 0) {
-      errorMessage("Please give the tractor price")
-      return
-    }
-    if (!activeTractor) {
-      errorMessage("Please select the tractor")
-      return
-    }
-    if (!slug) {
-      errorMessage("Store not available")
-      return
-    }
-
-    const addTractorBody = {
-      tractor_id: activeTractor,
-      price: `${tractorPrice}`,
-      store_id: slug,
-    }
-
-    setAdding(true)
-    renderInstance
-      .patch("/dealer/store/addTractorToDealerStore", addTractorBody, {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      })
-      .then(() => {
-        successMessage("Added")
-        fetchStore()
-        setTractorPrice(0)
-        setShowAllTractors(false)
-      })
-      .catch((err) => {
-        console.log(err)
-        if (err.response && err.response.status === 404) {
-          if (err.response.data.message === "Store not found") {
-            errorMessage("Store not found")
-          }
-          if (err.response.data.message === "Tractor is not valid") {
-            errorMessage("Tractor is not valid")
-          }
-          if (err.response.data.message === "Login user not found") {
-            errorMessage("Login user not found")
-          }
-        } else if (err.response && err.response.status === 400) {
-          if (err.response.data.message === "You are not allowed for this task") {
-            errorMessage("You are not allowed for this task")
-          }
-        } else {
-          errorMessage("Error updating store details")
-        }
-      })
-      .finally(() => {
-        setActiveTractor("")
-        setAdding(false)
-      })
   }
 
   function handleAddAttachment() {
@@ -280,6 +195,12 @@ export default function StorePage() {
       })
   }
 
+  // Callback function to refresh store data when tractor is added
+  const handleTractorAdded = () => {
+    fetchStore()
+    setShowAllTractors(false)
+  }
+
   // useEffect hooks
   useEffect(() => {
     if (slug) {
@@ -289,7 +210,6 @@ export default function StorePage() {
 
   useEffect(() => {
     fetchAttachments()
-    fetchTractors()
   }, [])
 
   // Loading and error states
@@ -395,7 +315,7 @@ export default function StorePage() {
       case "overview":
         return <AlternatingAddForm tractors={store.TractorInDealerStore} attachments={store.AttachmentInDealerStore} />
       case "tractors":
-        return <AddTractor alreadyTractors={store.TractorInDealerStore} />
+        return <AddTractor alreadyTractors={store.TractorInDealerStore} onTractorAdded={handleTractorAdded} />
       case "attachments":
         return <AddAttachment alreadyAttachments={store.AttachmentInDealerStore} />
       default:
@@ -404,11 +324,11 @@ export default function StorePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Background Pattern - positioned behind content */}
       <div className="fixed inset-0 bg-slate-900/30 pointer-events-none -z-10"></div>
 
-      <div className="container mx-auto px-4 py-8 relative">
+      <div className=" px-4 py-8 relative">
         {/* Hero Banner Section */}
         <div className="relative mb-12">
           <div className="relative overflow-hidden rounded-3xl shadow-2xl">
@@ -687,7 +607,7 @@ export default function StorePage() {
           <Dialog open={showAllTractors} onOpenChange={setShowAllTractors}>
             <DialogContent className="p-0 bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 rounded-3xl max-w-4xl">
               <div className="p-6">
-                <AddTractor alreadyTractors={store.TractorInDealerStore} />
+                <AddTractor alreadyTractors={store.TractorInDealerStore} onTractorAdded={handleTractorAdded} />
               </div>
             </DialogContent>
           </Dialog>

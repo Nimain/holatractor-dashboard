@@ -5,7 +5,6 @@ import type React from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
 import { X, Check, Info, Upload } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { renderInstance } from "@/utils/Axios/RenderInstance"
@@ -13,6 +12,19 @@ import { errorMessage, successMessage } from "@/utils/Toastify/Messages"
 import { useCookie } from "next-cookie"
 import { useParams } from "next/navigation"
 import { CircularProgress } from "@mui/material"
+
+const FEATURE_OPTIONS = [
+  "GPS Tracking",
+  "Air Conditioning",
+  "Heated Seats",
+  "Bluetooth Connectivity",
+  "LED Headlights",
+  "Power Steering",
+  "Hydraulic System",
+  "4WD Drive",
+  "Cruise Control",
+  "Digital Display",
+]
 
 interface Tractor {
   id: string
@@ -43,7 +55,7 @@ const steps: Step[] = [
 
 interface AddTractorModalProps {
   open: boolean
-  onOpenChange: (open: boolean) => void
+  onOpenChange: (tractorAdded?: boolean) => void
   selectedTractor: Tractor | null
 }
 
@@ -73,14 +85,71 @@ export function AddTractorModal({ open, onOpenChange, selectedTractor }: AddTrac
     listingType: "sell",
   })
   const [adding, setAdding] = useState(false)
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([])
 
   const { slug } = useParams()
   const { cookie } = useCookie()
   const access_token = cookie.get("access_token")
 
+  // Reset form when modal opens with new tractor
+  useState(() => {
+    if (selectedTractor) {
+      setFormData({
+        brand: selectedTractor.name || "",
+        model: selectedTractor.model || "",
+        manufactureYear: selectedTractor.year ? new Date(selectedTractor.year).getFullYear().toString() : "",
+        monthlyPrice: "",
+        sellingPrice: selectedTractor.inventory[0]?.fixedPrice?.toString() || "",
+        warranty: "",
+        features: "",
+        horsePower: "",
+        torque: "",
+        zeroToSixty: "",
+        engineType: selectedTractor.type || "",
+        fuelCapacity: "",
+        transmission: "",
+        weight: "",
+        dimensions: "",
+        maxSpeed: "",
+        tireType: "",
+        ptoPower: "",
+        liftCapacity: "",
+        listingType: "sell",
+      })
+    }
+  })
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const resetForm = () => {
+    setFormData({
+      brand: "",
+      model: "",
+      manufactureYear: "",
+      monthlyPrice: "",
+      sellingPrice: "",
+      warranty: "",
+      features: "",
+      horsePower: "",
+      torque: "",
+      zeroToSixty: "",
+      engineType: "",
+      fuelCapacity: "",
+      transmission: "",
+      weight: "",
+      dimensions: "",
+      maxSpeed: "",
+      tireType: "",
+      ptoPower: "",
+      liftCapacity: "",
+      listingType: "sell",
+    })
+    setImage(null)
+    setCurrentStep(0)
+    setSelectedFeatures([])
   }
 
   const handleAddTractor = async () => {
@@ -97,71 +166,69 @@ export function AddTractorModal({ open, onOpenChange, selectedTractor }: AddTrac
       return
     }
 
-    // Log the authorization key
-    console.log("Authorization Key (access_token):", access_token)
-
+    // Build the request body exactly matching your working Postman example
     const addTractorBody = {
-      inventory_tractor_id: selectedTractor.id,
-      price: Number.parseFloat(formData.sellingPrice), // REQUIRED FIELD
-      monthly_price: formData.monthlyPrice ? Number.parseFloat(formData.monthlyPrice) : undefined, // Optional
-      horsePower: formData.horsePower ? Number.parseInt(formData.horsePower, 10) : undefined,
-      torque: formData.torque ? Number.parseInt(formData.torque, 10) : undefined,
-      zeroToSixty: formData.zeroToSixty ? Number.parseFloat(formData.zeroToSixty) : undefined,
-      features: formData.features ? formData.features.split(",").map((f) => f.trim()).filter((f) => f) : [],
-      engineType: formData.engineType || selectedTractor.type,
-      fuelCapacity: formData.fuelCapacity ? Number.parseFloat(formData.fuelCapacity) : undefined,
-      transmission: formData.transmission || undefined,
-      weight: formData.weight ? Number.parseFloat(formData.weight) : undefined,
-      dimensions: formData.dimensions || undefined,
-      maxSpeed: formData.maxSpeed ? Number.parseFloat(formData.maxSpeed) : undefined,
-      tireType: formData.tireType || undefined,
-      seatingCapacity: 2, // Default value
-      ptoPower: formData.ptoPower ? Number.parseInt(formData.ptoPower, 10) : undefined,
-      liftCapacity: formData.liftCapacity ? Number.parseInt(formData.liftCapacity, 10) : undefined,
-      warranty: formData.warranty || undefined,
-      manufactureYear: formData.manufactureYear ? Number.parseInt(formData.manufactureYear, 10) : undefined,
       brand: formData.brand || selectedTractor.name,
+      dimensions: formData.dimensions || undefined,
+      engineType: formData.engineType || selectedTractor.type,
+      features: selectedFeatures.length > 0 ? selectedFeatures : undefined,
+      fuelCapacity: formData.fuelCapacity ? Number.parseFloat(formData.fuelCapacity) : undefined,
+      horsePower: formData.horsePower ? Number.parseInt(formData.horsePower, 10) : undefined,
+      inventory_tractor_id: selectedTractor.id,
+      liftCapacity: formData.liftCapacity ? Number.parseInt(formData.liftCapacity, 10) : undefined,
+      listingType: formData.listingType, // Keep as lowercase - don't use .toUpperCase()
+      manufactureYear: formData.manufactureYear ? Number.parseInt(formData.manufactureYear, 10) : undefined,
+      maxSpeed: formData.maxSpeed ? Number.parseFloat(formData.maxSpeed) : undefined,
       model: formData.model || selectedTractor.model,
-      listingType: formData.listingType.toUpperCase(), // Ensure uppercase to match API expectations
+      monthly_price: formData.monthlyPrice ? Number.parseFloat(formData.monthlyPrice) : undefined,
+      price: Number.parseFloat(formData.sellingPrice),
+      ptoPower: formData.ptoPower ? Number.parseInt(formData.ptoPower, 10) : undefined,
+      seatingCapacity: 2,
       store_id: slug,
+      tireType: formData.tireType || undefined,
+      torque: formData.torque ? Number.parseInt(formData.torque, 10) : undefined,
+      transmission: formData.transmission || undefined,
+      warranty: formData.warranty || undefined,
+      weight: formData.weight ? Number.parseFloat(formData.weight) : undefined,
+      zeroToSixty: formData.zeroToSixty ? Number.parseFloat(formData.zeroToSixty) : undefined,
     }
 
-    console.log("Submitting tractor data:", addTractorBody)
+    // Remove undefined values to clean up the payload
+    const cleanedBody = Object.fromEntries(Object.entries(addTractorBody).filter(([_, value]) => value !== undefined))
+
+    console.log("=== TRACTOR SUBMISSION DEBUG ===")
+    console.log("Selected Tractor:", selectedTractor)
+    console.log("Store ID (slug):", slug)
+    console.log("Access Token:", access_token ? "Present" : "Missing")
+    console.log("Form Data:", formData)
+    console.log("Selected Features:", selectedFeatures)
+    console.log("Final Request Body:", cleanedBody)
+    console.log("Request Body JSON:", JSON.stringify(cleanedBody, null, 2))
+    console.log("=== END DEBUG ===")
 
     setAdding(true)
     try {
-      await renderInstance.patch("/dealer/stores/addTractorToDealerStore", addTractorBody, {
+      const response = await renderInstance.patch("/dealer/store/addTractorToDealerStore", cleanedBody, {
         headers: {
           Authorization: `Bearer ${access_token}`,
+          "Content-Type": "application/json",
         },
       })
+
+      console.log("Success Response:", response.data)
       successMessage("Tractor added successfully")
-      setFormData({
-        brand: "",
-        model: "",
-        manufactureYear: "",
-        monthlyPrice: "",
-        sellingPrice: "",
-        warranty: "",
-        features: "",
-        horsePower: "",
-        torque: "",
-        zeroToSixty: "",
-        engineType: "",
-        fuelCapacity: "",
-        transmission: "",
-        weight: "",
-        dimensions: "",
-        maxSpeed: "",
-        tireType: "",
-        ptoPower: "",
-        liftCapacity: "",
-        listingType: "sell",
-      })
-      setImage(null)
-      setCurrentStep(0)
-      onOpenChange(false)
+      resetForm()
+      onOpenChange(true)
     } catch (err: any) {
+      console.error("=== ERROR DEBUG ===")
+      console.error("Full Error:", err)
+      console.error("Error Response:", err.response)
+      console.error("Error Data:", err.response?.data)
+      console.error("Error Status:", err.response?.status)
+      console.error("Error Headers:", err.response?.headers)
+      console.error("Request Config:", err.config)
+      console.error("=== END ERROR DEBUG ===")
+
       if (err.response && err.response.status === 404) {
         if (err.response.data.message === "Store not found") {
           errorMessage("Store not found")
@@ -169,22 +236,32 @@ export function AddTractorModal({ open, onOpenChange, selectedTractor }: AddTrac
           errorMessage("Tractor is not valid")
         } else if (err.response.data.message === "Login user not found") {
           errorMessage("Login user not found")
+        } else {
+          errorMessage(`404 Error: ${err.response.data.message || "Not found"}`)
         }
       } else if (err.response && err.response.status === 400) {
         if (err.response.data.message === "You are not allowed for this task") {
           errorMessage("You are not allowed for this task")
+        } else {
+          errorMessage(`400 Error: ${err.response.data.message || "Bad request"}`)
         }
+      } else if (err.response && err.response.status === 500) {
+        errorMessage(`500 Server Error: ${err.response.data.message || "Internal server error"}`)
       } else {
         errorMessage("Error adding tractor to store")
       }
-      console.error("Error adding tractor:", err)
     } finally {
       setAdding(false)
     }
   }
 
+  const handleClose = () => {
+    resetForm()
+    onOpenChange(false)
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex justify-between items-center mb-2">
@@ -200,7 +277,7 @@ export function AddTractorModal({ open, onOpenChange, selectedTractor }: AddTrac
               variant="ghost"
               size="icon"
               className="h-6 w-6 rounded-full absolute right-4 top-4"
-              onClick={() => onOpenChange(false)}
+              onClick={handleClose}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -276,7 +353,7 @@ export function AddTractorModal({ open, onOpenChange, selectedTractor }: AddTrac
                   {image ? (
                     <div className="relative w-full h-64 mb-4">
                       <img
-                        src={URL.createObjectURL(image)}
+                        src={URL.createObjectURL(image) || "/placeholder.svg"}
                         alt="Uploaded tractor"
                         className="mx-auto object-cover rounded-lg shadow-md w-full h-full"
                       />
@@ -291,7 +368,7 @@ export function AddTractorModal({ open, onOpenChange, selectedTractor }: AddTrac
                   ) : selectedTractor?.images[0] ? (
                     <div className="relative w-full h-64 mb-4">
                       <img
-                        src={selectedTractor.images[0]}
+                        src={selectedTractor.images[0] || "/placeholder.svg"}
                         alt={selectedTractor.name}
                         className="mx-auto object-cover rounded-lg shadow-md w-full h-full"
                       />
@@ -357,6 +434,7 @@ export function AddTractorModal({ open, onOpenChange, selectedTractor }: AddTrac
                     name="monthlyPrice"
                     placeholder="Enter monthly price"
                     type="number"
+                    step="0.01"
                     value={formData.monthlyPrice}
                     onChange={handleInputChange}
                     className="pr-10"
@@ -387,15 +465,17 @@ export function AddTractorModal({ open, onOpenChange, selectedTractor }: AddTrac
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Selling Price</label>
+                <label className="text-sm font-medium">Selling Price *</label>
                 <div className="relative">
                   <Input
                     name="sellingPrice"
                     placeholder="Enter selling price"
                     type="number"
+                    step="0.01"
                     value={formData.sellingPrice}
                     onChange={handleInputChange}
                     className="pr-10"
+                    required
                   />
                   <Popover>
                     <PopoverTrigger asChild>
@@ -415,8 +495,7 @@ export function AddTractorModal({ open, onOpenChange, selectedTractor }: AddTrac
                         </Button>
                       </div>
                       <p className="text-sm text-gray-500">
-                        Set the selling price if this tractor is available for purchase. Make sure to consider market
-                        value, condition, and included features when setting the price.
+                        Set the selling price if this tractor is available for purchase. This field is required.
                       </p>
                     </PopoverContent>
                   </Popover>
@@ -445,16 +524,31 @@ export function AddTractorModal({ open, onOpenChange, selectedTractor }: AddTrac
                 </select>
               </div>
               <div className="space-y-2 col-span-2">
-                <label className="text-sm font-medium">
-                  Features (Select from: GPS Tracking, Air Conditioning, Heated Seats, etc.)
-                </label>
-                <Textarea
-                  name="features"
-                  placeholder="Enter features (comma-separated, e.g., GPS Tracking, Air Conditioning, Heated Seats)"
-                  value={formData.features}
-                  onChange={handleInputChange}
-                  className="min-h-[100px]"
-                />
+                <label className="text-sm font-medium">Features (Select up to 3)</label>
+                <div className="grid grid-cols-2 gap-3 p-4 border rounded-lg bg-gray-50">
+                  {FEATURE_OPTIONS.map((feature) => (
+                    <div key={feature} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={feature}
+                        checked={selectedFeatures.includes(feature)}
+                        onChange={(e) => {
+                          if (e.target.checked && selectedFeatures.length < 3) {
+                            setSelectedFeatures([...selectedFeatures, feature])
+                          } else if (!e.target.checked) {
+                            setSelectedFeatures(selectedFeatures.filter((f) => f !== feature))
+                          }
+                        }}
+                        className="rounded border-gray-300"
+                        disabled={!selectedFeatures.includes(feature) && selectedFeatures.length >= 3}
+                      />
+                      <label htmlFor={feature} className="text-sm text-gray-700">
+                        {feature}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500">Selected: {selectedFeatures.length}/3</p>
               </div>
             </>
           ) : (
@@ -534,7 +628,7 @@ export function AddTractorModal({ open, onOpenChange, selectedTractor }: AddTrac
                 <label className="text-sm font-medium">Dimensions (LxWxH in meters)</label>
                 <Input
                   name="dimensions"
-                  placeholder="Enter dimensions"
+                  placeholder="e.g., 5.2m x 3.3m x 2.8m"
                   value={formData.dimensions}
                   onChange={handleInputChange}
                 />
