@@ -1,20 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import {
-  Share,
-  CreditCard,
-  Camera,
-  MapPin,
-  Clock,
-  Calendar,
-  Plus,
-  Search,
-  Sparkles,
-  Zap,
-  TrendingUp,
-} from "lucide-react"
-import { FaHotel, FaRegCalendarAlt } from "react-icons/fa"
+import { Share, Camera, MapPin, Clock, Calendar, Plus, Search, Loader2 } from "lucide-react"
+import { FaTractor } from "react-icons/fa"
+import { MdBuild } from "react-icons/md"
 import { EnhancedTractorCard } from "./Modals/EnhancedTractorCard"
 import { AttachmentCard } from "@/components/Dashboards/Dealer/_components/AttachmentCard"
 import AddTractor from "@/components/Dashboards/Dealer/_components/AddTractor"
@@ -40,25 +29,99 @@ import { errorMessage, successMessage } from "@/utils/Toastify/Messages"
 import { useCookie } from "next-cookie"
 import { CircularProgress } from "@mui/material"
 import { useParams } from "next/navigation"
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet"
+import "leaflet/dist/leaflet.css"
+import { Icon } from "leaflet"
+
+// Add this right after the imports and before the useReverseGeocode hook
+const MapStyles = () => (
+  <style jsx global>{`
+    .leaflet-container {
+      z-index: 1 !important;
+    }
+    .leaflet-control-container {
+      z-index: 2 !important;
+    }
+    .leaflet-popup {
+      z-index: 3 !important;
+    }
+    .leaflet-marker-pane {
+      z-index: 2 !important;
+    }
+    .leaflet-tile-pane {
+      z-index: 1 !important;
+    }
+    /* Ensure dialogs have higher z-index */
+    [data-radix-dialog-overlay] {
+      z-index: 9998 !important;
+    }
+    [data-radix-dialog-content] {
+      z-index: 9999 !important;
+    }
+  `}</style>
+)
+
+// Reverse geocoding hook
+const useReverseGeocode = (lat: string, lng: string) => {
+  const [address, setAddress] = useState<string>("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string>("")
+
+  useEffect(() => {
+    if (!lat || !lng) return
+
+    const fetchAddress = async () => {
+      setLoading(true)
+      setError("")
+
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+          {
+            headers: {
+              "User-Agent": "YourAppName/1.0",
+            },
+          },
+        )
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch address")
+        }
+
+        const data = await response.json()
+
+        if (data.display_name) {
+          setAddress(data.display_name)
+        } else {
+          setError("Address not found")
+        }
+      } catch (err) {
+        console.error("Reverse geocoding error:", err)
+        setError("Failed to load address")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    const timeoutId = setTimeout(fetchAddress, 500)
+    return () => clearTimeout(timeoutId)
+  }, [lat, lng])
+
+  return { address, loading, error }
+}
 
 const EmptyStateCard = ({ title, description }: { title: any; description: any }) => (
-  <div className="relative group">
-    <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-3xl blur-xl opacity-10 group-hover:opacity-20 transition-opacity duration-500"></div>
-    <Card className="relative w-full max-w-sm mx-auto text-center p-8 bg-slate-800/90 backdrop-blur-sm border border-slate-700/50 rounded-3xl shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 hover:scale-105">
-      <CardContent className="space-y-8">
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl blur-lg opacity-30"></div>
-          <div className="relative bg-slate-700/80 rounded-2xl p-6 mx-auto w-24 h-24 flex items-center justify-center shadow-xl border border-slate-600/50">
-            <CreditCard className="w-12 h-12 text-purple-400" />
-          </div>
-        </div>
-        <div className="space-y-3">
-          <h3 className="text-2xl font-bold text-white">{title}</h3>
-          <p className="text-slate-300 leading-relaxed">{description}</p>
-        </div>
-      </CardContent>
-    </Card>
-  </div>
+  <Card className="w-full max-w-sm mx-auto text-center p-8 bg-white border border-gray-200">
+    <CardContent className="space-y-6">
+      <div className="bg-gray-100 rounded-full p-6 mx-auto w-24 h-24 flex items-center justify-center">
+        <MdBuild className="w-12 h-12 text-gray-400" />
+      </div>
+      <div className="space-y-2">
+        <h3 className="text-xl font-semibold text-gray-900">{title}</h3>
+        <p className="text-gray-600">{description}</p>
+      </div>
+    </CardContent>
+  </Card>
 )
 
 export default function StorePage() {
@@ -80,6 +143,31 @@ export default function StorePage() {
   const [attachmentPrice, setAttachmentPrice] = useState(0)
 
   const [adding, setAdding] = useState(false)
+
+  // Custom marker icon setup
+  const [mapIcon, setMapIcon] = useState<any>(null)
+
+  // Use reverse geocoding hook
+  const {
+    address: geocodedAddress,
+    loading: geocodeLoading,
+    error: geocodeError,
+  } = useReverseGeocode(store?.location?.lat || "", store?.location?.lan || "")
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setMapIcon(
+        new Icon({
+          iconUrl:
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQEwUaVgCulxdLINyfmLUvymRmLIod3DN-6l76heo-SX4fWtunqdkVw9yE4VI0znfObci8&usqp=CAU",
+          iconSize: [25, 41],
+          iconAnchor: [12, 41],
+          popupAnchor: [1, -34],
+          shadowSize: [41, 41],
+        }),
+      )
+    }
+  }, [])
 
   const { slug } = useParams()
   const { cookie } = useCookie()
@@ -135,8 +223,7 @@ export default function StorePage() {
     const date = new Date(dateTimeStr)
     const hours = date.getUTCHours().toString().padStart(2, "0")
     const minutes = date.getUTCMinutes().toString().padStart(2, "0")
-    const seconds = date.getUTCSeconds().toString().padStart(2, "0")
-    return `${hours}:${minutes}:${seconds}`
+    return `${hours}:${minutes}`
   }
 
   function handleAddAttachment() {
@@ -197,13 +284,11 @@ export default function StorePage() {
       })
   }
 
-  // Callback function to refresh store data when tractor is added
   const handleTractorAdded = () => {
     fetchStore()
     setShowAllTractors(false)
   }
 
-  // useEffect hooks
   useEffect(() => {
     if (slug) {
       fetchStore()
@@ -214,31 +299,85 @@ export default function StorePage() {
     fetchAttachments()
   }, [])
 
-  // Get all tractors from both TractorInDealerStore and SellTractor arrays
+  useEffect(() => {
+    import("leaflet").then((leaflet) => {
+      delete (leaflet.Icon.Default.prototype as any)._getIconUrl
+      leaflet.Icon.Default.mergeOptions({
+        iconRetinaUrl: "/marker-icon-2x.png",
+        iconUrl: "/marker-icon.png",
+        shadowUrl: "/marker-shadow.png",
+      })
+    })
+  }, [])
+
+  // Get display address with improved logic
+  const getDisplayAddress = () => {
+    if (!store?.location) return "Location not available"
+
+    const addressParts = [
+      store.location.address,
+      store.location.city,
+      store.location.state,
+      store.location.zip_code,
+      store.location.country,
+    ].filter(Boolean)
+
+    if (addressParts.length > 0) {
+      return addressParts.join(", ")
+    }
+
+    if (geocodedAddress) {
+      return geocodedAddress
+    }
+
+    if (geocodeLoading) {
+      return (
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Loading address...</span>
+        </div>
+      )
+    }
+
+    if (geocodeError) {
+      return (
+        <div className="space-y-1">
+          <div className="font-medium">Location Coordinates:</div>
+          <div className="text-sm text-gray-600">
+            Latitude: {store.location.lat}° | Longitude: {store.location.lan}°
+          </div>
+          <div className="text-sm text-gray-500 italic">(Unable to load address - {geocodeError})</div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="space-y-1">
+        <div className="font-medium">Location Coordinates:</div>
+        <div className="text-sm text-gray-600">
+          Latitude: {store.location.lat}° | Longitude: {store.location.lan}°
+        </div>
+        <div className="text-sm text-gray-500 italic">(Address details not available)</div>
+      </div>
+    )
+  }
+
   const getAllTractors = () => {
     if (!store) return []
-
     const dealerStoreTractors = store.TractorInDealerStore || []
     const sellTractors = store.SellTractor || []
-
     return [...dealerStoreTractors, ...sellTractors]
   }
 
   // Loading and error states
   if (fetchingStore)
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-        <div className="absolute inset-0 bg-slate-900/50"></div>
-        <div className="container mx-auto px-4 py-8 relative z-10">
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-96">
             <div className="text-center">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full blur-xl opacity-50 animate-pulse"></div>
-                <div className="relative animate-spin rounded-full h-16 w-16 border-4 border-transparent bg-gradient-to-r from-purple-500 to-pink-500 mx-auto mb-6">
-                  <div className="absolute inset-2 bg-slate-900 rounded-full"></div>
-                </div>
-              </div>
-              <p className="text-white text-xl font-medium">Getting store details...</p>
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
+              <p className="text-gray-600 text-lg">Getting store details...</p>
             </div>
           </div>
         </div>
@@ -247,12 +386,11 @@ export default function StorePage() {
 
   if (!store)
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-        <div className="absolute inset-0 bg-slate-900/50"></div>
-        <div className="container mx-auto px-4 py-8 relative z-10">
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 py-8">
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-red-400 mb-4">Store Not Found</h1>
-            <p className="text-gray-300">The requested store could not be found.</p>
+            <h1 className="text-4xl font-bold text-red-600 mb-4">Store Not Found</h1>
+            <p className="text-gray-600">The requested store could not be found.</p>
           </div>
         </div>
       </div>
@@ -268,9 +406,7 @@ export default function StorePage() {
     const isEmptyAttachment = selectedTab === "attachments" && store.AttachmentInDealerStore.length === 0
 
     if (isEmptyOverview) {
-      return (
-        <EmptyStateCard title="No Equipments Available" description="This store doesn't have any equipments yet." />
-      )
+      return <EmptyStateCard title="No Equipment Available" description="This store doesn't have any equipment yet." />
     }
 
     if (isEmptyTractor) {
@@ -284,22 +420,16 @@ export default function StorePage() {
     }
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {selectedTab === "overview" &&
           store && [
             ...allStoreTractors.map((tractor, index) => (
-              <div
-                key={`tractor-${tractor.id}-${index}`}
-                className="transform hover:scale-105 transition-all duration-300"
-              >
+              <div key={`tractor-${tractor.id}-${index}`}>
                 <EnhancedTractorCard tractor={tractor} />
               </div>
             )),
             ...store.AttachmentInDealerStore.map((attachment, index) => (
-              <div
-                key={`attachment-${attachment.id}-${index}`}
-                className="transform hover:scale-105 transition-all duration-300"
-              >
+              <div key={`attachment-${attachment.id}-${index}`}>
                 <AttachmentCard attachment={attachment.baseAttachment} />
               </div>
             )),
@@ -307,17 +437,14 @@ export default function StorePage() {
         {selectedTab === "tractors" &&
           store &&
           allStoreTractors.map((tractor, index) => (
-            <div
-              key={`tractor-${tractor.id}-${index}`}
-              className="transform hover:scale-105 transition-all duration-300"
-            >
+            <div key={`tractor-${tractor.id}-${index}`}>
               <EnhancedTractorCard tractor={tractor} />
             </div>
           ))}
         {selectedTab === "attachments" &&
           store &&
           store.AttachmentInDealerStore.map((attachment) => (
-            <div key={attachment.id} className="transform hover:scale-105 transition-all duration-300">
+            <div key={attachment.id}>
               <AttachmentCard attachment={attachment.baseAttachment} />
             </div>
           ))}
@@ -339,53 +466,41 @@ export default function StorePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Background Pattern - positioned behind content */}
-      <div className="fixed inset-0 bg-slate-900/30 pointer-events-none -z-10"></div>
-
-      <div className="container mx-auto px-4 py-8 relative">
+    <div className="min-h-screen bg-gray-50">
+      <MapStyles />
+      <div className="container mx-auto px-4 py-8">
         {/* Hero Banner Section */}
-        <div className="relative mb-12">
-          <div className="relative overflow-hidden rounded-3xl shadow-2xl">
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-600/30 via-pink-600/30 to-blue-600/30"></div>
+        <div className="mb-8">
+          <div className="relative overflow-hidden rounded-lg shadow-lg">
             <Image
-              src={store.banner?.[0] || store.logo || "/placeholder.svg?height=400&width=1200"}
+              src={store.banner?.[0] || store.logo || "/placeholder.svg?height=300&width=1200"}
               alt={`${store.name} banner`}
               width={1200}
-              height={400}
-              className="w-full h-[400px] object-cover"
+              height={300}
+              className="w-full h-[300px] object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
+            <div className="absolute inset-0 bg-black bg-opacity-40"></div>
 
-            {/* Floating Share Button */}
-            <div className="absolute top-6 right-6">
-              <Button
-                variant="secondary"
-                size="icon"
-                className="rounded-full bg-slate-800/90 backdrop-blur-sm border border-slate-700/50 hover:bg-slate-700/90 transition-all duration-300 hover:scale-110 shadow-xl text-white"
-              >
-                <Share className="h-5 w-5" />
+            {/* Share Button */}
+            <div className="absolute top-4 right-4">
+              <Button variant="secondary" size="icon" className="rounded-full bg-white">
+                <Share className="h-4 w-4" />
               </Button>
             </div>
 
-            {/* Store Header with Logo */}
-            <div className="absolute bottom-0 left-0 w-full p-8">
-              <div className="flex items-end space-x-6">
-                <div className="relative group">
-                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full blur-xl opacity-40 group-hover:opacity-60 transition-opacity duration-500"></div>
-                  <div className="relative transform group-hover:scale-110 transition-transform duration-500">
-                    <Image
-                      src={store.logo || "/placeholder.svg?height=180&width=180"}
-                      alt={`${store.name} logo`}
-                      width={180}
-                      height={180}
-                      className="rounded-full border-4 w-[180px] h-[180px] border-white/50 object-cover shadow-2xl"
-                    />
-                  </div>
-                </div>
-                <div className="text-white space-y-2">
-                  <h1 className="text-5xl font-bold text-white drop-shadow-lg">{store.name}</h1>
-                  <p className="text-xl text-gray-200 max-w-2xl leading-relaxed drop-shadow-md">{store.description}</p>
+            {/* Store Header */}
+            <div className="absolute bottom-0 left-0 w-full p-6">
+              <div className="flex items-end space-x-4">
+                <Image
+                  src={store.logo || "/placeholder.svg?height=120&width=120"}
+                  alt={`${store.name} logo`}
+                  width={120}
+                  height={120}
+                  className="rounded-full border-4 border-white object-cover shadow-lg"
+                />
+                <div className="text-white">
+                  <h1 className="text-4xl font-bold mb-2">{store.name}</h1>
+                  <p className="text-lg opacity-90">{store.description}</p>
                 </div>
               </div>
             </div>
@@ -393,108 +508,102 @@ export default function StorePage() {
         </div>
 
         {/* Store Information Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Store Information Card */}
-          <div className="lg:col-span-2 relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-3xl blur-xl opacity-10 group-hover:opacity-20 transition-opacity duration-500"></div>
-            <Card className="relative bg-slate-800/90 backdrop-blur-sm border border-slate-700/50 rounded-3xl shadow-2xl hover:shadow-purple-500/20 transition-all duration-500">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-2xl font-bold text-white flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl">
-                    <MapPin className="h-6 w-6 text-white" />
-                  </div>
+          <div className="lg:col-span-2">
+            <Card className="bg-white border border-gray-200">
+              <CardHeader>
+                <CardTitle className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-blue-600" />
                   Store Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center p-4 bg-slate-700/50 rounded-2xl border border-slate-600/50 hover:bg-slate-700/70 transition-all duration-300">
-                    <div className="p-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl mr-4">
-                      <MapPin className="h-5 w-5 text-white" />
-                    </div>
-                    <span className="text-slate-200 text-lg">
-                      {[
-                        store.location.address,
-                        store.location.city,
-                        store.location.state,
-                        store.location.zip_code,
-                        store.location.country,
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                    </span>
-                  </div>
-                  <div className="flex items-center p-4 bg-slate-700/50 rounded-2xl border border-slate-600/50 hover:bg-slate-700/70 transition-all duration-300">
-                    <div className="p-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl mr-4">
-                      <Clock className="h-5 w-5 text-white" />
-                    </div>
-                    <span className="text-slate-200 text-lg">{`Open: ${formatTimeOnly(store.opening_time)} - ${formatTimeOnly(store.closing_time)}`}</span>
-                  </div>
-                  <div className="flex items-center p-4 bg-slate-700/50 rounded-2xl border border-slate-600/50 hover:bg-slate-700/70 transition-all duration-300">
-                    <div className="p-3 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl mr-4">
-                      <Calendar className="h-5 w-5 text-white" />
-                    </div>
-                    <span className="text-slate-200 text-lg">{`Closed on: ${store.closing_days.join(", ")}`}</span>
+              <CardContent className="space-y-4">
+                <div className="flex items-start p-3 bg-gray-50 rounded-lg">
+                  <MapPin className="h-5 w-5 text-blue-600 mt-0.5 mr-3" />
+                  <div className="text-gray-700">
+                    {store.location.name && <div className="font-medium">{store.location.name}</div>}
+                    <div className="mt-1">{getDisplayAddress()}</div>
                   </div>
                 </div>
+                <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                  <Clock className="h-5 w-5 text-green-600 mr-3" />
+                  <span className="text-gray-700">{`Open: ${formatTimeOnly(store.opening_time)} - ${formatTimeOnly(store.closing_time)}`}</span>
+                </div>
+                <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                  <Calendar className="h-5 w-5 text-red-600 mr-3" />
+                  <span className="text-gray-700">{`Closed on: ${store.closing_days.join(", ")}`}</span>
+                </div>
+                {store.location && store.location.lat && store.location.lan && (
+                  <div className="mt-4">
+                    <h3 className="text-lg font-medium text-gray-900 mb-3">Store Location</h3>
+                    <div
+                      className="h-[250px] w-full rounded-lg overflow-hidden border border-gray-200 relative"
+                      style={{ zIndex: 1 }}
+                    >
+                      {typeof window !== "undefined" && mapIcon && (
+                        <MapContainer
+                          center={[Number.parseFloat(store.location.lat), Number.parseFloat(store.location.lan)]}
+                          zoom={14}
+                          style={{ height: "100%", width: "100%", zIndex: 1 }}
+                          zoomControl={true}
+                        >
+                          <TileLayer
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                          />
+                          <Marker
+                            position={[Number.parseFloat(store.location.lat), Number.parseFloat(store.location.lan)]}
+                            icon={mapIcon}
+                          >
+                            <Popup>
+                              <div className="text-center">
+                                <strong>{store.name}</strong>
+                                <br />
+                                {store.description}
+                                <br />
+                                <small>{geocodedAddress || `${store.location.lat}, ${store.location.lan}`}</small>
+                              </div>
+                            </Popup>
+                          </Marker>
+                        </MapContainer>
+                      )}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
 
           {/* Quick Actions Card */}
-          <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-3xl blur-xl opacity-10 group-hover:opacity-20 transition-opacity duration-500"></div>
-            <Card className="relative bg-slate-800/90 backdrop-blur-sm border border-slate-700/50 rounded-3xl shadow-2xl hover:shadow-purple-500/20 transition-all duration-500">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-2xl font-bold text-white flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl">
-                    <Zap className="h-6 w-6 text-white" />
-                  </div>
-                  Quick Actions
-                </CardTitle>
+          <div>
+            <Card className="bg-white border border-gray-200">
+              <CardHeader>
+                <CardTitle className="text-xl font-semibold text-gray-900">Quick Actions</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3">
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button className="w-full h-14 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-2xl shadow-lg hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105">
-                      <Camera className="mr-3 h-5 w-5" />
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                      <Camera className="mr-2 h-4 w-4" />
                       Update Photos
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 rounded-3xl">
+                  <DialogContent className="bg-white">
                     <DialogHeader>
-                      <DialogTitle className="text-white text-xl">Update Store Photos</DialogTitle>
-                      <DialogDescription className="text-slate-300">
-                        Upload a new banner or logo for your store.
-                      </DialogDescription>
+                      <DialogTitle>Update Store Photos</DialogTitle>
+                      <DialogDescription>Upload a new banner or logo for your store.</DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                       <div>
-                        <Label htmlFor="banner" className="text-white font-medium">
-                          Banner Image
-                        </Label>
-                        <Input
-                          id="banner"
-                          type="file"
-                          accept="image/*"
-                          className="mt-2 bg-slate-700/50 border-slate-600/50 text-white rounded-xl"
-                        />
+                        <Label htmlFor="banner">Banner Image</Label>
+                        <Input id="banner" type="file" accept="image/*" className="mt-1" />
                       </div>
                       <div>
-                        <Label htmlFor="logo" className="text-white font-medium">
-                          Logo Image
-                        </Label>
-                        <Input
-                          id="logo"
-                          type="file"
-                          accept="image/*"
-                          className="mt-2 bg-slate-700/50 border-slate-600/50 text-white rounded-xl"
-                        />
+                        <Label htmlFor="logo">Logo Image</Label>
+                        <Input id="logo" type="file" accept="image/*" className="mt-1" />
                       </div>
-                      <Button
-                        type="submit"
-                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-xl"
-                      >
+                      <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
                         Upload Photos
                       </Button>
                     </div>
@@ -503,20 +612,15 @@ export default function StorePage() {
 
                 <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
                   <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full h-14 bg-slate-700/50 border-slate-600/50 text-white hover:bg-slate-700/70 font-semibold rounded-2xl shadow-lg hover:shadow-white/10 transition-all duration-300 hover:scale-105"
-                    >
-                      <Plus className="mr-3 h-5 w-5" />
+                    <Button variant="outline" className="w-full">
+                      <Plus className="mr-2 h-4 w-4" />
                       Add Equipment
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-md bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 rounded-3xl">
+                  <DialogContent className="max-w-md bg-white">
                     <DialogHeader>
-                      <DialogTitle className="text-white text-xl">Add Equipment</DialogTitle>
-                      <DialogDescription className="text-slate-300">
-                        Add new tractors or attachments to your store.
-                      </DialogDescription>
+                      <DialogTitle>Add Equipment</DialogTitle>
+                      <DialogDescription>Add new tractors or attachments to your store.</DialogDescription>
                     </DialogHeader>
                     <div className="p-4">{getAddComponent()}</div>
                   </DialogContent>
@@ -527,100 +631,71 @@ export default function StorePage() {
         </div>
 
         {/* Equipment Tabs */}
-        <div className="relative group">
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-3xl blur-xl opacity-10 group-hover:opacity-20 transition-opacity duration-500"></div>
-          <Card className="relative bg-slate-800/90 backdrop-blur-sm border border-slate-700/50 rounded-3xl shadow-2xl">
-            <Tabs value={selectedTab} onValueChange={setSelectedTab} className="p-6">
-              <TabsList className="grid w-full grid-cols-3 bg-slate-700/50 border border-slate-600/50 rounded-2xl p-1 gap-1">
-                <TabsTrigger
-                  value="overview"
-                  className="flex items-center justify-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-300 rounded-xl transition-all duration-300 hover:text-white hover:bg-slate-600/50 py-3 px-4 font-medium"
-                >
-                  <TrendingUp className="h-4 w-4" />
-                  <span>Overview</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="tractors"
-                  className="flex items-center justify-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-300 rounded-xl transition-all duration-300 hover:text-white hover:bg-slate-600/50 py-3 px-4 font-medium"
-                >
-                  <FaHotel className="h-4 w-4" />
-                  <span>Tractors ({allStoreTractors.length})</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="attachments"
-                  className="flex items-center justify-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-slate-300 rounded-xl transition-all duration-300 hover:text-white hover:bg-slate-600/50 py-3 px-4 font-medium"
-                >
-                  <FaRegCalendarAlt className="h-4 w-4" />
-                  <span>Attachments ({store.AttachmentInDealerStore.length})</span>
-                </TabsTrigger>
-              </TabsList>
+        <Card className="bg-white border border-gray-200">
+          <Tabs value={selectedTab} onValueChange={setSelectedTab} className="p-6">
+            <TabsList className="grid w-full grid-cols-3 bg-gray-100">
+              <TabsTrigger value="overview" className="flex items-center gap-2">
+                <span>Overview</span>
+              </TabsTrigger>
+              <TabsTrigger value="tractors" className="flex items-center gap-2">
+                <FaTractor className="h-4 w-4" />
+                <span>Tractors ({allStoreTractors.length})</span>
+              </TabsTrigger>
+              <TabsTrigger value="attachments" className="flex items-center gap-2">
+                <MdBuild className="h-4 w-4" />
+                <span>Attachments ({store.AttachmentInDealerStore.length})</span>
+              </TabsTrigger>
+            </TabsList>
 
-              <TabsContent value="overview" className="mt-8">
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-3xl font-bold text-white flex items-center gap-3">
-                        <Sparkles className="h-8 w-8 text-purple-400" />
-                        All Equipment
-                      </h3>
-                      <p className="text-slate-300 text-lg mt-2">
-                        Overview of all tractors and attachments in your store
-                      </p>
-                    </div>
-                  </div>
-                  <div className="p-8 bg-slate-700/30 rounded-3xl border border-slate-600/30">{renderContent()}</div>
+            <TabsContent value="overview" className="mt-6">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-2xl font-semibold text-gray-900 mb-2">All Equipment</h3>
+                  <p className="text-gray-600">Overview of all tractors and attachments in your store</p>
                 </div>
-              </TabsContent>
+                <div className="p-6 bg-gray-50 rounded-lg">{renderContent()}</div>
+              </div>
+            </TabsContent>
 
-              <TabsContent value="tractors" className="mt-8">
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-3xl font-bold text-white flex items-center gap-3">
-                        <FaHotel className="h-8 w-8 text-blue-400" />
-                        Tractors
-                      </h3>
-                      <p className="text-slate-300 text-lg mt-2">Manage your tractor inventory</p>
-                    </div>
-                    <Button
-                      onClick={() => setShowAllTractors(true)}
-                      className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold rounded-2xl px-6 py-3 shadow-lg hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105"
-                    >
-                      <Plus className="mr-2 h-5 w-5" /> Add Tractor
-                    </Button>
+            <TabsContent value="tractors" className="mt-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-2xl font-semibold text-gray-900 mb-2">Tractors</h3>
+                    <p className="text-gray-600">Manage your tractor inventory</p>
                   </div>
-                  <div className="p-8 bg-slate-700/30 rounded-3xl border border-slate-600/30">{renderContent()}</div>
+                  <Button onClick={() => setShowAllTractors(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Plus className="mr-2 h-4 w-4" /> Add Tractor
+                  </Button>
                 </div>
-              </TabsContent>
+                <div className="p-6 bg-gray-50 rounded-lg">{renderContent()}</div>
+              </div>
+            </TabsContent>
 
-              <TabsContent value="attachments" className="mt-8">
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-3xl font-bold text-white flex items-center gap-3">
-                        <FaRegCalendarAlt className="h-8 w-8 text-green-400" />
-                        Attachments
-                      </h3>
-                      <p className="text-slate-300 text-lg mt-2">Manage your attachment inventory</p>
-                    </div>
-                    <Button
-                      onClick={() => setShowAllAttachments(true)}
-                      className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-2xl px-6 py-3 shadow-lg hover:shadow-green-500/25 transition-all duration-300 hover:scale-105"
-                    >
-                      <Plus className="mr-2 h-5 w-5" /> Add Attachment
-                    </Button>
+            <TabsContent value="attachments" className="mt-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-2xl font-semibold text-gray-900 mb-2">Attachments</h3>
+                    <p className="text-gray-600">Manage your attachment inventory</p>
                   </div>
-                  <div className="p-8 bg-slate-700/30 rounded-3xl border border-slate-600/30">{renderContent()}</div>
+                  <Button
+                    onClick={() => setShowAllAttachments(true)}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <Plus className="mr-2 h-4 w-4" /> Add Attachment
+                  </Button>
                 </div>
-              </TabsContent>
-            </Tabs>
-          </Card>
-        </div>
+                <div className="p-6 bg-gray-50 rounded-lg">{renderContent()}</div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </Card>
 
         {/* Add Tractor Modal */}
         {showAllTractors && (
           <Dialog open={showAllTractors} onOpenChange={setShowAllTractors}>
-            <DialogContent className="p-0 bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 rounded-3xl max-w-4xl">
+            <DialogContent className="bg-white max-w-4xl">
               <div className="p-6">
                 <AddTractor alreadyTractors={allStoreTractors} onTractorAdded={handleTractorAdded} />
               </div>
@@ -631,91 +706,80 @@ export default function StorePage() {
         {/* Add Attachment Modal */}
         {showAllAttachments && (
           <Dialog open={showAllAttachments} onOpenChange={setShowAllAttachments}>
-            <DialogContent className="max-w-4xl bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 rounded-3xl">
+            <DialogContent className="max-w-4xl bg-white">
               <DialogHeader>
-                <DialogTitle className="text-white text-2xl">Add Attachment to Store</DialogTitle>
-                <DialogDescription className="text-slate-300 text-lg">
-                  Select an attachment to add to your store inventory.
-                </DialogDescription>
+                <DialogTitle className="text-xl">Add Attachment to Store</DialogTitle>
+                <DialogDescription>Select an attachment to add to your store inventory.</DialogDescription>
               </DialogHeader>
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <div className="relative">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
                     placeholder="Search attachments..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-12 bg-slate-700/50 border-slate-600/50 text-white placeholder-slate-400 rounded-2xl h-14 text-lg"
+                    className="pl-10"
                   />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[60vh] overflow-y-auto pr-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto">
                   {filteredAttachments.map((attachment) => (
-                    <div key={attachment.id} className="relative group">
-                      <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl blur-lg opacity-10 group-hover:opacity-20 transition-opacity duration-300"></div>
-                      <Card className="relative bg-slate-700/50 border border-slate-600/50 rounded-2xl hover:bg-slate-700/70 transition-all duration-300 hover:scale-105">
-                        <CardHeader>
-                          <CardTitle className="text-white text-xl">{attachment.name}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-slate-300 mb-4 leading-relaxed">{attachment.description}</p>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button
-                                onClick={() => {
-                                  setActiveAttachment(attachment.id)
-                                }}
-                                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-xl"
-                              >
-                                Add to Store
-                              </Button>
-                            </DialogTrigger>
-                            {activeAttachment && (
-                              <DialogContent className="bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 rounded-3xl">
-                                <DialogHeader>
-                                  <DialogTitle className="text-white text-xl">
-                                    Add {attachment.name} to Store
-                                  </DialogTitle>
-                                  <DialogDescription className="text-slate-300">
-                                    Set the price for this attachment in your store.
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-6">
-                                  <div>
-                                    <Label htmlFor="attachment-price" className="text-white font-medium">
-                                      Price
-                                    </Label>
-                                    <Input
-                                      id="attachment-price"
-                                      type="number"
-                                      placeholder="Enter price"
-                                      value={attachmentPrice}
-                                      onChange={(e) => {
-                                        setAttachmentPrice(Number.parseFloat(e.target.value))
-                                      }}
-                                      className="mt-2 bg-slate-700/50 border-slate-600/50 text-white rounded-xl h-12"
-                                    />
-                                  </div>
-                                  {adding ? (
-                                    <div className="flex justify-center">
-                                      <CircularProgress sx={{ color: "#a855f7" }} size={24} />
-                                    </div>
-                                  ) : (
-                                    <Button
-                                      onClick={() => {
-                                        handleAddAttachment()
-                                      }}
-                                      className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-xl h-12"
-                                    >
-                                      Add to Store
-                                    </Button>
-                                  )}
+                    <Card key={attachment.id} className="bg-white border border-gray-200">
+                      <CardHeader>
+                        <CardTitle className="text-lg">{attachment.name}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-gray-600 mb-4">{attachment.description}</p>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              onClick={() => {
+                                setActiveAttachment(attachment.id)
+                              }}
+                              className="w-full bg-blue-600 hover:bg-blue-700"
+                            >
+                              Add to Store
+                            </Button>
+                          </DialogTrigger>
+                          {activeAttachment && (
+                            <DialogContent className="bg-white">
+                              <DialogHeader>
+                                <DialogTitle>Add {attachment.name} to Store</DialogTitle>
+                                <DialogDescription>Set the price for this attachment in your store.</DialogDescription>
+                              </DialogHeader>
+                              <div className="space-y-4">
+                                <div>
+                                  <Label htmlFor="attachment-price">Price</Label>
+                                  <Input
+                                    id="attachment-price"
+                                    type="number"
+                                    placeholder="Enter price"
+                                    value={attachmentPrice}
+                                    onChange={(e) => {
+                                      setAttachmentPrice(Number.parseFloat(e.target.value))
+                                    }}
+                                    className="mt-1"
+                                  />
                                 </div>
-                              </DialogContent>
-                            )}
-                          </Dialog>
-                        </CardContent>
-                      </Card>
-                    </div>
+                                {adding ? (
+                                  <div className="flex justify-center">
+                                    <CircularProgress size={24} />
+                                  </div>
+                                ) : (
+                                  <Button
+                                    onClick={() => {
+                                      handleAddAttachment()
+                                    }}
+                                    className="w-full bg-blue-600 hover:bg-blue-700"
+                                  >
+                                    Add to Store
+                                  </Button>
+                                )}
+                              </div>
+                            </DialogContent>
+                          )}
+                        </Dialog>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               </div>

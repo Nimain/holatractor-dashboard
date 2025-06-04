@@ -54,7 +54,7 @@ export default function AddTractor({ alreadyTractors, onTractorAdded }: AddTract
     (tractor) =>
       (tractor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         tractor.model.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      !alreadyTractors.some((added) => added.baseTractor.id === tractor.id),
+      !alreadyTractors.some((added) => added.baseTractor?.id === tractor.id), // Added optional chaining
   )
 
   const handleModalClose = (tractorAdded = false) => {
@@ -96,7 +96,7 @@ export default function AddTractor({ alreadyTractors, onTractorAdded }: AddTract
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2">
-                        {tractor.images[0] && (
+                        {tractor.images?.[0] && ( // Added optional chaining
                           <Image
                             src={tractor.images[0] || "/placeholder.svg"}
                             alt={tractor.name}
@@ -130,7 +130,14 @@ export default function AddTractor({ alreadyTractors, onTractorAdded }: AddTract
         </CardContent>
       </Card>
 
-      <AddTractorModal open={isModalOpen} onOpenChange={handleModalClose} selectedTractor={selectedTractor} />
+      {/* Only render modal when selectedTractor exists */}
+      {selectedTractor && (
+        <AddTractorModal 
+          open={isModalOpen} 
+          onOpenChange={handleModalClose} 
+          selectedTractor={selectedTractor} 
+        />
+      )}
     </>
   )
 }

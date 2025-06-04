@@ -262,7 +262,7 @@ export function AddTractorModal({ open, onOpenChange, selectedTractor }: AddTrac
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto ">
         <DialogHeader>
           <div className="flex justify-between items-center mb-2">
             <div className="flex-1">
