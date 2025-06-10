@@ -9,8 +9,8 @@ import HolaTractor from "../../../../assets/traclog.png"
 
 const navigationItems = [
   { icon: '🔴', label: 'Dashboard', href: '/dealer' },
-  { icon: '🌾', label: 'Farms', href: '/farms' },
-  { icon: '💼', label: 'Business', href: '/business' },
+  // { icon: '🌾', label: 'Farms', href: '/farms' },
+  // { icon: '💼', label: 'Business', href: '/business' },
 ]
 
 const dropdownSections = [
