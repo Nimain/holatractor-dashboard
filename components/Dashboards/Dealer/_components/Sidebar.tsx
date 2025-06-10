@@ -32,6 +32,7 @@ const dropdownSections = [
     icon: '📈',
     label: 'Leads',
     items: [
+        { icon: '💰', label: 'Sales', href: '/dealer/sells' },
       { icon: '🆕', label: 'Lease', href: '/dealer/leads' },
       { icon: '🎯', label: 'Lead Scoring', href: '/demo' },
       { icon: '📊', label: 'Conversion Rates', href: '/demo' }

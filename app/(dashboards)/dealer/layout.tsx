@@ -10,6 +10,13 @@ const Sidebar = dynamic(
   }
 )
 
+const TopBar = dynamic(
+  () => import("../../../components/Dashboards/Dealer/_components/TopBar"),
+  {
+    ssr: false
+  }
+)
+
 export default function DashboardLayout({
   children,
 }: {
@@ -23,11 +30,18 @@ export default function DashboardLayout({
           <ToastContainer />
 
           {/* Sidebar */}
-
           <Sidebar />
 
-          {/* Main Content */}
-          {children}
+          {/* Main Content Area */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Top Bar */}
+            <TopBar />
+            
+            {/* Main Content */}
+            <div className="flex-1 overflow-auto">
+              {children}
+            </div>
+          </div>
         </div>
       </body>
     </html>
