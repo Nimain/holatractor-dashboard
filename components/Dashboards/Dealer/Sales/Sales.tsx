@@ -229,7 +229,7 @@ export default function SalesPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Total Value</p>
-                    <p className="text-2xl font-bold text-gray-900">₹{(totalValue / 100000).toFixed(1)}L</p>
+                    <p className="text-2xl font-bold text-gray-900">${(totalValue / 100000).toFixed(1)}L</p>
                   </div>
                   <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
                     <DollarSign className="h-6 w-6 text-green-600" />
@@ -243,7 +243,7 @@ export default function SalesPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Avg. Value</p>
-                    <p className="text-2xl font-bold text-gray-900">₹{(avgValue / 100000).toFixed(1)}L</p>
+                    <p className="text-2xl font-bold text-gray-900">${(avgValue / 100000).toFixed(1)}L</p>
                   </div>
                   <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
                     <TrendingUp className="h-6 w-6 text-purple-600" />
@@ -455,11 +455,11 @@ function TractorLeadCard({ lead }: { lead: ApiTractorLead }) {
                 <span className="text-sm text-gray-600">Price:</span>
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-lg text-gray-900">
-                    ₹{(tractorPrice / 100000).toFixed(1)}L
+                    ${(tractorPrice / 100000).toFixed(1)}L
                   </span>
                   {tractorDiscount > 0 && (
                     <Badge variant="destructive" className="text-xs">
-                      -₹{(tractorDiscount / 1000).toFixed(0)}K
+                      -${(tractorDiscount / 1000).toFixed(0)}K
                     </Badge>
                   )}
                 </div>
@@ -468,7 +468,7 @@ function TractorLeadCard({ lead }: { lead: ApiTractorLead }) {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Monthly EMI:</span>
                 <span className="font-semibold text-gray-900">
-                  ₹{tractorMonthlyPrice.toLocaleString()}
+                  ${tractorMonthlyPrice.toLocaleString()}
                 </span>
               </div>
               
@@ -606,7 +606,7 @@ function ContactLeadForm({ lead }: { lead: ApiTractorLead }) {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="offerPrice" className="text-sm font-medium">Offer Price (₹)</Label>
+            <Label htmlFor="offerPrice" className="text-sm font-medium">Offer Price ($)</Label>
             <Input
               id="offerPrice"
               name="offerPrice"

@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { ChevronDown, Menu } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import HolaTractor from "../../../../assets/traclog.png"
@@ -23,7 +24,7 @@ const dropdownSections = [
     icon: '👥',
     label: 'Customer',
     items: [
-      { icon: '📋', label: 'Customer List' , href: '/dealer/customer'},
+      { icon: '📋', label: 'Customer List', href: '/dealer/customer'},
       { icon: '🎫', label: 'Support Tickets', href: '/demo' },
       { icon: '💬', label: 'Feedback', href: '/demo' }
     ]
@@ -77,9 +78,45 @@ const dropdownSections = [
 ]
 
 export default function Sidebar() {
+  const pathname = usePathname()
   const [isExpanded, setIsExpanded] = useState(true)
   const [openSections, setOpenSections] = useState<string[]>([])
-  const [activeItem, setActiveItem] = useState('')
+
+  // Function to check if a route is active
+  const isActiveRoute = (href: string) => {
+    if (href === '/dealer') {
+      return pathname === '/dealer'
+    }
+    return pathname.startsWith(href)
+  }
+
+  // Function to check if any item in a section is active
+  const isSectionActive = (section: any) => {
+    if (section.href && isActiveRoute(section.href)) {
+      return true
+    }
+    if (section.items) {
+      return section.items.some((item: any) => isActiveRoute(item.href))
+    }
+    return false
+  }
+
+  // Auto-expand sections that contain active items
+  useEffect(() => {
+    const activeSections: string[] = []
+    
+    dropdownSections.forEach((section) => {
+      if (isSectionActive(section)) {
+        activeSections.push(section.label)
+      }
+    })
+    
+    setOpenSections(prev => {
+      const combinedSections = [...prev, ...activeSections]
+      const uniqueSections = Array.from(new Set(combinedSections))
+      return uniqueSections
+    })
+  }, [pathname])
 
   const toggleSection = (section: string) => {
     setOpenSections(prev =>
@@ -117,9 +154,8 @@ export default function Sidebar() {
             <Link
               key={item.label}
               href={item.href}
-              onClick={() => setActiveItem(item.label)}
               className={`flex items-center px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors duration-200 ${
-                activeItem === item.label ? 'bg-gray-50 text-primary' : ''
+                isActiveRoute(item.href) ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600' : ''
               }`}
             >
               <span className="text-xl mr-3">{item.icon}</span>
@@ -135,12 +171,14 @@ export default function Sidebar() {
                   onOpenChange={() => toggleSection(section.label)}
                 >
                   <CollapsibleTrigger className={`flex items-center justify-between w-full px-4 py-2.5 hover:bg-gray-50 transition-colors duration-200 ${
-                    openSections.includes(section.label) ? 'bg-gray-50' : ''
+                    openSections.includes(section.label) || isSectionActive(section) ? 'bg-gray-50' : ''
                   }`}>
                     <div className="flex items-center min-w-0">
                       <span className={`text-xl ${!isExpanded && 'mx-auto'}`}>{section.icon}</span>
                       {isExpanded && (
-                        <span className="ml-3 text-sm font-medium text-gray-700 truncate">
+                        <span className={`ml-3 text-sm font-medium truncate ${
+                          isSectionActive(section) ? 'text-blue-600' : 'text-gray-700'
+                        }`}>
                           {section.label}
                         </span>
                       )}
@@ -152,6 +190,20 @@ export default function Sidebar() {
                       />
                     )}
                   </CollapsibleTrigger>
+                  
+                  {/* Handle sections with direct href (like Store) */}
+                  {section.href && !section.items && (
+                    <Link 
+                      href={section.href}
+                      className={`flex items-center px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors duration-200 ${
+                        isActiveRoute(section.href) ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600' : ''
+                      }`}
+                    >
+                      <span className="text-xl mr-3">{section.icon}</span>
+                      {isExpanded && <span className="text-sm font-medium">{section.label}</span>}
+                    </Link>
+                  )}
+
                   {section.items && (
                     <>
                       {isExpanded ? (
@@ -160,9 +212,8 @@ export default function Sidebar() {
                             <Link
                               key={item.label}
                               href={item.href}
-                              onClick={() => setActiveItem(item.label)}
                               className={`flex items-center px-11 py-2 text-sm text-gray-600 hover:bg-gray-100 transition-colors duration-200 ${
-                                activeItem === item.label ? 'bg-gray-100 text-primary' : ''
+                                isActiveRoute(item.href) ? 'bg-blue-100 text-blue-600 border-r-2 border-blue-600' : ''
                               }`}
                             >
                               <span className="text-lg mr-2">{item.icon}</span>
@@ -176,29 +227,18 @@ export default function Sidebar() {
                             <Link
                               key={item.label}
                               href={item.href}
-                              onClick={() => setActiveItem(item.label)}
                               className={`flex items-center justify-center py-2.5 hover:bg-gray-50 transition-colors duration-200 ${
-                                activeItem === item.label ? 'bg-gray-50' : ''
+                                isActiveRoute(item.href) ? 'bg-blue-50 border-r-2 border-blue-600' : ''
                               }`}
                             >
-                              <span className="text-lg">{item.icon}</span>
+                              <span className={`text-lg ${isActiveRoute(item.href) ? 'text-blue-600' : ''}`}>
+                                {item.icon}
+                              </span>
                             </Link>
                           ))}
                         </div>
                       )}
                     </>
-                  )}
-                  {isExpanded && section.href && (
-                    <Link 
-                      href={section.href}
-                      onClick={() => setActiveItem('store')}
-                      className={`flex items-center px-11 py-2 text-sm text-gray-600 hover:bg-gray-100 transition-colors duration-200 ${
-                        activeItem === 'store' ? 'bg-gray-100 text-primary' : ''
-                      }`}
-                    >
-                      <span className="text-lg mr-2">🏪</span>
-                      View Store
-                    </Link>
                   )}
                 </Collapsible>
               </div>
