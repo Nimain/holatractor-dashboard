@@ -29,6 +29,15 @@ const dropdownSections = [
       { icon: '💬', label: 'Feedback', href: '/demo' }
     ]
   },
+   {
+    icon: '🚜',
+    label: 'Tractor Repair',
+    items: [
+      { icon: '📅', label: 'Schedule Repair', href: '/demo' },
+      { icon: '📝', label: 'Maintenance Log', href: '/demo' },
+      { icon: '🔧', label: 'Parts Inventory', href: '/demo' }
+    ]
+  },
   {
     icon: '📈',
     label: 'Leads',
@@ -66,15 +75,7 @@ const dropdownSections = [
       { icon: '🔗', label: 'Integrations', href: '/demo' }
     ]
   },
-  {
-    icon: '🚜',
-    label: 'Tractor Repair',
-    items: [
-      { icon: '📅', label: 'Schedule Repair', href: '/demo' },
-      { icon: '📝', label: 'Maintenance Log', href: '/demo' },
-      { icon: '🔧', label: 'Parts Inventory', href: '/demo' }
-    ]
-  }
+ 
 ]
 
 export default function Sidebar() {
