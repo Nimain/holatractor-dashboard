@@ -20,6 +20,7 @@ import { AddedDevicesSection } from "../devices/AddedDevicesSection"
 import TranslatedText from "@/components/Menubar/TranslatedText"
 import { OwnerDashboardTranslation } from "../OwnerDashboardTranslation"
 import { operatorWorkPageTranslations } from "../../Operator/WorkSection/WorkPageTranslations"
+import DeviceApiService, { type Device } from "../devices/Device" // Update with correct path
 
 // Types (same as your original)
 interface Store {
@@ -92,11 +93,6 @@ interface Location {
   longitude: number | null
 }
 
-const chartData = [
-  { status: "Active", count: 75, fill: "#4caf50" },
-  { status: "Inactive", count: 25, fill: "#f44336" },
-]
-
 const chartConfig = {
   active: {
     label: "Active",
@@ -128,6 +124,20 @@ const HomeDashboard = ({
   const [slideIndex, setSlideIndex] = useState(0)
   const [location, setLocation] = useState<Location>({ latitude: null, longitude: null })
   const [error, setError] = useState<string | null>(null)
+  const [devices, setDevices] = useState<Device[]>([])
+  const [loadingDevices, setLoadingDevices] = useState(false)
+
+  const getChartData = () => {
+    const activeDevices = devices.filter((device) => device.base.status === 1).length
+    const inactiveDevices = devices.length - activeDevices
+
+    return [
+      { status: "Active", count: activeDevices, fill: "#4caf50" },
+      { status: "Inactive", count: inactiveDevices, fill: "#f44336" },
+    ]
+  }
+
+  const chartData = getChartData()
 
   const totalDevices = chartData.reduce((sum, item) => sum + item.count, 0)
   const activeDevices = chartData.find((item) => item.status === "Active")?.count || 0
@@ -148,6 +158,18 @@ const HomeDashboard = ({
   const tractorProgress = calculateProgress(tractorsInUse, tractors.length)
   const attachmentProgress = calculateProgress(attachmentsInUse, attachments.length)
 
+  const fetchDevices = async () => {
+    try {
+      setLoadingDevices(true)
+      const deviceData = await DeviceApiService.getAllDevices()
+      setDevices(deviceData)
+    } catch (error) {
+      console.error("Error fetching devices:", error)
+    } finally {
+      setLoadingDevices(false)
+    }
+  }
+
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -163,6 +185,17 @@ const HomeDashboard = ({
       )
     } else {
       setError("Geolocation is not supported by this browser.")
+    }
+
+    // Fetch devices initially
+    fetchDevices()
+
+    // Set up real-time updates every 30 seconds
+    const deviceInterval = setInterval(fetchDevices, 30000)
+
+    // Cleanup interval on component unmount
+    return () => {
+      clearInterval(deviceInterval)
     }
   }, [])
 
@@ -472,15 +505,18 @@ const HomeDashboard = ({
                   <Smartphone className="h-4 w-4" />
                 </span>
                 <TranslatedText greetings={OwnerDashboardTranslation.devicesComingSoon} />
+                {loadingDevices && <span className="text-xs text-muted-foreground ml-2">Updating...</span>}
               </div>
             </CardTitle>
             <span className="text-sm text-muted-foreground">
-              {activeDevices} <TranslatedText greetings={OwnerDashboardTranslation.active} />
+              {chartData.find((item) => item.status === "Active")?.count || 0}{" "}
+              <TranslatedText greetings={OwnerDashboardTranslation.active} />
             </span>
           </CardHeader>
           <CardContent className="p-0">
             <p className="text-sm text-muted-foreground px-6 pb-4">
-              <TranslatedText greetings={OwnerDashboardTranslation.monitoringAllDevices} />
+              <TranslatedText greetings={OwnerDashboardTranslation.monitoringAllDevices} /> ({devices.length} total
+              devices)
             </p>
             <ChartContainer config={chartConfig} className="w-full h-[250px]">
               <PieChart>
