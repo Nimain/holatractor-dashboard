@@ -135,7 +135,7 @@ const Marketplace = () => {
   function fetchNewBookings() {
     setFetchingNewPageDetails(true)
     
-    renderInstance.get(`/booking/get/stand-alone/bookings?lat=${location.latitude}&lng=${location.longitude}&radius=80`)
+    renderInstance.get(`/booking/get/stand-alone/bookings?lat=${location.latitude}&lng=${location.longitude}&radius=100`)
       .then((res) => {
         setNewBookings(res.data)
       }).catch((err) => {

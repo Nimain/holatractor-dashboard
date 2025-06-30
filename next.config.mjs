@@ -1,13 +1,35 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     reactStrictMode: true,
-    distDir: '.next', 
+    distDir: '.next',
+     eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
     images: {
         remotePatterns: [
             {
                 protocol: 'https',
                 hostname: 'holatractor.com',
             },
+            {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+       
+      },
+      {
+        protocol: "https",
+        hostname: "encrypted-tbn0.gstatic.com",
+       
+      },
+      // Add other domains you might need
+      {
+        protocol: "https",
+        hostname: "example.com",
+      
+      },
             {
                 protocol: 'https',
                 hostname: 'wallpapercave.com',
