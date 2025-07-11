@@ -188,20 +188,20 @@ export default function SalesPage() {
         <div className="mb-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+              <h1 className="text-4xl font-bold text-[#F91F1F] mb-2">
                 Tractor Sales Dashboard
               </h1>
-              <p className="text-lg text-gray-600">
+              <p className="text-lg text-[#F91F1F]">
                 Manage your tractor inquiries and convert leads into sales
               </p>
             </div>
             
             <div className="flex flex-wrap items-center gap-3">
-              <Button variant="outline" onClick={fetchTractorLeads} disabled={fetching} className="shadow-sm">
+              {/* <Button variant="outline" onClick={fetchTractorLeads} disabled={fetching} className="shadow-sm">
                 <RefreshCw className={`h-4 w-4 mr-2 ${fetching ? "animate-spin" : ""}`} />
                 Refresh
-              </Button>
-              <Badge variant="secondary" className="text-lg px-4 py-2 bg-white shadow-sm">
+              </Button> */}
+              <Badge variant="secondary" className="text-lg px-4 py-2 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] shadow-sm">
                 <Users className="h-4 w-4 mr-2" />
                 {totalLeads} Total Leads
               </Badge>
@@ -210,7 +210,7 @@ export default function SalesPage() {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
-            <Card className="bg-white shadow-sm border-0">
+            <Card className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] shadow-sm border-0">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -224,7 +224,7 @@ export default function SalesPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white shadow-sm border-0">
+            <Card className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] shadow-sm border-0">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -238,7 +238,7 @@ export default function SalesPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white shadow-sm border-0">
+            <Card className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] shadow-sm border-0">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -252,7 +252,7 @@ export default function SalesPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white shadow-sm border-0">
+            <Card className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] shadow-sm border-0">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -269,7 +269,7 @@ export default function SalesPage() {
         </div>
 
         {/* Filters and Search */}
-        <Card className="mb-6 bg-white shadow-sm border-0">
+        <Card className="mb-6 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] shadow-sm border-0">
           <CardContent className="p-4">
             <div className="flex flex-col lg:flex-row gap-4">
               <div className="flex-1">
@@ -288,7 +288,7 @@ export default function SalesPage() {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gradient-to-br from-[#A10A0C] to-[#3B0404]"
                 >
                   <option value="newest">Newest First</option>
                   <option value="oldest">Oldest First</option>
@@ -302,13 +302,13 @@ export default function SalesPage() {
 
         {/* Main Content */}
         {fetching ? (
-          <div className="flex flex-col items-center justify-center py-16 bg-white rounded-lg shadow-sm">
+          <div className="flex flex-col items-center justify-center py-16 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-lg shadow-sm">
             <CircularProgress size={48} />
             <p className="mt-4 text-lg text-gray-600">Loading tractor leads...</p>
             <p className="text-sm text-gray-500">Please wait while we fetch your data</p>
           </div>
         ) : sortedLeads.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-lg shadow-sm">
+          <div className="text-center py-16 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-lg shadow-sm">
             <div className="mx-auto h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
               <Tractor className="h-12 w-12 text-gray-400" />
             </div>
@@ -372,7 +372,7 @@ function TractorLeadCard({ lead }: { lead: ApiTractorLead }) {
   const isHighValue = tractorPrice > 1000000
 
   return (
-    <Card className="group hover:shadow-xl transition-all duration-300 bg-white border-0 shadow-sm hover:-translate-y-1">
+    <Card className="group hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] border-0 shadow-sm hover:-translate-y-1">
       <CardHeader className="pb-4">
         <div className="flex items-start gap-4">
           <div className="relative">
@@ -626,7 +626,7 @@ function ContactLeadForm({ lead }: { lead: ApiTractorLead }) {
               name="contactMethod"
               value={formData.contactMethod}
               onChange={handleInputChange}
-              className="w-full p-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full p-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gradient-to-br from-[#A10A0C] to-[#3B0404]"
             >
               <option value="email">Email</option>
               <option value="phone">Phone</option>

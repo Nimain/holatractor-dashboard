@@ -154,7 +154,7 @@ export default function DealerDashboard() {
         {/* Left content */}
         <div className="p-6 bg-gray-50 min-h-screen">
           {/* Hero Section */}
-          <div className="bg-[#7C5CFC] rounded-3xl p-8 mb-8 text-white relative overflow-hidden">
+          <div className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-3xl p-8 mb-8 text-white relative overflow-hidden">
             <div className="absolute right-0 top-0 w-1/2 h-full opacity-20">
               <div className="absolute right-[-100px] top-1/2 transform -translate-y-1/2 w-[400px] h-[400px] border border-white/20 rounded-full" />
               <div className="absolute right-[-50px] top-1/2 transform -translate-y-1/2 w-[300px] h-[300px] border border-white/20 rounded-full" />
@@ -170,21 +170,21 @@ export default function DealerDashboard() {
 
           {/* Store Progress */}
           <div className="flex gap-6 mb-8 overflow-x-auto pb-4 scrollbar-hide">
-            <div className="flex items-center gap-4 p-4 bg-white rounded-xl shadow-sm min-w-[240px]">
+            <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-xl shadow-sm min-w-[240px]">
               <div className="p-3 bg-blue-50 rounded-xl">
                 <div className="text-blue-600 font-medium">Total Stores</div>
               </div>
               <div className="text-sm text-gray-500">{stores.length}</div>
               <MoreHorizontal size={20} className="text-gray-400 ml-auto cursor-pointer" />
             </div>
-            <div className="flex items-center gap-4 p-4 bg-white rounded-xl shadow-sm min-w-[240px]">
+            <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-xl shadow-sm min-w-[240px]">
               <div className="p-3 bg-green-50 rounded-xl">
                 <div className="text-green-600 font-medium">Active</div>
               </div>
               <div className="text-sm text-gray-500">{stores.length}</div>
               <MoreHorizontal size={20} className="text-gray-400 ml-auto cursor-pointer" />
             </div>
-            <div className="flex items-center gap-4 p-4 bg-white rounded-xl shadow-sm min-w-[240px]">
+            <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-xl shadow-sm min-w-[240px]">
               <div className="p-3 bg-purple-50 rounded-xl">
                 <div className="text-purple-600 font-medium">Inventory</div>
               </div>
@@ -216,7 +216,7 @@ export default function DealerDashboard() {
                 {stores.map((store) => (
                   <div
                     key={store.id}
-                    className="bg-white rounded-xl overflow-hidden shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                    className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-xl overflow-hidden shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                     onClick={() => router.push(`/dealer/store/${store.id}`)}
                   >
                     <div className="relative">
@@ -347,7 +347,7 @@ export default function DealerDashboard() {
         </div>
 
         {/* Right content */}
-        <div className="p-6 bg-white w-[98%] rounded-2xl">
+        <div className="p-6 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] w-[98%] rounded-2xl h-[130vh]">
           <div className="text-center mb-8">
             <div className="relative inline-block">
               <div className="w-20 h-20 rounded-full bg-[#F5F1FF] flex items-center justify-center relative">
