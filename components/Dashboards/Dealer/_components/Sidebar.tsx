@@ -4,78 +4,96 @@ import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ChevronDown, Menu } from 'lucide-react'
+import { 
+  ChevronDown, 
+  Menu, 
+  Home,
+  Store,
+  Users,
+  TrendingUp,
+  DollarSign,
+  FileText,
+  Megaphone,
+  Bell,
+  Settings,
+  Wrench,
+  Calendar,
+  BookOpen,
+  Package,
+  Target,
+  BarChart,
+  Zap,
+  Inbox,
+  AlertTriangle,
+  Shield,
+  Link as LinkIcon,
+  MessageSquare,
+  Ticket
+} from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import HolaTractor from "../../../../assets/traclog.png"
 
 const navigationItems = [
-  { icon: '🔴', label: 'Dashboard', href: '/dealer' },
-  // { icon: '🌾', label: 'Farms', href: '/farms' },
-  // { icon: '💼', label: 'Business', href: '/business' },
+  { icon: Home, label: 'Dashboard', href: '/dealer' },
+  { icon: Store, label: 'Store', href: '/dealer/viewstore' },
 ]
 
 const dropdownSections = [
   {
-    icon: '🏪',
-    label: 'Store',
-    href: '/dealer/viewstore'
-  },
-  {
-    icon: '👥',
+    icon: Users,
     label: 'Customer',
     items: [
-      { icon: '📋', label: 'Customer List', href: '/dealer/customer'},
-      { icon: '🎫', label: 'Support Tickets', href: '/demo' },
-      { icon: '💬', label: 'Feedback', href: '/demo' }
-    ]
-  },
-   {
-    icon: '🚜',
-    label: 'Tractor Repair',
-    items: [
-      { icon: '📅', label: 'Schedule Repair', href: '/demo' },
-      { icon: '📝', label: 'Maintenance Log', href: '/demo' },
-      { icon: '🔧', label: 'Parts Inventory', href: '/demo' }
+      { icon: FileText, label: 'Customer List', href: '/dealer/customer'},
+      { icon: Ticket, label: 'Support Tickets', href: '/demo' },
+      { icon: MessageSquare, label: 'Feedback', href: '/demo' }
     ]
   },
   {
-    icon: '📈',
+    icon: TrendingUp,
     label: 'Leads',
     items: [
-        { icon: '💰', label: 'Sales', href: '/dealer/sells' },
-      { icon: '🆕', label: 'Lease', href: '/dealer/leads' },
-      { icon: '🎯', label: 'Lead Scoring', href: '/demo' },
-      { icon: '📊', label: 'Conversion Rates', href: '/demo' }
+      { icon: DollarSign, label: 'Sales', href: '/dealer/sells' },
+      { icon: FileText, label: 'Lease', href: '/dealer/leads' },
+      { icon: Target, label: 'Lead Scoring', href: '/demo' },
+      { icon: BarChart, label: 'Conversion Rates', href: '/demo' }
     ]
   },
   {
-    icon: '📢',
+    icon: Megaphone,
     label: 'Marketing',
     items: [
-      { icon: '🚀', label: 'Campaigns', href: '/demo' },
-      { icon: '📊', label: 'Analytics', href: '/demo' },
-      { icon: '⚡', label: 'Automation', href: '/demo' }
+      { icon: Zap, label: 'Campaigns', href: '/demo' },
+      { icon: BarChart, label: 'Analytics', href: '/demo' },
+      { icon: Settings, label: 'Automation', href: '/demo' }
     ]
   },
   {
-    icon: '🔔',
+    icon: Bell,
     label: 'Notifications',
     items: [
-      { icon: '📬', label: 'All Notifications', href: '/demo' },
-      { icon: '⚙️', label: 'Settings', href: '/demo' },
-      { icon: '🚨', label: 'Alerts', href: '/demo' }
+      { icon: Inbox, label: 'All Notifications', href: '/demo' },
+      { icon: Settings, label: 'Settings', href: '/demo' },
+      { icon: AlertTriangle, label: 'Alerts', href: '/demo' }
     ]
   },
   {
-    icon: '⚙️',
+    icon: Settings,
     label: 'Settings',
     items: [
-      { icon: '🔧', label: 'General', href: '/demo' },
-      { icon: '🔒', label: 'Security', href: '/demo' },
-      { icon: '🔗', label: 'Integrations', href: '/demo' }
+      { icon: Settings, label: 'General', href: '/demo' },
+      { icon: Shield, label: 'Security', href: '/demo' },
+      { icon: LinkIcon, label: 'Integrations', href: '/demo' }
     ]
   },
- 
+  {
+    icon: Wrench,
+    label: 'Repairs',
+    items: [
+      { icon: Calendar, label: 'Schedule Repair', href: '/demo' },
+      { icon: BookOpen, label: 'Maintenance Log', href: '/demo' },
+      { icon: Package, label: 'Parts Inventory', href: '/demo' }
+    ]
+  },
 ]
 
 export default function Sidebar() {
@@ -129,121 +147,157 @@ export default function Sidebar() {
 
   return (
     <aside className={`bg-white shadow-lg transition-all duration-300 flex flex-col h-screen ${
-      isExpanded ? 'w-64' : 'w-16'
+      isExpanded ? 'w-80' : 'w-20'
     }`}>
-      <div className="px-2 py-4 border-b border-gray-100">
-        <Image
-          src={HolaTractor}
-          alt="Hola Tractor"
-          width={isExpanded ? 150 : 40}
-          height={40}
-          className="mx-auto transition-all duration-300"
-        />
+      {/* Logo Section */}
+      <div className="px-6 py-6 border-b border-red-100">
+        <div className="flex items-center justify-center">
+          <Image
+            src={HolaTractor}
+            alt="Hola Tractor"
+            width={isExpanded ? 150 : 40}
+            height={40}
+            className="transition-all duration-300"
+          />
+        </div>
       </div>
-      <div className="flex justify-center p-3 border-b border-gray-100">
+
+      {/* Toggle Button */}
+      <div className="flex justify-center p-4 border-b border-red-100">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="hover:bg-gray-100 p-2 rounded-lg transition-colors duration-200"
+          className="hover:bg-red-50 p-3 rounded-lg transition-colors duration-200"
         >
-          <Menu className="h-5 w-5 text-gray-600" />
+          <Menu className="h-6 w-6 text-[#F91F1F]" />
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
-        <nav className="mt-4 space-y-0.5">
-          {navigationItems.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={`flex items-center px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors duration-200 ${
-                isActiveRoute(item.href) ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600' : ''
-              }`}
-            >
-              <span className="text-xl mr-3">{item.icon}</span>
-              {isExpanded && <span className="text-sm font-medium">{item.label}</span>}
-            </Link>
-          ))}
-
-          <div className="pt-3">
-            {dropdownSections.map((section) => (
-              <div key={section.label} className="relative">
-                <Collapsible
-                  open={openSections.includes(section.label)}
-                  onOpenChange={() => toggleSection(section.label)}
+      {/* Navigation */}
+      <div className="flex-1 overflow-y-auto">
+        <nav className="py-4 px-4">
+          {/* Main Navigation Items */}
+          {navigationItems.map((item, index) => {
+            const IconComponent = item.icon
+            const isActive = isActiveRoute(item.href)
+            return (
+              <div key={item.label}>
+                <Link
+                  href={item.href}
+                  className={`flex items-center px-4 py-4 rounded-xl transition-all duration-200 mb-2 ${
+                    isActive 
+                      ? 'bg-[#F91F1F] text-white shadow-lg' 
+                      : 'text-[#F91F1F] hover:bg-red-50'
+                  }`}
                 >
-                  <CollapsibleTrigger className={`flex items-center justify-between w-full px-4 py-2.5 hover:bg-gray-50 transition-colors duration-200 ${
-                    openSections.includes(section.label) || isSectionActive(section) ? 'bg-gray-50' : ''
-                  }`}>
-                    <div className="flex items-center min-w-0">
-                      <span className={`text-xl ${!isExpanded && 'mx-auto'}`}>{section.icon}</span>
-                      {isExpanded && (
-                        <span className={`ml-3 text-sm font-medium truncate ${
-                          isSectionActive(section) ? 'text-blue-600' : 'text-gray-700'
-                        }`}>
-                          {section.label}
-                        </span>
-                      )}
-                    </div>
-                    {isExpanded && section.items && (
-                      <ChevronDown
-                        className={`w-4 h-4 text-gray-400 transition-transform duration-200 flex-shrink-0 
-                          ${openSections.includes(section.label) ? 'transform rotate-180' : ''}`}
-                      />
-                    )}
-                  </CollapsibleTrigger>
-                  
-                  {/* Handle sections with direct href (like Store) */}
-                  {section.href && !section.items && (
-                    <Link 
-                      href={section.href}
-                      className={`flex items-center px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors duration-200 ${
-                        isActiveRoute(section.href) ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600' : ''
-                      }`}
-                    >
-                      <span className="text-xl mr-3">{section.icon}</span>
-                      {isExpanded && <span className="text-sm font-medium">{section.label}</span>}
-                    </Link>
+                  <IconComponent className="h-6 w-6 flex-shrink-0" />
+                  {isExpanded && (
+                    <span className="ml-4 font-semibold text-base">
+                      {item.label}
+                    </span>
                   )}
-
-                  {section.items && (
-                    <>
-                      {isExpanded ? (
-                        <CollapsibleContent className="bg-gray-50/50">
-                          {section.items.map((item) => (
-                            <Link
-                              key={item.label}
-                              href={item.href}
-                              className={`flex items-center px-11 py-2 text-sm text-gray-600 hover:bg-gray-100 transition-colors duration-200 ${
-                                isActiveRoute(item.href) ? 'bg-blue-100 text-blue-600 border-r-2 border-blue-600' : ''
-                              }`}
-                            >
-                              <span className="text-lg mr-2">{item.icon}</span>
-                              {item.label}
-                            </Link>
-                          ))}
-                        </CollapsibleContent>
-                      ) : (
-                        <div className="border-l border-gray-200 ml-8 my-1">
-                          {section.items.map((item) => (
-                            <Link
-                              key={item.label}
-                              href={item.href}
-                              className={`flex items-center justify-center py-2.5 hover:bg-gray-50 transition-colors duration-200 ${
-                                isActiveRoute(item.href) ? 'bg-blue-50 border-r-2 border-blue-600' : ''
-                              }`}
-                            >
-                              <span className={`text-lg ${isActiveRoute(item.href) ? 'text-blue-600' : ''}`}>
-                                {item.icon}
-                              </span>
-                            </Link>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </Collapsible>
+                </Link>
+                {index < navigationItems.length - 1 && (
+                  <div className="mx-4 my-3 h-px bg-red-100"></div>
+                )}
               </div>
-            ))}
+            )
+          })}
+
+          {/* Dropdown Sections */}
+          <div className="mt-4">
+            {dropdownSections.map((section, sectionIndex) => {
+              const IconComponent = section.icon
+              const isOpen = openSections.includes(section.label)
+              const isActive = isSectionActive(section)
+              
+              return (
+                <div key={section.label} className="mb-2">
+                  <Collapsible
+                    open={isOpen}
+                    onOpenChange={() => toggleSection(section.label)}
+                  >
+                    <CollapsibleTrigger className={`flex items-center justify-between w-full px-4 py-4 rounded-xl transition-all duration-200 ${
+                      isOpen || isActive 
+                        ? 'bg-red-50 text-[#F91F1F]' 
+                        : 'text-[#F91F1F] hover:bg-red-50'
+                    }`}>
+                      <div className="flex items-center min-w-0 flex-1">
+                        <IconComponent className="h-6 w-6 flex-shrink-0" />
+                        {isExpanded && (
+                          <span className="ml-4 font-semibold text-base truncate">
+                            {section.label}
+                          </span>
+                        )}
+                      </div>
+                      {isExpanded && section.items && (
+                        <ChevronDown
+                          className={`w-5 h-5 transition-transform duration-200 flex-shrink-0 ml-3 ${
+                            isOpen ? 'transform rotate-180' : ''
+                          }`}
+                        />
+                      )}
+                    </CollapsibleTrigger>
+                    
+                    {section.items && (
+                      <>
+                        {isExpanded ? (
+                          <CollapsibleContent className="mt-2">
+                            <div className="ml-8 border-l-2 border-red-200 pl-4">
+                              {section.items.map((item) => {
+                                const ItemIconComponent = item.icon
+                                const isItemActive = isActiveRoute(item.href)
+                                return (
+                                  <Link
+                                    key={item.label}
+                                    href={item.href}
+                                    className={`flex items-center px-4 py-3 rounded-lg transition-all duration-200 mb-1 ${
+                                      isItemActive 
+                                        ? 'bg-[#F91F1F] text-white shadow-md' 
+                                        : 'text-[#F91F1F] hover:bg-red-50'
+                                    }`}
+                                  >
+                                    <ItemIconComponent className="h-5 w-5 flex-shrink-0" />
+                                    <span className="ml-3 font-medium text-sm truncate">
+                                      {item.label}
+                                    </span>
+                                  </Link>
+                                )
+                              })}
+                            </div>
+                          </CollapsibleContent>
+                        ) : (
+                          isOpen && (
+                            <div className="mt-1">
+                              {section.items.map((item) => {
+                                const ItemIconComponent = item.icon
+                                const isItemActive = isActiveRoute(item.href)
+                                return (
+                                  <Link
+                                    key={item.label}
+                                    href={item.href}
+                                    className={`flex items-center justify-center py-2 mb-1 rounded-lg transition-all duration-200 ${
+                                      isItemActive 
+                                        ? 'bg-[#F91F1F] text-white shadow-md' 
+                                        : 'text-[#F91F1F] hover:bg-red-50'
+                                    }`}
+                                    title={item.label}
+                                  >
+                                    <ItemIconComponent className="h-4 w-4" />
+                                  </Link>
+                                )
+                              })}
+                            </div>
+                          )
+                        )}
+                      </>
+                    )}
+                  </Collapsible>
+                  {sectionIndex < dropdownSections.length - 1 && (
+                    <div className="mx-4 my-3 h-px bg-red-100"></div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </nav>
       </div>

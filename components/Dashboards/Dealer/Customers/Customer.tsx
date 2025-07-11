@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import * as XLSX from 'xlsx'
+
 interface Owner {
   id: number
   name: string
@@ -14,6 +15,7 @@ interface Owner {
   status: 'Active' | 'Inactive'
   avatar: string
 }
+
 const initialOwners: Owner[] = [
   { id: 1, name: "John Doe", email: "john@example.com", mobile: "123-456-7890", gender: "Male", status: "Active", avatar: "/avatars/01.png" },
   { id: 2, name: "Jane Smith", email: "jane@example.com", mobile: "987-654-3210", gender: "Female", status: "Inactive", avatar: "/avatars/02.png" },
@@ -21,9 +23,12 @@ const initialOwners: Owner[] = [
   { id: 4, name: "Alice Brown", email: "alice@example.com", mobile: "789-012-3456", gender: "Female", status: "Active", avatar: "/avatars/04.png" },
   { id: 5, name: "Charlie Wilson", email: "charlie@example.com", mobile: "321-654-0987", gender: "Male", status: "Inactive", avatar: "/avatars/05.png" },
 ]
+
 function CustomTooltip({ text, maxLength }: { text: string; maxLength: number }) {
   const [isHovered, setIsHovered] = useState(false);
+  
   if (text.length <= maxLength) return <span>{text}</span>;
+  
   return (
     <div
       className="relative inline-block cursor-pointer"
@@ -39,25 +44,29 @@ function CustomTooltip({ text, maxLength }: { text: string; maxLength: number })
     </div>
   );
 }
+
 const TableHeader = ({ children, sortable = false }: { children: React.ReactNode; sortable?: boolean }) => (
-  <th className="px-6 py-4 bg-gray-50 text-left text-sm font-semibold text-gray-900">
+  <th className="px-6 py-4 text-left text-sm font-semibold text-white">
     <div className="flex items-center space-x-2">
       <span>{children}</span>
       {sortable && (
-        <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100">
+        <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 text-white hover:bg-white/10">
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       )}
     </div>
   </th>
 );
+
 export default function EnhancedOwnerTable() {
   const [owners, setOwners] = useState<Owner[]>(initialOwners)
   const [searchTerm, setSearchTerm] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return;
+
     const reader = new FileReader()
     reader.onload = (e) => {
       try {
@@ -82,17 +91,19 @@ export default function EnhancedOwnerTable() {
     }
     reader.readAsArrayBuffer(file)
   }
+
   const filteredOwners = owners.filter(owner =>
     Object.values(owner)
       .join(' ')
       .toLowerCase()
       .includes(searchTerm.toLowerCase())
   )
+
   return (
     <div className="min-h-screen w-full bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-[#F91F1F]">
             Customers ({owners.length})
           </h1>
           
@@ -102,21 +113,21 @@ export default function EnhancedOwnerTable() {
               <Input
                 type="text"
                 placeholder="Search customers..."
-                className="pl-10 w-64"
+                className="pl-10 w-64 shadow-md focus:shadow-lg transition-shadow duration-200"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             
             <Button 
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-[#F91F1F] text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
               onClick={() => alert('Add customer feature coming soon')}
             >
               <Plus className="mr-2 h-4 w-4" /> Add Customer
             </Button>
             
             <Button 
-              className="bg-orange-600 hover:bg-orange-700 text-white"
+              className="bg-[#F76A1E] text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload className="mr-2 h-4 w-4" /> Import Excel
@@ -131,10 +142,11 @@ export default function EnhancedOwnerTable() {
             />
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow-xl overflow-hidden">
+
+        <div className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-lg shadow-xl overflow-hidden">
           <div className="overflow-x-auto w-full">
             <table className="w-full divide-y divide-gray-200">
-              <thead>
+              <thead className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404]">
                 <tr className="group">
                   <TableHeader>ID</TableHeader>
                   <TableHeader sortable>Name</TableHeader>
@@ -145,17 +157,17 @@ export default function EnhancedOwnerTable() {
                 </tr>
               </thead>
               
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200 text-white bg-gradient-to-br from-[#A10A0C] to-[#3B0404]">
                 {filteredOwners.map((owner, index) => (
                   <tr 
                     key={owner.id}
-                    className="hover:bg-gray-50 transition-colors duration-150"
+                    className="hover:bg-white/10 transition-colors duration-150"
                   >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                       {index + 1}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-3 text-[#FFC8C8]">
                         <Avatar className="h-8 w-8">
                           <AvatarImage src={owner.avatar} alt={owner.name} />
                           <AvatarFallback>{owner.name.charAt(0)}</AvatarFallback>
@@ -166,20 +178,20 @@ export default function EnhancedOwnerTable() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <CustomTooltip text={owner.email} maxLength={25} />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                       {owner.mobile}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                       {owner.gender}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                      <button className={`inline-flex items-center justify-center rounded-[5px] px-4 py-2 text-xs font-semibold text-white w-20 shadow-md hover:shadow-lg transition-all duration-200 ${
                         owner.status === 'Active' 
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
+                          ? 'bg-[#F76A1E] hover:bg-[#E55A0E]'
+                          : 'bg-[#666666] hover:bg-[#555555]'
                       }`}>
                         {owner.status}
-                      </span>
+                      </button>
                     </td>
                   </tr>
                 ))}
