@@ -182,7 +182,7 @@ export default function SalesPage() {
   ).length
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 text-white">
       <div className="container mx-auto p-6">
         {/* Header Section */}
         <div className="mb-8">
@@ -201,7 +201,7 @@ export default function SalesPage() {
                 <RefreshCw className={`h-4 w-4 mr-2 ${fetching ? "animate-spin" : ""}`} />
                 Refresh
               </Button> */}
-              <Badge variant="secondary" className="text-lg px-4 py-2 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] shadow-sm">
+              <Badge variant="secondary" className="text-lg px-4 py-2 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] shadow-sm text-white">
                 <Users className="h-4 w-4 mr-2" />
                 {totalLeads} Total Leads
               </Badge>
@@ -214,8 +214,8 @@ export default function SalesPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Total Leads</p>
-                    <p className="text-2xl font-bold text-gray-900">{totalLeads}</p>
+                    <p className="text-sm font-medium text-white">Total Leads</p>
+                    <p className="text-2xl font-bold text-white">{totalLeads}</p>
                   </div>
                   <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
                     <Users className="h-6 w-6 text-blue-600" />
@@ -228,8 +228,8 @@ export default function SalesPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Total Value</p>
-                    <p className="text-2xl font-bold text-gray-900">${(totalValue / 100000).toFixed(1)}L</p>
+                    <p className="text-sm font-medium text-white">Total Value</p>
+                    <p className="text-2xl font-bold text-white">${(totalValue / 100000).toFixed(1)}L</p>
                   </div>
                   <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
                     <DollarSign className="h-6 w-6 text-green-600" />
@@ -242,8 +242,8 @@ export default function SalesPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Avg. Value</p>
-                    <p className="text-2xl font-bold text-gray-900">${(avgValue / 100000).toFixed(1)}L</p>
+                    <p className="text-sm font-medium text-white">Avg. Value</p>
+                    <p className="text-2xl font-bold text-white">${(avgValue / 100000).toFixed(1)}L</p>
                   </div>
                   <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
                     <TrendingUp className="h-6 w-6 text-purple-600" />
@@ -256,8 +256,8 @@ export default function SalesPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Urgent Leads</p>
-                    <p className="text-2xl font-bold text-gray-900">{urgentLeads}</p>
+                    <p className="text-sm font-medium text-white">Urgent Leads</p>
+                    <p className="text-2xl font-bold text-white">{urgentLeads}</p>
                   </div>
                   <div className="h-12 w-12 bg-red-100 rounded-lg flex items-center justify-center">
                     <Target className="h-6 w-6 text-red-600" />
@@ -279,7 +279,7 @@ export default function SalesPage() {
                     placeholder="Search by name, city, or email..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 border-gray-200"
+                    className="pl-10 border-gray-200 text-[#F91F1F] placeholder:text-[#F91F1F] bg-gradient-to-br from-[#A10A0C] to-[#3B0404] "
                   />
                 </div>
               </div>
@@ -288,7 +288,7 @@ export default function SalesPage() {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gradient-to-br from-[#A10A0C] to-[#3B0404]"
+                  className="px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] text-[#F91F1F] "
                 >
                   <option value="newest">Newest First</option>
                   <option value="oldest">Oldest First</option>
@@ -304,18 +304,18 @@ export default function SalesPage() {
         {fetching ? (
           <div className="flex flex-col items-center justify-center py-16 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-lg shadow-sm">
             <CircularProgress size={48} />
-            <p className="mt-4 text-lg text-gray-600">Loading tractor leads...</p>
-            <p className="text-sm text-gray-500">Please wait while we fetch your data</p>
+            <p className="mt-4 text-lg text-white">Loading tractor leads...</p>
+            <p className="text-sm text-white">Please wait while we fetch your data</p>
           </div>
         ) : sortedLeads.length === 0 ? (
           <div className="text-center py-16 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-lg shadow-sm">
             <div className="mx-auto h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
               <Tractor className="h-12 w-12 text-gray-400" />
             </div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-2xl font-semibold text-white mb-2">
               {searchTerm ? "No matching leads found" : "No leads available"}
             </h2>
-            <p className="text-gray-500 mb-6 max-w-md mx-auto">
+            <p className="text-white mb-6 max-w-md mx-auto">
               {searchTerm 
                 ? "Try adjusting your search terms or filters to find what you're looking for."
                 : "Check back later for new tractor inquiries, or refresh to load the latest data."
@@ -390,12 +390,12 @@ function TractorLeadCard({ lead }: { lead: ApiTractorLead }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between">
               <div className="min-w-0 flex-1">
-                <CardTitle className="text-lg font-semibold text-gray-900 truncate">
+                <CardTitle className="text-lg font-semibold text-white truncate">
                   {leadName}
                 </CardTitle>
                 <div className="flex items-center gap-1 mt-1">
                   <MapPin className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                  <span className="text-sm text-gray-600 truncate">{userCity}</span>
+                  <span className="text-sm text-white truncate">{userCity}</span>
                 </div>
               </div>
               
@@ -417,7 +417,7 @@ function TractorLeadCard({ lead }: { lead: ApiTractorLead }) {
         <div className="grid grid-cols-1 gap-3">
           <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
             <Phone className="h-4 w-4 text-blue-600 flex-shrink-0" />
-            <span className="text-sm font-medium text-gray-900">{userMobile}</span>
+            <span className="text-sm font-medium text-white">{userMobile}</span>
           </div>
           
           <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
@@ -445,16 +445,16 @@ function TractorLeadCard({ lead }: { lead: ApiTractorLead }) {
         {/* Tractor Details */}
         {lead.tractor && (
           <div className="border-t pt-4 mt-4">
-            <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
               <Tractor className="h-4 w-4" />
               Tractor Interest
             </h4>
             
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Price:</span>
+                <span className="text-sm text-white">Price:</span>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-lg text-gray-900">
+                  <span className="font-bold text-lg text-white">
                     ${(tractorPrice / 100000).toFixed(1)}L
                   </span>
                   {tractorDiscount > 0 && (
@@ -466,24 +466,24 @@ function TractorLeadCard({ lead }: { lead: ApiTractorLead }) {
               </div>
               
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Monthly EMI:</span>
-                <span className="font-semibold text-gray-900">
+                <span className="text-sm text-white">Monthly EMI:</span>
+                <span className="font-semibold text-white">
                   ${tractorMonthlyPrice.toLocaleString()}
                 </span>
               </div>
               
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Condition:</span>
+                <span className="text-sm text-white">Condition:</span>
                 <Badge variant={tractorListingType === "New" ? "default" : "secondary"}>
                   {tractorListingType}
                 </Badge>
               </div>
               
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Rating:</span>
+                <span className="text-sm text-white">Rating:</span>
                 <div className="flex items-center gap-1">
                   <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm font-semibold text-white">
                     {tractorRating.toFixed(1)}
                   </span>
                 </div>

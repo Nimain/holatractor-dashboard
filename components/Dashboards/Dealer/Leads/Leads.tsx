@@ -1,23 +1,14 @@
 "use client"
+
 import { useState, useEffect } from "react"
-import { MoreHorizontal, Filter, Search, Calendar, ChevronDown } from "lucide-react"
+import { Search, ChevronDown, UserIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { RentalDetailsModal } from "@/components/Dashboards/Dealer/Modals/RentalDetailsModal"
 import { useCookie } from "next-cookie"
 import { renderInstance } from "@/utils/Axios/RenderInstance"
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages"
 import { CircularProgress } from "@mui/material"
-
-// Define user interface to match your Header component
-interface User {
-  userId: string
-  image: string
-  name: string
-  email: string
-  email_varified: boolean
-}
 
 // Define interfaces that match the API response
 interface ApiTractor {
@@ -118,9 +109,8 @@ export default function EnhancedTractorRentalTable() {
   const [selectedRental, setSelectedRental] = useState<TractorRental | null>(null)
   const [fetching, setFetching] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-
   const { cookie } = useCookie()
-  const user: User = cookie?.get("user")
+  const dealerUser = cookie?.get("user")
   const access_token = cookie?.get("access_token")
 
   // Transform API data to table format with rich details
@@ -172,22 +162,21 @@ export default function EnhancedTractorRentalTable() {
 
   // Fetch tractor lease leads
   function fetchTractorLeaseLeads() {
-    if (!user?.userId) {
+    if (!dealerUser?.userId) {
       errorMessage("User not found. Please login again.")
-      console.log("User or userId is missing:", { user, userId: user?.userId })
+      console.log("User or userId is missing:", { dealerUser, userId: dealerUser?.userId })
       return
     }
 
     setFetching(true)
     renderInstance
-      .get(`/dealer/store/tractorleaselead/${user.userId}`, {
+      .get(`/dealer/store/tractorleaselead/${dealerUser.userId}`, {
         headers: {
           Authorization: `Bearer ${access_token}`,
         },
       })
       .then((res) => {
         console.log("API Response:", res.data)
-
         // Handle different response structures
         let leadsData = []
         if (Array.isArray(res.data)) {
@@ -209,7 +198,6 @@ export default function EnhancedTractorRentalTable() {
       .catch((err) => {
         console.error("Error fetching lease leads:", err)
         console.error("Error response:", err.response?.data)
-
         if (err.response?.status === 401) {
           errorMessage("Unauthorized. Please login again.")
         } else if (err.response?.status === 404) {
@@ -227,12 +215,12 @@ export default function EnhancedTractorRentalTable() {
   }
 
   useEffect(() => {
-    if (user?.userId && access_token) {
+    if (dealerUser?.userId && access_token) {
       fetchTractorLeaseLeads()
     } else {
-      console.log("Missing user or token:", { userId: user?.userId, hasToken: !!access_token })
+      console.log("Missing user or token:", { userId: dealerUser?.userId, hasToken: !!access_token })
     }
-  }, [user?.userId, access_token])
+  }, [dealerUser?.userId, access_token])
 
   // Enhanced search functionality
   const filteredRentals = rentals.filter((rental) => {
@@ -245,20 +233,9 @@ export default function EnhancedTractorRentalTable() {
 
     const searchString =
       `${customerName} ${customerEmail} ${rental.tractorNameModel} ${tractorBrand} ${tractorModel} ${tractorName} ${rental.status} ${rental.duration}`.toLowerCase()
+
     return searchString.includes(searchTerm.toLowerCase())
   })
-
-  const toggleSelectAll = () => {
-    if (selectedRentals.length === filteredRentals.length) {
-      setSelectedRentals([])
-    } else {
-      setSelectedRentals(filteredRentals.map((rental) => rental.id))
-    }
-  }
-
-  const toggleSelectRental = (id: number) => {
-    setSelectedRentals((prev) => (prev.includes(id) ? prev.filter((rentalId) => rentalId !== id) : [...prev, id]))
-  }
 
   const openModal = (rental: TractorRental) => {
     setSelectedRental(rental)
@@ -278,83 +255,58 @@ export default function EnhancedTractorRentalTable() {
   }
 
   return (
-    <div className="w-full p-1">
-      {/* First Row Header */}
-      <div className="flex items-center justify-between p-4 bg-white rounded-t-lg">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" className="h-10 px-4 bg-white border shadow-sm rounded-lg flex items-center">
-            <Filter className="mr-2 h-4 w-4 text-gray-500" />
+    <div className="w-full">
+      {/* Top Header Section - Bright Red */}
+      <div className="bg-white px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button className="bg-[#F91F1F] hover:bg-red-700 text-white px-4 py-2 rounded-[5px] text-sm font-medium flex items-center gap-2">
             All Rentals
-            <ChevronDown className="ml-2 h-4 w-4 text-gray-400" />
+            <ChevronDown className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" className="h-10 px-4 bg-white border shadow-sm rounded-lg flex items-center">
-            <div className="mr-2 h-5 w-5 rounded-full bg-gray-100 flex items-center justify-center">
-              <div className="h-4 w-4 text-gray-500">👤</div>
-            </div>
-            Rented by
-            <ChevronDown className="ml-2 h-4 w-4 text-gray-400" />
+          <Button className="bg-[#F91F1F] hover:bg-red-700 text-white px-4 py-2 rounded-[5px] text-sm font-medium flex items-center gap-2">
+            <UserIcon className="h-4 w-4" />
+            Rented By
+            <ChevronDown className="h-4 w-4" />
           </Button>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-            <Input
-              placeholder="Search in the list..."
-              className="h-10 pl-10 pr-4 w-[360px] text-sm border shadow-sm rounded-lg"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <Button
-            variant="ghost"
-            className="h-10 w-10 bg-white border shadow-sm rounded-lg flex items-center justify-center"
-            onClick={fetchTractorLeaseLeads}
-            disabled={fetching}
-          >
-            <Calendar size={39} className="w-14 h-14 text-gray-500 text-3xl" />
-          </Button>
+
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-white border-[#F91F1F]" />
+          <Input
+            placeholder="Search in the List"
+            className="pl-12 pr-4 py-3 w-96 bg-[#F91F1F] border-0 rounded-full text-sm placeholder:text-white border-[#F91F1F] focus:ring-2 "
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
       </div>
 
-      {/* Second Row Header */}
-      <div className="flex items-center justify-between px-6 py-4 bg-white border-t">
-        <div className="flex items-center gap-4">
-          <h1 className="text-lg font-semibold">Total Rentals: {filteredRentals.length}</h1>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>Sort by</span>
-            <Button variant="ghost" className="text-blue-600 px-1 hover:bg-transparent hover:text-blue-700">
+      {/* Secondary Header - Same Red */}
+      <div className="bg-red-500 px-6 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-6">
+          <h1 className="text-white font-semibold text-lg">Total Rentals: {filteredRentals.length}</h1>
+          <div className="flex items-center gap-2 bg-white py-0 px-5 rounded-full">
+            <span className="text-[#F91F1F] text-sm">Sort By:</span>
+            <Button className="bg-transparent text-red-500 hover:bg-transparent px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
               Date
-              <ChevronDown className="ml-1 h-4 w-4" />
+              <ChevronDown className="h-4 w-4" />
             </Button>
           </div>
         </div>
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">Results</span>
-            <Button variant="ghost" className="text-gray-900 px-1 hover:bg-transparent">
-              {filteredRentals.length}
-              <ChevronDown className="ml-1 h-4 w-4" />
-            </Button>
-          </div>
 
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <div className="grid grid-cols-3 gap-0.5">
-              {[...Array(9)].map((_, i) => (
-                <div key={i} className="w-1 h-1 bg-gray-400 rounded-full" />
-              ))}
-            </div>
-          </Button>
-
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <MoreHorizontal className="h-5 w-5 text-gray-400" />
+        <div className="flex items-center gap-2">
+          <span className="text-white text-sm">Results</span>
+          <Button variant="ghost" className="text-white hover:bg-red-600 px-2 py-1 text-sm flex items-center gap-1">
+            {filteredRentals.length}
+            <ChevronDown className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
       {/* Table */}
-      <div className="px-0 bg-white">
+      <div className="overflow-hidden">
         {filteredRentals.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-lg shadow-sm">
+          <div className="text-center py-16 bg-white">
             <div className="mx-auto h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
               <div className="h-12 w-12 text-gray-400">🚜</div>
             </div>
@@ -372,127 +324,102 @@ export default function EnhancedTractorRentalTable() {
                   Clear Search
                 </Button>
               )}
-              <Button onClick={fetchTractorLeaseLeads}>Refresh Data</Button>
+              <Button onClick={fetchTractorLeaseLeads} className="bg-red-500 hover:bg-red-600">
+                Refresh Data
+              </Button>
             </div>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-gray-100 bottom-7">
-            <table className="w-full table-auto">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="w-[40px] px-4 py-3">
-                    <Checkbox
-                      checked={selectedRentals.length === filteredRentals.length && filteredRentals.length > 0}
-                      onCheckedChange={toggleSelectAll}
-                    />
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">SL NO</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">CUSTOMER NAME</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">TRACTOR NAME & MODEL</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">START DATE</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">LEASE PERIOD</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">MONTHLY COST</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">PAYMENT STATUS</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">LEASE STATUS</th>
-                  <th className="w-[40px]"></th>
+          <table className="w-full">
+            {/* Table Header - Red */}
+            <thead>
+              <tr className="bg-white">
+                <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">S.NO</th>
+                <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
+                  CUSTOMER NAME
+                </th>
+                <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
+                  TRACTOR NAME & MODEL
+                </th>
+                <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
+                  START DATE
+                </th>
+                <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
+                  LEASE PERIOD
+                </th>
+                <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
+                  MONTHLY COST
+                </th>
+                <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
+                  PAYMENT STATUS
+                </th>
+                <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
+                  LEASE STATUS
+                </th>
+              </tr>
+            </thead>
+            {/* Table Body - Dark Red/Maroon with White Text */}
+            <tbody>
+              {filteredRentals.map((rental, index) => (
+                <tr
+                  key={rental.id}
+                  className="bg-red-900 hover:bg-red-800 transition-colors cursor-pointer border-b border-red-800"
+                  onClick={() => openModal(rental)}
+                >
+                  <td className="px-4 py-4 text-white font-bold text-lg">{index + 1}</td>
+                  <td className="px-4 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center">
+                        <span className="text-sm font-bold text-red-900">
+                          {rental.originalData?.User?.first_name?.[0] || "H"}
+                          {rental.originalData?.User?.last_name?.[0] || ""}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-white">{rental.userId || "Holauser123"}</p>
+                        <p className="text-sm text-red-200">
+                          {rental.originalData?.User?.email || "Holauser123@gmail.com"}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div>
+                      <p className="font-semibold text-white">{rental.tractorNameModel || "MF 245 DI-50 HP"}</p>
+                      <p className="text-sm text-red-200">
+                        {rental.originalData?.Tractor?.TractorSpecification?.horsePower || "677"} HP - Medium Type
+                      </p>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div>
+                      <p className="font-semibold text-white">{rental.startDate || "Jun 30,2025"}</p>
+                      <p className="text-sm text-red-200">May 02,2025</p>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <span className="font-semibold text-white">{rental.duration || "One Month"}</span>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div>
+                      <p className="font-semibold text-white">${rental.cost?.toLocaleString() || "1200"}.5</p>
+                      <p className="text-sm text-red-200">-$50 Discount</p>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-500 text-white">
+                      {rental.paymentStatus || "Pending"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-4">
+                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-600 text-white">
+                      {rental.status || "Active"}
+                    </span>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredRentals.map((rental, index) => (
-                  <tr
-                    key={rental.id}
-                    className="hover:bg-gray-50/50 transition-colors cursor-pointer"
-                    onClick={() => openModal(rental)}
-                  >
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      <Checkbox
-                        checked={selectedRentals.includes(rental.id)}
-                        onCheckedChange={() => toggleSelectRental(rental.id)}
-                      />
-                    </td>
-                    <td className="px-4 py-3">{index + 1}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                          <span className="text-xs font-medium text-blue-600">
-                            {rental.originalData?.User?.first_name?.[0] || "U"}
-                            {rental.originalData?.User?.last_name?.[0] || "N"}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">{rental.userId}</p>
-                          <p className="text-xs text-gray-500">{rental.originalData?.User?.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div>
-                        <p className="font-medium text-sm">{rental.tractorNameModel}</p>
-                        <p className="text-xs text-gray-500">
-                          {rental.originalData?.Tractor?.TractorSpecification?.horsePower || "N/A"} HP •
-                          {rental.originalData?.Tractor?.TractorSpecification?.inventoryTractor?.type || "Unknown"} Type
-                        </p>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div>
-                        <p className="font-medium text-sm">{rental.startDate}</p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(rental.originalData?.createdAt || "").toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })}{" "}
-                          applied
-                        </p>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="font-medium">{rental.duration}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div>
-                        <p className="font-medium text-sm">${rental.cost.toLocaleString()}</p>
-                        {rental.originalData?.discount > 0 && (
-                          <p className="text-xs text-green-600">-${rental.originalData.discount} discount</p>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          rental.paymentStatus === "Paid"
-                            ? "bg-green-100 text-green-800"
-                            : rental.paymentStatus === "Pending"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {rental.paymentStatus}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          rental.status === "Active"
-                            ? "bg-blue-100 text-blue-800"
-                            : rental.status === "Completed"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {rental.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-gray-100">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 
