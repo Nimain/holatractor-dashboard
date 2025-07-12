@@ -140,7 +140,7 @@ export default function DealerDashboard() {
         </div>
         <div className="flex items-center gap-4">
           <button
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors duration-200"
+            className="flex items-center gap-2 px-4 py-2 bg-[#F91F1F] text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors duration-200"
             onClick={() => setIsModalOpen(true)}
           >
             <Store size={20} className="text-white" />
@@ -162,8 +162,8 @@ export default function DealerDashboard() {
             </div>
             <div className="text-sm uppercase tracking-wide mb-2">Dealer Dashboard</div>
             <h1 className="text-4xl font-bold mb-6 max-w-lg leading-tight">Manage Your Stores and Inventory</h1>
-            <button className="bg-black hover:bg-black/90 text-white px-6 py-3 rounded-full flex items-center gap-2 text-sm transition-colors">
-              View Analytics
+            <button className="bg-white hover:bg-white text-[#F91F1F] px-6 py-3 rounded-[5px] flex items-center gap-2 text-sm transition-colors">
+              Join Now
               <ChevronRight size={16} />
             </button>
           </div>
@@ -172,24 +172,24 @@ export default function DealerDashboard() {
           <div className="flex gap-6 mb-8 overflow-x-auto pb-4 scrollbar-hide">
             <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-xl shadow-sm min-w-[240px]">
               <div className="p-3 bg-blue-50 rounded-xl">
-                <div className="text-blue-600 font-medium">Total Stores</div>
+                <div className="text-[#F91F1F] font-medium">Total Stores</div>
               </div>
               <div className="text-sm text-gray-500">{stores.length}</div>
-              <MoreHorizontal size={20} className="text-gray-400 ml-auto cursor-pointer" />
+              {/* <MoreHorizontal size={20} className="text-gray-400 ml-auto cursor-pointer" /> */}
             </div>
             <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-xl shadow-sm min-w-[240px]">
               <div className="p-3 bg-green-50 rounded-xl">
-                <div className="text-green-600 font-medium">Active</div>
+                <div className="text-[#F91F1F] font-medium">Branding</div>
               </div>
               <div className="text-sm text-gray-500">{stores.length}</div>
-              <MoreHorizontal size={20} className="text-gray-400 ml-auto cursor-pointer" />
+              {/* <MoreHorizontal size={20} className="text-gray-400 ml-auto cursor-pointer" /> */}
             </div>
             <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-xl shadow-sm min-w-[240px]">
               <div className="p-3 bg-purple-50 rounded-xl">
-                <div className="text-purple-600 font-medium">Inventory</div>
+                <div className="text-[#F91F1F] font-medium">Front End</div>
               </div>
               <div className="text-sm text-gray-500">0 items</div>
-              <MoreHorizontal size={20} className="text-gray-400 ml-auto cursor-pointer" />
+              {/* <MoreHorizontal size={20} className="text-gray-400 ml-auto cursor-pointer" /> */}
             </div>
           </div>
 
@@ -199,7 +199,7 @@ export default function DealerDashboard() {
               <h2 className="text-xl font-bold">All Stores</h2>
               <div className="flex gap-2">
                 <button className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
-                  <ChevronLeft size={20} className="text-gray-600" />
+                  <ChevronLeft size={20} className="text-" />
                 </button>
                 <button className="p-2 rounded-full bg-[#7C5CFC] hover:bg-[#6B4FD9] text-white transition-colors">
                   <ChevronRight size={20} />
@@ -216,7 +216,7 @@ export default function DealerDashboard() {
                 {stores.map((store) => (
                   <div
                     key={store.id}
-                    className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-xl overflow-hidden shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                    className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-xl overflow-hidden shadow-sm cursor-pointer hover:shadow-md transition-shadow text-white"
                     onClick={() => router.push(`/dealer/store/${store.id}`)}
                   >
                     <div className="relative">
@@ -228,23 +228,23 @@ export default function DealerDashboard() {
                         className="w-full h-48 object-cover"
                       />
                       <button className="absolute top-4 right-4 p-2 rounded-full bg-white/80 hover:bg-white transition-colors">
-                        <Heart size={20} className="text-gray-600" />
+                        <Heart size={20} className="text-white" />
                       </button>
                     </div>
                     <div className="p-4">
                       {/* Store Name */}
-                      <h3 className="font-semibold mb-3 line-clamp-1 text-base">{store.name || "Unnamed Store"}</h3>
-                      
+                      <h3 className="font-semibold mb-3 line-clamp-1 text-base ">{store.name || "Unnamed Store"}</h3>
+
                       {/* Time and Days in organized layout */}
                       <div className="space-y-2 mb-3">
                         {/* Opening Hours */}
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-500 font-medium min-w-[45px]">Hours:</span>
-                          <span className="text-sm text-blue-600 font-medium">
+                          <span className="text-sm text- font-medium">
                             {formatTime(store.opening_time)} - {formatTime(store.closing_time)}
                           </span>
                         </div>
-                        
+
                         {/* Closing Days */}
                         {store.closing_days.length > 0 && store.closing_days[0] && (
                           <div className="flex items-center gap-2">
@@ -259,13 +259,13 @@ export default function DealerDashboard() {
                           </div>
                         )}
                       </div>
-                      
+
                       {/* Description with hover - max 2 lines */}
                       <div className="relative group mb-4">
-                        <p className="text-sm text-gray-600 leading-5 h-10 overflow-hidden">
+                        <p className="text-sm text- leading-5 h-10 overflow-hidden">
                           {store.description || "No description available"}
                         </p>
-                        
+
                         {/* Hover tooltip for full description */}
                         {store.description && store.description.length > 80 && (
                           <div className="absolute bottom-full left-0 right-0 mb-2 p-3 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20 pointer-events-none shadow-lg">
@@ -274,17 +274,17 @@ export default function DealerDashboard() {
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                            <Store size={16} className="text-gray-600" />
+                            <Store size={16} className="text-[#F91F1F]" />
                           </div>
                           <div className="text-xs text-gray-500">
                             Created {new Date(store.createdAt).toLocaleDateString()}
                           </div>
                         </div>
-                        <button className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full">
+                        <button className="text-xs bg-blue-50 text- px-3 py-1 rounded-full text-[#F91F1F] ">
                           View Details
                         </button>
                       </div>
@@ -297,7 +297,7 @@ export default function DealerDashboard() {
                 <Store size={48} className="mx-auto text-gray-300 mb-4" />
                 <h3 className="text-lg font-medium text-gray-800 mb-2">No Stores Found</h3>
                 <p className="text-gray-500 mb-4">You haven't created any stores yet.</p>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg" onClick={() => setIsModalOpen(true)}>
+                <button className="px-4 py-2 bg- text-white rounded-lg" onClick={() => setIsModalOpen(true)}>
                   Create Your First Store
                 </button>
               </div>
@@ -305,7 +305,7 @@ export default function DealerDashboard() {
           </div>
 
           {/* Your Lesson Section */}
-          <div>
+          {/* <div>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold">Recent Activity</h2>
               <button className="text-[#7C5CFC] text-sm font-medium">See all</button>
@@ -343,7 +343,7 @@ export default function DealerDashboard() {
                 </div>
               ))}
             </div>
-          </div>
+          </div> */}
         </div>
 
         {/* Right content */}
@@ -377,76 +377,120 @@ export default function DealerDashboard() {
                     className="drop-shadow-[0_2px_4px_rgba(124,92,252,0.4)]"
                   />
                 </svg>
-                <span className="absolute -top-1 -right-1 bg-[#7C5CFC] text-white text-xs px-2 py-0.5 rounded-full shadow-lg">
+                {/* <span className="absolute -top-1 -right-1 bg-[#7C5CFC] text-white text-xs px-2 py-0.5 rounded-full shadow-lg">
                   {stores.length > 0 ? "Active" : "New"}
-                </span>
+                </span> */}
               </div>
             </div>
-            <h3 className="text-lg font-bold mt-4 mb-1">Welcome, {user?.name || "Dealer"} 👋</h3>
-            <p className="text-sm text-gray-500">Manage your stores and inventory from one place</p>
+            <h3 className="text-lg font-bold mt-4 mb-1 text-white">Welcome, {user?.name || "Dealer"} 👋</h3>
+            <p className="text-sm text-white">Manage your stores and inventory from one place</p>
           </div>
 
-          <div className="mb-8 bg-[#F8F7FF] p-6 rounded-[20px]">
-            <h3 className="font-semibold mb-4">Store Performance</h3>
+          <div className="mb-8 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] p-6 rounded-[20px] border border-white">
+            <h3 className="font-semibold mb-4 text-white">Store Performance</h3>
             <ChartContainer
               className="h-[170px]"
               config={{
                 value: {
-                  color: "#7C5CFC",
+                  color: "#FF6B1B",
                 },
               }}
             >
-              <BarChart data={chartData}>
-                <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={12} tickMargin={8} />
-                <YAxis axisLine={false} tickLine={false} fontSize={12} tickMargin={8} />
-                <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={40} />
+              <BarChart
+                data={chartData}
+                margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+              >
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  fontSize={12}
+                  tickMargin={8}
+                  tick={{ fill: '#ffffff', fontSize: 12 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  fontSize={12}
+                  tickMargin={8}
+                  tick={{ fill: '#ffffff', fontSize: 12 }}
+                />
+                <Bar
+                  dataKey="value"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={40}
+                  fill="#FF6B1B"
+                />
               </BarChart>
             </ChartContainer>
           </div>
 
-          <div className="bg-[#F8F7FF] p-6 rounded-[20px]">
+          <div className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404]  p-6 rounded-[20px] border border-white">
             <div className="flex justify-between items-center mb-6">
-              {/* <h2 className="text-xl font-bold">Quick Actions</h2> */}
-              <button className="text-[#7C5CFC] hover:bg-white p-1 rounded-full transition-colors">
-                <Plus size={20} />
-              </button>
+              <h2 className="text-xl font-bold text-yellow-400">Your Mentor</h2>
             </div>
+
             <div className="space-y-4">
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="flex items-center justify-between w-full p-3 bg-white rounded-lg hover:bg-gray-50 transition-colors"
-              >
+              {/* Mentor 1 */}
+              <div className="flex items-center justify-between w-full p-3 bg-transparent rounded-lg hover:bg-red-600/30 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-full">
-                    <Store size={20} className="text-blue-600" />
+                  <div className="relative">
+                    <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
+                      <Store size={20} className="text-" />
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
                   </div>
-                  <span>Add New Store</span>
+                  <div className="flex flex-col">
+                    <span className="text-white font-semibold">Padhang Satrio</span>
+                    <span className="text-gray-300 text-sm">Mentor</span>
+                  </div>
                 </div>
-                <ChevronRight size={16} className="text-gray-400" />
-              </button>
+                <button className="text-yellow-400 font-medium hover:text-yellow-300 transition-colors">
+                  Follow
+                </button>
+              </div>
 
-              <button className="flex items-center justify-between w-full p-3 bg-white rounded-lg hover:bg-gray-50 transition-colors">
+              {/* Mentor 2 */}
+              <div className="flex items-center justify-between w-full p-3 bg-transparent rounded-lg hover:bg-red-600/30 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 rounded-full">
-                    <Plus size={20} className="text-green-600" />
+                  <div className="relative">
+                    <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
+                      <Plus size={20} className="text-" />
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
                   </div>
-                  <span>Add Inventory</span>
+                  <div className="flex flex-col">
+                    <span className="text-white font-semibold">Padhang Satrio</span>
+                    <span className="text-gray-300 text-sm">Mentor</span>
+                  </div>
                 </div>
-                <ChevronRight size={16} className="text-gray-400" />
-              </button>
+                <button className="text-yellow-400 font-medium hover:text-yellow-300 transition-colors">
+                  Follow
+                </button>
+              </div>
 
-              <button className="flex items-center justify-between w-full p-3 bg-white rounded-lg hover:bg-gray-50 transition-colors">
+              {/* Mentor 3 */}
+              <div className="flex items-center justify-between w-full p-3 bg-transparent rounded-lg hover:bg-red-600/30 transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 rounded-full">
-                    <Mail size={20} className="text-purple-600" />
+                  <div className="relative">
+                    <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
+                      <Mail size={20} className="text-" />
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
                   </div>
-                  <span>Messages</span>
+                  <div className="flex flex-col">
+                    <span className="text-white font-semibold">Padhang Satrio</span>
+                    <span className="text-gray-300 text-sm">Mentor</span>
+                  </div>
                 </div>
-                <ChevronRight size={16} className="text-gray-400" />
-              </button>
+                <button className="text-yellow-400 font-medium hover:text-yellow-300 transition-colors">
+                  Follow
+                </button>
+              </div>
             </div>
-            <button className="w-full text-center text-[#7C5CFC] mt-6 py-2.5 bg-[#F5F1FF] rounded-xl text-sm font-medium hover:bg-[#EBE5FF] transition-colors">
-              View All Actions
+
+            <button className="w-full text-center text-white mt-6 py-3 bg-transparent border border-white/30 rounded-xl text-sm font-medium hover:bg-white/10 transition-colors">
+              See All
             </button>
           </div>
         </div>

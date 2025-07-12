@@ -1,8 +1,10 @@
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+"use client"
+
+import { ToastContainer } from "react-toastify"
+import "react-toastify/dist/ReactToastify.css"
 import "../../globals.css"
 import dynamic from "next/dynamic"
-import ReduxWrapper from "@/components/Dashboards/Dealer/wrapper/ReduxWrapper";
+import ReduxWrapper from "@/components/Dashboards/Dealer/wrapper/ReduxWrapper"
 
 // const Sidebar = dynamic(
 //   () => import("../../../components/Dashboards/Dealer/_components/Sidebar"),
@@ -26,17 +28,16 @@ export default function DashboardLayout({
     <html lang="en">
       <body style={{ fontFamily: 'Poppins' }} className="bg-[#e5e5e5]">
         <ReduxWrapper>
-          <div className="flex h-screen bg-gray-100">
+          <div className="flex min-h-screen flex-col md:flex-row bg-gray-100">
             <ToastContainer />
-            {/* Sidebar */}
+            {/* Sidebar (Commented Out) */}
             {/* <Sidebar /> */}
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-hidden w-full">
               {/* Top Bar */}
               <TopBar />
-             
               {/* Main Content */}
-              <div className="flex-1 overflow-auto">
+              <div className="flex-1 overflow-auto p-4 md:p-6">
                 {children}
               </div>
             </div>

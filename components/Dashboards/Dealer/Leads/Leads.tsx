@@ -10,7 +10,7 @@ import { renderInstance } from "@/utils/Axios/RenderInstance"
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages"
 import { CircularProgress } from "@mui/material"
 
-// Define interfaces that match the API response
+// Define interfaces (unchanged)
 interface ApiTractor {
   id: string
   dealerId: string
@@ -89,7 +89,6 @@ interface TractorLeaseLead {
   base: ApiBase
 }
 
-// Transform API data to match the existing table interface
 interface TractorRental {
   id: number
   userId: string
@@ -99,8 +98,39 @@ interface TractorRental {
   cost: number
   paymentStatus: "Paid" | "Pending" | "Overdue"
   status: "Active" | "Completed" | "Cancelled"
-  originalData: TractorLeaseLead // Keep original data for modal
+  originalData: TractorLeaseLead
 }
+
+// Custom CSS for responsive card layout
+const styles = `
+  @media (max-width: 768px) {
+    .table-container {
+      overflow-x: auto;
+    }
+    .rental-card {
+      border: 1px solid #742a2a;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background-color: #742a2a;
+      color: white;
+    }
+    .rental-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .rental-card-content {
+      display: grid;
+      gap: 0.5rem;
+    }
+    .rental-card-label {
+      font-weight: 600;
+      color: #fed7d7;
+    }
+  }
+`
 
 export default function EnhancedTractorRentalTable() {
   const [rentals, setRentals] = useState<TractorRental[]>([])
@@ -113,22 +143,19 @@ export default function EnhancedTractorRentalTable() {
   const dealerUser = cookie?.get("user")
   const access_token = cookie?.get("access_token")
 
-  // Transform API data to table format with rich details
+  // Transform API data to table format (unchanged)
   const transformApiDataToRental = (apiData: TractorLeaseLead[]): TractorRental[] => {
     return apiData.map((lead, index) => {
-      // Extract tractor name from nested data
       const tractorName =
         lead.Tractor?.TractorSpecification?.inventoryTractor?.name ||
         `${lead.Tractor?.TractorSpecification?.brand || "Unknown"} ${lead.Tractor?.TractorSpecification?.model || "Model"}` ||
         `Tractor ${lead.tractorId}`
 
-      // Extract customer name
       const customerName =
         `${lead.User?.first_name || ""} ${lead.User?.last_name || ""}`.trim() ||
         lead.User?.email ||
         `User ${lead.user_id}`
 
-      // Better status mapping
       const getPaymentStatus = (): "Paid" | "Pending" | "Overdue" => {
         if (lead.dealer_confirm && lead.user_confirm) return "Paid"
         if (lead.status === "CANCELLED") return "Overdue"
@@ -144,7 +171,7 @@ export default function EnhancedTractorRentalTable() {
 
       return {
         id: index + 1,
-        userId: customerName, // Show customer name instead of ID
+        userId: customerName,
         tractorNameModel: tractorName,
         startDate: new Date(lead.startDate).toLocaleDateString("en-US", {
           year: "numeric",
@@ -160,7 +187,7 @@ export default function EnhancedTractorRentalTable() {
     })
   }
 
-  // Fetch tractor lease leads
+  // Fetch tractor lease leads (unchanged)
   function fetchTractorLeaseLeads() {
     if (!dealerUser?.userId) {
       errorMessage("User not found. Please login again.")
@@ -177,7 +204,6 @@ export default function EnhancedTractorRentalTable() {
       })
       .then((res) => {
         console.log("API Response:", res.data)
-        // Handle different response structures
         let leadsData = []
         if (Array.isArray(res.data)) {
           leadsData = res.data
@@ -222,7 +248,7 @@ export default function EnhancedTractorRentalTable() {
     }
   }, [dealerUser?.userId, access_token])
 
-  // Enhanced search functionality
+  // Enhanced search functionality (unchanged)
   const filteredRentals = rentals.filter((rental) => {
     const customerName =
       `${rental.originalData?.User?.first_name || ""} ${rental.originalData?.User?.last_name || ""}`.trim()
@@ -244,7 +270,7 @@ export default function EnhancedTractorRentalTable() {
 
   if (fetching) {
     return (
-      <div className="w-full p-1">
+      <div className="w-full p-4 md:p-6">
         <div className="flex flex-col items-center justify-center py-16 bg-white rounded-lg shadow-sm">
           <CircularProgress size={48} />
           <p className="mt-4 text-lg text-gray-600">Loading tractor lease leads...</p>
@@ -255,36 +281,36 @@ export default function EnhancedTractorRentalTable() {
   }
 
   return (
-    <div className="w-full">
-      {/* Top Header Section - Bright Red */}
-      <div className="bg-white px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button className="bg-[#F91F1F] hover:bg-red-700 text-white px-4 py-2 rounded-[5px] text-sm font-medium flex items-center gap-2">
+    <div className="w-full bg-white">
+      <style>{styles}</style>
+      {/* Top Header Section */}
+      <div className="bg-transparent px-4 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <Button className="bg-[#F91F1F] hover:bg-[#F91F1F] text-white px-4 py-2 rounded-[5px] text-sm font-medium flex items-center gap-2 w-full sm:w-auto">
             All Rentals
             <ChevronDown className="h-4 w-4" />
           </Button>
-          <Button className="bg-[#F91F1F] hover:bg-red-700 text-white px-4 py-2 rounded-[5px] text-sm font-medium flex items-center gap-2">
+          <Button className="bg-[#F91F1F] hover:bg-[#F91F1F] text-white px-4 py-2 rounded-[5px] text-sm font-medium flex items-center gap-2 w-full sm:w-auto">
             <UserIcon className="h-4 w-4" />
             Rented By
             <ChevronDown className="h-4 w-4" />
           </Button>
         </div>
-
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-white border-[#F91F1F]" />
+        <div className="relative w-full md:w-96">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[#F91F1F]" />
           <Input
             placeholder="Search in the List"
-            className="pl-12 pr-4 py-3 w-96 bg-[#F91F1F] border-0 rounded-full text-sm placeholder:text-white border-[#F91F1F] focus:ring-2 "
+            className="pl-12 pr-4 py-3 w-full bg-white border border-[#F91F1F] rounded-[5px] text-sm placeholder:text-[#A80000] focus:ring-2"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
       </div>
 
-      {/* Secondary Header - Same Red */}
-      <div className="bg-red-500 px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <h1 className="text-white font-semibold text-lg">Total Rentals: {filteredRentals.length}</h1>
+      {/* Secondary Header */}
+      <div className="bg-red-500 px-4 md:px-6 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-center gap-4 md:gap-6">
+          <h1 className="text-white font-semibold text-base md:text-lg">Total Rentals: {filteredRentals.length}</h1>
           <div className="flex items-center gap-2 bg-white py-0 px-5 rounded-full">
             <span className="text-[#F91F1F] text-sm">Sort By:</span>
             <Button className="bg-transparent text-red-500 hover:bg-transparent px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
@@ -293,7 +319,6 @@ export default function EnhancedTractorRentalTable() {
             </Button>
           </div>
         </div>
-
         <div className="flex items-center gap-2">
           <span className="text-white text-sm">Results</span>
           <Button variant="ghost" className="text-white hover:bg-red-600 px-2 py-1 text-sm flex items-center gap-1">
@@ -303,123 +328,190 @@ export default function EnhancedTractorRentalTable() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-hidden">
+      {/* Table / Card Layout */}
+      <div className="table-container">
         {filteredRentals.length === 0 ? (
           <div className="text-center py-16 bg-white">
             <div className="mx-auto h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
               <div className="h-12 w-12 text-gray-400">🚜</div>
             </div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+            <h2 className="text-xl md:text-2xl font-semibold text-gray-900 mb-2">
               {searchTerm ? "No matching rentals found" : "No rental leads available"}
             </h2>
-            <p className="text-gray-500 mb-6 max-w-md mx-auto">
+            <p className="text-gray-500 mb-6 max-w-md mx-auto text-sm md:text-base">
               {searchTerm
                 ? "Try adjusting your search terms to find what you're looking for."
                 : "Check back later for new tractor lease inquiries, or refresh to load the latest data."}
             </p>
-            <div className="flex justify-center gap-3">
+            <div className="flex flex-col sm:flex-row justify-center gap-3">
               {searchTerm && (
-                <Button variant="outline" onClick={() => setSearchTerm("")}>
+                <Button variant="outline" onClick={() => setSearchTerm("")} className="w-full sm:w-auto">
                   Clear Search
                 </Button>
               )}
-              <Button onClick={fetchTractorLeaseLeads} className="bg-red-500 hover:bg-red-600">
+              <Button onClick={fetchTractorLeaseLeads} className="bg-red-500 hover:bg-red-600 w-full sm:w-auto">
                 Refresh Data
               </Button>
             </div>
           </div>
         ) : (
-          <table className="w-full">
-            {/* Table Header - Red */}
-            <thead>
-              <tr className="bg-white">
-                <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">S.NO</th>
-                <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
-                  CUSTOMER NAME
-                </th>
-                <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
-                  TRACTOR NAME & MODEL
-                </th>
-                <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
-                  START DATE
-                </th>
-                <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
-                  LEASE PERIOD
-                </th>
-                <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
-                  MONTHLY COST
-                </th>
-                <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
-                  PAYMENT STATUS
-                </th>
-                <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
-                  LEASE STATUS
-                </th>
-              </tr>
-            </thead>
-            {/* Table Body - Dark Red/Maroon with White Text */}
-            <tbody>
-              {filteredRentals.map((rental, index) => (
-                <tr
-                  key={rental.id}
-                  className="bg-red-900 hover:bg-red-800 transition-colors cursor-pointer border-b border-red-800"
-                  onClick={() => openModal(rental)}
-                >
-                  <td className="px-4 py-4 text-white font-bold text-lg">{index + 1}</td>
-                  <td className="px-4 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center">
-                        <span className="text-sm font-bold text-red-900">
-                          {rental.originalData?.User?.first_name?.[0] || "H"}
-                          {rental.originalData?.User?.last_name?.[0] || ""}
-                        </span>
+          <>
+            {/* Table for larger screens */}
+            <table className="w-full hidden md:table">
+              <thead>
+                <tr className="bg-white">
+                  <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">S.NO</th>
+                  <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
+                    CUSTOMER NAME
+                  </th>
+                  <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
+                    TRACTOR NAME & MODEL
+                  </th>
+                  <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
+                    START DATE
+                  </th>
+                  <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
+                    LEASE PERIOD
+                  </th>
+                  <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
+                    MONTHLY COST
+                  </th>
+                  <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
+                    PAYMENT STATUS
+                  </th>
+                  <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
+                    LEASE STATUS
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRentals.map((rental, index) => (
+                  <tr
+                    key={rental.id}
+                    className="bg-red-900 hover:bg-red-800 transition-colors cursor-pointer border-b border-red-800"
+                    onClick={() => openModal(rental)}
+                  >
+                    <td className="px-4 py-4 text-white font-bold text-lg">{index + 1}</td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center">
+                          <span className="text-sm font-bold text-red-900">
+                            {rental.originalData?.User?.first_name?.[0] || "H"}
+                            {rental.originalData?.User?.last_name?.[0] || ""}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-white">{rental.userId || "Holauser123"}</p>
+                          <p className="text-sm text-red-200">
+                            {rental.originalData?.User?.email || "Holauser123@gmail.com"}
+                          </p>
+                        </div>
                       </div>
+                    </td>
+                    <td className="px-4 py-4">
                       <div>
-                        <p className="font-semibold text-white">{rental.userId || "Holauser123"}</p>
+                        <p className="font-semibold text-white">{rental.tractorNameModel || "MF 245 DI-50 HP"}</p>
                         <p className="text-sm text-red-200">
-                          {rental.originalData?.User?.email || "Holauser123@gmail.com"}
+                          {rental.originalData?.Tractor?.TractorSpecification?.horsePower || "677"} HP - Medium Type
                         </p>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <div>
-                      <p className="font-semibold text-white">{rental.tractorNameModel || "MF 245 DI-50 HP"}</p>
-                      <p className="text-sm text-red-200">
-                        {rental.originalData?.Tractor?.TractorSpecification?.horsePower || "677"} HP - Medium Type
-                      </p>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <div>
-                      <p className="font-semibold text-white">{rental.startDate || "Jun 30,2025"}</p>
-                      <p className="text-sm text-red-200">May 02,2025</p>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className="font-semibold text-white">{rental.duration || "One Month"}</span>
-                  </td>
-                  <td className="px-4 py-4">
-                    <div>
-                      <p className="font-semibold text-white">${rental.cost?.toLocaleString() || "1200"}.5</p>
-                      <p className="text-sm text-red-200">-$50 Discount</p>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-500 text-white">
-                      {rental.paymentStatus || "Pending"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4">
+                    </td>
+                    <td className="px-4 py-4">
+                      <div>
+                        <p className="font-semibold text-white">{rental.startDate || "Jun 30,2025"}</p>
+                        <p className="text-sm text-red-200">May 02,2025</p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="font-semibold text-white">{rental.duration || "One Month"}</span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div>
+                        <p className="font-semibold text-white">${rental.cost?.toLocaleString() || "1200"}.5</p>
+                        <p className="text-sm text-red-200">-$50 Discount</p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-500 text-white">
+                        {rental.paymentStatus || "Pending"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-600 text-white">
+                        {rental.status || "Active"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Card layout for smaller screens */}
+            <div className="md:hidden">
+              {filteredRentals.map((rental, index) => (
+                <div
+                  key={rental.id}
+                  className="rental-card"
+                  onClick={() => openModal(rental)}
+                >
+                  <div className="rental-card-header">
+                    <span className="font-bold text-lg">{index + 1}</span>
                     <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-600 text-white">
                       {rental.status || "Active"}
                     </span>
-                  </td>
-                </tr>
+                  </div>
+                  <div className="rental-card-content">
+                    <div>
+                      <span className="rental-card-label">Customer:</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center">
+                          <span className="text-xs font-bold text-red-900">
+                            {rental.originalData?.User?.first_name?.[0] || "H"}
+                            {rental.originalData?.User?.last_name?.[0] || ""}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-white text-sm">{rental.userId || "Holauser123"}</p>
+                          <p className="text-xs text-red-200">
+                            {rental.originalData?.User?.email || "Holauser123@gmail.com"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="rental-card-label">Tractor:</span>
+                      <p className="font-semibold text-white text-sm">{rental.tractorNameModel || "MF 245 DI-50 HP"}</p>
+                      <p className="text-xs text-red-200">
+                        {rental.originalData?.Tractor?.TractorSpecification?.horsePower || "677"} HP - Medium Type
+                      </p>
+                    </div>
+                    <div>
+                      <span className="rental-card-label">Start Date:</span>
+                      <p className="font-semibold text-white text-sm">{rental.startDate || "Jun 30,2025"}</p>
+                      <p className="text-xs text-red-200">May 02,2025</p>
+                    </div>
+                    <div>
+                      <span className="rental-card-label">Lease Period:</span>
+                      <p className="font-semibold text-white text-sm">{rental.duration || "One Month"}</p>
+                    </div>
+                    <div>
+                      <span className="rental-card-label">Monthly Cost:</span>
+                      <p className="font-semibold text-white text-sm">${rental.cost?.toLocaleString() || "1200"}.5</p>
+                      <p className="text-xs text-red-200">-$50 Discount</p>
+                    </div>
+                    <div>
+                      <span className="rental-card-label">Payment Status:</span>
+                      <p>
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-500 text-white">
+                          {rental.paymentStatus || "Pending"}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
 

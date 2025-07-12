@@ -103,6 +103,7 @@ export default function Dashboard() {
                 <p className="text-sm text-white mt-3">Data per 29 June 2024</p>
               </CardContent>
             </Card>
+
             {/* Second Total Members Card */}
             <Card className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-3xl border shadow-sm text-white">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -117,6 +118,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+
           {/* Second column with time chart */}
           <div className="w-[30%]">
             <Card className="rounded-3xl border shadow-sm h-full bg-gradient-to-br from-[#A10A0C] to-[#3B0404] text-white">
@@ -143,6 +145,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+
           {/* Third column with bar chart */}
           <div className="w-[55%]">
             <Card className="rounded-3xl border shadow-sm h-full bg-gradient-to-br from-[#A10A0C] to-[#3B0404] text-white">
@@ -160,13 +163,21 @@ export default function Dashboard() {
               <CardContent>
                 <div className="h-[240px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={salesData} barGap={8}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "#fff", fontSize: 12 }} />
+                    <BarChart data={salesData} barGap={8} margin={{ bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff20" />
+                      <XAxis
+                        dataKey="name"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: "#ffffff", fontSize: 12, fontWeight: 500 }}
+                        interval={0}
+                        angle={0}
+                        textAnchor="middle"
+                      />
                       <YAxis
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: "#fff", fontSize: 12 }}
+                        tick={{ fill: "#ffffff80", fontSize: 12 }}
                         domain={[0, 140]}
                         ticks={[0, 20, 40, 60, 80, 100, 120, 140]}
                       />
@@ -177,7 +188,7 @@ export default function Dashboard() {
                             return (
                               <div className="rounded-lg border bg-white p-2 shadow-sm">
                                 <div className="flex flex-col">
-                                  <span className="text-sm font-medium">{payload[0].value}</span>
+                                  <span className="text-sm font-medium text-gray-900">{payload[0].value}</span>
                                 </div>
                               </div>
                             )
@@ -198,11 +209,7 @@ export default function Dashboard() {
                                   <stop offset="100%" stopColor="#FF782F" />
                                 </linearGradient>
                               </defs>
-                              <rect
-                                {...props}
-                                fill={isFriday ? "url(#barGradient)" : "#e8eeff"}
-                                fillOpacity={isFriday ? 1 : 0.5}
-                              />
+                              <rect {...props} fill={isFriday ? "url(#barGradient)" : "#ffffff40"} fillOpacity={1} />
                               {isFriday && (
                                 <text
                                   x={props.x + props.width / 2}
