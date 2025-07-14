@@ -11,6 +11,27 @@ import { renderInstance } from "@/utils/Axios/RenderInstance"
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages"
 import { CircularProgress } from "@mui/material"
 
+function CustomTooltip({ text, maxLength }: { text: string; maxLength: number }) {
+  const [isHovered, setIsHovered] = useState(false)
+
+  if (text.length <= maxLength) return <span>{text}</span>
+
+  return (
+    <div
+      className="relative inline-block cursor-pointer"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <span>{text.slice(0, maxLength)}...</span>
+      {isHovered && (
+        <div className="absolute left-0 top-full mt-2 z-50 p-2 bg-gray-800 text-white text-sm rounded shadow-lg whitespace-nowrap max-w-xs">
+          {text}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Define interfaces (unchanged)
 interface ApiTractor {
   id: string
@@ -185,7 +206,6 @@ export default function EnhancedTractorRentalTable() {
           console.warn("Unexpected response structure:", res.data)
           leadsData = []
         }
-
         console.log("Processed lease leads data:", leadsData)
         const transformedData = transformApiDataToRental(leadsData)
         setRentals(transformedData)
@@ -294,7 +314,6 @@ export default function EnhancedTractorRentalTable() {
               <ChevronDown className="h-4 w-4" />
             </Button>
           </div>
-
           {/* Search Bar */}
           <div className="relative w-full lg:w-96">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#F91F1F]" />
@@ -334,7 +353,7 @@ export default function EnhancedTractorRentalTable() {
       </div>
 
       {/* Main Content Area */}
-      <div >
+      <div>
         {filteredRentals.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-lg">
             <div className="mx-auto h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
@@ -371,7 +390,7 @@ export default function EnhancedTractorRentalTable() {
                         <th className="px-4 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
                           S.NO
                         </th>
-                        <th className="px-4 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
+                        <th className="px-3 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider w-48">
                           Customer Name
                         </th>
                         <th className="px-4 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
@@ -405,25 +424,32 @@ export default function EnhancedTractorRentalTable() {
                           onClick={() => openModal(rental)}
                         >
                           <td className="px-4 py-4 text-white font-semibold">{index + 1}</td>
-                          <td className="px-4 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
-                                <span className="text-sm font-bold text-white">
+                          <td className="px-3 py-4 w-48">
+                            <div className="flex items-center gap-2">
+                              <div className="h-8 w-8 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
+                                <span className="text-xs font-bold text-white">
                                   {rental.originalData?.User?.first_name?.[0] || "H"}
                                   {rental.originalData?.User?.last_name?.[0] || ""}
                                 </span>
                               </div>
-                              <div className="min-w-0">
-                                <p className="font-semibold text-white truncate">{rental.userId || "Holauser123"}</p>
-                                <p className="text-sm text-white truncate">
-                                  {rental.originalData?.User?.email || "Holauser123@gmail.com"}
+                              <div className="min-w-0 flex-1">
+                                <p className="font-semibold text-white text-sm">
+                                  <CustomTooltip text={rental.userId || "Holauser123"} maxLength={10} />
+                                </p>
+                                <p className="text-xs text-white">
+                                  <CustomTooltip
+                                    text={rental.originalData?.User?.email || "Holauser123@gmail.com"}
+                                    maxLength={15}
+                                  />
                                 </p>
                               </div>
                             </div>
                           </td>
                           <td className="px-4 py-4">
                             <div>
-                              <p className="font-semibold text-white">{rental.tractorNameModel}</p>
+                              <p className="font-semibold text-white">
+                                <CustomTooltip text={rental.tractorNameModel} maxLength={15} />
+                              </p>
                               <p className="text-sm text-white">
                                 {rental.originalData?.Tractor?.TractorSpecification?.horsePower} HP
                               </p>
@@ -478,7 +504,7 @@ export default function EnhancedTractorRentalTable() {
                         <th className="px-3 py-3 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
                           S.NO
                         </th>
-                        <th className="px-3 py-3 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
+                        <th className="px-2 py-3 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider w-32">
                           Customer
                         </th>
                         <th className="px-3 py-3 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
@@ -509,23 +535,25 @@ export default function EnhancedTractorRentalTable() {
                           onClick={() => openModal(rental)}
                         >
                           <td className="px-3 py-3 text-white font-semibold text-sm">{index + 1}</td>
-                          <td className="px-3 py-3">
-                            <div className="flex items-center gap-2">
-                              <div className="h-8 w-8 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
+                          <td className="px-2 py-3 w-32">
+                            <div className="flex items-center gap-1">
+                              <div className="h-6 w-6 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
                                 <span className="text-xs font-bold text-white">
                                   {rental.originalData?.User?.first_name?.[0] || "H"}
                                   {rental.originalData?.User?.last_name?.[0] || ""}
                                 </span>
                               </div>
-                              <div className="min-w-0">
-                                <p className="font-semibold text-white text-sm truncate">
-                                  {rental.userId || "Holauser123"}
+                              <div className="min-w-0 flex-1">
+                                <p className="font-semibold text-white text-xs">
+                                  <CustomTooltip text={rental.userId || "Holauser123"} maxLength={8} />
                                 </p>
                               </div>
                             </div>
                           </td>
                           <td className="px-3 py-3">
-                            <p className="font-semibold text-white text-sm">{rental.tractorNameModel}</p>
+                            <p className="font-semibold text-white text-sm">
+                              <CustomTooltip text={rental.tractorNameModel} maxLength={12} />
+                            </p>
                           </td>
                           <td className="px-3 py-3">
                             <p className="font-semibold text-white text-sm">{rental.startDate || "Jun 30, 2025"}</p>
@@ -573,7 +601,6 @@ export default function EnhancedTractorRentalTable() {
                         {rental.status || "Active"}
                       </Badge>
                     </div>
-
                     <div className="space-y-3">
                       {/* Customer Info */}
                       <div className="flex items-center gap-3">
@@ -584,22 +611,27 @@ export default function EnhancedTractorRentalTable() {
                           </span>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-white">{rental.userId || "Holauser123"}</p>
-                          <p className="text-sm text-white truncate">
-                            {rental.originalData?.User?.email || "Holauser123@gmail.com"}
+                          <p className="font-semibold text-white">
+                            <CustomTooltip text={rental.userId || "Holauser123"} maxLength={12} />
+                          </p>
+                          <p className="text-sm text-white">
+                            <CustomTooltip
+                              text={rental.originalData?.User?.email || "Holauser123@gmail.com"}
+                              maxLength={20}
+                            />
                           </p>
                         </div>
                       </div>
-
                       {/* Tractor Info */}
                       <div>
                         <p className="text-sm font-medium text-white">Tractor</p>
-                        <p className="font-semibold text-white">{rental.tractorNameModel || "MF 245 DI-50 HP"}</p>
+                        <p className="font-semibold text-white">
+                          <CustomTooltip text={rental.tractorNameModel || "MF 245 DI-50 HP"} maxLength={20} />
+                        </p>
                         <p className="text-sm text-white">
                           {rental.originalData?.Tractor?.TractorSpecification?.horsePower || "677"} HP
                         </p>
                       </div>
-
                       {/* Details Grid */}
                       <div className="grid grid-cols-2 gap-3 pt-2 border-t border-gray-100">
                         <div>

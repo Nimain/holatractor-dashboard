@@ -1,6 +1,6 @@
 "use client"
 
-import { Search, Mail, Store, Heart, ChevronLeft, ChevronRight, Plus, Menu, X } from "lucide-react"
+import { Search, Mail, Store, Heart, ChevronLeft, ChevronRight, Plus } from "lucide-react"
 import { Bar, BarChart, XAxis, YAxis } from "recharts"
 import { ChartContainer } from "@/components/ui/chart"
 import Image from "next/image"
@@ -84,6 +84,7 @@ export default function ResponsiveDealerDashboard() {
         setLoading(false)
       }
     }
+
     fetchStores()
   }, [user?.userId, access_token])
 
@@ -106,9 +107,9 @@ export default function ResponsiveDealerDashboard() {
   ]
 
   return (
-    <div >
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-4 md:p-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-4 md:p-6 bg-white shadow-sm">
         <div className="relative w-full md:w-1/2 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
           <input
@@ -130,10 +131,10 @@ export default function ResponsiveDealerDashboard() {
 
       <AddStoreModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
 
-      {/* Main Content Grid - Fixed layout */}
-      <div className="flex flex-col xl:flex-row gap-6 p-4 md:p-6">
-        {/* Left content - Flexible width */}
-        <div className="flex-1 space-y-6">
+      {/* Main Content Grid - FIXED: Changed from xl:flex-row to 2xl:flex-row */}
+      <div className="flex flex-col 2xl:flex-row gap-6 p-4 md:p-6">
+        {/* Left content - Flexible width with min-w-0 to prevent overflow */}
+        <div className="flex-1 min-w-0 space-y-6">
           {/* Hero Section */}
           <div className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-2xl md:rounded-3xl p-6 md:p-8 text-white relative overflow-hidden">
             <div className="absolute right-0 top-0 w-1/2 h-full opacity-20 hidden md:block">
@@ -192,11 +193,12 @@ export default function ResponsiveDealerDashboard() {
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
               </div>
             ) : stores.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+              /* FIXED: Changed grid breakpoints to prevent squeezing */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-4 md:gap-6">
                 {stores.map((store) => (
                   <div
                     key={store.id}
-                    className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-xl overflow-hidden shadow-sm cursor-pointer hover:shadow-md transition-shadow text-white"
+                    className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-xl overflow-hidden shadow-sm cursor-pointer hover:shadow-lg transition-all duration-200 text-white hover:scale-[1.02]"
                     onClick={() => router.push(`/dealer/store/${store.id}`)}
                   >
                     <div className="relative">
@@ -207,13 +209,18 @@ export default function ResponsiveDealerDashboard() {
                         height={200}
                         className="w-full h-40 md:h-48 object-cover"
                       />
-                      <button className="absolute top-4 right-4 p-2 rounded-full bg-white/80 hover:bg-white transition-colors">
+                      <button
+                        className="absolute top-4 right-4 p-2 rounded-full bg-white/80 hover:bg-white transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          // Handle favorite logic here
+                        }}
+                      >
                         <Heart size={20} className="text-[#F91F1F]" />
                       </button>
                     </div>
                     <div className="p-4">
                       <h3 className="font-semibold mb-3 line-clamp-1 text-base">{store.name || "Unnamed Store"}</h3>
-
                       <div className="space-y-2 mb-3">
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-white font-medium min-w-[45px]">Hours:</span>
@@ -234,7 +241,6 @@ export default function ResponsiveDealerDashboard() {
                           </div>
                         )}
                       </div>
-
                       <div className="relative group mb-4">
                         <p className="text-sm text-white leading-5 h-10 overflow-hidden">
                           {store.description || "No description available"}
@@ -246,7 +252,6 @@ export default function ResponsiveDealerDashboard() {
                           </div>
                         )}
                       </div>
-
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
@@ -256,7 +261,13 @@ export default function ResponsiveDealerDashboard() {
                             Created {new Date(store.createdAt).toLocaleDateString()}
                           </div>
                         </div>
-                        <button className="text-xs bg-blue-50 text-[#F91F1F] px-3 py-1 rounded-full whitespace-nowrap">
+                        <button
+                          className="text-xs bg-blue-50 text-[#F91F1F] px-3 py-1 rounded-full whitespace-nowrap hover:bg-blue-100 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            router.push(`/dealer/store/${store.id}`)
+                          }}
+                        >
                           View Details
                         </button>
                       </div>
@@ -265,11 +276,14 @@ export default function ResponsiveDealerDashboard() {
                 ))}
               </div>
             ) : (
-              <div className="bg-white rounded-xl p-8 text-center">
+              <div className="bg-white rounded-xl p-8 text-center shadow-sm">
                 <Store size={48} className="mx-auto text-gray-300 mb-4" />
                 <h3 className="text-lg font-medium text-gray-800 mb-2">No Stores Found</h3>
                 <p className="text-gray-600 mb-4">You haven't created any stores yet.</p>
-                <button className="px-4 py-2 bg-[#F91F1F] text-white rounded-lg" onClick={() => setIsModalOpen(true)}>
+                <button
+                  className="px-4 py-2 bg-[#F91F1F] text-white rounded-lg hover:bg-red-700 transition-colors"
+                  onClick={() => setIsModalOpen(true)}
+                >
                   Create Your First Store
                 </button>
               </div>
@@ -277,9 +291,9 @@ export default function ResponsiveDealerDashboard() {
           </div>
         </div>
 
-        {/* Right Sidebar - Fixed width */}
-        <div className="w-full xl:w-80 xl:flex-shrink-0">
-          <div className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-2xl p-6 xl:sticky xl:top-6">
+        {/* Right Sidebar - FIXED: Changed from xl:w-80 xl:flex-shrink-0 to 2xl:w-80 2xl:flex-shrink-0 */}
+        <div className="w-full 2xl:w-80 2xl:flex-shrink-0">
+          <div className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-2xl p-6 2xl:sticky 2xl:top-6">
             {/* Profile Section */}
             <div className="text-center mb-6 md:mb-8">
               <div className="relative inline-block">
@@ -327,7 +341,7 @@ export default function ResponsiveDealerDashboard() {
                   },
                 }}
               >
-                <BarChart data={chartData} margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+                <BarChart data={chartData} margin={{ top: 10, right: 0, bottom: 10, left: 10 }}>
                   <XAxis
                     dataKey="name"
                     axisLine={false}

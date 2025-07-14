@@ -298,8 +298,8 @@ export default function SalesPage() {
         {fetching ? (
           <div className="flex flex-col items-center justify-center py-16 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-lg shadow-sm">
             <CircularProgress size={48} />
-            <p className="mt-4 text-lg text-gray-900">Loading tractor leads...</p>
-            <p className="text-sm text-gray-600">Please wait while we fetch your data</p>
+            <p className="mt-4 text-lg text-white">Loading tractor leads...</p>
+            <p className="text-sm text-white">Please wait while we fetch your data</p>
           </div>
         ) : sortedLeads.length === 0 ? (
           <div className="text-center py-16 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-lg shadow-sm">

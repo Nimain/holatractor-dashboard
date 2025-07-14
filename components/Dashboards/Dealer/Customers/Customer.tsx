@@ -1,7 +1,6 @@
 "use client"
 import { useState, useRef } from "react"
 import type React from "react"
-
 import { MoreHorizontal, Plus, Upload, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -69,9 +68,7 @@ const initialOwners: Owner[] = [
 
 function CustomTooltip({ text, maxLength }: { text: string; maxLength: number }) {
   const [isHovered, setIsHovered] = useState(false)
-
   if (text.length <= maxLength) return <span>{text}</span>
-
   return (
     <div
       className="relative inline-block cursor-pointer"
@@ -161,44 +158,45 @@ export default function EnhancedOwnerTable() {
   return (
     <div className="min-h-screen w-full bg-gray-50 p-2 sm:p-4">
       <div className="w-full max-w-full">
-        {/* Header Section */}
+        {/* Header Section - Single Row Layout */}
         <div className="mb-4 sm:mb-6 lg:mb-8">
-          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-[#F91F1F] mb-3 sm:mb-4 lg:mb-6">
-            Customers ({owners.length})
-          </h1>
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-6">
+            {/* Title */}
+            <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-[#F91F1F] whitespace-nowrap">
+              Customers ({owners.length})
+            </h1>
 
-          {/* Search and Actions in One Row */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
-            {/* Search Bar */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                type="text"
-                placeholder="Search customers..."
-                className="pl-10 w-full shadow-md focus:shadow-lg transition-shadow duration-200 text-sm sm:text-base"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
+            {/* Search Bar and Buttons Container */}
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
+              {/* Search Bar - Reduced Width */}
+             <div className="relative w-full sm:w-80">
+  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+  <input
+    type="text"
+    placeholder="Search Customers..."
+    className="pl-10 w-full h-12 border border-gray-300 shadow-md focus:shadow-lg focus:ring-2 focus:ring-[#F91F1F]/50 focus:border-[#F91F1F] transition-all duration-200 text-sm sm:text-base rounded-md"
+    value={searchTerm}
+    onChange={(e) => setSearchTerm(e.target.value)}
+  />
+</div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-2 sm:gap-3 flex-shrink-0">
-              <Button
-                className="bg-[#F91F1F] text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 text-sm sm:text-base py-2 sm:py-3 px-4"
-                onClick={() => setShowAddModal(true)}
-              >
-                <Plus className="mr-2 h-4 w-4" /> Add Customer
-              </Button>
-
-              <Button
-                className="bg-[#F76A1E] text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 text-sm sm:text-base py-2 sm:py-3 px-4"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload className="mr-2 h-4 w-4" /> Import Excel
-              </Button>
+              {/* Action Buttons */}
+              <div className="flex gap-3 flex-shrink-0">
+                <Button
+                  className="bg-[#F91F1F] hover:bg-[#E01010] text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 text-sm sm:text-base py-3 px-6 h-12 font-medium"
+                  onClick={() => setShowAddModal(true)}
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Add Customer
+                </Button>
+                <Button
+                  className="bg-[#F76A1E] hover:bg-[#E55A0E] text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 text-sm sm:text-base py-3 px-6 h-12 font-medium"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="mr-2 h-4 w-4" /> Import Excel
+                </Button>
+              </div>
             </div>
           </div>
-
           <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".xlsx, .xls" className="hidden" />
         </div>
 
@@ -230,7 +228,6 @@ export default function EnhancedOwnerTable() {
                     {owner.status}
                   </button>
                 </div>
-
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between items-start">
                     <span className="text-gray-300 flex-shrink-0">Email:</span>
@@ -261,7 +258,6 @@ export default function EnhancedOwnerTable() {
                   <TableHeader sortable>Status</TableHeader>
                 </tr>
               </thead>
-
               <tbody className="divide-y divide-gray-200 text-white bg-gradient-to-br from-[#A10A0C] to-[#3B0404]">
                 {filteredOwners.map((owner, index) => (
                   <tr key={owner.id} className="hover:bg-white/10 transition-colors duration-150">
@@ -309,7 +305,6 @@ export default function EnhancedOwnerTable() {
                   <TableHeader sortable>Status</TableHeader>
                 </tr>
               </thead>
-
               <tbody className="divide-y divide-gray-200 text-white bg-gradient-to-br from-[#A10A0C] to-[#3B0404]">
                 {filteredOwners.map((owner, index) => (
                   <tr key={owner.id} className="hover:bg-white/10 transition-colors duration-150">
