@@ -1,5 +1,4 @@
 "use client"
-
 import type React from "react"
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,23 +9,21 @@ import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from 
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { 
-  Phone, 
-  MapPin, 
-  Star, 
-  Clock, 
-  Mail, 
-  Tractor, 
-  RefreshCw, 
+import {
+  Phone,
+  MapPin,
+  Star,
+  Clock,
+  Mail,
+  Tractor,
+  RefreshCw,
   Search,
-  Filter,
   TrendingUp,
   Calendar,
   DollarSign,
   MessageSquare,
-  ChevronDown,
   Users,
-  Target
+  Target,
 } from "lucide-react"
 import { useCookie } from "next-cookie"
 import { renderInstance } from "@/utils/Axios/RenderInstance"
@@ -81,7 +78,6 @@ export default function SalesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
   const [sortBy, setSortBy] = useState("newest")
-
   const { cookie } = useCookie()
   const user: User = cookie?.get("user")
   const access_token = cookie?.get("access_token")
@@ -102,7 +98,6 @@ export default function SalesPage() {
       })
       .then((res) => {
         console.log("API Response:", res.data)
-
         // Handle different response structures
         let leadsData = []
         if (Array.isArray(res.data)) {
@@ -123,7 +118,6 @@ export default function SalesPage() {
       .catch((err) => {
         console.error("Error fetching leads:", err)
         console.error("Error response:", err.response?.data)
-
         if (err.response?.status === 401) {
           errorMessage("Unauthorized. Please login again.")
         } else if (err.response?.status === 404) {
@@ -149,11 +143,11 @@ export default function SalesPage() {
   }, [user?.userId, access_token])
 
   // Filter and sort leads
-  const filteredLeads = leads.filter(lead => {
+  const filteredLeads = leads.filter((lead) => {
     const leadName = lead.name ?? `${lead.user?.first_name ?? ""} ${lead.user?.last_name ?? ""}`.trim()
     const userCity = lead.city ?? lead.user?.location?.city ?? ""
     const searchString = `${leadName} ${userCity} ${lead.user?.email ?? ""}`.toLowerCase()
-    
+
     return searchString.includes(searchTerm.toLowerCase())
   })
 
@@ -176,32 +170,29 @@ export default function SalesPage() {
   const totalLeads = leads.length
   const totalValue = leads.reduce((sum, lead) => sum + (lead.tractor?.price || 0), 0)
   const avgValue = totalLeads > 0 ? totalValue / totalLeads : 0
-  const urgentLeads = leads.filter(lead => 
-    lead.timeframe?.toLowerCase().includes('urgent') || 
-    lead.timeframe?.toLowerCase().includes('immediate')
+  const urgentLeads = leads.filter(
+    (lead) => lead.timeframe?.toLowerCase().includes("urgent") || lead.timeframe?.toLowerCase().includes("immediate"),
   ).length
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 text-white">
+    <div
+      className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 text-white"
+      style={{ scrollBehavior: "smooth" }}
+    >
       <div className="container mx-auto p-6">
         {/* Header Section */}
         <div className="mb-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div>
-              <h1 className="text-4xl font-bold text-[#F91F1F] mb-2">
-                Tractor Sales Dashboard
-              </h1>
-              <p className="text-lg text-[#F91F1F]">
-                Manage your tractor inquiries and convert leads into sales
-              </p>
+              <h1 className="text-4xl font-bold text-[#F91F1F] mb-2">Tractor Sales Dashboard</h1>
+              <p className="text-lg text-[#F91F1F]">Manage your tractor inquiries and convert leads into sales</p>
             </div>
-            
+
             <div className="flex flex-wrap items-center gap-3">
-              {/* <Button variant="outline" onClick={fetchTractorLeads} disabled={fetching} className="shadow-sm">
-                <RefreshCw className={`h-4 w-4 mr-2 ${fetching ? "animate-spin" : ""}`} />
-                Refresh
-              </Button> */}
-              <Badge variant="secondary" className="text-lg px-4 py-2 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] shadow-sm text-white">
+              <Badge
+                variant="secondary"
+                className="text-lg px-4 py-2 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] shadow-sm text-white"
+              >
                 <Users className="h-4 w-4 mr-2" />
                 {totalLeads} Total Leads
               </Badge>
@@ -223,7 +214,6 @@ export default function SalesPage() {
                 </div>
               </CardContent>
             </Card>
-
             <Card className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] shadow-sm border-0">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -237,7 +227,6 @@ export default function SalesPage() {
                 </div>
               </CardContent>
             </Card>
-
             <Card className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] shadow-sm border-0">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -251,7 +240,6 @@ export default function SalesPage() {
                 </div>
               </CardContent>
             </Card>
-
             <Card className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] shadow-sm border-0">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -268,58 +256,63 @@ export default function SalesPage() {
           </div>
         </div>
 
-        {/* Filters and Search */}
-        <Card className="mb-6 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] shadow-sm border-0">
-          <CardContent className="p-4">
-            <div className="flex flex-col lg:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    placeholder="Search by name, city, or email..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 border-gray-200 text-[#F91F1F] placeholder:text-[#F91F1F] bg-gradient-to-br from-[#A10A0C] to-[#3B0404] "
-                  />
-                </div>
-              </div>
-              
-              <div className="flex gap-3">
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] text-[#F91F1F] "
-                >
-                  <option value="newest">Newest First</option>
-                  <option value="oldest">Oldest First</option>
-                  <option value="price-high">Price: High to Low</option>
-                  <option value="price-low">Price: Low to High</option>
-                </select>
+        {/* Redesigned Search Bar */}
+        <div className="mb-6 bg-gradient-to-r from-red-800 to-red-900 rounded-2xl p-4 shadow-lg">
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white h-5 w-5" />
+                <Input
+                  placeholder="Search by Name, city, or email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-12 pr-4 py-3 bg-white/10 border-white/20 text-white placeholder:text-white/70 rounded-xl focus:bg-white/20 focus:border-white/40 transition-all"
+                />
               </div>
             </div>
-          </CardContent>
-        </Card>
+
+            <div className="flex gap-3">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:bg-white/20 focus:border-white/40 transition-all min-w-[140px]"
+              >
+                <option value="newest" className="text-gray-900">
+                  Newest First
+                </option>
+                <option value="oldest" className="text-gray-900">
+                  Oldest First
+                </option>
+                <option value="price-high" className="text-gray-900">
+                  Price: High to Low
+                </option>
+                <option value="price-low" className="text-gray-900">
+                  Price: Low to High
+                </option>
+              </select>
+            </div>
+          </div>
+        </div>
 
         {/* Main Content */}
         {fetching ? (
           <div className="flex flex-col items-center justify-center py-16 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-lg shadow-sm">
             <CircularProgress size={48} />
-            <p className="mt-4 text-lg text-white">Loading tractor leads...</p>
-            <p className="text-sm text-white">Please wait while we fetch your data</p>
+            <p className="mt-4 text-lg text-gray-900">Loading tractor leads...</p>
+            <p className="text-sm text-gray-600">Please wait while we fetch your data</p>
           </div>
         ) : sortedLeads.length === 0 ? (
           <div className="text-center py-16 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-lg shadow-sm">
             <div className="mx-auto h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
               <Tractor className="h-12 w-12 text-gray-400" />
             </div>
-            <h2 className="text-2xl font-semibold text-white mb-2">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
               {searchTerm ? "No matching leads found" : "No leads available"}
             </h2>
-            <p className="text-white mb-6 max-w-md mx-auto">
-              {searchTerm 
+            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              {searchTerm
                 ? "Try adjusting your search terms or filters to find what you're looking for."
-                : "Check back later for new tractor inquiries, or refresh to load the latest data."
-              }
+                : "Check back later for new tractor inquiries, or refresh to load the latest data."}
             </p>
             <div className="flex justify-center gap-3">
               {searchTerm && (
@@ -355,137 +348,106 @@ function TractorLeadCard({ lead }: { lead: ApiTractorLead }) {
         .toUpperCase()
         .slice(0, 2) || "UN"
     : `${lead.user?.first_name?.[0] ?? "U"}${lead.user?.last_name?.[0] ?? "U"}`
-
   const userEmail = lead.user?.email ?? "No email"
   const userImage = lead.user?.image ?? undefined
   const userCity = lead.city ?? lead.user?.location?.city ?? "Unknown City"
   const userMobile = lead.mobile ?? lead.user?.mobile ?? "No phone"
   const timeframe = lead.timeframe ?? "Not specified"
-
   const tractorPrice = lead.tractor?.price ?? 0
   const tractorMonthlyPrice = lead.tractor?.monthlyPrice ?? 0
   const tractorDiscount = lead.tractor?.discount ?? 0
   const tractorRating = lead.tractor?.rating ?? 0
   const tractorListingType = lead.tractor?.listingType ?? "N/A"
 
-  const isUrgent = timeframe.toLowerCase().includes('urgent') || timeframe.toLowerCase().includes('immediate')
+  const isUrgent = timeframe.toLowerCase().includes("urgent") || timeframe.toLowerCase().includes("immediate")
   const isHighValue = tractorPrice > 1000000
 
   return (
-    <Card className="group hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] border-0 shadow-sm hover:-translate-y-1">
+    <Card className="bg-gradient-to-br from-red-800 to-red-900 border-0 shadow-lg hover:shadow-xl transition-shadow duration-200 text-white rounded-2xl overflow-hidden">
       <CardHeader className="pb-4">
         <div className="flex items-start gap-4">
-          <div className="relative">
-            <Avatar className="h-16 w-16 ring-2 ring-white shadow-md">
-              <AvatarImage src={userImage ?? "/placeholder.svg"} alt={leadName} />
-              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
-                {userInitials}
-              </AvatarFallback>
-            </Avatar>
-            {isUrgent && (
-              <div className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full animate-pulse"></div>
-            )}
-          </div>
-          
+          <Avatar className="h-16 w-16 ring-2 ring-white/20 shadow-md">
+            <AvatarImage src={userImage ?? "/placeholder.svg"} alt={leadName} />
+            <AvatarFallback className="bg-white/20 text-white font-bold text-lg">{userInitials}</AvatarFallback>
+          </Avatar>
+
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between">
-              <div className="min-w-0 flex-1">
-                <CardTitle className="text-lg font-semibold text-white truncate">
-                  {leadName}
-                </CardTitle>
-                <div className="flex items-center gap-1 mt-1">
-                  <MapPin className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                  <span className="text-sm text-white truncate">{userCity}</span>
-                </div>
-              </div>
-              
-              <div className="flex flex-col gap-1 ml-2">
-                {isUrgent && (
-                  <Badge variant="destructive" className="text-xs">Urgent</Badge>
-                )}
-                {isHighValue && (
-                  <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800">High Value</Badge>
-                )}
-              </div>
+            <CardTitle className="text-lg font-bold text-white mb-1">{leadName}</CardTitle>
+            <div className="flex items-center gap-1">
+              <MapPin className="h-4 w-4 text-white/70" />
+              <span className="text-sm text-white/90">{userCity}</span>
             </div>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        {/* Contact Information */}
-        <div className="grid grid-cols-1 gap-3">
-          <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
-            <Phone className="h-4 w-4 text-blue-600 flex-shrink-0" />
-            <span className="text-sm font-medium text-white">{userMobile}</span>
+      <CardContent className="space-y-3">
+        {/* Contact Information Cards */}
+        <div className="bg-white rounded-xl p-3 flex items-center gap-3">
+          <Phone className="h-4 w-4 text-red-600 flex-shrink-0" />
+          <span className="text-red-600 font-medium">{userMobile}</span>
+        </div>
+
+        <div className="bg-white rounded-xl p-3 flex items-center gap-3">
+          <Mail className="h-4 w-4 text-red-600 flex-shrink-0" />
+          <span className="text-red-600 text-sm truncate">{userEmail}</span>
+        </div>
+
+        {/* Time period and date on same row */}
+        <div className="flex gap-3">
+          <div className="bg-white rounded-xl p-3 flex items-center gap-2 flex-1">
+            <Clock className="h-4 w-4 text-red-600 flex-shrink-0" />
+            <span className="text-red-600 text-sm font-medium">{timeframe}</span>
           </div>
-          
-          <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
-            <Mail className="h-4 w-4 text-green-600 flex-shrink-0" />
-            <span className="text-sm text-gray-700 truncate">{userEmail}</span>
-          </div>
-          
-          <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
-            <Clock className="h-4 w-4 text-purple-600 flex-shrink-0" />
-            <span className="text-sm text-gray-700">{timeframe}</span>
-          </div>
-          
-          <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
-            <Calendar className="h-4 w-4 text-orange-600 flex-shrink-0" />
-            <span className="text-sm text-gray-700">
-              {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString('en-IN', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric'
-              }) : "Unknown date"}
+
+          <div className="bg-white rounded-xl p-3 flex items-center gap-2 flex-1">
+            <Calendar className="h-4 w-4 text-red-600 flex-shrink-0" />
+            <span className="text-red-600 text-sm font-medium">
+              {lead.createdAt
+                ? new Date(lead.createdAt).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })
+                : "Unknown date"}
             </span>
           </div>
         </div>
 
-        {/* Tractor Details */}
+        {/* Tractor Interest Section */}
         {lead.tractor && (
-          <div className="border-t pt-4 mt-4">
-            <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
-              <Tractor className="h-4 w-4" />
-              Tractor Interest
-            </h4>
-            
-            <div className="space-y-3">
+          <div className="mt-4 pt-4 border-t border-white/20">
+            <div className="flex items-center gap-2 mb-3">
+              <Tractor className="h-4 w-4 text-white" />
+              <h4 className="font-bold text-white">Tractor Interest</h4>
+            </div>
+
+            <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-white">Price:</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-lg text-white">
-                    ${(tractorPrice / 100000).toFixed(1)}L
-                  </span>
-                  {tractorDiscount > 0 && (
-                    <Badge variant="destructive" className="text-xs">
-                      -${(tractorDiscount / 1000).toFixed(0)}K
-                    </Badge>
-                  )}
-                </div>
+                <span className="text-white/90 text-sm">Price</span>
+                <span className="font-bold text-white text-lg">${(tractorPrice / 1000).toFixed(0)}K</span>
               </div>
-              
+
               <div className="flex justify-between items-center">
-                <span className="text-sm text-white">Monthly EMI:</span>
-                <span className="font-semibold text-white">
-                  ${tractorMonthlyPrice.toLocaleString()}
-                </span>
+                <span className="text-white/90 text-sm">Monthly EMI</span>
+                <span className="font-semibold text-white">${tractorMonthlyPrice.toLocaleString()}</span>
               </div>
-              
+
               <div className="flex justify-between items-center">
-                <span className="text-sm text-white">Condition:</span>
-                <Badge variant={tractorListingType === "New" ? "default" : "secondary"}>
+                <span className="text-white/90 text-sm">Offering Type</span>
+                <Badge
+                  variant={tractorListingType === "Sell" ? "destructive" : "secondary"}
+                  className="bg-red-600 text-white"
+                >
                   {tractorListingType}
                 </Badge>
               </div>
-              
+
               <div className="flex justify-between items-center">
-                <span className="text-sm text-white">Rating:</span>
+                <span className="text-white/90 text-sm">Rating</span>
                 <div className="flex items-center gap-1">
+                  <span className="text-white font-semibold">{tractorRating.toFixed(1)}</span>
                   <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                  <span className="text-sm font-semibold text-white">
-                    {tractorRating.toFixed(1)}
-                  </span>
                 </div>
               </div>
             </div>
@@ -503,7 +465,6 @@ function TractorLeadCard({ lead }: { lead: ApiTractorLead }) {
 function ContactLeadForm({ lead }: { lead: ApiTractorLead }) {
   const [open, setOpen] = useState(false)
   const [requesting, setRequesting] = useState(false)
-
   const { cookie } = useCookie()
   const access_token = cookie?.get("access_token")
 
@@ -531,7 +492,6 @@ function ContactLeadForm({ lead }: { lead: ApiTractorLead }) {
     }
 
     setRequesting(true)
-
     const requestData = {
       subject: formData.subject.trim(),
       message: formData.message.trim(),
@@ -558,7 +518,6 @@ function ContactLeadForm({ lead }: { lead: ApiTractorLead }) {
       })
       .catch((err) => {
         console.error("Error contacting lead:", err)
-
         if (err.response?.status === 404) {
           errorMessage("Lead not found")
         } else if (err.response?.status === 401) {
@@ -581,7 +540,7 @@ function ContactLeadForm({ lead }: { lead: ApiTractorLead }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all duration-200">
+        <Button className="w-full bg-white hover:bg-gray-50 text-red-600 border-0 rounded-xl font-semibold transition-all duration-200 shadow-sm">
           <MessageSquare className="h-4 w-4 mr-2" />
           Contact Lead
         </Button>
@@ -590,10 +549,12 @@ function ContactLeadForm({ lead }: { lead: ApiTractorLead }) {
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">Contact {leadName}</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4 mt-4">
           <div className="space-y-2">
-            <Label htmlFor="subject" className="text-sm font-medium">Subject *</Label>
+            <Label htmlFor="subject" className="text-sm font-medium">
+              Subject *
+            </Label>
             <Input
               id="subject"
               name="subject"
@@ -604,9 +565,11 @@ function ContactLeadForm({ lead }: { lead: ApiTractorLead }) {
               className="border-gray-200"
             />
           </div>
-          
+
           <div className="space-y-2">
-            <Label htmlFor="offerPrice" className="text-sm font-medium">Offer Price ($)</Label>
+            <Label htmlFor="offerPrice" className="text-sm font-medium">
+              Offer Price ($)
+            </Label>
             <Input
               id="offerPrice"
               name="offerPrice"
@@ -618,24 +581,28 @@ function ContactLeadForm({ lead }: { lead: ApiTractorLead }) {
               className="border-gray-200"
             />
           </div>
-          
+
           <div className="space-y-2">
-            <Label htmlFor="contactMethod" className="text-sm font-medium">Contact Method</Label>
+            <Label htmlFor="contactMethod" className="text-sm font-medium">
+              Contact Method
+            </Label>
             <select
               id="contactMethod"
               name="contactMethod"
               value={formData.contactMethod}
               onChange={handleInputChange}
-              className="w-full p-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gradient-to-br from-[#A10A0C] to-[#3B0404]"
+              className="w-full p-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="email">Email</option>
               <option value="phone">Phone</option>
               <option value="both">Both</option>
             </select>
           </div>
-          
+
           <div className="space-y-2">
-            <Label htmlFor="message" className="text-sm font-medium">Message *</Label>
+            <Label htmlFor="message" className="text-sm font-medium">
+              Message *
+            </Label>
             <Textarea
               id="message"
               name="message"
@@ -647,10 +614,10 @@ function ContactLeadForm({ lead }: { lead: ApiTractorLead }) {
               className="border-gray-200"
             />
           </div>
-          
-          <Button 
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" 
-            onClick={handleContactLead} 
+
+          <Button
+            className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800"
+            onClick={handleContactLead}
             disabled={requesting}
           >
             {requesting ? (

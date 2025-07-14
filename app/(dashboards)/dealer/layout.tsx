@@ -26,9 +26,9 @@ export default function DashboardLayout({
 }) {
   return (
     <html lang="en">
-      <body style={{ fontFamily: 'Poppins' }} className="bg-[#e5e5e5]">
+      <body style={{ fontFamily: 'Poppins' }} >
         <ReduxWrapper>
-          <div className="flex min-h-screen flex-col md:flex-row bg-gray-100">
+          <div className="flex  flex-col md:flex-row ">
             <ToastContainer />
             {/* Sidebar (Commented Out) */}
             {/* <Sidebar /> */}
@@ -37,7 +37,7 @@ export default function DashboardLayout({
               {/* Top Bar */}
               <TopBar />
               {/* Main Content */}
-              <div className="flex-1 overflow-auto p-4 md:p-6">
+              <div className="flex-1 overflow-auto ">
                 {children}
               </div>
             </div>

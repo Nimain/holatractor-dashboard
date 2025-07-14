@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, ChevronDown, UserIcon } from "lucide-react"
+import { Search, ChevronDown, UserIcon, Filter, MoreVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import { RentalDetailsModal } from "@/components/Dashboards/Dealer/Modals/RentalDetailsModal"
 import { useCookie } from "next-cookie"
 import { renderInstance } from "@/utils/Axios/RenderInstance"
@@ -100,37 +101,6 @@ interface TractorRental {
   status: "Active" | "Completed" | "Cancelled"
   originalData: TractorLeaseLead
 }
-
-// Custom CSS for responsive card layout
-const styles = `
-  @media (max-width: 768px) {
-    .table-container {
-      overflow-x: auto;
-    }
-    .rental-card {
-      border: 1px solid #742a2a;
-      border-radius: 8px;
-      margin-bottom: 1rem;
-      padding: 1rem;
-      background-color: #742a2a;
-      color: white;
-    }
-    .rental-card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 0.5rem;
-    }
-    .rental-card-content {
-      display: grid;
-      gap: 0.5rem;
-    }
-    .rental-card-label {
-      font-weight: 600;
-      color: #fed7d7;
-    }
-  }
-`
 
 export default function EnhancedTractorRentalTable() {
   const [rentals, setRentals] = useState<TractorRental[]>([])
@@ -268,6 +238,32 @@ export default function EnhancedTractorRentalTable() {
     setIsModalOpen(true)
   }
 
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case "Active":
+        return "bg-green-500 hover:bg-green-600"
+      case "Completed":
+        return "bg-blue-500 hover:bg-blue-600"
+      case "Cancelled":
+        return "bg-gray-500 hover:bg-gray-600"
+      default:
+        return "bg-green-500 hover:bg-green-600"
+    }
+  }
+
+  const getPaymentStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case "Paid":
+        return "bg-green-500 hover:bg-green-600"
+      case "Pending":
+        return "bg-orange-500 hover:bg-orange-600"
+      case "Overdue":
+        return "bg-red-500 hover:bg-red-600"
+      default:
+        return "bg-orange-500 hover:bg-orange-600"
+    }
+  }
+
   if (fetching) {
     return (
       <div className="w-full p-4 md:p-6">
@@ -282,58 +278,67 @@ export default function EnhancedTractorRentalTable() {
 
   return (
     <div className="w-full bg-white">
-      <style>{styles}</style>
-      {/* Top Header Section */}
-      <div className="bg-transparent px-4 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex flex-col sm:flex-row items-center gap-4">
-          <Button className="bg-[#F91F1F] hover:bg-[#F91F1F] text-white px-4 py-2 rounded-[5px] text-sm font-medium flex items-center gap-2 w-full sm:w-auto">
-            All Rentals
-            <ChevronDown className="h-4 w-4" />
-          </Button>
-          <Button className="bg-[#F91F1F] hover:bg-[#F91F1F] text-white px-4 py-2 rounded-[5px] text-sm font-medium flex items-center gap-2 w-full sm:w-auto">
-            <UserIcon className="h-4 w-4" />
-            Rented By
-            <ChevronDown className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-[#F91F1F]" />
-          <Input
-            placeholder="Search in the List"
-            className="pl-12 pr-4 py-3 w-full bg-white border border-[#F91F1F] rounded-[5px] text-sm placeholder:text-[#A80000] focus:ring-2"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      {/* Top Header Section - Improved Responsive Layout */}
+      <div className="bg-transparent px-4 py-4">
+        <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
+          {/* Filter Buttons */}
+          <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
+            <Button className="bg-[#F91F1F] hover:bg-[#F91F1F] text-white px-4 py-2 rounded-[5px] text-sm font-medium flex items-center justify-center gap-2 w-full sm:w-auto">
+              <Filter className="h-4 w-4" />
+              All Rentals
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+            <Button className="bg-[#F91F1F] hover:bg-[#F91F1F] text-white px-4 py-2 rounded-[5px] text-sm font-medium flex items-center justify-center gap-2 w-full sm:w-auto">
+              <UserIcon className="h-4 w-4" />
+              Rented By
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Search Bar */}
+          <div className="relative w-full lg:w-96">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#F91F1F]" />
+            <Input
+              placeholder="Search in the List"
+              className="pl-10 pr-4 py-2.5 w-full bg-white border border-[#F91F1F] rounded-md text-sm placeholder:text-[#A80000] focus:ring-2 focus:ring-[#F91F1F] focus:border-transparent"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Secondary Header */}
-      <div className="bg-red-500 px-4 md:px-6 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex flex-col sm:flex-row items-center gap-4 md:gap-6">
-          <h1 className="text-white font-semibold text-base md:text-lg">Total Rentals: {filteredRentals.length}</h1>
-          <div className="flex items-center gap-2 bg-white py-0 px-5 rounded-full">
-            <span className="text-[#F91F1F] text-sm">Sort By:</span>
-            <Button className="bg-transparent text-red-500 hover:bg-transparent px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
-              Date
+      {/* Secondary Header - Improved Layout */}
+      <div className="bg-red-500 px-4 md:px-6 py-3">
+        <div className="flex flex-col space-y-3 md:flex-row md:items-center md:justify-between md:space-y-0">
+          <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-6">
+            <h1 className="text-white font-semibold text-lg">
+              Total Rentals: <span className="font-bold">{filteredRentals.length}</span>
+            </h1>
+            <div className="flex items-center gap-2 bg-white py-1 px-4 rounded-full w-fit">
+              <span className="text-[#F91F1F] text-sm font-medium">Sort By:</span>
+              <Button className="bg-transparent text-red-500 hover:bg-red-50 px-2 py-1 rounded-md text-sm font-medium flex items-center gap-1">
+                Date
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-white text-sm">Results:</span>
+            <Button variant="ghost" className="text-white hover:bg-red-600 px-3 py-1 text-sm flex items-center gap-1">
+              {filteredRentals.length}
               <ChevronDown className="h-4 w-4" />
             </Button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-white text-sm">Results</span>
-          <Button variant="ghost" className="text-white hover:bg-red-600 px-2 py-1 text-sm flex items-center gap-1">
-            {filteredRentals.length}
-            <ChevronDown className="h-4 w-4" />
-          </Button>
-        </div>
       </div>
 
-      {/* Table / Card Layout */}
-      <div className="table-container">
+      {/* Main Content Area */}
+      <div >
         {filteredRentals.length === 0 ? (
-          <div className="text-center py-16 bg-white">
+          <div className="text-center py-16 bg-white rounded-lg">
             <div className="mx-auto h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-              <div className="h-12 w-12 text-gray-400">🚜</div>
+              <div className="h-12 w-12 text-gray-400 text-2xl">🚜</div>
             </div>
             <h2 className="text-xl md:text-2xl font-semibold text-gray-900 mb-2">
               {searchTerm ? "No matching rentals found" : "No rental leads available"}
@@ -356,156 +361,266 @@ export default function EnhancedTractorRentalTable() {
           </div>
         ) : (
           <>
-            {/* Table for larger screens */}
-            <table className="w-full hidden md:table">
-              <thead>
-                <tr className="bg-white">
-                  <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">S.NO</th>
-                  <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
-                    CUSTOMER NAME
-                  </th>
-                  <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
-                    TRACTOR NAME & MODEL
-                  </th>
-                  <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
-                    START DATE
-                  </th>
-                  <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
-                    LEASE PERIOD
-                  </th>
-                  <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
-                    MONTHLY COST
-                  </th>
-                  <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
-                    PAYMENT STATUS
-                  </th>
-                  <th className="px-4 py-4 text-left text-sm font-bold text-[#F91F1F] uppercase tracking-wider">
-                    LEASE STATUS
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRentals.map((rental, index) => (
-                  <tr
-                    key={rental.id}
-                    className="bg-red-900 hover:bg-red-800 transition-colors cursor-pointer border-b border-red-800"
-                    onClick={() => openModal(rental)}
-                  >
-                    <td className="px-4 py-4 text-white font-bold text-lg">{index + 1}</td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center">
-                          <span className="text-sm font-bold text-red-900">
-                            {rental.originalData?.User?.first_name?.[0] || "H"}
-                            {rental.originalData?.User?.last_name?.[0] || ""}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-semibold text-white">{rental.userId || "Holauser123"}</p>
-                          <p className="text-sm text-red-200">
-                            {rental.originalData?.User?.email || "Holauser123@gmail.com"}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div>
-                        <p className="font-semibold text-white">{rental.tractorNameModel || "MF 245 DI-50 HP"}</p>
-                        <p className="text-sm text-red-200">
-                          {rental.originalData?.Tractor?.TractorSpecification?.horsePower || "677"} HP - Medium Type
-                        </p>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div>
-                        <p className="font-semibold text-white">{rental.startDate || "Jun 30,2025"}</p>
-                        <p className="text-sm text-red-200">May 02,2025</p>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className="font-semibold text-white">{rental.duration || "One Month"}</span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div>
-                        <p className="font-semibold text-white">${rental.cost?.toLocaleString() || "1200"}.5</p>
-                        <p className="text-sm text-red-200">-$50 Discount</p>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-500 text-white">
-                        {rental.paymentStatus || "Pending"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-600 text-white">
-                        {rental.status || "Active"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {/* Desktop Table - Hidden on mobile and tablet */}
+            <div className="hidden xl:block">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
+                          S.NO
+                        </th>
+                        <th className="px-4 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
+                          Customer Name
+                        </th>
+                        <th className="px-4 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
+                          Tractor Name & Model
+                        </th>
+                        <th className="px-4 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
+                          Start Date
+                        </th>
+                        <th className="px-4 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
+                          Lease Period
+                        </th>
+                        <th className="px-4 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
+                          Monthly Cost
+                        </th>
+                        <th className="px-4 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
+                          Payment Status
+                        </th>
+                        <th className="px-4 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
+                          Lease Status
+                        </th>
+                        <th className="px-4 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-red-900 divide-y divide-gray-200">
+                      {filteredRentals.map((rental, index) => (
+                        <tr
+                          key={rental.id}
+                          className="hover:bg-red-800 transition-colors cursor-pointer"
+                          onClick={() => openModal(rental)}
+                        >
+                          <td className="px-4 py-4 text-white font-semibold">{index + 1}</td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
+                                <span className="text-sm font-bold text-white">
+                                  {rental.originalData?.User?.first_name?.[0] || "H"}
+                                  {rental.originalData?.User?.last_name?.[0] || ""}
+                                </span>
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-semibold text-white truncate">{rental.userId || "Holauser123"}</p>
+                                <p className="text-sm text-white truncate">
+                                  {rental.originalData?.User?.email || "Holauser123@gmail.com"}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div>
+                              <p className="font-semibold text-white">{rental.tractorNameModel}</p>
+                              <p className="text-sm text-white">
+                                {rental.originalData?.Tractor?.TractorSpecification?.horsePower} HP
+                              </p>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <p className="font-semibold text-white">{rental.startDate || "Jun 30, 2025"}</p>
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className="font-semibold text-white">{rental.duration || "One Month"}</span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <p className="font-semibold text-white">${rental.cost?.toLocaleString() || "1200"}</p>
+                          </td>
+                          <td className="px-4 py-4">
+                            <Badge className={`${getPaymentStatusBadgeVariant(rental.paymentStatus)} text-white`}>
+                              {rental.paymentStatus || "Pending"}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-4">
+                            <Badge className={`${getStatusBadgeVariant(rental.status)} text-white`}>
+                              {rental.status || "Active"}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-4">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openModal(rental)
+                              }}
+                            >
+                              <MoreVertical className="h-4 w-4 text-white" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
 
-            {/* Card layout for smaller screens */}
-            <div className="md:hidden">
+            {/* Tablet Horizontal Scroll Table - Visible on medium to large screens */}
+            <div className="hidden md:block xl:hidden">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full ">
+                    <thead className="border-b border-gray-200">
+                      <tr>
+                        <th className="px-3 py-3 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
+                          S.NO
+                        </th>
+                        <th className="px-3 py-3 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
+                          Customer
+                        </th>
+                        <th className="px-3 py-3 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
+                          Tractor
+                        </th>
+                        <th className="px-3 py-3 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
+                          Date
+                        </th>
+                        <th className="px-3 py-3 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
+                          Period
+                        </th>
+                        <th className="px-3 py-3 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
+                          Cost
+                        </th>
+                        <th className="px-3 py-3 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
+                          Payment
+                        </th>
+                        <th className="px-3 py-3 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-red-900 divide-y divide-gray-200">
+                      {filteredRentals.map((rental, index) => (
+                        <tr
+                          key={rental.id}
+                          className="hover:bg-red-800 transition-colors cursor-pointer"
+                          onClick={() => openModal(rental)}
+                        >
+                          <td className="px-3 py-3 text-white font-semibold text-sm">{index + 1}</td>
+                          <td className="px-3 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="h-8 w-8 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
+                                <span className="text-xs font-bold text-white">
+                                  {rental.originalData?.User?.first_name?.[0] || "H"}
+                                  {rental.originalData?.User?.last_name?.[0] || ""}
+                                </span>
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-semibold text-white text-sm truncate">
+                                  {rental.userId || "Holauser123"}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-3 py-3">
+                            <p className="font-semibold text-white text-sm">{rental.tractorNameModel}</p>
+                          </td>
+                          <td className="px-3 py-3">
+                            <p className="font-semibold text-white text-sm">{rental.startDate || "Jun 30, 2025"}</p>
+                          </td>
+                          <td className="px-3 py-3">
+                            <span className="font-semibold text-white text-sm">{rental.duration || "One Month"}</span>
+                          </td>
+                          <td className="px-3 py-3">
+                            <p className="font-semibold text-white text-sm">
+                              ${rental.cost?.toLocaleString() || "1200"}
+                            </p>
+                          </td>
+                          <td className="px-3 py-3">
+                            <Badge
+                              className={`${getPaymentStatusBadgeVariant(rental.paymentStatus)} text-white text-xs`}
+                            >
+                              {rental.paymentStatus || "Pending"}
+                            </Badge>
+                          </td>
+                          <td className="px-3 py-3">
+                            <Badge className={`${getStatusBadgeVariant(rental.status)} text-white text-xs`}>
+                              {rental.status || "Active"}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile Card Layout - Visible only on small screens */}
+            <div className="md:hidden space-y-4">
               {filteredRentals.map((rental, index) => (
                 <div
                   key={rental.id}
-                  className="rental-card"
+                  className="cursor-pointer hover:shadow-md transition-shadow border border-gray-200 bg-[#742a2a]"
                   onClick={() => openModal(rental)}
                 >
-                  <div className="rental-card-header">
-                    <span className="font-bold text-lg">{index + 1}</span>
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-600 text-white">
-                      {rental.status || "Active"}
-                    </span>
-                  </div>
-                  <div className="rental-card-content">
-                    <div>
-                      <span className="rental-card-label">Customer:</span>
-                      <div className="flex items-center gap-2 mt-1">
-                        <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center">
-                          <span className="text-xs font-bold text-red-900">
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-bold text-lg text-white">#{index + 1}</span>
+                      <Badge className={`${getStatusBadgeVariant(rental.status)} text-white`}>
+                        {rental.status || "Active"}
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-3">
+                      {/* Customer Info */}
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-bold text-white">
                             {rental.originalData?.User?.first_name?.[0] || "H"}
                             {rental.originalData?.User?.last_name?.[0] || ""}
                           </span>
                         </div>
-                        <div>
-                          <p className="font-semibold text-white text-sm">{rental.userId || "Holauser123"}</p>
-                          <p className="text-xs text-red-200">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-white">{rental.userId || "Holauser123"}</p>
+                          <p className="text-sm text-white truncate">
                             {rental.originalData?.User?.email || "Holauser123@gmail.com"}
                           </p>
                         </div>
                       </div>
-                    </div>
-                    <div>
-                      <span className="rental-card-label">Tractor:</span>
-                      <p className="font-semibold text-white text-sm">{rental.tractorNameModel || "MF 245 DI-50 HP"}</p>
-                      <p className="text-xs text-red-200">
-                        {rental.originalData?.Tractor?.TractorSpecification?.horsePower || "677"} HP - Medium Type
-                      </p>
-                    </div>
-                    <div>
-                      <span className="rental-card-label">Start Date:</span>
-                      <p className="font-semibold text-white text-sm">{rental.startDate || "Jun 30,2025"}</p>
-                      <p className="text-xs text-red-200">May 02,2025</p>
-                    </div>
-                    <div>
-                      <span className="rental-card-label">Lease Period:</span>
-                      <p className="font-semibold text-white text-sm">{rental.duration || "One Month"}</p>
-                    </div>
-                    <div>
-                      <span className="rental-card-label">Monthly Cost:</span>
-                      <p className="font-semibold text-white text-sm">${rental.cost?.toLocaleString() || "1200"}.5</p>
-                      <p className="text-xs text-red-200">-$50 Discount</p>
-                    </div>
-                    <div>
-                      <span className="rental-card-label">Payment Status:</span>
-                      <p>
-                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-500 text-white">
-                          {rental.paymentStatus || "Pending"}
-                        </span>
-                      </p>
+
+                      {/* Tractor Info */}
+                      <div>
+                        <p className="text-sm font-medium text-white">Tractor</p>
+                        <p className="font-semibold text-white">{rental.tractorNameModel || "MF 245 DI-50 HP"}</p>
+                        <p className="text-sm text-white">
+                          {rental.originalData?.Tractor?.TractorSpecification?.horsePower || "677"} HP
+                        </p>
+                      </div>
+
+                      {/* Details Grid */}
+                      <div className="grid grid-cols-2 gap-3 pt-2 border-t border-gray-100">
+                        <div>
+                          <p className="text-sm font-medium text-white">Start Date</p>
+                          <p className="font-semibold text-white">{rental.startDate || "Jun 30, 2025"}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-white">Period</p>
+                          <p className="font-semibold text-white">{rental.duration || "One Month"}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-white">Monthly Cost</p>
+                          <p className="font-semibold text-white">${rental.cost?.toLocaleString() || "1200"}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-white">Payment</p>
+                          <Badge className={`${getPaymentStatusBadgeVariant(rental.paymentStatus)} text-white text-xs`}>
+                            {rental.paymentStatus || "Pending"}
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { Search, Mail, Store, Heart, ChevronLeft, ChevronRight, Plus, MoreHorizontal } from "lucide-react"
+import { Search, Mail, Store, Heart, ChevronLeft, ChevronRight, Plus, Menu, X } from "lucide-react"
 import { Bar, BarChart, XAxis, YAxis } from "recharts"
 import { ChartContainer } from "@/components/ui/chart"
 import Image from "next/image"
@@ -55,7 +55,7 @@ interface Mentor {
   verified?: boolean
 }
 
-export default function DealerDashboard() {
+export default function ResponsiveDealerDashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [stores, setStores] = useState<StoreData[]>([])
   const [loading, setLoading] = useState(true)
@@ -68,7 +68,6 @@ export default function DealerDashboard() {
   useEffect(() => {
     const fetchStores = async () => {
       if (!user?.userId || !access_token) return
-
       try {
         setLoading(true)
         const response = await renderInstance.get(`/dealer/all-stores/${user.userId}`, {
@@ -76,7 +75,6 @@ export default function DealerDashboard() {
             Authorization: `Bearer ${access_token}`,
           },
         })
-
         if (response.status === 200) {
           setStores(response.data)
         }
@@ -86,11 +84,10 @@ export default function DealerDashboard() {
         setLoading(false)
       }
     }
-
     fetchStores()
   }, [user?.userId, access_token])
 
-  // Format time from ISO string (e.g., "1970-01-01T23:35:00.000Z")
+  // Format time from ISO string
   const formatTime = (timeString: string) => {
     try {
       const date = new Date(timeString)
@@ -100,18 +97,6 @@ export default function DealerDashboard() {
     }
   }
 
-  const lessons = [
-    {
-      mentor: {
-        name: "Padhang Satrio",
-        avatar: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJkPZY_sSpXLHyqUr_6WAB4oXmauRcUvHISQ&s",
-        date: "2/16/2004",
-      },
-      type: "UI/UX DESIGN",
-      desc: "Understand Of UI/UX Design",
-    },
-  ]
-
   const chartData = [
     { name: "1-10 Aug", value: 30, fill: "#7C5CFC" },
     { name: "11-20 Aug", value: 45, fill: "#7C5CFC" },
@@ -120,17 +105,11 @@ export default function DealerDashboard() {
     { name: "21-30 Aug", value: 60, fill: "#7C5CFC" },
   ]
 
-  const mentors: Mentor[] = [
-    { name: "Padhang Satrio", role: "Mentor", avatar: "/placeholder.svg?height=48&width=48", verified: true },
-    { name: "Zakir Horizontal", role: "Mentor", avatar: "/placeholder.svg?height=48&width=48", verified: true },
-    { name: "Leonardo Samsul", role: "Mentor", avatar: "/placeholder.svg?height=48&width=48", verified: true },
-  ]
-
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div >
       {/* Header */}
-      <div className="flex justify-between items-center p-6 mb-8">
-        <div className="relative w-1/3">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-4 md:p-6">
+        <div className="relative w-full md:w-1/2 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
           <input
             type="text"
@@ -138,70 +117,71 @@ export default function DealerDashboard() {
             className="w-full pl-10 pr-4 py-2 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
           />
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 w-full md:w-auto justify-end">
           <button
-            className="flex items-center gap-2 px-4 py-2 bg-[#F91F1F] text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors duration-200"
+            className="flex items-center gap-2 px-4 py-2 bg-[#F91F1F] text-white rounded-lg shadow-md hover:bg-red-700 transition-colors duration-200"
             onClick={() => setIsModalOpen(true)}
           >
             <Store size={20} className="text-white" />
-            Add Store
+            <span className="hidden sm:inline">Add Store</span>
           </button>
-          <AddStoreModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
         </div>
       </div>
 
-      <div className="grid grid-cols-[1fr_400px]">
-        {/* Left content */}
-        <div className="p-6 bg-gray-50 min-h-screen">
+      <AddStoreModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+
+      {/* Main Content Grid - Fixed layout */}
+      <div className="flex flex-col xl:flex-row gap-6 p-4 md:p-6">
+        {/* Left content - Flexible width */}
+        <div className="flex-1 space-y-6">
           {/* Hero Section */}
-          <div className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-3xl p-8 mb-8 text-white relative overflow-hidden">
-            <div className="absolute right-0 top-0 w-1/2 h-full opacity-20">
+          <div className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-2xl md:rounded-3xl p-6 md:p-8 text-white relative overflow-hidden">
+            <div className="absolute right-0 top-0 w-1/2 h-full opacity-20 hidden md:block">
               <div className="absolute right-[-100px] top-1/2 transform -translate-y-1/2 w-[400px] h-[400px] border border-white/20 rounded-full" />
               <div className="absolute right-[-50px] top-1/2 transform -translate-y-1/2 w-[300px] h-[300px] border border-white/20 rounded-full" />
               <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-[200px] h-[200px] border border-white/20 rounded-full" />
             </div>
-            <div className="text-sm uppercase tracking-wide mb-2">Dealer Dashboard</div>
-            <h1 className="text-4xl font-bold mb-6 max-w-lg leading-tight">Manage Your Stores and Inventory</h1>
-            <button className="bg-white hover:bg-white text-[#F91F1F] px-6 py-3 rounded-[5px] flex items-center gap-2 text-sm transition-colors">
+            <div className="text-xs md:text-sm uppercase tracking-wide mb-2">Dealer Dashboard</div>
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 md:mb-6 max-w-lg leading-tight">
+              Manage Your Stores and Inventory
+            </h1>
+            <button className="bg-white hover:bg-gray-100 text-[#F91F1F] px-4 md:px-6 py-2 md:py-3 rounded-[5px] flex items-center gap-2 text-sm transition-colors">
               Join Now
               <ChevronRight size={16} />
             </button>
           </div>
 
-          {/* Store Progress */}
-          <div className="flex gap-6 mb-8 overflow-x-auto pb-4 scrollbar-hide">
-            <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-xl shadow-sm min-w-[240px]">
-              <div className="p-3 bg-blue-50 rounded-xl">
-                <div className="text-[#F91F1F] font-medium">Total Stores</div>
+          {/* Store Progress Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+            <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-xl shadow-sm">
+              <div className="p-3 bg-blue-50 rounded-xl flex-shrink-0">
+                <div className="text-[#F91F1F] font-medium text-sm">Total Stores</div>
               </div>
-              <div className="text-sm text-gray-500">{stores.length}</div>
-              {/* <MoreHorizontal size={20} className="text-gray-400 ml-auto cursor-pointer" /> */}
+              <div className="text-sm text-white">{stores.length}</div>
             </div>
-            <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-xl shadow-sm min-w-[240px]">
-              <div className="p-3 bg-green-50 rounded-xl">
-                <div className="text-[#F91F1F] font-medium">Branding</div>
+            <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-xl shadow-sm">
+              <div className="p-3 bg-green-50 rounded-xl flex-shrink-0">
+                <div className="text-[#F91F1F] font-medium text-sm">Branding</div>
               </div>
-              <div className="text-sm text-gray-500">{stores.length}</div>
-              {/* <MoreHorizontal size={20} className="text-gray-400 ml-auto cursor-pointer" /> */}
+              <div className="text-sm text-white">{stores.length}</div>
             </div>
-            <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-xl shadow-sm min-w-[240px]">
-              <div className="p-3 bg-purple-50 rounded-xl">
-                <div className="text-[#F91F1F] font-medium">Front End</div>
+            <div className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-xl shadow-sm">
+              <div className="p-3 bg-purple-50 rounded-xl flex-shrink-0">
+                <div className="text-[#F91F1F] font-medium text-sm">Front End</div>
               </div>
-              <div className="text-sm text-gray-500">0 items</div>
-              {/* <MoreHorizontal size={20} className="text-gray-400 ml-auto cursor-pointer" /> */}
+              <div className="text-sm text-white">0 items</div>
             </div>
           </div>
 
           {/* All Stores Section */}
-          <div className="mb-8">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold">All Stores</h2>
+          <div>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+              <h2 className="text-xl font-bold text-[#F91F1F]">All Stores</h2>
               <div className="flex gap-2">
                 <button className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
-                  <ChevronLeft size={20} className="text-" />
+                  <ChevronLeft size={20} className="text-gray-600" />
                 </button>
-                <button className="p-2 rounded-full bg-[#7C5CFC] hover:bg-[#6B4FD9] text-white transition-colors">
+                <button className="p-2 rounded-full bg-[#F91F1F] hover:bg-red-700 text-white transition-colors">
                   <ChevronRight size={20} />
                 </button>
               </div>
@@ -212,7 +192,7 @@ export default function DealerDashboard() {
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
               </div>
             ) : stores.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
                 {stores.map((store) => (
                   <div
                     key={store.id}
@@ -225,30 +205,25 @@ export default function DealerDashboard() {
                         alt={store.name}
                         width={400}
                         height={200}
-                        className="w-full h-48 object-cover"
+                        className="w-full h-40 md:h-48 object-cover"
                       />
                       <button className="absolute top-4 right-4 p-2 rounded-full bg-white/80 hover:bg-white transition-colors">
-                        <Heart size={20} className="text-white" />
+                        <Heart size={20} className="text-[#F91F1F]" />
                       </button>
                     </div>
                     <div className="p-4">
-                      {/* Store Name */}
-                      <h3 className="font-semibold mb-3 line-clamp-1 text-base ">{store.name || "Unnamed Store"}</h3>
+                      <h3 className="font-semibold mb-3 line-clamp-1 text-base">{store.name || "Unnamed Store"}</h3>
 
-                      {/* Time and Days in organized layout */}
                       <div className="space-y-2 mb-3">
-                        {/* Opening Hours */}
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500 font-medium min-w-[45px]">Hours:</span>
-                          <span className="text-sm text- font-medium">
+                          <span className="text-xs text-white font-medium min-w-[45px]">Hours:</span>
+                          <span className="text-sm text-white font-medium">
                             {formatTime(store.opening_time)} - {formatTime(store.closing_time)}
                           </span>
                         </div>
-
-                        {/* Closing Days */}
                         {store.closing_days.length > 0 && store.closing_days[0] && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500 font-medium min-w-[45px]">Closed:</span>
+                          <div className="flex items-start gap-2">
+                            <span className="text-xs text-white font-medium min-w-[45px] mt-0.5">Closed:</span>
                             <div className="flex flex-wrap gap-1">
                               {store.closing_days.map((day, index) => (
                                 <span key={index} className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded">
@@ -260,13 +235,10 @@ export default function DealerDashboard() {
                         )}
                       </div>
 
-                      {/* Description with hover - max 2 lines */}
                       <div className="relative group mb-4">
-                        <p className="text-sm text- leading-5 h-10 overflow-hidden">
+                        <p className="text-sm text-white leading-5 h-10 overflow-hidden">
                           {store.description || "No description available"}
                         </p>
-
-                        {/* Hover tooltip for full description */}
                         {store.description && store.description.length > 80 && (
                           <div className="absolute bottom-full left-0 right-0 mb-2 p-3 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20 pointer-events-none shadow-lg">
                             {store.description}
@@ -277,14 +249,14 @@ export default function DealerDashboard() {
 
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
                             <Store size={16} className="text-[#F91F1F]" />
                           </div>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-white">
                             Created {new Date(store.createdAt).toLocaleDateString()}
                           </div>
                         </div>
-                        <button className="text-xs bg-blue-50 text- px-3 py-1 rounded-full text-[#F91F1F] ">
+                        <button className="text-xs bg-blue-50 text-[#F91F1F] px-3 py-1 rounded-full whitespace-nowrap">
                           View Details
                         </button>
                       </div>
@@ -296,202 +268,124 @@ export default function DealerDashboard() {
               <div className="bg-white rounded-xl p-8 text-center">
                 <Store size={48} className="mx-auto text-gray-300 mb-4" />
                 <h3 className="text-lg font-medium text-gray-800 mb-2">No Stores Found</h3>
-                <p className="text-gray-500 mb-4">You haven't created any stores yet.</p>
-                <button className="px-4 py-2 bg- text-white rounded-lg" onClick={() => setIsModalOpen(true)}>
+                <p className="text-gray-600 mb-4">You haven't created any stores yet.</p>
+                <button className="px-4 py-2 bg-[#F91F1F] text-white rounded-lg" onClick={() => setIsModalOpen(true)}>
                   Create Your First Store
                 </button>
               </div>
             )}
           </div>
-
-          {/* Your Lesson Section */}
-          {/* <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold">Recent Activity</h2>
-              <button className="text-[#7C5CFC] text-sm font-medium">See all</button>
-            </div>
-
-            <div className="bg-white rounded-xl overflow-hidden">
-              <div className="grid grid-cols-4 gap-4 p-4 text-sm text-gray-500 border-b">
-                <div>USER</div>
-                <div>TYPE</div>
-                <div>DESC</div>
-                <div>ACTION</div>
-              </div>
-              {lessons.map((lesson, index) => (
-                <div key={index} className="grid grid-cols-4 gap-4 p-4 items-center">
-                  <div className="flex items-center gap-3">
-                    <Image
-                      src={lesson.mentor.avatar || "/placeholder.svg"}
-                      alt={lesson.mentor.name}
-                      width={40}
-                      height={40}
-                      className="rounded-full"
-                    />
-                    <div>
-                      <div className="font-medium text-sm">{lesson.mentor.name}</div>
-                      <div className="text-xs text-gray-500">{lesson.mentor.date}</div>
-                    </div>
-                  </div>
-                  <div className="px-3 py-1 bg-purple-50 text-purple-600 rounded-md w-fit text-sm">{lesson.type}</div>
-                  <div className="text-sm">{lesson.desc}</div>
-                  <div>
-                    <button className="p-2 rounded-full bg-[#7C5CFC] text-white">
-                      <ChevronRight size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div> */}
         </div>
 
-        {/* Right content */}
-        <div className="p-6 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] w-[98%] rounded-2xl h-[130vh]">
-          <div className="text-center mb-8">
-            <div className="relative inline-block">
-              <div className="w-20 h-20 rounded-full bg-[#F5F1FF] flex items-center justify-center relative">
-                <img
-                  src={user?.image || "/placeholder.svg?height=80&width=80"}
-                  alt="Profile"
-                  className="w-16 h-16 rounded-full object-cover"
-                />
-                <svg className="absolute inset-0 w-full h-full rotate-[-90deg]">
-                  <circle
-                    cx="40"
-                    cy="40"
-                    r="38"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                    className="text-[#F5F1FF]"
+        {/* Right Sidebar - Fixed width */}
+        <div className="w-full xl:w-80 xl:flex-shrink-0">
+          <div className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-2xl p-6 xl:sticky xl:top-6">
+            {/* Profile Section */}
+            <div className="text-center mb-6 md:mb-8">
+              <div className="relative inline-block">
+                <div className="w-16 md:w-20 h-16 md:h-20 rounded-full bg-[#F5F1FF] flex items-center justify-center relative">
+                  <img
+                    src={user?.image || "/placeholder.svg?height=80&width=80"}
+                    alt="Profile"
+                    className="w-12 md:w-16 h-12 md:h-16 rounded-full object-cover"
                   />
-                  <circle
-                    cx="40"
-                    cy="40"
-                    r="38"
-                    stroke="#7C5CFC"
-                    strokeWidth="4"
-                    fill="none"
-                    strokeDasharray={`${2 * Math.PI * 38 * 0.32} ${2 * Math.PI * 38 * (1 - 0.32)}`}
-                    className="drop-shadow-[0_2px_4px_rgba(124,92,252,0.4)]"
-                  />
-                </svg>
-                {/* <span className="absolute -top-1 -right-1 bg-[#7C5CFC] text-white text-xs px-2 py-0.5 rounded-full shadow-lg">
-                  {stores.length > 0 ? "Active" : "New"}
-                </span> */}
+                  <svg className="absolute inset-0 w-full h-full rotate-[-90deg]">
+                    <circle
+                      cx="50%"
+                      cy="50%"
+                      r="38"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                      className="text-[#F5F1FF]"
+                    />
+                    <circle
+                      cx="50%"
+                      cy="50%"
+                      r="38"
+                      stroke="#7C5CFC"
+                      strokeWidth="4"
+                      fill="none"
+                      strokeDasharray={`${2 * Math.PI * 38 * 0.32} ${2 * Math.PI * 38 * (1 - 0.32)}`}
+                      className="drop-shadow-[0_2px_4px_rgba(124,92,252,0.4)]"
+                    />
+                  </svg>
+                </div>
               </div>
+              <h3 className="text-lg font-bold mt-4 mb-1 text-white">Welcome, {user?.name || "Dealer"} 👋</h3>
+              <p className="text-sm text-white">Manage your stores and inventory from one place</p>
             </div>
-            <h3 className="text-lg font-bold mt-4 mb-1 text-white">Welcome, {user?.name || "Dealer"} 👋</h3>
-            <p className="text-sm text-white">Manage your stores and inventory from one place</p>
-          </div>
 
-          <div className="mb-8 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] p-6 rounded-[20px] border border-white">
-            <h3 className="font-semibold mb-4 text-white">Store Performance</h3>
-            <ChartContainer
-              className="h-[170px]"
-              config={{
-                value: {
-                  color: "#FF6B1B",
-                },
-              }}
-            >
-              <BarChart
-                data={chartData}
-                margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+            {/* Chart Section */}
+            <div className="mb-6 md:mb-8 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] p-4 md:p-6 rounded-[20px] border border-white">
+              <h3 className="font-semibold mb-4 text-white">Store Performance</h3>
+              <ChartContainer
+                className="h-[150px] md:h-[170px] w-full"
+                config={{
+                  value: {
+                    color: "#FF6B1B",
+                  },
+                }}
               >
-                <XAxis
-                  dataKey="name"
-                  axisLine={false}
-                  tickLine={false}
-                  fontSize={12}
-                  tickMargin={8}
-                  tick={{ fill: '#ffffff', fontSize: 12 }}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  fontSize={12}
-                  tickMargin={8}
-                  tick={{ fill: '#ffffff', fontSize: 12 }}
-                />
-                <Bar
-                  dataKey="value"
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={40}
-                  fill="#FF6B1B"
-                />
-              </BarChart>
-            </ChartContainer>
-          </div>
-
-          <div className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404]  p-6 rounded-[20px] border border-white">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-yellow-400">Your Mentor</h2>
+                <BarChart data={chartData} margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    fontSize={10}
+                    tickMargin={8}
+                    tick={{ fill: "#ffffff", fontSize: 10 }}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    fontSize={10}
+                    tickMargin={8}
+                    tick={{ fill: "#ffffff", fontSize: 10 }}
+                  />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={40} fill="#FF6B1B" />
+                </BarChart>
+              </ChartContainer>
             </div>
 
-            <div className="space-y-4">
-              {/* Mentor 1 */}
-              <div className="flex items-center justify-between w-full p-3 bg-transparent rounded-lg hover:bg-red-600/30 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
-                      <Store size={20} className="text-" />
-                    </div>
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-white font-semibold">Padhang Satrio</span>
-                    <span className="text-gray-300 text-sm">Mentor</span>
-                  </div>
-                </div>
-                <button className="text-yellow-400 font-medium hover:text-yellow-300 transition-colors">
-                  Follow
-                </button>
+            {/* Mentors Section */}
+            <div className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] p-4 md:p-6 rounded-[20px] border border-white">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-lg md:text-xl font-bold text-yellow-400">Your Mentor</h2>
               </div>
-
-              {/* Mentor 2 */}
-              <div className="flex items-center justify-between w-full p-3 bg-transparent rounded-lg hover:bg-red-600/30 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
-                      <Plus size={20} className="text-" />
+              <div className="space-y-4">
+                {/* Mentor Items */}
+                {[
+                  { icon: Store, name: "Padhang Satrio" },
+                  { icon: Plus, name: "Zakir Horizontal" },
+                  { icon: Mail, name: "Leonardo Samsul" },
+                ].map((mentor, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between w-full p-3 bg-transparent rounded-lg hover:bg-red-600/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="relative flex-shrink-0">
+                        <div className="w-10 md:w-12 h-10 md:h-12 bg-gray-300 rounded-full flex items-center justify-center">
+                          <mentor.icon size={18} className="text-gray-600" />
+                        </div>
+                        <div className="absolute -bottom-1 -right-1 w-3 md:w-4 h-3 md:h-4 bg-green-500 rounded-full border-2 border-white"></div>
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-white font-semibold text-sm md:text-base truncate">{mentor.name}</span>
+                        <span className="text-gray-300 text-xs md:text-sm">Mentor</span>
+                      </div>
                     </div>
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+                    <button className="text-yellow-400 font-medium hover:text-yellow-300 transition-colors text-sm flex-shrink-0">
+                      Follow
+                    </button>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-white font-semibold">Padhang Satrio</span>
-                    <span className="text-gray-300 text-sm">Mentor</span>
-                  </div>
-                </div>
-                <button className="text-yellow-400 font-medium hover:text-yellow-300 transition-colors">
-                  Follow
-                </button>
+                ))}
               </div>
-
-              {/* Mentor 3 */}
-              <div className="flex items-center justify-between w-full p-3 bg-transparent rounded-lg hover:bg-red-600/30 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
-                      <Mail size={20} className="text-" />
-                    </div>
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-white font-semibold">Padhang Satrio</span>
-                    <span className="text-gray-300 text-sm">Mentor</span>
-                  </div>
-                </div>
-                <button className="text-yellow-400 font-medium hover:text-yellow-300 transition-colors">
-                  Follow
-                </button>
-              </div>
+              <button className="w-full text-center text-white mt-6 py-3 bg-transparent border border-white/30 rounded-xl text-sm font-medium hover:bg-white/10 transition-colors">
+                See All
+              </button>
             </div>
-
-            <button className="w-full text-center text-white mt-6 py-3 bg-transparent border border-white/30 rounded-xl text-sm font-medium hover:bg-white/10 transition-colors">
-              See All
-            </button>
           </div>
         </div>
       </div>
