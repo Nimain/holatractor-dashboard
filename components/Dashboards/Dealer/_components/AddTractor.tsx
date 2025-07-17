@@ -1,7 +1,8 @@
 "use client"
+
 import { useState, useEffect } from "react"
 import { Search } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Image from "next/image"
@@ -9,6 +10,7 @@ import { renderInstance } from "@/utils/Axios/RenderInstance"
 import { errorMessage } from "@/utils/Toastify/Messages"
 import { CircularProgress } from "@mui/material"
 import { AddTractorModal } from "../Modals/AddTractorModal"
+import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface Tractor {
   id: string
@@ -23,7 +25,7 @@ interface Tractor {
 
 interface AddTractorProps {
   alreadyTractors: any[]
-  onTractorAdded?: () => void // Callback to refresh store data
+  onTractorAdded?: () => void
 }
 
 export default function AddTractor({ alreadyTractors, onTractorAdded }: AddTractorProps) {
@@ -33,7 +35,6 @@ export default function AddTractor({ alreadyTractors, onTractorAdded }: AddTract
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedTractor, setSelectedTractor] = useState<Tractor | null>(null)
 
-  // Fetch tractors from the /tractor endpoint
   useEffect(() => {
     async function fetchTractors() {
       setFetchingTractors(true)
@@ -49,19 +50,16 @@ export default function AddTractor({ alreadyTractors, onTractorAdded }: AddTract
     fetchTractors()
   }, [])
 
-  // Filter tractors based on search term and exclude already added tractors
   const filteredTractors = tractors.filter(
     (tractor) =>
       (tractor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         tractor.model.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      !alreadyTractors.some((added) => added.baseTractor?.id === tractor.id), // Added optional chaining
+      !alreadyTractors.some((added) => added.baseTractor?.id === tractor.id),
   )
 
   const handleModalClose = (tractorAdded = false) => {
     setIsModalOpen(false)
     setSelectedTractor(null)
-
-    // If a tractor was successfully added, call the callback to refresh store data
     if (tractorAdded && onTractorAdded) {
       onTractorAdded()
     }
@@ -69,74 +67,84 @@ export default function AddTractor({ alreadyTractors, onTractorAdded }: AddTract
 
   return (
     <>
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardContent className="pt-6 px-4 pb-4">
-          <div className="flex items-center space-x-2 mb-6">
-            <Search className="w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Search tractors..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-grow"
-            />
-          </div>
-          {fetchingTractors ? (
-            <div className="flex justify-center">
-              <CircularProgress />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredTractors.length === 0 ? (
-                <p className="text-center col-span-full">No tractors available</p>
-              ) : (
-                filteredTractors.map((tractor) => (
-                  <Card key={tractor.id}>
-                    <CardHeader>
-                      <CardTitle>{tractor.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {tractor.images?.[0] && ( // Added optional chaining
-                          <Image
-                            src={tractor.images[0] || "/placeholder.svg"}
-                            alt={tractor.name}
-                            width={100}
-                            height={100}
-                            className="w-24 h-24 object-cover rounded"
-                          />
-                        )}
-                        <p className="text-sm text-gray-600">
-                          <strong>Model:</strong> {tractor.model}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          <strong>Type:</strong> {tractor.type}
-                        </p>
-                      </div>
-                      <Button
-                        onClick={() => {
-                          setSelectedTractor(tractor)
-                          setIsModalOpen(true)
-                        }}
-                        className="mt-4"
-                      >
-                        Add to Store
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <DialogHeader className="mb-6">
+        <DialogTitle className="text-2xl text-left text-white">Add Tractor to Store</DialogTitle>
+        <DialogDescription className="text-left text-white/80">
+          Select a Tractor to add to your store inventory
+        </DialogDescription>
+      </DialogHeader>
 
-      {/* Only render modal when selectedTractor exists */}
+      <div className="space-y-6">
+        {/* Search Input */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[#A10A0C]" />
+          <Input
+            placeholder="Search for the tractor"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 bg-white text-gray-900 placeholder:text-gray-400 border-gray-300 focus:border-[#A10A0C] focus:ring-[#A10A0C]"
+          />
+        </div>
+
+        {/* Tractors Grid */}
+        {fetchingTractors ? (
+          <div className="flex justify-center py-8">
+            <CircularProgress />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-h-[calc(90vh-200px)] overflow-y-auto pr-2">
+            {filteredTractors.length === 0 ? (
+              <p className="text-center col-span-full text-white">No tractors available</p>
+            ) : (
+              filteredTractors.map((tractor) => (
+                <Card key={tractor.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  <CardContent className="p-4">
+                    {/* Image Placeholder */}
+                    <div className="w-full h-24 bg-gray-300 rounded mb-3 flex items-center justify-center">
+                      {tractor.images?.[0] ? (
+                        <Image
+                          src={tractor.images[0] || "/placeholder.svg"}
+                          alt={tractor.name}
+                          width={100}
+                          height={60}
+                          className="w-full h-full object-cover rounded"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-300 rounded"></div>
+                      )}
+                    </div>
+
+                    {/* Tractor Info */}
+                    <div className="space-y-1 mb-3">
+                      <h3 className="font-semibold text-gray-900 text-sm">{tractor.name}</h3>
+                      <p className="text-xs text-gray-600">
+                        <span className="font-medium">Model:</span> {tractor.model}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        <span className="font-medium">Type:</span> {tractor.type}
+                      </p>
+                    </div>
+
+                    {/* Add Button */}
+                    <Button
+                      onClick={() => {
+                        setSelectedTractor(tractor)
+                        setIsModalOpen(true)
+                      }}
+                      className="w-full bg-[#F76A1E] hover:bg-[#F76A1E]/90 text-white text-sm py-2 rounded"
+                    >
+                      Add To Store
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
       {selectedTractor && (
-        <AddTractorModal 
-          open={isModalOpen} 
-          onOpenChange={handleModalClose} 
-          selectedTractor={selectedTractor} 
-        />
+        <AddTractorModal open={isModalOpen} onOpenChange={handleModalClose} selectedTractor={selectedTractor} />
       )}
     </>
   )

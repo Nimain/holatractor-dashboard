@@ -73,7 +73,6 @@ const useReverseGeocode = (lat: string, lng: string) => {
     const fetchAddress = async () => {
       setLoading(true)
       setError("")
-
       try {
         const response = await fetch(
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
@@ -83,13 +82,10 @@ const useReverseGeocode = (lat: string, lng: string) => {
             },
           },
         )
-
         if (!response.ok) {
           throw new Error("Failed to fetch address")
         }
-
         const data = await response.json()
-
         if (data.display_name) {
           setAddress(data.display_name)
         } else {
@@ -132,16 +128,12 @@ export default function StorePage() {
   const [showAllTractors, setShowAllTractors] = useState(false)
   const [showAllAttachments, setShowAllAttachments] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-
   const [store, setStore] = useState<DealerStore | null>(null)
   const [fetchingStore, setFetchingStore] = useState(false)
-
   const [allAttachments, setAllAttachments] = useState<Attachment[]>([])
   const [fetchingAttachments, setFetchingAttachments] = useState(false)
-
   const [activeAttachment, setActiveAttachment] = useState("")
   const [attachmentPrice, setAttachmentPrice] = useState(0)
-
   const [adding, setAdding] = useState(false)
 
   // Custom marker icon setup
@@ -372,12 +364,12 @@ export default function StorePage() {
   // Loading and error states
   if (fetchingStore)
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[#222222]">
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-96">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
-              <p className="text-gray-600 text-lg">Getting store details...</p>
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-orange-500 border-t-transparent mx-auto mb-4"></div>
+              <p className="text-white text-lg">Getting store details...</p>
             </div>
           </div>
         </div>
@@ -386,11 +378,11 @@ export default function StorePage() {
 
   if (!store)
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[#222222]">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <h1 className="text-4xl font-bold text-red-600 mb-4">Store Not Found</h1>
-            <p className="text-gray-600">The requested store could not be found.</p>
+            <p className="text-white">The requested store could not be found.</p>
           </div>
         </div>
       </div>
@@ -401,18 +393,15 @@ export default function StorePage() {
   const renderContent = () => {
     const isEmptyOverview =
       selectedTab === "overview" && allStoreTractors.length === 0 && store.AttachmentInDealerStore.length === 0
-
     const isEmptyTractor = selectedTab === "tractors" && allStoreTractors.length === 0
     const isEmptyAttachment = selectedTab === "attachments" && store.AttachmentInDealerStore.length === 0
 
     if (isEmptyOverview) {
       return <EmptyStateCard title="No Equipment Available" description="This store doesn't have any equipment yet." />
     }
-
     if (isEmptyTractor) {
       return <EmptyStateCard title="No Tractors Available" description="This store doesn't have any tractors yet." />
     }
-
     if (isEmptyAttachment) {
       return (
         <EmptyStateCard title="No Attachments Available" description="This store doesn't have any attachments yet." />
@@ -466,7 +455,7 @@ export default function StorePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#222222]">
       <MapStyles />
       <div className="container mx-auto px-4 py-8">
         {/* Hero Banner Section */}
@@ -480,14 +469,12 @@ export default function StorePage() {
               className="w-full h-[300px] object-cover"
             />
             <div className="absolute inset-0 bg-black bg-opacity-40"></div>
-
             {/* Share Button */}
             <div className="absolute top-4 right-4">
               <Button variant="secondary" size="icon" className="rounded-full bg-white">
                 <Share className="h-4 w-4" />
               </Button>
             </div>
-
             {/* Store Header */}
             <div className="absolute bottom-0 left-0 w-full p-6">
               <div className="flex items-end space-x-4">
@@ -511,32 +498,31 @@ export default function StorePage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Store Information Card */}
           <div className="lg:col-span-2">
-            <Card className="bg-white border border-gray-200">
+            <Card className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] border border-gray-200">
               <CardHeader>
-                <CardTitle className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-blue-600" />
+                <CardTitle className="text-xl font-semibold text-white flex items-center gap-2">
                   Store Information
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-start p-3 bg-gray-50 rounded-lg">
-                  <MapPin className="h-5 w-5 text-blue-600 mt-0.5 mr-3" />
-                  <div className="text-gray-700">
+                <div className="flex items-start p-3 bg-[#3B0404] rounded-lg">
+                  <MapPin className="h-5 w-5 text-white mt-0.5 mr-3" />
+                  <div className="text-white">
                     {store.location.name && <div className="font-medium">{store.location.name}</div>}
                     <div className="mt-1">{getDisplayAddress()}</div>
                   </div>
                 </div>
-                <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                  <Clock className="h-5 w-5 text-green-600 mr-3" />
-                  <span className="text-gray-700">{`Open: ${formatTimeOnly(store.opening_time)} - ${formatTimeOnly(store.closing_time)}`}</span>
+                <div className="flex items-center p-3 bg-[#3B0404] rounded-lg">
+                  <Clock className="h-5 w-5 text-white mr-3" />
+                  <span className="text-white">{`Open: ${formatTimeOnly(store.opening_time)} - ${formatTimeOnly(store.closing_time)}`}</span>
                 </div>
-                <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                  <Calendar className="h-5 w-5 text-red-600 mr-3" />
-                  <span className="text-gray-700">{`Closed on: ${store.closing_days.join(", ")}`}</span>
+                <div className="flex items-center p-3 bg-[#3B0404] rounded-lg">
+                  <Calendar className="h-5 w-5 text-white mr-3" />
+                  <span className="text-white">{`Closed on: ${store.closing_days.join(", ")}`}</span>
                 </div>
                 {store.location && store.location.lat && store.location.lan && (
                   <div className="mt-4">
-                    <h3 className="text-lg font-medium text-gray-900 mb-3">Store Location</h3>
+                    <h3 className="text-lg font-medium text-white mb-3">Store Location</h3>
                     <div
                       className="h-[250px] w-full rounded-lg overflow-hidden border border-gray-200 relative"
                       style={{ zIndex: 1 }}
@@ -577,14 +563,14 @@ export default function StorePage() {
 
           {/* Quick Actions Card */}
           <div>
-            <Card className="bg-white border border-gray-200">
+            <Card className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] border border-gray-200">
               <CardHeader>
-                <CardTitle className="text-xl font-semibold text-gray-900">Quick Actions</CardTitle>
+                <CardTitle className="text-xl font-semibold text-white">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                    <Button className="w-full bg-[#F76A1E] hover:bg-[#F76A1E] text-white">
                       <Camera className="mr-2 h-4 w-4" />
                       Update Photos
                     </Button>
@@ -609,10 +595,9 @@ export default function StorePage() {
                     </div>
                   </DialogContent>
                 </Dialog>
-
                 <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full">
+                    <Button className="w-full bg-[#F76A1E] text-white">
                       <Plus className="mr-2 h-4 w-4" />
                       Add Equipment
                     </Button>
@@ -631,62 +616,71 @@ export default function StorePage() {
         </div>
 
         {/* Equipment Tabs */}
-        <Card className="bg-white border border-gray-200">
+        <Card className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] border border-gray-200">
           <Tabs value={selectedTab} onValueChange={setSelectedTab} className="p-6">
-            <TabsList className="grid w-full grid-cols-3 bg-gray-100">
-              <TabsTrigger value="overview" className="flex items-center gap-2">
+            <TabsList className="grid w-full grid-cols-3 bg-[#3B0404]">
+              <TabsTrigger
+                value="overview"
+                className="flex items-center gap-2 text-white data-[state=active]:bg-[#F76A1E] data-[state=active]:text-white"
+              >
                 <span>Overview</span>
               </TabsTrigger>
-              <TabsTrigger value="tractors" className="flex items-center gap-2">
+              <TabsTrigger
+                value="tractors"
+                className="flex items-center gap-2 text-white data-[state=active]:bg-[#F76A1E] data-[state=active]:text-white"
+              >
                 <FaTractor className="h-4 w-4" />
                 <span>Tractors ({allStoreTractors.length})</span>
               </TabsTrigger>
-              <TabsTrigger value="attachments" className="flex items-center gap-2">
+              <TabsTrigger
+                value="attachments"
+                className="flex items-center gap-2 text-white data-[state=active]:bg-[#F76A1E] data-[state=active]:text-white"
+              >
                 <MdBuild className="h-4 w-4" />
                 <span>Attachments ({store.AttachmentInDealerStore.length})</span>
               </TabsTrigger>
             </TabsList>
-
             <TabsContent value="overview" className="mt-6">
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-2xl font-semibold text-gray-900 mb-2">All Equipment</h3>
-                  <p className="text-gray-600">Overview of all tractors and attachments in your store</p>
+                  <h3 className="text-2xl font-semibold text-white mb-2">All Equipment</h3>
+                  <p className="text-white">Overview of all tractors and attachments in your store</p>
                 </div>
-                <div className="p-6 bg-gray-50 rounded-lg">{renderContent()}</div>
+                <div className="p-6 bg-white rounded-lg">{renderContent()}</div>
               </div>
             </TabsContent>
-
             <TabsContent value="tractors" className="mt-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-2xl font-semibold text-gray-900 mb-2">Tractors</h3>
-                    <p className="text-gray-600">Manage your tractor inventory</p>
+                    <h3 className="text-2xl font-semibold text-white mb-2">Tractors</h3>
+                    <p className="text-white">Manage your tractor inventory</p>
                   </div>
-                  <Button onClick={() => setShowAllTractors(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
+                  <Button
+                    onClick={() => setShowAllTractors(true)}
+                    className="bg-[#F76A1E] hover:bg-[#F76A1E] text-white"
+                  >
                     <Plus className="mr-2 h-4 w-4" /> Add Tractor
                   </Button>
                 </div>
-                <div className="p-6 bg-gray-50 rounded-lg">{renderContent()}</div>
+                <div className="p-6 bg-white rounded-lg">{renderContent()}</div>
               </div>
             </TabsContent>
-
             <TabsContent value="attachments" className="mt-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-2xl font-semibold text-gray-900 mb-2">Attachments</h3>
-                    <p className="text-gray-600">Manage your attachment inventory</p>
+                    <h3 className="text-2xl font-semibold text-white mb-2">Attachments</h3>
+                    <p className="text-white">Manage your attachment inventory</p>
                   </div>
                   <Button
                     onClick={() => setShowAllAttachments(true)}
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-[#F76A1E] hover:bg-[#F76A1E] text-white"
                   >
                     <Plus className="mr-2 h-4 w-4" /> Add Attachment
                   </Button>
                 </div>
-                <div className="p-6 bg-gray-50 rounded-lg">{renderContent()}</div>
+                <div className="p-6 bg-white rounded-lg">{renderContent()}</div>
               </div>
             </TabsContent>
           </Tabs>
@@ -695,7 +689,7 @@ export default function StorePage() {
         {/* Add Tractor Modal */}
         {showAllTractors && (
           <Dialog open={showAllTractors} onOpenChange={setShowAllTractors}>
-            <DialogContent className="bg-white max-w-4xl">
+            <DialogContent className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] max-w-4xl max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 <AddTractor alreadyTractors={allStoreTractors} onTractorAdded={handleTractorAdded} />
               </div>
