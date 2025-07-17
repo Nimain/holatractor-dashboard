@@ -19,14 +19,15 @@ const timeData = [
 ]
 
 const salesData = [
+  { name: "Sunday", value: 95 },
   { name: "Monday", value: 45 },
   { name: "Tuesday", value: 75 },
   { name: "Wednesday", value: 105 },
   { name: "Thursday", value: 35 },
   { name: "Friday", value: 124 },
   { name: "Saturday", value: 85 },
-  { name: "Sunday", value: 95 },
-]
+];
+
 
 const membersList = [
   {
