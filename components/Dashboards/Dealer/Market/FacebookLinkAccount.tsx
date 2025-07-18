@@ -83,8 +83,8 @@ export default function FacebookLinkAccount() {
   }
 
   return (
-    <div className=" bg-gradient-to-br from-[#ffffff] to-[#fff5f7] p-4 md:p-8 lg:p-12 flex items-center justify-center">
-      <div className="w-full max-w-6xl space-y-6">
+    <div className="bg-gradient-to-br from-[#ffffff] to-[#fff5f7] flex items-center justify-center">
+      <div className="w-full  space-y-6">
         {/* Top Section: Three Easy Steps */}
         <div className="bg-gradient-to-br from-[#8B0000] to-[#DC143C] rounded-2xl p-8 md:p-10 lg:p-12 shadow-2xl border-4 border-[#A10A0C] relative overflow-hidden">
           <h2 className="text-white text-2xl md:text-3xl font-bold mb-12 text-center">

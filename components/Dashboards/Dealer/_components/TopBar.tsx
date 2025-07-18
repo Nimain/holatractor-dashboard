@@ -16,7 +16,7 @@ const TopBar = () => {
   // Get user info from cookie
   const userCookie = cookie.get("user")
   let user = null
-  
+
   try {
     if (userCookie) {
       user = typeof userCookie === 'string' ? JSON.parse(userCookie) : userCookie
@@ -65,18 +65,18 @@ const TopBar = () => {
   }
 
   const formatTime = (date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
       minute: '2-digit',
-      hour12: true 
+      hour12: true
     })
   }
 
   const formatDate = (date) => {
-    return date.toLocaleDateString('en-US', { 
+    return date.toLocaleDateString('en-US', {
       weekday: 'short',
-      month: 'short', 
-      day: 'numeric' 
+      month: 'short',
+      day: 'numeric'
     })
   }
 
@@ -90,7 +90,7 @@ const TopBar = () => {
               Dealer Dashboard
             </h1>
           </div>
-          
+
           <div className="hidden md:flex items-center space-x-2 px-4 py-2 bg-gray-50 rounded-lg">
             <div className="text-sm text-[#F91F1F]">
               <div className="font-medium">{formatTime(currentTime)}</div>
@@ -169,9 +169,10 @@ const TopBar = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="p-2">
-                  <button className="w-full flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-md transition-all">
+                  <button onClick={() => router.push('/dealer/profile')}
+                    className="w-full flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-md transition-all">
                     <User size={16} />
                     <span>Profile Settings</span>
                   </button>
