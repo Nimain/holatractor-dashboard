@@ -1,14 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Share, Camera, MapPin, Clock, Calendar, Plus, Search, Loader2 } from "lucide-react"
-import { FaTractor } from "react-icons/fa"
-import { MdBuild } from "react-icons/md"
-import { EnhancedTractorCard } from "./Modals/EnhancedTractorCard"
-import { AttachmentCard } from "@/components/Dashboards/Dealer/_components/AttachmentCard"
-import AddTractor from "@/components/Dashboards/Dealer/_components/AddTractor"
-import AddAttachment from "@/components/Dashboards/Dealer/_components/AddAttachment"
-import AlternatingAddForm from "@/components/Dashboards/Dealer/_components/AlternatingAddForm"
+import { Share, Camera, MapPin, Clock, Calendar, Plus, Search, Loader2, Tractor, Wrench } from "lucide-react" // Added Tractor, Wrench, Loader2
 import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -20,18 +13,26 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { X } from 'lucide-react'
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { renderInstance } from "@/utils/Axios/RenderInstance"
-import type { Attachment, DealerStore } from "@/utils/Types/types"
-import { errorMessage, successMessage } from "@/utils/Toastify/Messages"
-import { useCookie } from "next-cookie"
-import { CircularProgress } from "@mui/material"
 import { useParams } from "next/navigation"
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet"
 import "leaflet/dist/leaflet.css"
 import { Icon } from "leaflet"
+import { useCookie } from "next-cookie" // Assuming this is a valid client-side cookie hook
+
+// Placeholder imports for custom components and utilities
+// You should ensure these files exist in your project at the specified paths.
+import { EnhancedTractorCard } from "./Modals/EnhancedTractorCard"
+import { AttachmentCard } from "@/components/Dashboards/Dealer/_components/AttachmentCard"
+import AddTractor from "@/components/Dashboards/Dealer/_components/AddTractor"
+import AddAttachment from "@/components/Dashboards/Dealer/_components/AddAttachment"
+import AlternatingAddForm from "@/components/Dashboards/Dealer/_components/AlternatingAddForm"
+import { renderInstance } from "@/utils/Axios/RenderInstance"
+import type { Attachment, DealerStore } from "@/utils/Types/types"
+import { errorMessage, successMessage } from "@/utils/Toastify/Messages"
 
 // Add this right after the imports and before the useReverseGeocode hook
 const MapStyles = () => (
@@ -78,7 +79,7 @@ const useReverseGeocode = (lat: string, lng: string) => {
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
           {
             headers: {
-              "User-Agent": "YourAppName/1.0",
+              "User-Agent": "YourAppName/1.0", // Required by Nominatim
             },
           },
         )
@@ -106,11 +107,11 @@ const useReverseGeocode = (lat: string, lng: string) => {
   return { address, loading, error }
 }
 
-const EmptyStateCard = ({ title, description }: { title: any; description: any }) => (
+const EmptyStateCard = ({ title, description }: { title: string; description: string }) => (
   <Card className="w-full max-w-sm mx-auto text-center p-8 bg-white border border-gray-200">
     <CardContent className="space-y-6">
       <div className="bg-gray-100 rounded-full p-6 mx-auto w-24 h-24 flex items-center justify-center">
-        <MdBuild className="w-12 h-12 text-gray-400" />
+        <Wrench className="w-12 h-12 text-gray-400" />
       </div>
       <div className="space-y-2">
         <h3 className="text-xl font-semibold text-gray-900">{title}</h3>
@@ -123,7 +124,6 @@ const EmptyStateCard = ({ title, description }: { title: any; description: any }
 export default function StorePage() {
   const [selectedTab, setSelectedTab] = useState("overview")
   const [showAddDialog, setShowAddDialog] = useState(false)
-
   // API State Management
   const [showAllTractors, setShowAllTractors] = useState(false)
   const [showAllAttachments, setShowAllAttachments] = useState(false)
@@ -132,7 +132,9 @@ export default function StorePage() {
   const [fetchingStore, setFetchingStore] = useState(false)
   const [allAttachments, setAllAttachments] = useState<Attachment[]>([])
   const [fetchingAttachments, setFetchingAttachments] = useState(false)
-  const [activeAttachment, setActiveAttachment] = useState("")
+
+  // State for the separate attachment price dialog
+  const [activeAttachmentIdForPrice, setActiveAttachmentIdForPrice] = useState<string | null>(null)
   const [attachmentPrice, setAttachmentPrice] = useState(0)
   const [adding, setAdding] = useState(false)
 
@@ -223,7 +225,7 @@ export default function StorePage() {
       errorMessage("Please give the attachment price")
       return
     }
-    if (!activeAttachment) {
+    if (!activeAttachmentIdForPrice) {
       errorMessage("Please select the attachment")
       return
     }
@@ -233,7 +235,7 @@ export default function StorePage() {
     }
 
     const addAttachmentBody = {
-      attachment_id: activeAttachment,
+      attachment_id: activeAttachmentIdForPrice,
       price: `${attachmentPrice}`,
       store_id: slug,
     }
@@ -249,7 +251,8 @@ export default function StorePage() {
         successMessage("Added")
         fetchStore()
         setAttachmentPrice(0)
-        setShowAllAttachments(false)
+        setActiveAttachmentIdForPrice(null) // Close the price dialog
+        setShowAllAttachments(false) // Close the main attachment selection dialog
       })
       .catch((err) => {
         if (err.response && err.response.status === 404) {
@@ -271,7 +274,6 @@ export default function StorePage() {
         }
       })
       .finally(() => {
-        setActiveAttachment("")
         setAdding(false)
       })
   }
@@ -305,7 +307,6 @@ export default function StorePage() {
   // Get display address with improved logic
   const getDisplayAddress = () => {
     if (!store?.location) return "Location not available"
-
     const addressParts = [
       store.location.address,
       store.location.city,
@@ -313,15 +314,12 @@ export default function StorePage() {
       store.location.zip_code,
       store.location.country,
     ].filter(Boolean)
-
     if (addressParts.length > 0) {
       return addressParts.join(", ")
     }
-
     if (geocodedAddress) {
       return geocodedAddress
     }
-
     if (geocodeLoading) {
       return (
         <div className="flex items-center gap-2">
@@ -330,7 +328,6 @@ export default function StorePage() {
         </div>
       )
     }
-
     if (geocodeError) {
       return (
         <div className="space-y-1">
@@ -342,7 +339,6 @@ export default function StorePage() {
         </div>
       )
     }
-
     return (
       <div className="space-y-1">
         <div className="font-medium">Location Coordinates:</div>
@@ -453,6 +449,8 @@ export default function StorePage() {
         return null
     }
   }
+
+  const activeAttachmentForPrice = filteredAttachments.find((a) => a.id === activeAttachmentIdForPrice)
 
   return (
     <div className="min-h-screen bg-[#222222]">
@@ -595,6 +593,7 @@ export default function StorePage() {
                     </div>
                   </DialogContent>
                 </Dialog>
+
                 <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
                   <DialogTrigger asChild>
                     <Button className="w-full bg-[#F76A1E] text-white">
@@ -629,14 +628,14 @@ export default function StorePage() {
                 value="tractors"
                 className="flex items-center gap-2 text-white data-[state=active]:bg-[#F76A1E] data-[state=active]:text-white"
               >
-                <FaTractor className="h-4 w-4" />
+                <Tractor className="h-4 w-4" />
                 <span>Tractors ({allStoreTractors.length})</span>
               </TabsTrigger>
               <TabsTrigger
                 value="attachments"
                 className="flex items-center gap-2 text-white data-[state=active]:bg-[#F76A1E] data-[state=active]:text-white"
               >
-                <MdBuild className="h-4 w-4" />
+                <Wrench className="h-4 w-4" />
                 <span>Attachments ({store.AttachmentInDealerStore.length})</span>
               </TabsTrigger>
             </TabsList>
@@ -697,89 +696,125 @@ export default function StorePage() {
           </Dialog>
         )}
 
-        {/* Add Attachment Modal */}
-        {showAllAttachments && (
-          <Dialog open={showAllAttachments} onOpenChange={setShowAllAttachments}>
-            <DialogContent className="max-w-4xl bg-white">
-              <DialogHeader>
-                <DialogTitle className="text-xl">Add Attachment to Store</DialogTitle>
-                <DialogDescription>Select an attachment to add to your store inventory.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    placeholder="Search attachments..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto">
-                  {filteredAttachments.map((attachment) => (
-                    <Card key={attachment.id} className="bg-white border border-gray-200">
-                      <CardHeader>
-                        <CardTitle className="text-lg">{attachment.name}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-gray-600 mb-4">{attachment.description}</p>
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              onClick={() => {
-                                setActiveAttachment(attachment.id)
-                              }}
-                              className="w-full bg-blue-600 hover:bg-blue-700"
-                            >
-                              Add to Store
-                            </Button>
-                          </DialogTrigger>
-                          {activeAttachment && (
-                            <DialogContent className="bg-white">
-                              <DialogHeader>
-                                <DialogTitle>Add {attachment.name} to Store</DialogTitle>
-                                <DialogDescription>Set the price for this attachment in your store.</DialogDescription>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <div>
-                                  <Label htmlFor="attachment-price">Price</Label>
-                                  <Input
-                                    id="attachment-price"
-                                    type="number"
-                                    placeholder="Enter price"
-                                    value={attachmentPrice}
-                                    onChange={(e) => {
-                                      setAttachmentPrice(Number.parseFloat(e.target.value))
-                                    }}
-                                    className="mt-1"
-                                  />
-                                </div>
-                                {adding ? (
-                                  <div className="flex justify-center">
-                                    <CircularProgress size={24} />
-                                  </div>
-                                ) : (
-                                  <Button
-                                    onClick={() => {
-                                      handleAddAttachment()
-                                    }}
-                                    className="w-full bg-blue-600 hover:bg-blue-700"
-                                  >
-                                    Add to Store
-                                  </Button>
-                                )}
-                              </div>
-                            </DialogContent>
-                          )}
-                        </Dialog>
-                      </CardContent>
-                    </Card>
-                  ))}
+        {/* Add Attachment Selection Modal */}
+     {showAllAttachments && (
+  <Dialog open={showAllAttachments} onOpenChange={setShowAllAttachments}>
+    <DialogContent className="max-w-6xl bg-gradient-to-br from-red-700 to-red-900 border-0">
+      <DialogHeader className="text-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <DialogTitle className="text-2xl font-bold">Add Tractor to Store</DialogTitle>
+            <DialogDescription className="text-red-100 mt-1">
+              Select a Tractor to add to your store inventory
+            </DialogDescription>
+          </div>
+          <button 
+            onClick={() => setShowAllAttachments(false)}
+            className="bg-red-800/50 hover:bg-red-800 rounded-full p-2 transition-colors"
+          >
+            {/* <X className="w-6 h-6 text-white" /> */}
+          </button>
+        </div>
+      </DialogHeader>
+      
+      <div className="space-y-6">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Input
+            placeholder="Search for the tractor"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-12 h-12 bg-white border-0 rounded-lg text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-white/20"
+          />
+        </div>
+
+        {/* Tractor Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-h-[70vh] overflow-y-auto pr-2">
+          {filteredAttachments.map((attachment) => (
+            <div key={attachment.id} className="bg-white rounded-lg p-4 shadow-lg">
+              {/* Placeholder Image */}
+              <div className="w-full h-32 bg-gray-200 rounded-lg mb-3 flex items-center justify-center">
+                <div className="w-16 h-16 bg-gray-300 rounded"></div>
+              </div>
+              
+              {/* Tractor Info */}
+              <div className="space-y-1 mb-4">
+                <h3 className="font-bold text-gray-900 text-sm leading-tight">
+                  {attachment.name}
+                </h3>
+                <div className="space-y-0.5 text-xs text-gray-600">
+                  <div className="flex">
+                    <span className="font-medium w-12">Model:</span>
+                    <span>{attachment.model || 'M108'}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="font-medium w-12">Type:</span>
+                    <span>{attachment.type || 'Large'}</span>
+                  </div>
                 </div>
               </div>
+              
+              {/* Add Button */}
+              <button
+                onClick={() => {
+                  setActiveAttachmentIdForPrice(attachment.id);
+                }}
+                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-all duration-200 text-sm shadow-md hover:shadow-lg"
+              >
+                Add To Store
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </DialogContent>
+  </Dialog>
+)}
+
+        {/* Separate Dialog for setting attachment price */}
+        <Dialog
+          open={!!activeAttachmentIdForPrice}
+          onOpenChange={(open) => {
+            if (!open) {
+              setActiveAttachmentIdForPrice(null) // Close and reset activeAttachmentIdForPrice
+              setAttachmentPrice(0) // Reset price
+            }
+          }}
+        >
+          {activeAttachmentForPrice && ( // Only render content if an attachment is active
+            <DialogContent className="bg-white">
+              <DialogHeader>
+                <DialogTitle>Add {activeAttachmentForPrice.name} to Store</DialogTitle>
+                <DialogDescription>Set the price for this attachment in your store.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="attachment-price">Price</Label>
+                  <Input
+                    id="attachment-price"
+                    type="number"
+                    placeholder="Enter price"
+                    value={attachmentPrice}
+                    onChange={(e) => {
+                      setAttachmentPrice(Number.parseFloat(e.target.value))
+                    }}
+                    className="mt-1"
+                  />
+                </div>
+                {adding ? (
+                  <div className="flex justify-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                  </div>
+                ) : (
+                  <Button onClick={handleAddAttachment} className="w-full bg-blue-600 hover:bg-blue-700">
+                    Add to Store
+                  </Button>
+                )}
+              </div>
             </DialogContent>
-          </Dialog>
-        )}
+          )}
+        </Dialog>
       </div>
     </div>
   )
