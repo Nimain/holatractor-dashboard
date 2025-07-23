@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Filter, ChevronDown, MoreHorizontal } from 'lucide-react';
+import { Search, Filter, ChevronDown, MoreHorizontal, TrendingUp, DollarSign } from 'lucide-react';
 
 interface MetricCardProps {
   title: string;
@@ -29,30 +29,36 @@ const MetricCard: React.FC<MetricCardProps> = ({ title, value, change, isPositiv
 
 const SalesChart: React.FC = () => {
   const data = [
-    { day: 'Sun', value: 320, color: 'bg-orange-500' },
-    { day: 'Mon', value: 350, color: 'bg-white' },
-    { day: 'Tue', value: 370, color: 'bg-white' },
-    { day: 'Wed', value: 200, color: 'bg-orange-500' },
-    { day: 'Thu', value: 100, color: 'bg-orange-500' },
-    { day: 'Fri', value: 380, color: 'bg-white' },
-    { day: 'Sat', value: 350, color: 'bg-orange-500' },
+    { day: 'Mon', value: 28500, amount: '$28.5K', color: 'from-red-500 to-red-400' },
+    { day: 'Tue', value: 32100, amount: '$32.1K', color: 'from-red-500 to-red-400' },
+    { day: 'Wed', value: 24800, amount: '$24.8K', color: 'from-red-500 to-red-400' },
+    { day: 'Thu', value: 18200, amount: '$18.2K', color: 'from-red-600 to-red-500' },
+    { day: 'Fri', value: 45300, amount: '$45.3K', color: 'from-orange-500 to-red-400' },
+    { day: 'Sat', value: 38700, amount: '$38.7K', color: 'from-red-500 to-red-400' },
+    { day: 'Sun', value: 22100, amount: '$22.1K', color: 'from-red-600 to-red-500' },
   ];
 
   const maxValue = Math.max(...data.map(d => d.value));
+  const minValue = Math.min(...data.map(d => d.value));
 
   return (
-    <div className="bg-red-800 rounded-lg p-6 text-white">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-red-800 rounded-lg p-6 text-white shadow-lg">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-xl font-bold mb-1">Sales Report</h3>
-          <p className="text-red-200 text-sm">Your Weekly Statistics Reports</p>
+          <h3 className="text-xl font-bold mb-1 flex items-center">
+            <TrendingUp className="w-5 h-5 mr-2 text-red-300" />
+            Sales Report
+          </h3>
+          <p className="text-red-200 text-sm">Weekly performance analytics</p>
         </div>
         <div className="flex space-x-2">
-          {['1d', '7d', '30d', '16m', 'Max'].map((period, index) => (
+          {['1D', '7D', '30D', '3M', '1Y'].map((period, index) => (
             <button
               key={period}
-              className={`px-3 py-1 rounded text-sm ${
-                index === 2 ? 'bg-white text-red-800' : 'bg-red-700 text-white hover:bg-red-600'
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                index === 1 
+                  ? 'bg-white text-red-800 shadow-sm' 
+                  : 'bg-red-700/50 text-red-100 hover:bg-red-600/60 hover:text-white'
               }`}
             >
               {period}
@@ -60,23 +66,97 @@ const SalesChart: React.FC = () => {
           ))}
         </div>
       </div>
-      <div className="flex items-end justify-between h-48 mt-8">
-        {data.map((item, index) => (
-          <div key={index} className="flex flex-col items-center">
-            <div
-              className={`w-12 ${item.color} rounded-t`}
-              style={{ height: `${(item.value / maxValue) * 160}px` }}
-            />
-            <span className="text-red-200 text-sm mt-2">{item.day}</span>
+      
+      {/* Chart Container */}
+      <div className="bg-red-900/20 rounded-xl p-6 backdrop-blur-sm">
+        {/* Chart Grid Lines */}
+        <div className="relative">
+          {/* Horizontal grid lines */}
+          <div className="absolute inset-0 flex flex-col justify-between opacity-20">
+            {[0, 1, 2, 3, 4].map((line) => (
+              <div key={line} className="h-px bg-red-400"></div>
+            ))}
           </div>
-        ))}
+          
+          <div className="flex items-end justify-between h-64 mb-4 relative">
+            {data.map((item, index) => {
+              const height = ((item.value - minValue) / (maxValue - minValue)) * 220 + 20;
+              const isHighest = item.value === maxValue;
+              
+              return (
+                <div key={index} className="flex flex-col items-center group relative flex-1 mx-1">
+                  {/* Tooltip */}
+                  <div className="absolute -top-16 bg-gray-900 text-white text-xs px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap shadow-lg z-10 border border-gray-700">
+                    <div className="font-semibold">{item.amount}</div>
+                    <div className="text-gray-300 text-xs">{item.day}</div>
+                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                  </div>
+                  
+                  {/* Bar */}
+                  <div className="relative flex flex-col items-center w-full">
+                    <div
+                      className={`w-8 rounded-t-lg transition-all duration-500 ease-out group-hover:scale-105 shadow-lg ${
+                        isHighest 
+                          ? 'bg-gradient-to-t from-orange-600 via-orange-500 to-orange-400 shadow-orange-500/30' 
+                          : `bg-gradient-to-t ${item.color} shadow-red-500/20`
+                      }`}
+                      style={{ 
+                        height: `${height}px`,
+                        boxShadow: isHighest ? '0 4px 20px rgba(249, 115, 22, 0.4)' : '0 2px 10px rgba(239, 68, 68, 0.3)'
+                      }}
+                    >
+                      {/* Shine effect */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-t-lg"></div>
+                    </div>
+                    
+                    {/* Base */}
+                    <div className="w-8 h-1 bg-red-700 rounded-b-sm"></div>
+                  </div>
+                  
+                  {/* Day Label */}
+                  <span className="text-red-200 text-sm mt-3 font-medium group-hover:text-white transition-colors duration-200">
+                    {item.day}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        
+        {/* Y-axis Labels */}
+        <div className="flex justify-between text-red-300/60 text-xs px-4 mb-2">
+          <span>$0</span>
+          <span>$15K</span>
+          <span>$30K</span>
+          <span>$45K</span>
+        </div>
       </div>
-      <div className="flex justify-between text-red-200 text-sm mt-4">
-        <span>$0</span>
-        <span>$100K</span>
-        <span>$200K</span>
-        <span>$300K</span>
-        <span>$400K</span>
+      
+      {/* Summary Stats */}
+      <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-red-700/50">
+        <div className="text-center">
+          <div className="text-xl font-bold text-white flex items-center justify-center">
+            <DollarSign className="w-4 h-4 mr-1 text-green-400" />
+            209.7K
+          </div>
+          <div className="text-red-200 text-sm">Total Sales</div>
+        </div>
+        <div className="text-center">
+          <div className="text-xl font-bold text-green-400">+18.2%</div>
+          <div className="text-red-200 text-sm">vs Last Week</div>
+        </div>
+        <div className="text-center">
+          <div className="text-xl font-bold text-orange-400">Friday</div>
+          <div className="text-red-200 text-sm">Peak Day</div>
+        </div>
+      </div>
+      
+      {/* Additional insights */}
+      <div className="mt-4 p-3 bg-red-900/30 rounded-lg">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-red-200">Average daily sales:</span>
+          <span className="text-white font-semibold">$29.96K</span>
+        </div>
       </div>
     </div>
   );
