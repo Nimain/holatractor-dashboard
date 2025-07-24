@@ -72,8 +72,8 @@ const dropdownSections = [
     icon: Bell,
     label: "Notifications",
     items: [
-      { icon: Inbox, label: "All Notifications", href: "/demo" },
-      { icon: Settings, label: "Settings", href: "/demo" },
+      { icon: Inbox, label: "All Notifications", href: "/dealer/notifications/allnotification" },
+      { icon: Settings, label: "Settings", href: "/dealer/notifications/settings" },
       { icon: AlertTriangle, label: "Alerts", href: "/demo" },
     ],
   },
@@ -81,18 +81,18 @@ const dropdownSections = [
     icon: Settings,
     label: "Settings",
     items: [
-      { icon: Settings, label: "General", href: "/demo" },
-      { icon: Shield, label: "Security", href: "/demo" },
-      { icon: LinkIcon, label: "Integrations", href: "/demo" },
+      { icon: Settings, label: "General", href: "/dealer/settings/general" },
+      { icon: Shield, label: "Security", href: "/dealer/settings/security" },
+      { icon: LinkIcon, label: "Integrations", href: "/dealer/settings/integration" },
     ],
   },
   {
     icon: Wrench,
     label: "Repairs",
     items: [
-      { icon: Calendar, label: "Schedule Repair", href: "/demo" },
-      { icon: BookOpen, label: "Maintenance Log", href: "/demo" },
-      { icon: Package, label: "Parts Inventory", href: "/demo" },
+      { icon: Calendar, label: "Schedule Repair", href: "/dealer/repair/ScheduleTractorRepair" },
+      // { icon: BookOpen, label: "Maintenance Log", href: "/dealer/repair" },
+      { icon: Package, label: "Parts Inventory", href: "/dealer/repair/PartsInventory" },
     ],
   },
 ]
