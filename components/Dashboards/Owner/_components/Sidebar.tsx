@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Boxes, ChevronDown, ChevronLeft, ChevronRight, Plus, Settings, Store as StoreIcon, UserSearch, Wallet } from "lucide-react"
+import { Boxes, ChevronDown, ChevronLeft, ChevronRight, Plus, Settings, Store as StoreIcon, UserSearch, Wallet, TabletSmartphone } from "lucide-react"
 import { useCookie } from "next-cookie"
 import Image from "next/image"
 import Link from "next/link"
@@ -22,6 +22,7 @@ import { useRouter } from "next/navigation"
 import TranslatedText from "@/components/Menubar/TranslatedText"
 import { ownerSidebar } from "./OwnerSidebarTranslations"
 import { useOwnerStoreContext } from "@/components/wrappers/StoreProvider"
+
 
 interface user {
     userId: string;
@@ -64,7 +65,7 @@ const Sidebar = () => {
 
     return (
         <aside
-            className={`shadow-md transition-all duration-300 rounded-2xl ${isExpanded ? 'w-64' : 'w-16'} h-[90vh] bg-primaryColor text-white my-auto`}>
+            className={`shadow-md bg-gradient-to-r from-[#8c0000] to-[#4d0000] transition-all duration-300 rounded-2xl ${isExpanded ? 'w-50' : 'w-16'} h-[90vh] bg-primaryColor text-white my-auto`}>
             <Link href={"/owner"} className="flex items-center justify-center gap-2 w-full mx-auto mt-4 mb-2">
                 <Image
                     src={"https://holaimagesdata.s3.us-west-2.amazonaws.com/web/logo/ISOLOGO_HT_BLANCO.png"}
@@ -84,7 +85,7 @@ const Sidebar = () => {
                 <Collapsible open={showStoreList} onOpenChange={setShowStoreList}>
                     <CollapsibleTrigger asChild>
                         <Button
-                            className={`flex gap-2 items-center bg-transparent hover:bg-white/20 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
+                            className={`flex gap-2 items-center bg-transparent hover:bg-white hover:text-red-500 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
                         >
                             <Tooltip title={<TranslatedText greetings={ownerSidebar.store} />} placement="right">
                                 <StoreIcon className="h-6 w-6" />
@@ -102,12 +103,12 @@ const Sidebar = () => {
                             <div className="w-full flex flex-col gap-2">
                                 {stores.map((store, i) => {
                                     return (
-                                        <Link key={i} href={`/owner/stores/${store.id}`} className="pl-6 text-sm hover:bg-white/20 py-2 rounded">{store.name}</Link>
+                                        <Link key={i} href={`/owner/stores/${store.id}`} className="pl-6 text-sm hover:bg-white hover:text-red-500 py-2 rounded">{store.name}</Link>
                                     )
                                 })}
                             </div>
                             <Button
-                                className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
+                                className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white hover:text-red-500`}
                                 onClick={() => { dispatch(changeNewStoreShow()) }}
                             >
                                 <Plus className="h-6 w-6" />
@@ -118,7 +119,7 @@ const Sidebar = () => {
                 </Collapsible>
                 <Link href={"/owner/bookings"}>
                     <Button
-                        className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
+                        className={`flex gap-2 items-center bg-transparent hover:bg-white hover:text-red-500 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
                     >
                         <Tooltip title={<TranslatedText greetings={ownerSidebar.bookings} />} placement="right">
                             <StyleIcon className="h-6 w-6" />
@@ -128,7 +129,7 @@ const Sidebar = () => {
                 </Link>
                 <Link href={"/owner/operator"}>
                     <Button
-                        className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
+                        className={`flex gap-2 items-center bg-transparent hover:bg-white hover:text-red-500 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
                     >
                         <Tooltip title={<TranslatedText greetings={ownerSidebar.operator} />} placement="right">
                             <UserSearch className="h-6 w-6" />
@@ -138,7 +139,7 @@ const Sidebar = () => {
                 </Link>
                 <Link href={"/owner/marketplace"}>
                     <Button
-                        className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
+                        className={`flex gap-2 items-center bg-transparent hover:bg-white hover:text-red-500 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
                     >
                         <Tooltip title={<TranslatedText greetings={ownerSidebar.marketplace} />} placement="right">
                             <Boxes className="h-6 w-6" />
@@ -146,9 +147,19 @@ const Sidebar = () => {
                         {isExpanded && <TranslatedText greetings={ownerSidebar.marketplace} />}
                     </Button>
                 </Link>
+               <Link href="/owner/devicestractors">
+                    <Button
+                        className={`flex gap-2 items-center bg-transparent hover:bg-white hover:text-red-500 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
+                    >
+                        <Tooltip title={<TranslatedText greetings={ownerSidebar.Devices} />} placement="right">
+                            < TabletSmartphone className="h-6 w-6" />
+                        </Tooltip>
+                        {isExpanded && <TranslatedText greetings={ownerSidebar.Devices} />}
+                    </Button>
+                </Link>
                 <Link href={"/owner/payment"}>
                     <Button
-                        className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
+                        className={`flex gap-2 items-center bg-transparent hover:bg-white hover:text-red-500 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
                     >
                         <Tooltip title={<TranslatedText greetings={ownerSidebar.payment} />} placement="right">
                             <Wallet className="h-6 w-6" />
@@ -158,7 +169,7 @@ const Sidebar = () => {
                 </Link>
                 <Link href={"/owner/customer"}>
                     <Button
-                        className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
+                        className={`flex gap-2 items-center bg-transparent hover:bg-white hover:text-red-500 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
                     >
                         <Tooltip title={<TranslatedText greetings={ownerSidebar.customers} />} placement="right">
                             <SupportAgentIcon className="h-6 w-6" />
@@ -168,7 +179,7 @@ const Sidebar = () => {
                 </Link>
                 <Separator className={`mt-4 ${isExpanded ? "w-[90%]" : "w-[75%]"} mx-auto`} />
                 <Button
-                    className={`flex gap-2 items-center bg-transparent hover:bg-white/20 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
+                    className={`flex gap-2 items-center bg-transparent hover:bg-white hover:text-red-500 mt-4 ${isExpanded ? "w-full mx-0 justify-start" : "w-fit mx-auto p-0 aspect-square justify-center rounded-full"}`}
                     onClick={() => { handleLogOut() }}
                 >
                     <Tooltip title={<TranslatedText greetings={ownerSidebar.logOut} />} placement="right">

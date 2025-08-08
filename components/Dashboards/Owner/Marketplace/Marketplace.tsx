@@ -178,7 +178,7 @@ const Marketplace = () => {
   return (
     <>
       <div className="flex justify-between items-center gap-4 flex-wrap mb-8">
-        <Breadcrumb>
+        {/* <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink href="/owner"><TranslatedText greetings={ownerMarketPlaceTranslations.dashboard} /></BreadcrumbLink>
@@ -188,22 +188,23 @@ const Marketplace = () => {
               <BreadcrumbLink href="/owner/marketplace"><TranslatedText greetings={ownerMarketPlaceTranslations.marketplace} /></BreadcrumbLink>
             </BreadcrumbItem>
           </BreadcrumbList>
-        </Breadcrumb>
+        </Breadcrumb> */}
+        <h2 className='text-red-600 text-2xl font-bold mt-3 mx-4'>Marketplace</h2>
       </div>
       <TooltipProvider>
-        <div className="p-6 space-y-6 ">
+        <div className="p-1 space-y-6 ">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map((stat, index) => (
               <Card
                 key={index}
-                className="cursor-pointer transition-all hover:shadow-lg"
+                className="cursor-pointer h-[120px] bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white transition-all hover:shadow-lg"
                 onClick={() => handleCardClick(stat)}
               >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
                   <Tooltip>
                     <TooltipTrigger>
-                      <Info className="h-4 w-4 text-muted-foreground" />
+                      <Info className="h-4 w-4 text-muted" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p><TranslatedText greetings={ownerMarketPlaceTranslations.clickForMoreDetails} /></p>
@@ -227,88 +228,89 @@ const Marketplace = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
             {/* "New" Status Column */}
             <div className="space-y-4">
-              <Card className="overflow-hidden">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-white p-7 rounded-md">
+              <Card className="overflow-hidden ">
+                <CardHeader className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white  flex flex-row items-center justify-between space-y-0 pb-2 bg-white p-7 rounded-md">
                   <CardTitle className="text-lg font-semibold flex items-center space-x-2">
                     <span className="h-3 w-3 rounded-full bg-blue-500"></span>
                     <span><TranslatedText greetings={ownerMarketPlaceTranslations.new} /></span>
                   </CardTitle>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-sm text-muted">
                     {newBookings.length} <TranslatedText greetings={ownerMarketPlaceTranslations.leads} />
                   </span>
                 </CardHeader>
               </Card>
-              {fetchingNewPageDetails ?
+              {/* {fetchingNewPageDetails ?
               <LeadShrimmer />
               : 
               newBookings.length === 0 ? <p><TranslatedText greetings={ownerMarketPlaceTranslations.noOpenBookingsAvailable} /></p> : newBookings.map((lead) => (
                 <NewBookings booking={lead.booking} key={lead.booking.id} minDistance={lead.minDistance} />
-              ))}
+              ))} */}
             </div>
 
             {/* "Open" Status Column */}
-            <div className="space-y-4">
-              <Card className="overflow-hidden">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-white p-7 rounded-md">
-                  <CardTitle className="text-lg font-semibold flex items-center space-x-2">
-                    <span className="h-3 w-3 rounded-full bg-purple-500"></span>
-                    <span><TranslatedText greetings={ownerMarketPlaceTranslations.open} /></span>
+            <div className="space-y-4 ">
+              <Card className=" overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white   flex flex-row items-center justify-between space-y-0 pb-2  p-7 rounded-md">
+                  <CardTitle className="text-lg font-semibold flex items-center space-x-2 ">
+                    <span className="h-3 w-3 rounded-full bg-yellow-500"></span>
+                    <span className=''><TranslatedText greetings={ownerMarketPlaceTranslations.open} /></span>
                   </CardTitle>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-sm text-muted">
                     {openBookings.length} <TranslatedText greetings={ownerMarketPlaceTranslations.leads} />
                   </span>
                 </CardHeader>
               </Card>
-              {fetchingPageDetails ?
+              {/* {fetchingPageDetails ?
               <LeadShrimmer />
               :
               openBookings.length === 0 ? <p><TranslatedText greetings={ownerMarketPlaceTranslations.noOpenBookingsAvailable} /></p> : openBookings.map((lead) => (
                 <SeeBooking booking={lead} key={lead.id} />
-              ))}
+              ))} */}
             </div>
 
             {/* "In Progress" Status Column */}
             <div className="space-y-4">
               <Card className="overflow-hidden">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-white p-7 rounded-md">
+                <CardHeader className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white  flex flex-row items-center justify-between space-y-0 pb-2 bg-white p-7 rounded-md">
                   <CardTitle className="text-lg font-semibold flex items-center space-x-2">
                     <span className="h-3 w-3 rounded-full bg-green-500"></span>
                     <span><TranslatedText greetings={ownerMarketPlaceTranslations.inProgress} /></span>
                   </CardTitle>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-sm text-muted">
                     {inProgressBookings.length} <TranslatedText greetings={ownerMarketPlaceTranslations.leads} />
                   </span>
                 </CardHeader>
               </Card>
-              {
+              {/* {
               fetchingPageDetails ?
               <LeadShrimmer />
               :
               inProgressBookings.length === 0 ? <p><TranslatedText greetings={ownerMarketPlaceTranslations.noOpenBookingsAvailable} /></p> : inProgressBookings.map((lead) => (
                 <SeeBooking booking={lead} key={lead.id} />
-              ))}
+              ))} */}
             </div>
 
             {/* "Closed" Status Column */}
             <div className="space-y-4">
               <Card className="overflow-hidden">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-white p-7 rounded-md">
+                <CardHeader className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white  flex flex-row items-center justify-between space-y-0 pb-2 bg-white p-7 rounded-md">
                   <CardTitle className="text-lg font-semibold flex items-center space-x-2">
                     <span className="h-3 w-3 rounded-full bg-red-500"></span>
                     <span><TranslatedText greetings={ownerMarketPlaceTranslations.closed} /></span>
                   </CardTitle>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-sm text-muted">
                     {completedBookings.length} <TranslatedText greetings={ownerMarketPlaceTranslations.leads} />
                   </span>
                 </CardHeader>
               </Card>
-              {
+              {/* {
               fetchingPageDetails ?
               <LeadShrimmer />
               :
-              completedBookings.length === 0 ? <p><TranslatedText greetings={ownerMarketPlaceTranslations.noOpenBookingsAvailable} /></p> : completedBookings.map((lead) => (
+              completedBookings.length === 0 ? <p><TranslatedText greetings={ownerMarketPlaceTranslations.noOpenBookingsAvailable} /></p> 
+              : completedBookings.map((lead) => (
                 <SeeBooking booking={lead} key={lead.id} />
-              ))}
+              ))} */}
             </div>
           </div>
 
