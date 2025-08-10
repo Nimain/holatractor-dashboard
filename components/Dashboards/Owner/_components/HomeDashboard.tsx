@@ -224,9 +224,9 @@ const HomeDashboard = ({
   return (
     <div className="mt-4">
       {/* First Row with 2 cards having background images */}
-      <div className="grid grid-cols-1  1050px:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2  gap-6">
         {/* First Card with Swiper */}
-        <div className="relative rounded-[20px] shadow-xl h-64 1600px:h-80 overflow-hidden">
+        <div className="relative rounded-[20px] shadow-xl h-48 md:h-56 xl:h-64 overflow-hidden w-full">
           {/* Slider with only changing images */}
           {stores.length === 0 ? (
             <Card className="w-full h-full rounded-2xl">
@@ -344,7 +344,7 @@ const HomeDashboard = ({
         </div>
 
         {/* Second Card */}
-        <div className="p-0 rounded-[20px] shadow-lg h-64 1600px:h-96 w-full">
+        <div className="p-0 rounded-[20px] shadow-lg h-48 md:h-56 xl:h-64 w-full">
           {/* Map Integration */}
           {location.latitude && location.longitude ? (
             <div className="h-full w-full bg-gradient-to-br from-green-100 to-blue-100 rounded-lg flex items-center justify-center">

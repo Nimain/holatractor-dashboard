@@ -160,9 +160,7 @@ export default function StorePage() {
                     Overview of all the tractors in your inventory
                   </p>
                 </div>
-                <button className="bg-orange-500 text-white px-4 py-2 mr-10 rounded-md font-semibold">
-                  + Add Tractor
-                </button>
+                <AddTractor alreadyTractors={store.TractorInStore} />
               </div>
             </>
           )}
@@ -178,9 +176,8 @@ export default function StorePage() {
                     Overview of all the tractors in your inventory
                   </p>
                 </div>
-                <button className="bg-orange-500 text-white px-4 py-2 mr-10 rounded-md font-semibold">
-                  + Add Attachment
-                </button>
+               
+                <AddAttachment alreadyAttachments={store.AttachmentInStore} />
               </div>
             </>
           )}

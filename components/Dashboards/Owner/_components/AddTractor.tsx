@@ -20,8 +20,18 @@ import { Backdrop } from "@mui/material";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CalendarIcon } from "lucide-react";
 import { format, setYear } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -31,7 +41,11 @@ import { singleStoreOwnerTranslations } from "../SingleStoreTranslation";
 import TranslatedText from "@/components/Menubar/TranslatedText";
 import { useAddStoreItemContext } from "@/components/wrappers/AddStoreItemProvider";
 
-const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) => {
+const AddTractor = ({
+  alreadyTractors,
+}: {
+  alreadyTractors: TractorInStore[];
+}) => {
   const [open, setOpen] = useState(false);
   const [selectedTractorId, setSelectedTractorId] = useState("");
   const [selectedInventoryId, setSelectedInventoryId] = useState("");
@@ -40,17 +54,19 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
   const [creating, setCreating] = useState(false);
   const [hourlyPrice, setHourlyPrice] = useState<number>();
   const [attachment, setattachment] = useState<File | null>(null);
-  const [document_number, set_document_number] = useState("")
-  const [expiry_date, set_expiry_date] = useState<Date>()
-  const [expiry_date_false, set_expiry_date_false] = useState(false)
-  const [expiry_date_year, set_expiry_date_year] = useState<number>(new Date().getFullYear())
+  const [document_number, set_document_number] = useState("");
+  const [expiry_date, set_expiry_date] = useState<Date>();
+  const [expiry_date_false, set_expiry_date_false] = useState(false);
+  const [expiry_date_year, set_expiry_date_year] = useState<number>(
+    new Date().getFullYear()
+  );
 
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
 
   const { slug } = useParams();
 
-  const { fetchStoreDetails } = useAddStoreItemContext()
+  const { fetchStoreDetails } = useAddStoreItemContext();
 
   function fetchAllTractors() {
     if (access_token) {
@@ -73,11 +89,11 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
 
   const handleExpiryDateChange = (newDate: Date | undefined) => {
     if (newDate) {
-      const updatedDate = setYear(newDate, expiry_date_year)
-      set_expiry_date(updatedDate)
-      set_expiry_date_false(false)
+      const updatedDate = setYear(newDate, expiry_date_year);
+      set_expiry_date(updatedDate);
+      set_expiry_date_false(false);
     }
-  }
+  };
 
   useEffect(() => {
     fetchAllTractors();
@@ -90,12 +106,12 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
     }
 
     if (!attachment || !document_number) {
-      errorMessage("Liscence details is needed")
-      return
+      errorMessage("Liscence details is needed");
+      return;
     }
 
-    let attachmentLink = ""
-    
+    let attachmentLink = "";
+
     setCreating(true);
 
     const buffer = Buffer.from(await attachment.arrayBuffer());
@@ -103,7 +119,7 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
 
     if (!attachmentLink) {
       errorMessage("Something went wrong in uploading the attachment");
-      setCreating(false)
+      setCreating(false);
       return;
     }
 
@@ -114,7 +130,7 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
       inventory_id: selectedInventoryId,
       document_number: document_number,
       attachment: attachmentLink,
-      expire_date: expiry_date
+      expire_date: expiry_date,
     };
 
     renderInstance
@@ -124,12 +140,12 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
         },
       })
       .then((res) => {
-        fetchStoreDetails()
+        fetchStoreDetails();
         successMessage("Tractor added successfully");
       })
       .catch((err) => {
         if (err.response && err.response.status && err.response.data.message) {
-          errorMessage(err.response.data.message)
+          errorMessage(err.response.data.message);
         } else {
           errorMessage("Some error occurred");
         }
@@ -145,7 +161,7 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
       <DialogTrigger asChild>
         <div>
           <div className="flex flex-col items-center justify-center h-full space-y-4">
-            <div className="w-32 h-32 bg-gray-200 rounded-full flex items-center justify-center">
+            {/* <div className="w-32 h-32 bg-gray-200 rounded-full flex items-center justify-center">
               <Image
                 src="https://holaimagesdata.s3.us-west-2.amazonaws.com/web/serviso/land_preparation.webp"
                 alt="Tractor Icon"
@@ -154,29 +170,49 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
                 className="w-full h-full object-cover rounded-full"
                 unoptimized={true}
               />
-            </div>
-            <h3 className="text-2xl font-bold text-center"><TranslatedText greetings={singleStoreOwnerTranslations.addNewTractor} /></h3>
+            </div> */}
+            {/* <h3 className="text-2xl font-bold text-center">
+              <TranslatedText
+                greetings={singleStoreOwnerTranslations.addNewTractor}
+              />
+            </h3>
             <p className="text-gray-600 text-center">
-            <TranslatedText greetings={singleStoreOwnerTranslations.clickAddNewTractor} />
-            </p>
-            <Button
-              className="mt-4"
+              <TranslatedText
+                greetings={singleStoreOwnerTranslations.clickAddNewTractor}
+              />
+            </p> */}
+            {/* <Button className="mt-4">
+              <AddIcon className="mr-2" />
+              <TranslatedText
+                greetings={singleStoreOwnerTranslations.addTractor}
+              />
+            </Button> */}
+            <button
+              className="bg-orange-500 text-white px-4 py-2 mr-10 rounded-md font-semibold "
               onClick={() => {
                 setOpen(true);
               }}
             >
-              <AddIcon className="mr-2" />
-              <TranslatedText greetings={singleStoreOwnerTranslations.addTractor} />
-            </Button>
+              + Add Tractor
+            </button>
           </div>
         </div>
       </DialogTrigger>
 
-      <DialogContent className="max-h-[90vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
-        <div className="grid gap-4 py-4 grid-cols-2"> 
+      <DialogContent
+        className="max-h-[90vh] overflow-auto bg-gradient-to-r from-[#8c0000] to-[#4d0000]"
+        style={{ scrollbarWidth: "none" }}
+      >
+        <div className="text-3xl text-white font-bold">Select Tractor</div>
+        <div className="grid gap-4 py-4 grid-cols-4 ">
           {selectedTractorId ? (
             <div className="grid gap-4">
-              <Label htmlFor="hourly-price"><TranslatedText greetings={singleStoreOwnerTranslations.hourlyPrice} /> ($)</Label>
+              <Label htmlFor="hourly-price">
+                <TranslatedText
+                  greetings={singleStoreOwnerTranslations.hourlyPrice}
+                />{" "}
+                ($)
+              </Label>
               <Input
                 id="hourly-price"
                 type="number"
@@ -184,47 +220,45 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
                 onChange={(e) => setHourlyPrice(Number(e.target.value))}
               />
               <div className="flex items-center justify-center w-full">
-
                 <label
                   htmlFor="dropzone-file"
                   className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50"
                 >
-                  {
-                    attachment ?
-                      <Image
-                        src={URL.createObjectURL(attachment)}
-                        alt={attachment.name}
-                        unoptimized={true}
-                        className="w-52 aspect-square rounded-md object-cover"
-                        width={200}
-                        height={200}
-                      />
-                      :
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <svg
-                          className="w-8 h-8 mb-4 text-gray-500 dark:text-gray-400"
-                          aria-hidden="true"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 20 16"
-                        >
-                          <path
-                            stroke="currentColor"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
-                          />
-                        </svg>
-                        <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                          <span className="font-semibold">Click to upload</span> or
-                          drag and drop
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          SVG, PNG, JPG or GIF (MAX. 800x400px)
-                        </p>
-                      </div>
-                  }
+                  {attachment ? (
+                    <Image
+                      src={URL.createObjectURL(attachment)}
+                      alt={attachment.name}
+                      unoptimized={true}
+                      className="w-52 aspect-square rounded-md object-cover"
+                      width={200}
+                      height={200}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <svg
+                        className="w-8 h-8 mb-4 text-gray-500 dark:text-gray-400"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 20 16"
+                      >
+                        <path
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
+                        />
+                      </svg>
+                      <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                        <span className="font-semibold">Click to upload</span>{" "}
+                        or drag and drop
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        SVG, PNG, JPG or GIF (MAX. 800x400px)
+                      </p>
+                    </div>
+                  )}
 
                   <input
                     id="dropzone-file"
@@ -238,9 +272,11 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
                     }}
                   />
                 </label>
-
               </div>
-              <Popover open={expiry_date_false} onOpenChange={set_expiry_date_false}>
+              <Popover
+                open={expiry_date_false}
+                onOpenChange={set_expiry_date_false}
+              >
                 <PopoverTrigger asChild>
                   <Button
                     variant={"outline"}
@@ -248,27 +284,42 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
                       "w-[280px] justify-start text-left font-normal",
                       !expiry_date && "text-muted-foreground"
                     )}
-                    onClick={() => { set_expiry_date_false(true) }}
+                    onClick={() => {
+                      set_expiry_date_false(true);
+                    }}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {expiry_date ? format(expiry_date, "PPP") : <span><TranslatedText greetings={singleStoreOwnerTranslations.expiryDate} /></span>}
+                    {expiry_date ? (
+                      format(expiry_date, "PPP")
+                    ) : (
+                      <span>
+                        <TranslatedText
+                          greetings={singleStoreOwnerTranslations.expiryDate}
+                        />
+                      </span>
+                    )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="flex w-fit flex-col space-y-2 p-2">
                   <Select
-                    onValueChange={(value) => set_expiry_date_year(parseInt(value))}
+                    onValueChange={(value) =>
+                      set_expiry_date_year(parseInt(value))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select Year" />
                     </SelectTrigger>
                     <SelectContent position="popper">
                       {[...Array(30)].map((_, index) => {
-                        const yearValue = new Date().getFullYear() + index
+                        const yearValue = new Date().getFullYear() + index;
                         return (
-                          <SelectItem key={yearValue} value={yearValue.toString()}>
+                          <SelectItem
+                            key={yearValue}
+                            value={yearValue.toString()}
+                          >
                             {yearValue}
                           </SelectItem>
-                        )
+                        );
                       })}
                     </SelectContent>
                   </Select>
@@ -282,60 +333,89 @@ const AddTractor = ({ alreadyTractors }: { alreadyTractors: TractorInStore[] }) 
                 </PopoverContent>
               </Popover>
               <div className="space-y-1">
-                <Label htmlFor="liscenceNumber"><TranslatedText greetings={singleStoreOwnerTranslations.licenseID} /></Label>
+                <Label htmlFor="liscenceNumber">
+                  <TranslatedText
+                    greetings={singleStoreOwnerTranslations.licenseID}
+                  />
+                </Label>
                 <Input
                   id="liscenceNumber"
-                  placeholder='e.g - es0012390'
+                  placeholder="e.g - es0012390"
                   value={document_number}
-                  autoComplete='new-liscence'
-                  autoCorrect='off'
-                  spellCheck='false'
-                  onChange={e => { set_document_number(e.target.value) }} />
+                  autoComplete="new-liscence"
+                  autoCorrect="off"
+                  spellCheck="false"
+                  onChange={(e) => {
+                    set_document_number(e.target.value);
+                  }}
+                />
               </div>
-              <Button onClick={saveTractor}><TranslatedText greetings={singleStoreOwnerTranslations.saveTractor} /></Button>
+              <Button onClick={saveTractor}>
+                <TranslatedText
+                  greetings={singleStoreOwnerTranslations.saveTractor}
+                />
+              </Button>
             </div>
           ) : fetchingTractors ? (
-            <p><TranslatedText greetings={singleStoreOwnerTranslations.loadingTractors} />...</p>
-          ) : (
-            allTractors.map((tractor) => (
-              <div key={tractor.id} className="border p-4 rounded-md">
-                <Swiper
-                  modules={[Autoplay, Pagination]}
-                  spaceBetween={0}
-                  slidesPerView={1}
-                  loop={true}
-                  pagination={true}
-                  autoplay={true}
-                  className="w-full h-40 mb-4"
-                >
-                  {tractor.tractor.images.map((image, i) => (
-                    <SwiperSlide key={i}>
-                      <Image
-                        src={image}
-                        alt="tractor_image"
-                        layout="fill"
-                        objectFit="cover"
-                      />
-                    </SwiperSlide>
-                  ))}
-                </Swiper>
-                <h3 className="font-bold">{tractor.tractor.name}</h3>
-                <p className="text-sm text-gray-500">{tractor.tractor.description}</p>
-                <Button
-                  className="mt-2 w-full"
-                  onClick={() => {
-                    setSelectedTractorId(tractor.tractor.id)
-                    setSelectedInventoryId(tractor.id)
-                  }}
-                >
-                  <TranslatedText greetings={singleStoreOwnerTranslations.select} />
-                </Button>
+            <p>
+              <TranslatedText
+                greetings={singleStoreOwnerTranslations.loadingTractors}
+              />
+              ...
+            </p>
+          ) : (allTractors.map((tractor) => (
+              <div
+                key={tractor.id}
+                className="border rounded-md overflow-hidden bg-gradient"
+                style={{ width: "200px" }} // Adjust width to match design
+              >
+                {/* Image Placeholder */}
+                <div className="w-full h-32 bg-gray-200 flex items-center justify-center overflow-hidden">
+                  {tractor.tractor.images?.[0] ? (
+                    <Image
+                      src={tractor.tractor.images[0]}
+                      alt={tractor.tractor.name}
+                      width={200}
+                      height={130}
+                      className="object-cover"
+                      unoptimized={true} // optional, for dev
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-300" />
+                  )}
+                </div>
+
+                {/* Info Section */}
+                <div className="p-3">
+                  <h3 className="font-semibold text-white text-sm leading-tight">
+                    {tractor.tractor.name}
+                  </h3>
+                  <p className="text-xs text-gray-300 mt-1 line-clamp-3">
+                    {tractor.tractor.description}
+                  </p>
+                  <button
+                    onClick={() => {
+                      setSelectedTractorId(tractor.tractor.id);
+                      setSelectedInventoryId(tractor.id);
+                    }}
+                    className="mt-3 w-full bg-orange-500 text-white rounded px-3 py-1 text-xs font-semibold hover:bg-orange-600 transition"
+                  >
+                    <TranslatedText
+                      greetings={singleStoreOwnerTranslations.select}
+                    />
+                  </button>
+                </div>
               </div>
             ))
           )}
         </div>
         <Backdrop open={creating}>
-          <p><TranslatedText greetings={singleStoreOwnerTranslations.addingTractorToStore} />...</p>
+          <p>
+            <TranslatedText
+              greetings={singleStoreOwnerTranslations.addingTractorToStore}
+            />
+            ...
+          </p>
         </Backdrop>
       </DialogContent>
     </Dialog>

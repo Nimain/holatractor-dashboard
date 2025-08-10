@@ -217,9 +217,9 @@ const OwnerCustomer = () => {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 900px:grid-cols-2 1300px:grid-cols-4 gap-4 mb-8">
         {/* Total Estimate Card */}
-        <div className="grid-cols-1 900px:col-span-2   bg-gradient-to-r from-[#8c0000] to-[#4d0000]  rounded-lg border shadow-sm p-6">
+        <div className="900px:col-span-2 bg-gradient-to-r from-[#8c0000] to-[#4d0000] rounded-lg border shadow-sm p-6">
           <div className="flex justify-between items-center">
-            <h3 className="text-white text-2xl font-bold ">
+            <h3 className="text-white text-2xl font-bold">
               <TranslatedText
                 greetings={ownerCustomerPageTranslations.totalEstimate}
               />
@@ -229,51 +229,41 @@ const OwnerCustomer = () => {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 500px:grid-cols-2 768px:grid-cols-3 900px:flex gap-5 mt-4">
-            <div className="bg-white text-green-600 p-3 w-52 h-20 rounded">
-              <div className="col-span-1 900px:flex-1">
-                <div className="flex  items-center gap-1">
-                  <span className="ml-2 shrink-0 size-4 flex justify-center items-center rounded-full bg-green-700 text-primary-foreground">
-                    <Check className="h-3 w-3" />
-                  </span>
-                  <h3 className="text-green-600 font-bold  ">
-                    <TranslatedText
-                      greetings={ownerCustomerPageTranslations.accepted}
-                    />
-                  </h3>
-                </div>
-                <div className="text-xl text-center font-semibold mb-1">
-                  $ {totalReceived.toFixed(2)}
-                </div>
+          <div className="grid grid-cols-1 500px:grid-cols-2 768px:grid-cols-3 gap-5 mt-4">
+            <div className="bg-white text-green-600 p-3 rounded flex-1">
+              <div className="flex items-center gap-1">
+                <span className="ml-2 size-4 flex justify-center items-center rounded-full bg-green-700 text-white">
+                  <Check className="h-3 w-3" />
+                </span>
+                <h3 className="text-green-600 font-bold">
+                  <TranslatedText
+                    greetings={ownerCustomerPageTranslations.accepted}
+                  />
+                </h3>
+              </div>
+              <div className="text-xl text-center font-semibold mb-1">
+                $ {totalReceived.toFixed(2)}
               </div>
             </div>
 
-            {/* <div className="w-px bg-gray-200 mx-4 hidden 900px:inline-block"></div> */}
-
-            <div className="col-span-1 900px:flex-1 bg-white text-green-600 p-3 w-64 h-20 rounded">
-              <div className="flex items-center gap-1">
-                <div className="text-orange-400">
-                  <FileClock className="h-4 w-4"/>
-                </div>
-                <h3 className="text-orange-400 font-bold ">
+            <div className="bg-white p-3 rounded flex-1">
+              <div className="flex items-center gap-1 text-orange-400">
+                <FileClock className="h-4 w-4" />
+                <h3 className="font-bold">
                   <TranslatedText
                     greetings={ownerCustomerPageTranslations.pending}
                   />
                 </h3>
               </div>
-              <div className="text-xl text-orange-400 text-center font-semibold mb-1 ">
+              <div className="text-xl text-center font-semibold text-orange-400 mb-1">
                 $ {pendingCustomers.toFixed(2)}
               </div>
             </div>
 
-            {/* <div className="w-px bg-gray-200 mx-4 hidden 900px:inline-block"></div> */}
-
-            <div className="bg-white text-green-600 p-3 w-52 h-20 rounded col-span-1 900px:flex-1">
+            <div className="bg-white p-3 rounded flex-1">
               <div className="flex items-center gap-1">
-                <div>
-                  <XCircle className="w-5 h-5 text-white fill-red-600" />
-                </div>
-                <h3 className="text-red-500 font-bold ">
+                <XCircle className="w-5 h-5 text-white fill-red-600" />
+                <h3 className="text-red-500 font-bold">
                   <TranslatedText
                     greetings={ownerCustomerPageTranslations.cancelled}
                   />
@@ -283,78 +273,36 @@ const OwnerCustomer = () => {
                 $ {rejectedCustomers.toFixed(2)}
               </div>
             </div>
-            {/* <div className="items-center mt-4 col-span-1 768px:col-span-3">
-              <p className="text-gray-500 text-sm justify-center text-right">
-                {currentTime}
-              </p>
-              <p className="text-gray-500 text-sm mt-1 text-right">
-                {currentDate}
-              </p>
-            </div> */}
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] p-6 w-[600px] rounded-lg">
-          <h3 className="text-white text-2xl mb-2 font-bold ">
+        {/* Second Card */}
+        <div className="900px:col-span-2 bg-gradient-to-r from-[#8c0000] to-[#4d0000] p-6 rounded-lg">
+          <h3 className="text-white text-2xl mb-2 font-bold">
             <TranslatedText
               greetings={ownerCustomerPageTranslations.totalEstimate}
             />
           </h3>
-          <div className="flex justify-evenly items-center mt-4">
-            {/* Total Customers Card */}
-            <div className="col-span-1  p-3 w-52 h-20 bg-white rounded-lg border shadow-sm ">
-              <div className="">
-                <div></div>
-                <h3 className="text-green-500 font-bold">
-                  <TranslatedText
-                    greetings={ownerCustomerPageTranslations.activeCustomers}
-                  />
-                </h3>
-                {/* <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button> */}
-              </div>
-
-              <div className="  mx-3">
-                <div className="text-2xl font-semibold text-green-500">
-                  {activeCustomers}
-                </div>
-                {/* <div className="flex items-center gap-1 mt-2">
-                            <span className="text-green-500 text-sm">↑ 15%</span>
-                        </div> */}
+          <div className="flex flex-col 500px:flex-row gap-4 mt-4">
+            <div className="p-3 bg-white rounded-lg border shadow-sm flex-1">
+              <h3 className="text-green-500 font-bold">
+                <TranslatedText
+                  greetings={ownerCustomerPageTranslations.activeCustomers}
+                />
+              </h3>
+              <div className="text-2xl font-semibold text-green-500">
+                {activeCustomers}
               </div>
             </div>
 
-            {/* Total Member Card */}
-            <div className="col-span-1  p-3 w-52 h-20 bg-white rounded-lg border shadow-sm">
-              <div className="">
-                <div></div>
-                <h3 className="text-orange-500  font-bold">
-                  <TranslatedText
-                    greetings={ownerCustomerPageTranslations.totalCustomers}
-                  />
-                </h3>
-                {/* <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button> */}
-              </div>
-
-              <div className=" ">
-                <div className="text-2xl font-semibold text-orange-500">
-                  {customers.length}
-                </div>
-                {/* <div className="flex -space-x-2 mt-4">
-                  {[1, 2, 3, 4, 5].map((index) => (
-                    <Image
-                      key={index}
-                      src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRH87TKQrWcl19xly2VNs0CjBzy8eaKNM-ZpA&s"
-                      alt={`Member ${index}`}
-                      className="w-8 h-8 rounded-full border-2 object-cover border-white"
-                      width={400}
-                      height={400}
-                    />
-                  ))}
-                </div> */}
+            <div className="p-3 bg-white rounded-lg border shadow-sm flex-1">
+              <h3 className="text-orange-500 font-bold">
+                <TranslatedText
+                  greetings={ownerCustomerPageTranslations.totalCustomers}
+                />
+              </h3>
+              <div className="text-2xl font-semibold text-orange-500">
+                {customers.length}
               </div>
             </div>
           </div>
@@ -440,7 +388,7 @@ const OwnerCustomer = () => {
       </div>
 
       {/* Customer Table */}
-      <div className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] border rounded-xl overflow-hidden  text-white">
+      <div className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] border rounded-xl overflow-hidden  text-white ">
         <Table className="w-full">
           <TableHeader className=" bg-gradient-to-r from-[#8c0000] to-[#4d0000]   text-white">
             <TableRow>
@@ -465,7 +413,9 @@ const OwnerCustomer = () => {
                     />
                   </div>
                   <span>
-                    <button className="bg-white text-red-500 p-1 mx-2 rounded-md "><FilterIcon /></button>
+                    <button className="bg-white text-red-500 p-1 mx-2 rounded-md ">
+                      <FilterIcon />
+                    </button>
                   </span>
                 </div>
               </div>

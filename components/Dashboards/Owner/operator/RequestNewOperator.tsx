@@ -270,7 +270,7 @@ const RequestNewOperator = () => {
           {priceTypes.map((priceType, index) => (
             <div key={index} className="flex gap-4 items-end">
               <div className="flex-1">
-                <Label className="flex items-center">
+                <Label className="flex items-center mb-2">
                     <HomeIcon className="mr-1 h-4 w-4"/>
                   <TranslatedText
                     greetings={requestNewOperatorTranslations.priceType}
@@ -307,7 +307,7 @@ const RequestNewOperator = () => {
                 </Select>
               </div>
               <div className="flex-1 ">
-                <Label className="flex items-center">
+                <Label className="flex items-center mb-2">
                     <DollarSign className="mr-1 h-4 w-4"/>
                   <TranslatedText
                     greetings={requestNewOperatorTranslations.value}
