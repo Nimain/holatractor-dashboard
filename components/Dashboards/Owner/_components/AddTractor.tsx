@@ -1,21 +1,14 @@
 "use client";
 
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useState, useEffect } from "react";
 import AddIcon from "@mui/icons-material/Add";
 import { Inventory, TractorInStore } from "@/utils/Types/types";
 import { useCookie } from "next-cookie";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
-import { Pagination, Autoplay } from "swiper/modules";
-import { Swiper, SwiperSlide } from "swiper/react";
-import "swiper/css";
-import "swiper/css/autoplay";
-import "swiper/css/navigation";
-import "swiper/css/pagination";
-import "swiper/css/scrollbar";
 import Image from "next/image";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { Backdrop } from "@mui/material";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -32,7 +25,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarIcon } from "lucide-react";
+import {
+  CircleDollarSignIcon,
+  CalendarClock,
+  CalendarIcon,
+  UserRoundPlusIcon,
+  ChevronLeft,
+  Loader2,
+} from "lucide-react";
 import { format, setYear } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
@@ -40,15 +40,21 @@ import { uploadFileToS3 } from "@/utils/AWS/FileUpload";
 import { singleStoreOwnerTranslations } from "../SingleStoreTranslation";
 import TranslatedText from "@/components/Menubar/TranslatedText";
 import { useAddStoreItemContext } from "@/components/wrappers/AddStoreItemProvider";
+import { FaPhotoVideo } from "react-icons/fa";
 
 const AddTractor = ({
   alreadyTractors,
 }: {
   alreadyTractors: TractorInStore[];
 }) => {
+  // Step management
+  type Step = "tractor" | "details";
+  const [step, setStep] = useState<Step>("tractor");
+  
   const [open, setOpen] = useState(false);
   const [selectedTractorId, setSelectedTractorId] = useState("");
   const [selectedInventoryId, setSelectedInventoryId] = useState("");
+  const [selectedTractor, setSelectedTractor] = useState<Inventory | null>(null);
   const [allTractors, setAllTractors] = useState<Inventory[]>([]);
   const [fetchingTractors, setFetchingTractors] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -63,9 +69,7 @@ const AddTractor = ({
 
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
-
   const { slug } = useParams();
-
   const { fetchStoreDetails } = useAddStoreItemContext();
 
   function fetchAllTractors() {
@@ -96,8 +100,26 @@ const AddTractor = ({
   };
 
   useEffect(() => {
-    fetchAllTractors();
-  }, []);
+    if (open) {
+      fetchAllTractors();
+      // Reset state when modal opens
+      setStep("tractor");
+      setSelectedTractorId("");
+      setSelectedInventoryId("");
+      setSelectedTractor(null);
+      setHourlyPrice(undefined);
+      setattachment(null);
+      set_document_number("");
+      set_expiry_date(undefined);
+    }
+  }, [open]);
+
+  const handleTractorSelect = (tractor: Inventory) => {
+    setSelectedTractorId(tractor.tractor.id);
+    setSelectedInventoryId(tractor.id);
+    setSelectedTractor(tractor);
+    setStep("details");
+  };
 
   async function saveTractor() {
     if (!hourlyPrice) {
@@ -106,12 +128,11 @@ const AddTractor = ({
     }
 
     if (!attachment || !document_number) {
-      errorMessage("Liscence details is needed");
+      errorMessage("License details is needed");
       return;
     }
 
     let attachmentLink = "";
-
     setCreating(true);
 
     const buffer = Buffer.from(await attachment.arrayBuffer());
@@ -156,39 +177,24 @@ const AddTractor = ({
       });
   }
 
+  const getStepTitle = () => {
+    switch (step) {
+      case "tractor":
+        return "Select Tractor";
+      case "details":
+        return "Additional Tractor Details";
+      default:
+        return "Add Tractor";
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <div>
           <div className="flex flex-col items-center justify-center h-full space-y-4">
-            {/* <div className="w-32 h-32 bg-gray-200 rounded-full flex items-center justify-center">
-              <Image
-                src="https://holaimagesdata.s3.us-west-2.amazonaws.com/web/serviso/land_preparation.webp"
-                alt="Tractor Icon"
-                width={64}
-                height={64}
-                className="w-full h-full object-cover rounded-full"
-                unoptimized={true}
-              />
-            </div> */}
-            {/* <h3 className="text-2xl font-bold text-center">
-              <TranslatedText
-                greetings={singleStoreOwnerTranslations.addNewTractor}
-              />
-            </h3>
-            <p className="text-gray-600 text-center">
-              <TranslatedText
-                greetings={singleStoreOwnerTranslations.clickAddNewTractor}
-              />
-            </p> */}
-            {/* <Button className="mt-4">
-              <AddIcon className="mr-2" />
-              <TranslatedText
-                greetings={singleStoreOwnerTranslations.addTractor}
-              />
-            </Button> */}
             <button
-              className="bg-orange-500 text-white px-4 py-2 mr-10 rounded-md font-semibold "
+              className="bg-orange-500 text-white px-4 py-2 mr-10 rounded-md font-semibold"
               onClick={() => {
                 setOpen(true);
               }}
@@ -199,218 +205,289 @@ const AddTractor = ({
         </div>
       </DialogTrigger>
 
-      <DialogContent
-        className="max-h-[90vh] overflow-auto bg-gradient-to-r from-[#8c0000] to-[#4d0000]"
-        style={{ scrollbarWidth: "none" }}
-      >
-        <div className="text-3xl text-white font-bold">Select Tractor</div>
-        <div className="grid gap-4 py-4 grid-cols-4 ">
-          {selectedTractorId ? (
-            <div className="grid gap-4">
-              <Label htmlFor="hourly-price">
-                <TranslatedText
-                  greetings={singleStoreOwnerTranslations.hourlyPrice}
-                />{" "}
-                ($)
-              </Label>
-              <Input
-                id="hourly-price"
-                type="number"
-                value={hourlyPrice}
-                onChange={(e) => setHourlyPrice(Number(e.target.value))}
-              />
-              <div className="flex items-center justify-center w-full">
-                <label
-                  htmlFor="dropzone-file"
-                  className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50"
-                >
-                  {attachment ? (
-                    <Image
-                      src={URL.createObjectURL(attachment)}
-                      alt={attachment.name}
-                      unoptimized={true}
-                      className="w-52 aspect-square rounded-md object-cover"
-                      width={200}
-                      height={200}
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <svg
-                        className="w-8 h-8 mb-4 text-gray-500 dark:text-gray-400"
-                        aria-hidden="true"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 20 16"
-                      >
-                        <path
-                          stroke="currentColor"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
-                        />
-                      </svg>
-                      <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                        <span className="font-semibold">Click to upload</span>{" "}
-                        or drag and drop
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        SVG, PNG, JPG or GIF (MAX. 800x400px)
-                      </p>
-                    </div>
-                  )}
-
-                  <input
-                    id="dropzone-file"
-                    type="file"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files ? e.target.files[0] : null;
-                      if (file) {
-                        setattachment(file);
-                      }
-                    }}
-                  />
-                </label>
-              </div>
-              <Popover
-                open={expiry_date_false}
-                onOpenChange={set_expiry_date_false}
+      <DialogContent className={`max-w-4xl max-h-[80vh] overflow-hidden flex flex-col ${
+        step === "tractor" 
+          ? "bg-white border-gray-200 text-red-600" 
+          : "bg-gradient-to-r from-[#8c0000] to-[#4d0000] border-[#4d0000] text-white"
+      }`}>
+        <DialogHeader>
+          <div className="flex items-center gap-2">
+            {step === "details" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setStep("tractor")}
+                className="text-white hover:bg-white/10"
               >
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-[280px] justify-start text-left font-normal",
-                      !expiry_date && "text-muted-foreground"
-                    )}
-                    onClick={() => {
-                      set_expiry_date_false(true);
-                    }}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {expiry_date ? (
-                      format(expiry_date, "PPP")
-                    ) : (
-                      <span>
-                        <TranslatedText
-                          greetings={singleStoreOwnerTranslations.expiryDate}
-                        />
-                      </span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="flex w-fit flex-col space-y-2 p-2">
-                  <Select
-                    onValueChange={(value) =>
-                      set_expiry_date_year(parseInt(value))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Year" />
-                    </SelectTrigger>
-                    <SelectContent position="popper">
-                      {[...Array(30)].map((_, index) => {
-                        const yearValue = new Date().getFullYear() + index;
-                        return (
-                          <SelectItem
-                            key={yearValue}
-                            value={yearValue.toString()}
-                          >
-                            {yearValue}
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                  <div className="rounded-md border">
-                    <Calendar
-                      mode="single"
-                      selected={expiry_date}
-                      onSelect={handleExpiryDateChange}
-                    />
-                  </div>
-                </PopoverContent>
-              </Popover>
-              <div className="space-y-1">
-                <Label htmlFor="liscenceNumber">
-                  <TranslatedText
-                    greetings={singleStoreOwnerTranslations.licenseID}
-                  />
-                </Label>
-                <Input
-                  id="liscenceNumber"
-                  placeholder="e.g - es0012390"
-                  value={document_number}
-                  autoComplete="new-liscence"
-                  autoCorrect="off"
-                  spellCheck="false"
-                  onChange={(e) => {
-                    set_document_number(e.target.value);
-                  }}
-                />
-              </div>
-              <Button onClick={saveTractor}>
-                <TranslatedText
-                  greetings={singleStoreOwnerTranslations.saveTractor}
-                />
+                <ChevronLeft className="h-4 w-4" />
+                Back
               </Button>
-            </div>
-          ) : fetchingTractors ? (
-            <p>
-              <TranslatedText
-                greetings={singleStoreOwnerTranslations.loadingTractors}
-              />
-              ...
-            </p>
-          ) : (allTractors.map((tractor) => (
-              <div
-                key={tractor.id}
-                className="border rounded-md overflow-hidden bg-gradient"
-                style={{ width: "200px" }} // Adjust width to match design
-              >
-                {/* Image Placeholder */}
-                <div className="w-full h-32 bg-gray-200 flex items-center justify-center overflow-hidden">
-                  {tractor.tractor.images?.[0] ? (
-                    <Image
-                      src={tractor.tractor.images[0]}
-                      alt={tractor.tractor.name}
-                      width={200}
-                      height={130}
-                      className="object-cover"
-                      unoptimized={true} // optional, for dev
+            )}
+            <DialogTitle className={`text-3xl font-bold ${
+              step === "tractor" ? "text-red-600" : "text-white"
+            }`}>
+              {getStepTitle()}
+            </DialogTitle>
+          </div>
+          {step === "tractor" && (
+            <h3 className="text-red-500">
+              Select from all the tractors from inventory
+            </h3>
+          )}
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto">
+          {/* Tractor Selection Step */}
+          {step === "tractor" && (
+            <div className="space-y-4">
+              {fetchingTractors ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                  <span className="ml-2 text-red-600">
+                    <TranslatedText
+                      greetings={singleStoreOwnerTranslations.loadingTractors}
                     />
-                  ) : (
-                    <div className="w-full h-full bg-gray-300" />
-                  )}
+                    ...
+                  </span>
+                </div>
+              ) : allTractors.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-red-400">No tractors available</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                  {allTractors.map((tractor) => (
+                    <div
+                      key={tractor.id}
+                      className="border rounded-xl overflow-hidden bg-red-50 border-red-200 cursor-pointer transition-all hover:bg-red-100"
+                      onClick={() => handleTractorSelect(tractor)}
+                    >
+                      {/* Image Section */}
+                      <div className="w-full h-32 flex items-center justify-center overflow-hidden">
+                        {tractor.tractor.images?.[0] ? (
+                          <Image
+                            src={tractor.tractor.images[0]}
+                            alt={tractor.tractor.name}
+                            width={200}
+                            height={130}
+                            className="object-cover w-full h-full"
+                            unoptimized={true}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-200" />
+                        )}
+                      </div>
+
+                      {/* Info Section */}
+                      <div className="p-4 bg-gradient-to-r from-[#8c0000] to-[#4d0000] h-full">
+                        <h3 className="font-semibold text-white text-sm leading-tight">
+                          {tractor.tractor.name}
+                        </h3>
+                        <p className="text-xs text-white mt-1 line-clamp-3">
+                          {tractor.tractor.description}
+                        </p>
+                        <Button
+                          size="sm"
+                          className="mt-3 w-full bg-orange-500 text-white rounded hover:bg-orange-600 transition"
+                        >
+                          <TranslatedText
+                            greetings={singleStoreOwnerTranslations.select}
+                          />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Details Step */}
+          {step === "details" && selectedTractor && (
+            <div className="space-y-6">
+
+              {/* Form Fields */}
+              <div className="space-y-4">
+                {/* Hourly Price */}
+                <div>
+                  <Label htmlFor="hourly-price" className="flex items-center text-white">
+                    <CircleDollarSignIcon className="w-4 h-4" />
+                    <span className="ml-2">
+                      <TranslatedText
+                        greetings={singleStoreOwnerTranslations.hourlyPrice}
+                      />{" "}
+                      ($)
+                    </span>
+                  </Label>
+                  <Input
+                    id="hourly-price"
+                    type="number"
+                    value={hourlyPrice}
+                    onChange={(e) => setHourlyPrice(Number(e.target.value))}
+                    className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                  />
                 </div>
 
-                {/* Info Section */}
-                <div className="p-3">
-                  <h3 className="font-semibold text-white text-sm leading-tight">
-                    {tractor.tractor.name}
-                  </h3>
-                  <p className="text-xs text-gray-300 mt-1 line-clamp-3">
-                    {tractor.tractor.description}
-                  </p>
-                  <button
-                    onClick={() => {
-                      setSelectedTractorId(tractor.tractor.id);
-                      setSelectedInventoryId(tractor.id);
-                    }}
-                    className="mt-3 w-full bg-orange-500 text-white rounded px-3 py-1 text-xs font-semibold hover:bg-orange-600 transition"
+                {/* File Upload */}
+                <div>
+                  <h2 className="flex items-center text-white mb-2">
+                    <FaPhotoVideo className="w-4 h-4" />
+                    <span className="ml-2">Upload Additional Image</span>
+                  </h2>
+                  <label
+                    htmlFor="dropzone-file"
+                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-white/20 border-dashed rounded-lg cursor-pointer bg-white/5 hover:bg-white/10"
                   >
-                    <TranslatedText
-                      greetings={singleStoreOwnerTranslations.select}
+                    {attachment ? (
+                      <Image
+                        src={URL.createObjectURL(attachment)}
+                        alt={attachment.name}
+                        unoptimized={true}
+                        className="w-24 h-24 rounded-md object-cover"
+                        width={96}
+                        height={96}
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <svg
+                          className="w-8 h-8 mb-4 text-white/50"
+                          aria-hidden="true"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 20 16"
+                        >
+                          <path
+                            stroke="currentColor"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
+                          />
+                        </svg>
+                        <p className="text-sm text-white/70">
+                          <span className="font-semibold">Click to upload</span> or drag and drop
+                        </p>
+                      </div>
+                    )}
+                    <input
+                      id="dropzone-file"
+                      type="file"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files ? e.target.files[0] : null;
+                        if (file) {
+                          setattachment(file);
+                        }
+                      }}
                     />
-                  </button>
+                  </label>
+                </div>
+
+                {/* Expiry Date */}
+                <div>
+                  <h2 className="flex items-center text-white mb-2">
+                    <CalendarClock className="w-4 h-4" />
+                    <span className="ml-2">Expiry Date</span>
+                  </h2>
+                  <Popover open={expiry_date_false} onOpenChange={set_expiry_date_false}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal bg-white/10 border-white/20 text-white hover:bg-white/20",
+                          !expiry_date && "text-white/50"
+                        )}
+                        onClick={() => set_expiry_date_false(true)}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {expiry_date ? (
+                          format(expiry_date, "PPP")
+                        ) : (
+                          <span>
+                            <TranslatedText
+                              greetings={singleStoreOwnerTranslations.expiryDate}
+                            />
+                          </span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="flex w-fit flex-col space-y-2 p-2">
+                      <Select onValueChange={(value) => set_expiry_date_year(parseInt(value))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Year" />
+                        </SelectTrigger>
+                        <SelectContent position="popper">
+                          {[...Array(30)].map((_, index) => {
+                            const yearValue = new Date().getFullYear() + index;
+                            return (
+                              <SelectItem key={yearValue} value={yearValue.toString()}>
+                                {yearValue}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                      <div className="rounded-md border">
+                        <Calendar
+                          mode="single"
+                          selected={expiry_date}
+                          onSelect={handleExpiryDateChange}
+                        />
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* License Number */}
+                <div>
+                  <Label htmlFor="liscenceNumber" className="flex items-center text-white">
+                    <UserRoundPlusIcon className="w-4 h-4" />
+                    <span className="ml-2">
+                      <TranslatedText
+                        greetings={singleStoreOwnerTranslations.licenseID}
+                      />
+                    </span>
+                  </Label>
+                  <Input
+                    id="liscenceNumber"
+                    placeholder="e.g - es0012390"
+                    value={document_number}
+                    autoComplete="new-liscence"
+                    autoCorrect="off"
+                    spellCheck="false"
+                    onChange={(e) => set_document_number(e.target.value)}
+                    className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                  />
                 </div>
               </div>
-            ))
+            </div>
           )}
         </div>
+
+        {/* Footer Buttons */}
+        <div className="flex justify-end gap-2 pt-4 border-t border-white/20">
+          {/* <Button
+            variant="outline"
+            className="bg-orange-500 text-white hover:bg-orange-600 border-orange-500"
+            onClick={() => setOpen(false)}
+          >
+            Cancel
+          </Button> */}
+
+          {step === "details" && (
+            <Button
+              className="bg-orange-500 text-white hover:bg-orange-600"
+              onClick={saveTractor}
+              disabled={creating}
+            >
+              {creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              <TranslatedText greetings={singleStoreOwnerTranslations.saveTractor} />
+            </Button>
+          )}
+        </div>
+
         <Backdrop open={creating}>
-          <p>
+          <p className="text-white">
             <TranslatedText
               greetings={singleStoreOwnerTranslations.addingTractorToStore}
             />

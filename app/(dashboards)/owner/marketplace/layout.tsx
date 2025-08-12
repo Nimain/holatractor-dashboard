@@ -50,7 +50,7 @@ export default function MarketplaceLayout({
 
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="rounded-mdflex items-center justify-between h-16 px-4 bg-red-800 text-white border-b border-red-700 shrink-0 md:px-6">
+      <header className="rounded-md flex items-center justify-between h-16 px-4 bg-red-800 text-white border-b border-red-700 shrink-0 md:px-6">
         {/* Breadcrumb Navigation */}
         <nav className="flex items-center space-x-1" aria-label="Breadcrumb">
           <div className="flex items-center bg-red-700 rounded-lg px-4 py-2 border border-red-600">

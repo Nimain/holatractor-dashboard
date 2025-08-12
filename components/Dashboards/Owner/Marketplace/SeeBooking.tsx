@@ -23,7 +23,7 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
     return (
         <Sheet>
             <SheetTrigger asChild>
-                <Card className="overflow-hidden bg-white shadow-sm rounded-md mt-3">
+                <Card className="overflow-hidden bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white shadow-sm rounded-md mt-3">
                     <CardContent className="flex items-center space-x-4 p-4">
                         <Avatar className="h-12 w-12">
                             {
@@ -47,7 +47,7 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
                     </CardContent>
                 </Card>
             </SheetTrigger>
-            <SheetContent side="right" className="p-0 bg-white">
+            <SheetContent side="right" className="p-0 bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white">
                 <SheetHeader className="px-6 py-4 border-b">
                     <SheetTitle className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
@@ -58,7 +58,7 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
                 </SheetHeader>
 
                 <div className="px-6 py-4 overflow-y-auto h-[calc(100vh-80px)]">
-                    <div className="bg-white rounded-lg shadow-md p-6 border mt-3">
+                    <div className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white rounded-lg shadow-md p-6 border mt-3">
                         <div className="flex justify-between">
 
                             <div className="flex items-center space-x-4">

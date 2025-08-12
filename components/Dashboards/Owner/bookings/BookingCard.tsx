@@ -349,7 +349,7 @@ export function BookingCard({
                   <Badge
                     className={
                       ticket.bookingStatus.toLowerCase() === "open"
-                        ? "bg-orange-500 text-white"
+                        ? "bg-orange-500 text-white hover:bg-orange-600"
                         : ticket.bookingStatus.toLowerCase() === "finished"
                         ? "bg-green-500 text-white"
                         : ticket.bookingStatus.toLowerCase() === "rejected"
@@ -427,7 +427,7 @@ export function BookingCard({
                       <AssignOperator
                         selectedRequest={ticket.id}
                         storeId={ticket.store_id}
-                      />
+                    />
                     )}
                   <div className="flex gap-3">
                     <div className="flex flex-col items-center">
