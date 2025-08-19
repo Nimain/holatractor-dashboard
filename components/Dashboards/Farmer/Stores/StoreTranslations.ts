@@ -1,143 +1,170 @@
 export const storePageTranslations = {
-    farmStore: {
-      en: "Farm store",
-      es: "Tienda de granja",
-      ay: "Awti uta",
-      qu: "Ttienda ayllu",
-      gn: "Ñemba'apo róg"
-    },
-    allStores: {
-      en: "All stores",
-      es: "Todas las tiendas",
-      ay: "Uti apaqta",
-      qu: "Ñisqay taqtakuna",
-      gn: "Mayma ñeime"
-    },
-    storeDetailsUnavailable: {
-      en: "Store details not available",
-      es: "Detalles de la tienda no disponibles",
-      ay: "Uta sapaqatqaña",
-      qu: "Qhoswa ima k’apiyuq",
-      gn: "Ndaipóri marandúre"
-    },
-    tractor: {
-      en: "Tractor",
-      es: "Tractor",
-      ay: "Patanta",
-      qu: "Ñusqakuy",
-      gn: "Ñemaeha"
-    },
-    attachment: {
-      en: "Attachment",
-      es: "Implemento",
-      ay: "Ancha",
-      qu: "Ñisqa",
-      gn: "Ñe'ama"
-    },
-    wantToBook: {
-      en: "Want to book from this store?",
-      es: "¿Quieres reservar desde esta tienda?",
-      ay: "¿Jutaw qhipara?",
-      qu: "¿Ñusqay pichu?",
-      gn: "¿Rehusa kokun?"
-    },
-    fillFormToBook: {
-      en: "Please fill the form to book from this store",
-      es: "Por favor completa el formulario para reservar desde esta tienda",
-      ay: "Chaskisqa uta qhipanta",
-      qu: "Ñisqa uyariw, qhawayta",
-      gn: "Eremopyhy aranduye"
-    },
-    selectFarms: {
-      en: "Select Farms",
-      es: "Seleccionar granjas",
-      ay: "Ayllu",
-      qu: "Qhoswa",
-      gn: "Ñeharuramo"
-    },
-    loadingFarmLists: {
-      en: "Loading farm lists",
-      es: "Cargando listas de granjas",
-      ay: "Sapachasqaña qhiswa",
-      qu: "Ñisqa achka churay",
-      gn: "Ñema'apo reykai"
-    },
-    totalTractorsSelected: {
-      en: "Total tractors selected",
-      es: "Total de tractores seleccionados",
-      ay: "Ñusqay qipata",
-      qu: "Ñusi utjuy",
-      gn: "Ñepa'itypeguetaha"
-    },
-    totalAttachmentsSelected: {
-      en: "Total attachments selected",
-      es: "Total de implementos seleccionados",
-      ay: "Ñisqa",
-      qu: "Achuy qhapuy",
-      gn: "Ñenaigueha"
-    },
-    bookNow: {
-      en: "Book now",
-      es: "Reservar ahora",
-      ay: "Qhipa",
-      qu: "Ñisqa",
-      gn: "Ñeryepe'a"
-    },
-    noTractorsAvailable: {
-      en: "No tractors available",
-      es: "No hay tractores disponibles",
-      ay: "Ñusqay utjaw",
-      qu: "Tara, qhawayta",
-      gn: "Ndaipóri ñehemeha"
-    },
-    sorryNoTractors: {
-      en: "Sorry this store has no tractors available",
-      es: "Lo sentimos, esta tienda no tiene tractores disponibles",
-      ay: "Qhawa uta qhipa utjaw",
-      qu: "Ñisqa, qhipa qhawasaq",
-      gn: "Ñemyatyryei"
-    },
-    model: {
-      en: "Model",
-      es: "Modelo",
-      ay: "Ñaw",
-      qu: "Ñapa",
-      gn: "Ñekye"
-    },
-    hourlyPrice: {
-      en: "Hourly price",
-      es: "Precio por hora",
-      ay: "Ñaw hatun",
-      qu: "Ñapa kay",
-      gn: "Ñeguapy ára"
-    },
-    select: {
-      en: "Select",
-      es: "Seleccionar",
-      ay: "Qhoswasqa",
-      qu: "Ñihuska",
-      gn: "Ñema'agui"
-    },
-    selected: {
-      en: "Selected",
-      es: "Seleccionado",
-      ay: "Ñiluta",
-      qu: "Ñihuya",
-      gn: "Ñemboharape"
-    },
-    noAttachmentsAvailable: {
-      en: "No attachments available",
-      es: "No hay implementos disponibles",
-      ay: "Ñaw",
-      qu: "Ñisqa",
-      gn: "Ndaipóri"
-    },
-    sorryNoAttachments: {
-      en: "Sorry this store has no attachments available",
-      es: "Lo sentimos, esta tienda no tiene implementos disponibles",
-      ay: "Ñisqa",
-      qu: "Qhoswa",
-      gn: "Ñema'apo ai"
-    }
-  };
-  
+  Store: {
+    en: "Store",
+    es: "Tienda",
+    ay: "Almacén",
+    qu: "Tienda",
+    gn: "Ñemuha",
+  },
+  allStores: {
+    en: "All stores",
+    es: "Todas las tiendas",
+    ay: "Uti apaqta",
+    qu: "Ñisqay taqtakuna",
+    gn: "Mayma ñeime",
+  },
+  storeDetailsUnavailable: {
+    en: "Store details not available",
+    es: "Detalles de la tienda no disponibles",
+    ay: "Uta sapaqatqaña",
+    qu: "Qhoswa ima k’apiyuq",
+    gn: "Ndaipóri marandúre",
+  },
+  tractor: {
+    en: "Tractor",
+    es: "Tractor",
+    ay: "Patanta",
+    qu: "Ñusqakuy",
+    gn: "Ñemaeha",
+  },
+  attachment: {
+    en: "Attachment",
+    es: "Implemento",
+    ay: "Ancha",
+    qu: "Ñisqa",
+    gn: "Ñe'ama",
+  },
+  wantToBook: {
+    en: "Want to book from this store?",
+    es: "¿Quieres reservar desde esta tienda?",
+    ay: "¿Jutaw qhipara?",
+    qu: "¿Ñusqay pichu?",
+    gn: "¿Rehusa kokun?",
+  },
+  fillFormToBook: {
+    en: "Please fill the form to book from this store",
+    es: "Por favor completa el formulario para reservar desde esta tienda",
+    ay: "Chaskisqa uta qhipanta",
+    qu: "Ñisqa uyariw, qhawayta",
+    gn: "Eremopyhy aranduye",
+  },
+  selectFarms: {
+    en: "Select Farms",
+    es: "Seleccionar granjas",
+    ay: "Ayllu",
+    qu: "Qhoswa",
+    gn: "Ñeharuramo",
+  },
+  loadingFarmLists: {
+    en: "Loading farm lists",
+    es: "Cargando listas de granjas",
+    ay: "Sapachasqaña qhiswa",
+    qu: "Ñisqa achka churay",
+    gn: "Ñema'apo reykai",
+  },
+  totalTractorsSelected: {
+    en: "Total tractors selected",
+    es: "Total de tractores seleccionados",
+    ay: "Ñusqay qipata",
+    qu: "Ñusi utjuy",
+    gn: "Ñepa'itypeguetaha",
+  },
+  totalAttachmentsSelected: {
+    en: "Total attachments selected",
+    es: "Total de implementos seleccionados",
+    ay: "Ñisqa",
+    qu: "Achuy qhapuy",
+    gn: "Ñenaigueha",
+  },
+  bookNow: {
+    en: "Book now",
+    es: "Reservar ahora",
+    ay: "Qhipa",
+    qu: "Ñisqa",
+    gn: "Ñeryepe'a",
+  },
+  noTractorsAvailable: {
+    en: "No tractors available",
+    es: "No hay tractores disponibles",
+    ay: "Ñusqay utjaw",
+    qu: "Tara, qhawayta",
+    gn: "Ndaipóri ñehemeha",
+  },
+  sorryNoTractors: {
+    en: "Sorry this store has no tractors available",
+    es: "Lo sentimos, esta tienda no tiene tractores disponibles",
+    ay: "Qhawa uta qhipa utjaw",
+    qu: "Ñisqa, qhipa qhawasaq",
+    gn: "Ñemyatyryei",
+  },
+  model: {
+    en: "Model",
+    es: "Modelo",
+    ay: "Ñaw",
+    qu: "Ñapa",
+    gn: "Ñekye",
+  },
+  hourlyPrice: {
+    en: "Hourly price",
+    es: "Precio por hora",
+    ay: "Ñaw hatun",
+    qu: "Ñapa kay",
+    gn: "Ñeguapy ára",
+  },
+  select: {
+    en: "Select",
+    es: "Seleccionar",
+    ay: "Qhoswasqa",
+    qu: "Ñihuska",
+    gn: "Ñema'agui",
+  },
+  selected: {
+    en: "Selected",
+    es: "Seleccionado",
+    ay: "Ñiluta",
+    qu: "Ñihuya",
+    gn: "Ñemboharape",
+  },
+  noAttachmentsAvailable: {
+    en: "No attachments available",
+    es: "No hay implementos disponibles",
+    ay: "Ñaw",
+    qu: "Ñisqa",
+    gn: "Ndaipóri",
+  },
+  sorryNoAttachments: {
+    en: "Sorry this store has no attachments available",
+    es: "Lo sentimos, esta tienda no tiene implementos disponibles",
+    ay: "Ñisqa",
+    qu: "Qhoswa",
+    gn: "Ñema'apo ai",
+  },
+  AllTractors: {
+    en: "All Tractors",
+    es: "Todos los tractores",
+    ay: "Taqi tractoranak",
+    qu: "Llapa tractoreskuna",
+    gn: "Tractores opaite",
+  },
+  AllAttachments: {
+    en: "All Attachments",
+    es: "Todos los implementos",
+    ay: "Taqi anexonaka",
+    qu: "Llapa anexokuna",
+    gn: "Mboka opaite",
+  },
+  OverviewTractors: {
+    en: "Overview of all the tractors available for booking",
+    es: "Resumen de todos los tractores disponibles para reservar",
+    ay: "Taqi tractornaka reservarañataki",
+    qu: "Llapa tractoreskuna reservaspa rikch’ariy",
+    gn: "Opaite tractores orepyta reserva hag̃ua",
+  },
+  OverviewAttachments: {
+    en: "Overview of all the attachments available for booking",
+    es: "Resumen de todos los implementos disponibles para reservar",
+    ay: "Taqi anexonaka reservarañataki",
+    qu: "Llapa anexokuna reservaspa rikch’ariy",
+    gn: "Opaite mboka orepyta reserva hag̃ua",
+  },
+};

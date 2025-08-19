@@ -71,8 +71,8 @@ const Stores = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-semibold text-gray-900">
-            <TranslatedText greetings={storePageTranslations.farmStore} />
+          <h1 className="text-3xl font-semibold text-red-700">
+            <TranslatedText greetings={storePageTranslations.Store} />
           </h1>
           <span className="text-2xl text-gray-500">
             {fetching ? "Loading" : stores.length}
@@ -126,17 +126,17 @@ const Stores = () => {
              </div> */}
            </div>
 
-           <div className="p-4 transition-all duration-300 group-hover:bg-blue-50/50">
+           <div className="p-4 transition-all duration-300 bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white group-hover:bg-blue-50/50">
              <div className="flex justify-between items-start mb-2">
                <div>
-                 <h3 className="font-medium text-lg text-gray-900 transition-colors duration-300 group-hover:text-blue-600">{center.store.name}</h3>
-                 <div className="flex items-center gap-2 text-gray-500">
-                   <div className="text-xl font-semibold text-gray-900">
+                 <h3 className="font-medium text-lg text-white transition-colors duration-300 group-hover:text-sky-500">{center.store.name}</h3>
+                 <div className="flex items-center gap-2 text-white">
+                   <div className="text-xl font-semibold text-white">
                ${center.cheapestEquipment ? `${center.cheapestEquipment}` : "0"} - ${center.mostExpensiveEquipment ? center.mostExpensiveEquipment : "0"}
              </div>
                  </div>
                </div>
-               <span className="text-gray-500 text-sm">{center.distance}Km</span>
+               <span className="text-white text-sm">{center.distance}Km</span>
              </div>
 
              

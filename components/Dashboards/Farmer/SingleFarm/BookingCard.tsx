@@ -16,7 +16,7 @@ export default function BookingCard({ booking }: { booking: Booking; }) {
     }
 
     return (
-        <Card className="w-full max-w-sm border-0">
+        <Card className="w-full max-w-sm border-0 bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white">
             <CardContent className="space-y-2">
                 <div className="flex justify-between items-center py-2 border-0">
                     <span><TranslatedText greetings={farmPageTranslations.bookings} /> #{booking.id.slice(-4)}</span>
