@@ -78,7 +78,7 @@ export default function WeatherWidget({ city }: { city: string }) {
     const { location, current } = weather
 
     return (
-        <Card className="w-full 900px:max-w-md rounded-2xl bg-primaryColor text-white">
+        <Card className="w-full 900px:max-w-md rounded-2xl bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white">
             <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                     <span>{location.name}, {location.region}</span>

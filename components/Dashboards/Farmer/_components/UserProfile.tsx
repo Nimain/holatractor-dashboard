@@ -21,7 +21,7 @@ export default function UserProfileCard({
   isEmailVerified,
 }: UserProfileCardProps) {
   return (
-    <Card className="w-full 900px:max-w-md rounded-2xl bg-primaryColor text-white">
+    <Card className="w-full 900px:max-w-md rounded-2xl bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white">
       <CardHeader className="flex flex-col 500px:flex-row items-center gap-4">
         <Avatar className="h-16 w-16">
           <AvatarImage src={avatarUrl} alt={name} />

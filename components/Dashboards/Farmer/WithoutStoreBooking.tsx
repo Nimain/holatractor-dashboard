@@ -272,6 +272,7 @@ const WithoutStoreBooking = () => {
                     onClick={() => {
                         setOpen(true);
                     }}
+                    className='bg-green-700'
                 >
                     <TranslatedText greetings={newBookingTranslations.newBooking} />
                 </Button>
