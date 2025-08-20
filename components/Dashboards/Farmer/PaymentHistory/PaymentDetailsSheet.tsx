@@ -200,16 +200,17 @@ const PaymentDetailsSheet = ({
           )}
         </TableRow>
       </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-xl overflow-y-auto bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white">
         <SheetHeader className="space-y-4">
+          <p className="text-center text-white">Payment Details</p>
           <div className="items-center">
-            <SheetTitle>ID: {payment.id}</SheetTitle>
+            <SheetTitle>Payment ID: {payment.id}</SheetTitle>
             <div className="flex items-center gap-2 mt-8">
-              <Button variant="outline" className="bg-black text-white">
+              <Button variant="outline" className="bg-orange-600 text-white">
                 <Download className="h-4 w-4 mr-2" />
                 <TranslatedText greetings={paymentHistoryTranslations.export} />
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="bg-orange-600 text-white">
                 <Printer className="h-4 w-4 mr-2" />
                 <TranslatedText greetings={paymentHistoryTranslations.print} />
               </Button>
@@ -219,14 +220,14 @@ const PaymentDetailsSheet = ({
 
         <div className="space-y-6 py-6">
           {/* Order Items Section */}
-          <div className="space-y-4">
+          <div className="space-y-4 bg-white/10 backdrop-blur-sm text-white">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-medium">
                 <TranslatedText
                   greetings={paymentHistoryTranslations.orderItems}
                 />
               </h3>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-white">
                 {payment.booking.tractors.length +
                   payment.booking.attachments.length}
               </span>
@@ -302,7 +303,7 @@ const PaymentDetailsSheet = ({
           <Separator />
 
           {/* Contact Section */}
-          <div className="space-y-4 w-[60%]">
+          <div className="space-y-4 w-[60%] bg-white/10 backdrop-blur-sm text-white">
             <h3 className="text-lg font-medium">
               <TranslatedText
                 greetings={paymentHistoryTranslations.contactInformation}
@@ -318,7 +319,7 @@ const PaymentDetailsSheet = ({
                   value={`${payment.booking.store?.owner.user.first_name} ${
                     payment.booking.store?.owner.user.middle_name ?? ""
                   } ${payment.booking.store?.owner.user.last_name}`}
-                  readOnly={true}
+                  readOnly={true} className="bg-white/10 backdrop-blur-sm  text-white"
                 />
               </div>
               <div className="space-y-2">
@@ -331,6 +332,7 @@ const PaymentDetailsSheet = ({
                   id="email"
                   value={payment.booking.store?.owner.user.email}
                   readOnly={true}
+                  className="bg-white/10 backdrop-blur-sm  text-white"
                 />
               </div>
               {`${payment.status} === "OwnerREJECTED` &&
@@ -358,9 +360,9 @@ const PaymentDetailsSheet = ({
 
           {/* Payment Method Section */}
 
-          <Card className="w-full max-w-2xl">
+          <Card className="w-full max-w-2xl  text-white">
             <CardContent className="p-6">
-              <h2 className="text-lg font-semibold mb-4">
+              <h2 className="text-lg font-semibold mb-4 text-white">
                 <TranslatedText
                   greetings={paymentHistoryTranslations.paymentMethods}
                 />
@@ -368,7 +370,7 @@ const PaymentDetailsSheet = ({
               <div className="space-y-4">
                 {/* Payment method */}
 
-                <div className="flex items-center justify-between py-3 border-b">
+                <div className="flex items-center justify-between py-3 border-b bg-white/10 backdrop-blur-sm  text-white">
                   <div className="flex items-center gap-3">
                     <div className="bg-purple-100 p-2 rounded-lg">
                       <Wallet className="h-5 w-5 text-purple-600" />
@@ -388,7 +390,7 @@ const PaymentDetailsSheet = ({
                   <div className="flex items-center gap-2">
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" className="bg-orange-400 text-white">
                           <Eye className="h-4 w-4 mr-1" />
                           <TranslatedText
                             greetings={paymentHistoryTranslations.view}
@@ -420,7 +422,7 @@ const PaymentDetailsSheet = ({
                         )}
                       </DialogContent>
                     </Dialog>
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm"  className="bg-orange-400 text-white">
                       <Download className="h-4 w-4 mr-1" />
                       <TranslatedText
                         greetings={paymentHistoryTranslations.download}
@@ -442,7 +444,7 @@ const PaymentDetailsSheet = ({
                   greetings={paymentHistoryTranslations.paymentProof}
                 />
               </h3>
-              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg">
+              <div className="border-2  rounded-lg bg-white/10 backdrop-blur-sm  text-white">
                 <label
                   htmlFor="payment-proof"
                   className="relative flex flex-col items-center justify-center gap-1 p-8 text-center cursor-pointer"
@@ -511,7 +513,7 @@ const PaymentDetailsSheet = ({
           {(`${payment.status}` === "FarmerPENDING" ||
             `${payment.status}` === "OwnerREJECTED") && (
             <Button
-              className="w-full"
+              className="w-full bg-orange-500 text-white"
               disabled={loading || !selectedFile}
               onClick={() => {
                 handleSubmit();
