@@ -489,31 +489,31 @@ function PaymentTableShrimmer() {
   return Array.from({ length: 5 }).map((_, index) => (
     <tr key={index} className="animate-pulse border-b">
       <td className="p-4">
-        <div className="h-4 w-4 bg-gray-300 rounded"></div>
+        <div className="h-4 w-4 text-white rounded"></div>
       </td>
       <td className="p-4">
-        <div className="h-4 w-32 bg-gray-300 rounded"></div>
+        <div className="h-4 w-32 text-white rounded"></div>
       </td>
       <td className="p-4">
-        <div className="h-4 w-32 bg-gray-300 rounded"></div>
+        <div className="h-4 w-32 text-white rounded"></div>
       </td>
       <td className="p-4">
-        <div className="h-4 w-24 bg-gray-300 rounded"></div>
+        <div className="h-4 w-24 text-white rounded"></div>
       </td>
       <td className="p-4">
-        <div className="h-4 w-16 bg-gray-300 rounded"></div>
+        <div className="h-4 w-16 text-white rounded"></div>
       </td>
       <td className="p-4">
-        <div className="h-4 w-24 bg-gray-300 rounded"></div>
+        <div className="h-4 w-24 text-white rounded"></div>
       </td>
       <td className="p-4">
-        <div className="h-4 w-32 bg-gray-300 rounded"></div>
+        <div className="h-4 w-32 text-white rounded"></div>
       </td>
       <td className="p-4">
-        <div className="h-4 w-36 bg-gray-300 rounded"></div>
+        <div className="h-4 w-36 text-white rounded"></div>
       </td>
       <td className="p-4">
-        <div className="h-4 w-36 bg-gray-300 rounded"></div>
+        <div className="h-4 w-36 text-white rounded"></div>
       </td>
     </tr>
   ));

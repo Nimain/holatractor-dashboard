@@ -823,6 +823,7 @@ export enum PaymentStatus {
   OwnerPending,
   OwnerREJECTED,
   COMPLETED,
+  PAID
 }
 
 export interface Inquiry {
@@ -1124,3 +1125,4 @@ export enum StoreOperatorStatus {
   Inactive = 'Inactive',
   Deleted = 'Deleted'
 }
+

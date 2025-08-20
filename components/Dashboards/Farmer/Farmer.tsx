@@ -405,7 +405,6 @@ const FarmerDashboard = () => {
               isEmailVerified={user.email_varified}
               isOnline={true}
               name={user.name} />
-A
               <LatestBookingComponent booking={bookings} bookingLength={totalBookings} />
 
             <WeatherWidget city={city} />

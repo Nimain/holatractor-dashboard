@@ -630,11 +630,12 @@ const NewBookingHistory = () => {
                   <TableCell className="p-4 text-sm">
                     ${booking.total_cost.toFixed(2)}
                   </TableCell>
-                  <TableCell className="p-4 text-sm rounded-full font-medium">
-                    <div className="bg-green-700 text-white p-2 w-14 rounded-full">
+                  <TableCell className="p-4 text-sm font-medium">
+                    <div className="bg-green-700 text-white px-3 py-1 rounded-full inline-flex items-center justify-center">
                       {booking.bookingStatus}
                     </div>
                   </TableCell>
+
                   {!booking.confirm && (
                     <TableCell className="p-4 text-sm">
                       <BookingConfirmation
