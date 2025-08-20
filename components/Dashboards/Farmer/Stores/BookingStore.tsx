@@ -324,16 +324,18 @@ const BookingStore = () => {
         </div>
       </div>
 
-      <div className="mt- flex flex-col lg:flex-row gap-8 p-6">
+      <div className=" flex flex-col lg:flex-row gap-8 p-6">
         <Card className="w-full lg:w-[400px] bg-gradient-to-br from-[#8c0000] to-[#4d0000] text-white border-none shrink-0 z-10 -mt-24 shadow-2xl">
           <CardHeader>
             <CardTitle className="text-center">
               <TranslatedText greetings={storePageTranslations.wantToBook} />
             </CardTitle>
-            <CardDescription className="text-center">
+            <CardDescription className="text-center text-white">
+              ({" "}
               <TranslatedText
                 greetings={storePageTranslations.fillFormToBook}
               />
+              )
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -489,7 +491,9 @@ const BookingStore = () => {
           </CardFooter>
         </Card>
 
-        <div className="flex-1 grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+        <div>
+          {/* className="flex-1 grid gap-4 grid-cols-1 md:grid-cols-2
+          xl:grid-cols-3" */}
           {selectedTab === "Tractor" &&
             store.TractorInStore.map((tractor) => (
               <Card
@@ -532,7 +536,7 @@ const BookingStore = () => {
                   </div>
                 </div>
                 <Button
-                  className={`w-full font-bold mt-auto pt-4 bg-orange-600 hover:bg-orange-700 text-white`}
+                  className={`w-full font-bold mt-2 pt-4 bg-orange-600 hover:bg-orange-700 text-white`}
                   onClick={() => handleBookClick(tractor.id)}
                 >
                   {selectedTractorIds.includes(tractor.id)
@@ -541,7 +545,6 @@ const BookingStore = () => {
                 </Button>
               </Card>
             ))}
-
           {selectedTab === "Attachment" &&
             store.AttachmentInStore.length === 0 && (
               <Card className="bg-white dark:bg-slate-900 text-black dark:text-white p-8 flex flex-col justify-center items-center col-span-1 md:col-span-2 xl:col-span-3">
@@ -552,7 +555,6 @@ const BookingStore = () => {
                 </p>
               </Card>
             )}
-
           {selectedTab === "Attachment" &&
             store.AttachmentInStore.map((attachment) => (
               <Card

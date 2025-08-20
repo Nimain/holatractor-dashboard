@@ -657,7 +657,7 @@ const NewBooking = () => {
       
       <CardContent className="space-y-6 pt-6">
         {/* Date and Duration Section */}
-        <div className="space-y-4">
+        <div className="space-y-4 ">
           <div className="flex items-center gap-2">
             <CalendarIcon className="h-5 w-5 text-primary" />
             <h3 className="font-semibold">Booking Period</h3>
