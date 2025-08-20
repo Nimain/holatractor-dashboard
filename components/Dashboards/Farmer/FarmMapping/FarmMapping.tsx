@@ -1,26 +1,32 @@
-"use client"
+"use client";
 
-import { MapContainer, TileLayer, FeatureGroup } from 'react-leaflet'
+import { MapContainer, TileLayer, FeatureGroup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-draw/dist/leaflet.draw.css";
 import { EditControl } from "react-leaflet-draw";
-import { useState, useEffect } from "react"
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
-import { CircularProgress } from '@mui/material';
-import { errorMessage, successMessage } from '@/utils/Toastify/Messages';
-import { renderInstance } from '@/utils/Axios/RenderInstance';
-import { Button } from '@/components/ui/button';
-import { useCookie } from 'next-cookie';
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { CircularProgress } from "@mui/material";
+import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
+import { renderInstance } from "@/utils/Axios/RenderInstance";
+import { Button } from "@/components/ui/button";
+import { useCookie } from "next-cookie";
 import { area, polygon } from "@turf/turf";
-import { useRouter } from 'next/navigation';
-import TranslatedText from '@/components/Menubar/TranslatedText';
-import { farmDetailsTranslations } from '../SingleFarm/FarmTranslations';
-import { useFarmContext } from '@/components/wrappers/FarmProvider';
+import { useRouter } from "next/navigation";
+import TranslatedText from "@/components/Menubar/TranslatedText";
+import { farmDetailsTranslations } from "../SingleFarm/FarmTranslations";
+import { useFarmContext } from "@/components/wrappers/FarmProvider";
 
 interface Location {
   latitude: number | null;
@@ -36,30 +42,36 @@ interface user {
 
 const FarmBooking = () => {
   const [error, setError] = useState<string | null>(null);
-  const [location, setLocation] = useState<Location>({ latitude: null, longitude: null });
-  const [layerType, setLayerType] = useState("")
-  const [coordinates, setCoordinates] = useState<Location[]>([])
-  const [open, setOpen] = useState(false)
+  const [location, setLocation] = useState<Location>({
+    latitude: null,
+    longitude: null,
+  });
+  const [layerType, setLayerType] = useState("");
+  const [coordinates, setCoordinates] = useState<Location[]>([]);
+  const [open, setOpen] = useState(false);
 
-  const [farmName, setFarmName] = useState("")
-  const [farmDescription, setFarmDescription] = useState("")
-  const [farea, setArea] = useState(0)
+  const [farmName, setFarmName] = useState("");
+  const [farmDescription, setFarmDescription] = useState("");
+  const [farea, setArea] = useState(0);
 
-  const [adding, setAdding] = useState(false)
+  const [adding, setAdding] = useState(false);
 
   const { fetchFarmer, setFarms } = useFarmContext();
 
-  const router = useRouter()
+  const router = useRouter();
 
-  const { cookie } = useCookie()
-  const user: user = cookie.get("user")
-  const access_token = cookie.get("access_token")
+  const { cookie } = useCookie();
+  const user: user = cookie.get("user");
+  const access_token = cookie.get("access_token");
 
   const _created = (e: any) => {
     const leafletLatLngs = e.layer._latlngs[0]; // Use `[0]` if you have nested arrays, depending on Leaflet structure
 
     // Convert Leaflet coordinates to Turf.js-compatible format (GeoJSON-like)
-    const coordinates = leafletLatLngs.map((latlng: { lng: any; lat: any; }) => [latlng.lng, latlng.lat]);
+    const coordinates = leafletLatLngs.map((latlng: { lng: any; lat: any }) => [
+      latlng.lng,
+      latlng.lat,
+    ]);
 
     // Close the polygon by repeating the first coordinate at the end
     coordinates.push(coordinates[0]);
@@ -67,56 +79,79 @@ const FarmBooking = () => {
     // Create a Turf.js polygon
     const polyArea = polygon([coordinates]);
     const totalArea = area(polyArea);
-    setArea(totalArea)
-    setLayerType(e.layerType)
-    setCoordinates(e.layer._latlngs[0])
-    setOpen(true)
-  }
+    setArea(totalArea);
+    setLayerType(e.layerType);
+    setCoordinates(e.layer._latlngs[0]);
+    setOpen(true);
+  };
 
   function handleAddFarm() {
     if (!layerType || coordinates.length === 0) {
-      errorMessage("Please check the area again")
-      return
+      errorMessage("Please check the area again");
+      return;
     }
     if (!farmName) {
-      errorMessage("Please give the farm name")
-      return
+      errorMessage("Please give the farm name");
+      return;
     }
 
-    setAdding(true)
-    renderInstance.post("/farm", {
-      owner_id: user.userId,
-      type: layerType,
-      name: farmName,
-      description: farmDescription,
-      boundary: {
-        coordinates: coordinates,
-        area: farea
-      }
-    }, {
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-      }
-    }).then((res) => {
-      successMessage("Farm added")
-      setFarms((prevFarms) => [...prevFarms, res.data]);
-      fetchFarmer()
-      router.push("/farmer")
-    }).catch((err) => {
-      if (err.response) {
-        if (err.response.status === 404 && err.response.data.message === "Farmer details not found") {
-          errorMessage("Farmer details not found")
-        } else if (err.response.status === 404 && err.response.data.message === "Log in user not found") {
-          errorMessage("Log in user not found")
-        } else if (err.response.status === 409 && err.response.data.message === "Login user is not admin") {
-          errorMessage("Login user is not admin")
-        } else if (err.response.status === 409 && err.response.data.message === "You have already a farm with this name") {
-          errorMessage("You have already a farm with this name")
+    setAdding(true);
+    renderInstance
+      .post(
+        "/farm",
+        {
+          owner_id: user.userId,
+          type: layerType,
+          name: farmName,
+          description: farmDescription,
+          boundary: {
+            coordinates: coordinates,
+            area: farea,
+          },
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+          },
         }
-      } else {
-        errorMessage("Some error occurred. Please try again...")
-      }
-    }).finally(() => { setAdding(false) })
+      )
+      .then((res) => {
+        successMessage("Farm added");
+        setFarms((prevFarms) => [...prevFarms, res.data]);
+        fetchFarmer();
+        router.push("/farmer");
+      })
+      .catch((err) => {
+        if (err.response) {
+          if (
+            err.response.status === 404 &&
+            err.response.data.message === "Farmer details not found"
+          ) {
+            errorMessage("Farmer details not found");
+          } else if (
+            err.response.status === 404 &&
+            err.response.data.message === "Log in user not found"
+          ) {
+            errorMessage("Log in user not found");
+          } else if (
+            err.response.status === 409 &&
+            err.response.data.message === "Login user is not admin"
+          ) {
+            errorMessage("Login user is not admin");
+          } else if (
+            err.response.status === 409 &&
+            err.response.data.message ===
+              "You have already a farm with this name"
+          ) {
+            errorMessage("You have already a farm with this name");
+          }
+        } else {
+          errorMessage("Some error occurred. Please try again...");
+        }
+      })
+      .finally(() => {
+        setAdding(false);
+      });
   }
 
   useEffect(() => {
@@ -140,13 +175,16 @@ const FarmBooking = () => {
   return (
     <>
       {error ? (
-        <p><TranslatedText greetings={farmDetailsTranslations.error} />: {error}</p>
-      ) : (location.latitude && location.longitude) ? (
+        <p>
+          <TranslatedText greetings={farmDetailsTranslations.error} />: {error}
+        </p>
+      ) : location.latitude && location.longitude ? (
         <MapContainer
           center={[location.latitude, location.longitude]}
           zoom={13}
           scrollWheelZoom={false}
-          style={{ width: "100%", height: "100vh", zIndex: 1 }}>
+          style={{ width: "100%", height: "100vh", zIndex: 1 }}
+        >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -155,50 +193,69 @@ const FarmBooking = () => {
             <EditControl
               position="topright"
               onCreated={_created}
-              draw={
-                {
-                  // rectangle: false,
-                  circle: false,
-                  circlemarker: false,
-                  marker: false,
-                  polyline: false,
-                }
-              }
+              draw={{
+                // rectangle: false,
+                circle: false,
+                circlemarker: false,
+                marker: false,
+                polyline: false,
+              }}
             />
           </FeatureGroup>
         </MapContainer>
       ) : (
-        <p><TranslatedText greetings={farmDetailsTranslations.latLongNotAvailable} /></p>
+        <p>
+          <TranslatedText
+            greetings={farmDetailsTranslations.latLongNotAvailable}
+          />
+        </p>
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-
-          <Card className='p-0 border-0'>
-            <CardHeader>
-              <TranslatedText greetings={farmDetailsTranslations.giveFarmDetails} />
+        <DialogContent className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white border-none w-[700px]">
+          <Card className="bg-transparent border-0 shadow-none">
+            <CardHeader >
+              <CardTitle className="text-2xl font-bold text-white">
+                <TranslatedText
+                  greetings={farmDetailsTranslations.giveFarmDetails}
+                />
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-4">
-                <Label><TranslatedText greetings={farmDetailsTranslations.farmName} /></Label>
+              <div className="space-y-2">
+                <Label className="font-medium text-white">
+                  <TranslatedText
+                    greetings={farmDetailsTranslations.farmName}
+                  />
+                </Label>
                 <Input
                   value={farmName}
-                  onChange={e => { setFarmName(e.target.value) }}
+                  onChange={(e) => setFarmName(e.target.value)}
                   required={true}
-                  readOnly={adding} />
+                  readOnly={adding}
+                  className="bg-transparent  placeholder:text-gray-400"
+                />
               </div>
-              <div className="space-y-4">
-                <Label><TranslatedText greetings={farmDetailsTranslations.farmDescription} /></Label>
+              <div className="space-y-2">
+                <Label className="font-medium text-white">
+                  <TranslatedText
+                    greetings={farmDetailsTranslations.farmDescription}
+                  />
+                </Label>
                 <Textarea
                   value={farmDescription}
-                  onChange={e => { setFarmDescription(e.target.value) }}
-                  className="resize-none"
-                  readOnly={adding} />
+                  onChange={(e) => setFarmDescription(e.target.value)}
+                  className="resize-none bg-transparent  placeholder:text-gray-400"
+                  readOnly={adding}
+                />
               </div>
-              <Separator />
             </CardContent>
             <CardFooter>
-              <Button onClick={() => { handleAddFarm() }} disabled={adding}>
+              <Button
+                onClick={handleAddFarm}
+                disabled={adding}
+                className=" bg-yellow-500 hover:bg-yellow-700 text-white font-bold"
+              >
                 {adding ? (
                   <CircularProgress size={24} color="inherit" />
                 ) : (
@@ -207,11 +264,10 @@ const FarmBooking = () => {
               </Button>
             </CardFooter>
           </Card>
-
         </DialogContent>
       </Dialog>
     </>
-  )
-}
+  );
+};
 
-export default FarmBooking
+export default FarmBooking;

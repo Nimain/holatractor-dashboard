@@ -101,6 +101,7 @@ const Sidebar = () => {
               <Button
                 className={`w-full flex gap-2 justify-start bg-transparent hover:bg-white/20`}
               >
+                
                 <Plus className="h-6 w-6" />
                 <TranslatedText greetings={sidebarTranslations.addFarm} />
               </Button>
