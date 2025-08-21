@@ -389,7 +389,7 @@ const WithoutStoreBooking = () => {
                        <CardContent className="space-y-4">
                          <div className="bg-white/10 backdrop-blur-sm  p-4 rounded-lg space-y-3">
                            <div className="flex items-center gap-2">
-                             <CalendarIcon className="h-5 w-5 text-white/80" />
+                             <CalendarIcon className="h-5 w-5 mr-1 text-white/80" />
                              <h3 className="font-semibold text-white">
                                <TranslatedText
                                  greetings={newBookingTranslations.bookingPeriod}
@@ -523,7 +523,7 @@ const WithoutStoreBooking = () => {
                     <div className="space-y-4">
                       <Label className="flex items-center ">
                         <div>
-                          <LucideHouse />
+                          <LucideHouse className="h-5 w-5 mr-1" />
                         </div>
                         <TranslatedText
                           greetings={newBookingTranslations.selectFarm}
@@ -565,7 +565,7 @@ const WithoutStoreBooking = () => {
                     <div className="space-y-4">
                       <Label className="mb-3 flex items-center">
                         <div>
-                          <Clock1 />
+                          <Clock1 className="h-5 w-5 mr-1" />
                         </div>
                         <TranslatedText
                           greetings={newBookingTranslations.bookingHours}
@@ -682,13 +682,13 @@ const WithoutStoreBooking = () => {
                         <Popover>
                           <div className="flex items-center ">
                             <div>
-                              <CalendarIcon className=" h-4 w-4" />
+                              <CalendarIcon className=" h-4 w-4 mr-1" />
                             </div>
                             <h1>Start Date</h1>
                           </div>
                           <PopoverTrigger
                             asChild
-                            className="bg-white/10 text-white"
+                            className="bg-white/10 text-white hover:bg-white/10 hover:text-white"
                           >
                             <Button
                               variant={"outline"}

@@ -148,7 +148,7 @@ const FarmerLogs = () => {
             link.click();
             document.body.removeChild(link);
           }}
-          className="bg-orange-600 text-white"
+          className="bg-orange-600 text-white hover:bg-orange-700 hover:text-white"
         >
           <Download className="size-4 mr-1" />
           Export <ChevronDown className="ml-2 h-4 w-4" />

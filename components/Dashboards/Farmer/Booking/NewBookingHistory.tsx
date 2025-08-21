@@ -413,7 +413,7 @@ const NewBookingHistory = () => {
           </p>
         </div>
         <Button
-          className="bg-orange-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+          className="bg-orange-600 text-white hover:bg-orange-700 hover:text-white px-4 py-2 rounded-lg flex items-center gap-2"
           onClick={() => {
             // Export functionality
             const headers = [

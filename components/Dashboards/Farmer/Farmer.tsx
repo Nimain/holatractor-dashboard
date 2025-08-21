@@ -347,7 +347,7 @@ const FarmerDashboard = () => {
                       <TranslatedText greetings={logTranslations.systemActivity} />
                     </h1>
                     <Table  className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white">
-                      <TableCaption>
+                      <TableCaption className="text-white">
                         <TranslatedText greetings={logTranslations.recentActivitiesList} />
                       </TableCaption>
                       <TableHeader>
@@ -372,7 +372,7 @@ const FarmerDashboard = () => {
                             key={index}>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <TableRow>
+                                <TableRow >
                                   <TableCell>{index + 1}</TableCell>
                                   <TableCell>{log.action}</TableCell>
                                   <TableCell>{truncateDetails(log.details)}</TableCell>
@@ -380,7 +380,7 @@ const FarmerDashboard = () => {
                                 </TableRow>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>{log.details}</p>
+                                <p className="text-white">{log.details}</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
