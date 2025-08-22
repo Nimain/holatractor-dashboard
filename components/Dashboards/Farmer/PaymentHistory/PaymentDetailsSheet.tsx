@@ -133,7 +133,7 @@ const PaymentDetailsSheet = ({
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <TableRow className="border-b hover:bg-gray-50">
+        <TableRow className="border-b hover:bg-gray-100">
           {/* <TableCell className='p-4'>
                         <Input
                             type="checkbox"

@@ -301,7 +301,7 @@ const BookingStore = () => {
           <p className="text-lg text-white/90 max-w-2xl">{store.description}</p>
         </div>
         <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-full flex justify-center z-20">
-          <div className="flex items-center justify-center p-1.5 rounded-xl bg-black/30 backdrop-blur-lg shadow-xl">
+          <div className="flex items-center justify-center  rounded-xl bg-white/20 backdrop-blur-lg shadow-xl">
             {[
               { name: "Tractor", icon: <Tractor /> },
               { name: "Attachment", icon: <Wrench /> },
@@ -312,7 +312,7 @@ const BookingStore = () => {
                 className={`flex items-center gap-2 px-6 py-2.5 rounded-lg transition-all duration-300 font-bold text-sm
                                     ${
                                       selectedTab === tab.name
-                                        ? "bg-yellow-500/40 text-white border border-yellow-400/50 shadow-lg"
+                                        ? "bg-[#a35f3b]/100  text-white border border-yellow-400/50 shadow-lg"
                                         : "text-white/80 hover:bg-white/10"
                                     }`}
               >

@@ -53,7 +53,7 @@ const Sidebar = () => {
 
   return (
     <aside
-      className={`shadow-md transition-all duration-300 rounded-2xl ${isExpanded ? 'w-64' : 'w-16'} h-[90vh] bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white my-auto`}>
+      className={`shadow-md transition-all duration-300 rounded-2xl ${isExpanded ? 'w-64' : 'w-16'} h-[90vh] bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white my-auto  `}>
       <Link href={"/farmer"} className="flex items-center justify-center gap-2 w-full mx-auto mt-4 mb-2">
         <Image
           src={"https://holaimagesdata.s3.us-west-2.amazonaws.com/web/logo/ISOLOGO_HT_BLANCO.png"}

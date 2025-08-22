@@ -129,7 +129,7 @@ const Stores = () => {
            <div className="p-4 transition-all duration-300 bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white group-hover:bg-blue-50/50">
              <div className="flex justify-between items-start mb-2">
                <div>
-                 <h3 className="font-medium text-lg text-white transition-colors duration-300 group-hover:text-sky-500">{center.store.name}</h3>
+                 <h3 className="font-medium text-lg text-white transition-colors duration-300 group-hover:text-gray-400">{center.store.name}</h3>
                  <div className="flex items-center gap-2 text-white">
                    <div className="text-xl font-semibold text-white">
                ${center.cheapestEquipment ? `${center.cheapestEquipment}` : "0"} - ${center.mostExpensiveEquipment ? center.mostExpensiveEquipment : "0"}
