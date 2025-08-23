@@ -141,11 +141,7 @@ const OwnerSection = () => {
               </DialogClose>
 
               {isSignUpCard ? (
-                <OwnerRegister 
-                  inPage={true} 
-                  name={newOwnerName} 
-                 
-                />
+                <OwnerRegister inPage={true} name={newOwnerName} />
               ) : (
                 <Button
                   name="Name_next_button"
@@ -168,8 +164,10 @@ const OwnerSection = () => {
             <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
               <ArrowUpwardIcon />
             </div>
-            <div className="rounded-full w-[30px] h-[30px] 
-            flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+            <div
+              className="rounded-full w-[30px] h-[30px] 
+            flex items-center justify-center transition-all duration-500 hover:bg-gray-300"
+            >
               <MoreVertIcon />
             </div>
           </div>
@@ -312,8 +310,8 @@ const OwnerSection = () => {
                   updateDate={formatDate(details.updatedAt)}
                   status={details.status}
                   id={details.id}
-                  screenShots={details.paymentScreenshots}
-                 
+                  user={details.user} // ✅ now supported
+                  screenshots={details.paymentScreenshots} // ✅ corrected prop spelling
                 />
               </div>
             );
