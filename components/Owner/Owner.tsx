@@ -310,8 +310,20 @@ const OwnerSection = () => {
                   updateDate={formatDate(details.updatedAt)}
                   status={details.status}
                   id={details.id}
-                  user={details.user} // ✅ now supported
-                  screenshots={details.paymentScreenshots} // ✅ corrected prop spelling
+                  user={details.user}
+                  screenshots={details.paymentScreenshots}
+                  document={
+                    details.document
+                      ? {
+                          ...details.document,
+                          expire_date:
+                            details.document.expire_date instanceof Date
+                              ? details.document.expire_date.toISOString()
+                              : details.document.expire_date ?? null,
+                        }
+                      : undefined
+                  }
+                  location={details.location}
                 />
               </div>
             );

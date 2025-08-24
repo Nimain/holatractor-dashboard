@@ -1,3 +1,4 @@
+// part-2
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,18 @@ import { CircularProgress } from "@mui/material";
 import { CheckCircle, XCircle } from "lucide-react";
 import Image from "next/image";
 
-// ✅ extend props to include user object & screenshots
+// utils/formatDate.ts
+export function formatDateOnly(dateString?: string | null) {
+  if (!dateString) return "N/A";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+// ✅ extend props
 interface UserDetails {
   first_name?: string | null;
   middle_name?: string | null;
@@ -35,6 +47,22 @@ interface UserDetails {
   country_code?: string | null;
 }
 
+interface DocumentDetails {
+  document_number?: string;
+  attachment?: string;
+  expire_date?: string | null;
+}
+
+interface LocationDetails {
+  name?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  country?: string;
+  lat?: string;
+  lan?: string;
+}
 
 interface OwnerActionProps {
   index: number;
@@ -46,8 +74,10 @@ interface OwnerActionProps {
   updateDate: string;
   status: number;
   id: string;
-  screenshots: string[]; // ✅ correct spelling
-  user?: UserDetails; // ✅ added user object
+  screenshots: string[];
+  user?: UserDetails;
+  document?: DocumentDetails;
+  location?: LocationDetails;
 }
 
 const OwnerAction = ({
@@ -62,24 +92,53 @@ const OwnerAction = ({
   id,
   screenshots,
   user,
+  document,
+  location,
 }: OwnerActionProps) => {
   const [loading, setLoading] = useState(false);
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
+
+  // ✅ FIXED: Changed to PATCH method for soft delete
+  function DeleteOwner(e: MouseEvent<HTMLButtonElement>) {
+    e.stopPropagation();
+    e.preventDefault();
+    setLoading(true);
+    
+    // Using PATCH method to change status to "deleted" instead of actually deleting
+    renderInstance
+      .patch(
+        `/owner/delete_owner/${id}`, // Keep the same endpoint
+        {}, // Empty body - the server will handle changing status to "deleted"
+        { 
+          headers: { 
+            Authorization: `Bearer ${access_token}` // Same auth as other functions
+          } 
+        }
+      )
+      .then(() => {
+        successMessage("Owner deleted successfully");
+        window.location.reload(); // Refresh to show updated data
+      })
+      .catch(() => errorMessage("Failed to delete. Try again"))
+      .finally(() => setLoading(false));
+  }
 
   function InactiveOwner(e: MouseEvent<HTMLButtonElement>) {
     e.stopPropagation();
     e.preventDefault();
     setLoading(true);
     renderInstance
-      .patch(`/owner/inactivate_owner/${id}`, {}, { headers: { Authorization: `Bearer ${access_token}` } })
+      .patch(
+        `/owner/inactivate_owner/${id}`,
+        {},
+        { headers: { Authorization: `Bearer ${access_token}` } }
+      )
       .then(() => {
         successMessage("Success");
         window.location.reload();
       })
-      .catch(() => {
-        errorMessage("Try again");
-      })
+      .catch(() => errorMessage("Try again"))
       .finally(() => setLoading(false));
   }
 
@@ -88,24 +147,33 @@ const OwnerAction = ({
     e.preventDefault();
     setLoading(true);
     renderInstance
-      .patch(`/owner/activate_owner/${id}`, {}, { headers: { Authorization: `Bearer ${access_token}` } })
+      .patch(
+        `/owner/activate_owner/${id}`,
+        {},
+        { headers: { Authorization: `Bearer ${access_token}` } }
+      )
       .then(() => {
         successMessage("Success");
         window.location.reload();
       })
-      .catch(() => {
-        errorMessage("Try again");
-      })
+      .catch(() => errorMessage("Try again"))
       .finally(() => setLoading(false));
   }
 
+  
   return (
     <Sheet>
       <SheetTrigger asChild>
         <div className="text-[18px] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer hover:bg-white transition-all duration-500">
           <p className="w-[100px]">{index + 1}</p>
-          <p className="w-[140px]">{mailHover === index ? name : `${name.slice(0, 5)}...`}</p>
-          <p className={`transition ${index === mailHover ? "w-fit" : "w-[140px]"}`}>
+          <p className="w-[140px]">
+            {mailHover === index ? name : `${name.slice(0, 5)}...`}
+          </p>
+          <p
+            className={`transition ${
+              index === mailHover ? "w-fit" : "w-[140px]"
+            }`}
+          >
             {mailHover === index ? email : `${email.slice(0, 5)}...`}
           </p>
           <div
@@ -122,121 +190,202 @@ const OwnerAction = ({
           >
             {status === 1 ? "Active" : "Inactive"}
           </p>
-          <p className="w-[180px]">{mailHover === index ? creatDate : `${creatDate.slice(0, 12)}...`}</p>
-          <p className="w-[180px]">{mailHover === index ? updateDate : `${updateDate.slice(0, 12)}...`}</p>
+          <p className="w-[180px]">
+            {mailHover === index ? creatDate : `${creatDate.slice(0, 12)}...`}
+          </p>
+          <p className="w-[180px]">
+            {mailHover === index ? updateDate : `${updateDate.slice(0, 12)}...`}
+          </p>
         </div>
       </SheetTrigger>
 
       <SheetContent className="flex flex-col h-full">
         <SheetHeader>
           <SheetTitle>Update status of {name}</SheetTitle>
-          <SheetDescription>
+          <SheetDescription className="text-red-600">
             {status === 1
               ? `${name} is an active operator`
-              : `${name} is an inactive operator. Click on the active button to activate the operator.`}
+              : `${name} is inactive. Click "Active" to activate.`}
           </SheetDescription>
         </SheetHeader>
 
-        {/* Main content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {user?.first_name && (
-            <div>
-              <Label className="font-medium">First Name</Label>
-              <Input value={user.first_name} readOnly />
-            </div>
-          )}
-          {user?.middle_name && (
-            <div>
-              <Label className="font-medium">Middle Name</Label>
-              <Input value={user.middle_name} readOnly />
-            </div>
-          )}
-          {user?.last_name && (
-            <div>
-              <Label className="font-medium">Last Name</Label>
-              <Input value={user.last_name} readOnly />
-            </div>
-          )}
-          {user?.gender && (
-            <div>
-              <Label className="font-medium">Gender</Label>
-              <Input value={user.gender} readOnly />
-            </div>
-          )}
-          {user?.dob && (
-            <div>
-              <Label className="font-medium">Date of Birth</Label>
-              <Input value={user.dob} readOnly />
-            </div>
+        {/* Main Content Sections */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+          {screenshots?.length > 0 ? (
+            screenshots.map((img, i) => (
+              <Image
+                key={i}
+                src={img && img.trim() !== "" ? img : "/pic.jpg"}
+                alt="Payment Screenshot"
+                width={400}
+                height={400}
+                className="w-[90%] mx-auto rounded-lg border object-cover"
+                onError={(e) =>
+                  ((e.currentTarget as HTMLImageElement).src = "/pic.jpg")
+                }
+              />
+            ))
+          ) : (
+            <p className="text-gray-500">No payment screenshots uploaded</p>
           )}
 
-          {/* Email */}
+          {/* ✅ Owner Details */}
           <div>
-            <Label className="font-medium flex items-center gap-2">
-              Email ID{" "}
-              {user?.emailVerified ? (
-                <CheckCircle className="text-green-500 w-4 h-4" />
-              ) : (
-                <XCircle className="text-red-500 w-4 h-4" />
+            <h3 className="text-xl font-semibold border-b pb-2">
+              Owner Details
+            </h3>
+            <div className="space-y-3 mt-3">
+              <div>
+                <Label>Name</Label>
+                <Input value={name} readOnly />
+              </div>
+              {user?.gender && (
+                <div>
+                  <Label>Gender</Label>
+                  <Input value={user.gender} readOnly />
+                </div>
               )}
-            </Label>
-            <Input value={user?.email || email} readOnly />
-          </div>
 
-          {/* Mobile */}
-          {user?.mobile && (
-            <div>
-              <Label className="font-medium flex items-center gap-2">
-                Mobile{" "}
-                {user?.phoneVerified ? (
-                  <CheckCircle className="text-green-500 w-4 h-4" />
-                ) : (
-                  <XCircle className="text-red-500 w-4 h-4" />
-                )}
-              </Label>
-              <Input value={`${user.country_code || ""} ${user.mobile}`} readOnly />
+              {user?.dob && (
+                <div>
+                  <Label>Date of Birth</Label>
+                  <Input value={formatDateOnly(user.dob)} readOnly />
+                </div>
+              )}
+              <div>
+                <Label className="flex items-center gap-2">
+                  Email{" "}
+                  {user?.emailVerified ? (
+                    <CheckCircle className="text-green-500 w-4 h-4" />
+                  ) : (
+                    <XCircle className="text-red-500 w-4 h-4" />
+                  )}
+                </Label>
+                <Input value={user?.email || email} readOnly />
+              </div>
+              {user?.mobile && (
+                <div>
+                  <Label className="flex items-center gap-2">
+                    Mobile{" "}
+                    {user?.phoneVerified ? (
+                      <CheckCircle className="text-green-500 w-4 h-4" />
+                    ) : (
+                      <XCircle className="text-red-500 w-4 h-4" />
+                    )}
+                  </Label>
+                  <Input
+                    value={`${user.country_code || ""} ${user.mobile}`}
+                    readOnly
+                  />
+                </div>
+              )}
             </div>
-          )}
-
-          {/* Screenshots */}
-          {screenshots?.map((imageLink, i) => (
-            <Image
-              key={i}
-              src={imageLink && imageLink.trim() !== "" ? imageLink : "/pic.jpg"}
-              alt="Payment proof"
-              width={400}
-              height={400}
-              className="w-[90%] mx-auto object-cover"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src = "/pic.jpg";
-              }}
-            />
-          ))}
-
-          {/* Verified info */}
-          <div>
-            <Label className="font-medium">Mail Verified</Label>
-            <Input value={user?.emailVerified ? "Yes" : "No"} readOnly />
           </div>
+
+          {/* ✅ Payment Details */}
           <div>
-            <Label className="font-medium">Mobile Verified</Label>
-            <Input value={user?.phoneVerified ? "Yes" : "No"} readOnly />
+            <h3 className="text-xl font-semibold border-b pb-2">
+              Payment Details
+            </h3>
+
+            {screenshots?.length > 0 ? (
+              <div className="space-y-3 mt-3">
+                {screenshots.map((src, i) => (
+                  <div key={i} className=" rounded-lg space-y-2">
+                    <div>
+                      <Label>Screenshot ID</Label>
+                      <Input value={`${i + 1}`} readOnly />
+                    </div>
+                    <div>
+                      <Label>Screenshot URL</Label>
+                      <Input value={src} readOnly />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 mt-3">
+                No payment screenshots uploaded
+              </p>
+            )}
+          </div>
+
+          {/* ✅ Document */}
+          <div>
+            <h3 className="text-xl font-semibold border-b pb-2">Document</h3>
+            <div className="space-y-3 mt-3">
+              <div>
+                <Label>Document Number</Label>
+                <Input value={document?.document_number || "N/A"} readOnly />
+              </div>
+              {document?.expire_date && (
+                <div>
+                  <Label>Expiry Date</Label>
+                  <Input
+                    value={formatDateOnly(document.expire_date)}
+                    readOnly
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ✅ Location */}
+          <div>
+            <h3 className="text-xl font-semibold border-b pb-2">Location</h3>
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div>
+                <Label>City</Label>
+                <Input value={location?.city || "N/A"} readOnly />
+              </div>
+              <div>
+                <Label>State</Label>
+                <Input value={location?.state || "N/A"} readOnly />
+              </div>
+              <div>
+                <Label>Country</Label>
+                <Input value={location?.country || "N/A"} readOnly />
+              </div>
+              <div>
+                <Label>Zip Code</Label>
+                <Input value={location?.zip_code || "N/A"} readOnly />
+              </div>
+              <div>
+                <Label>Latitude</Label>
+                <Input value={location?.lat || "N/A"} readOnly />
+              </div>
+              <div>
+                <Label>Longitude</Label>
+                <Input value={location?.lan || "N/A"} readOnly />
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <SheetFooter className="flex justify-end items-end mt-auto pt-4">
-          <SheetClose asChild>
+        <SheetFooter className="flex justify-between items-center mt-auto pt-4">
+          {/* ✅ FIXED Delete button */}
+          <Button
+            variant="destructive"
+            onClick={(e) => DeleteOwner(e)}
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={16} /> : "Delete"}
+          </Button>
+
+          <div className="flex gap-3">
             {status === 1 ? (
-              <Button variant="destructive" onClick={(e) => InactiveOwner(e)}>
+              <Button variant="outline" onClick={(e) => InactiveOwner(e)}>
                 {loading ? <CircularProgress size={16} /> : "Inactive"}
               </Button>
             ) : (
-              <Button className="bg-green-800 hover:bg-green-700" onClick={(e) => ActiveOwner(e)}>
+              <Button
+                className="bg-green-800 hover:bg-green-700"
+                onClick={(e) => ActiveOwner(e)}
+              >
                 {loading ? <CircularProgress size={16} /> : "Active"}
               </Button>
             )}
-          </SheetClose>
+          </div>
         </SheetFooter>
       </SheetContent>
     </Sheet>
