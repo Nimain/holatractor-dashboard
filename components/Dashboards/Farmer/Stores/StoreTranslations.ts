@@ -50,14 +50,14 @@ export const storePageTranslations = {
   },
   selectFarms: {
     en: "Select Farms",
-    es: "Seleccionar granjas",
+    es: "Seleccionar campos",
     ay: "Ayllu",
     qu: "Qhoswa",
     gn: "Ñeharuramo",
   },
   loadingFarmLists: {
     en: "Loading farm lists",
-    es: "Cargando listas de granjas",
+    es: "Cargando listas de campos",
     ay: "Sapachasqaña qhiswa",
     qu: "Ñisqa achka churay",
     gn: "Ñema'apo reykai",

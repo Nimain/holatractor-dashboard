@@ -120,7 +120,7 @@ export const operatorBookingsTranslations = {
     },
     seeFarmLocation: {
       en: "Click to see farm location",
-      es: "Haz clic para ver la ubicación de la granja",
+      es: "Haz clic para ver la ubicación de la campo",
       ay: "Chhaqt'i para uñt'aña jakhuñ utjaña",
       qu: "Qellqay rikusunchik chakra taripay",
       gn: "Klik ñaimo'ã tendápe ka'aty",

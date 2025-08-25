@@ -132,7 +132,7 @@ const Sidebar = () => {
       ),
       name: getTranslation(locale, {
         en: "Farms",
-        es: "Granjas",
+        es: "Campos",
         ay: "Chhijllaña",
         qu: "Qichwasqa",
         gn: "Ñemityha",

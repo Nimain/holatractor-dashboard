@@ -40,7 +40,7 @@ export const totalUnpaidTranslation = {
 
 export const totalFarms = {
   en: "Total Farms",
-  es: "Total de Granjas",
+  es: "Total de Campos",
   ay: "Jach’a Qullqi Allinaka",
   qu: "Llapan Hatunllaqta",
   gn: "Mba'ekuaaty Oguerekóva Totál",
@@ -273,7 +273,7 @@ export const sidebarTranslations = {
   },
   farms: {
     en: "Farms",
-    es: "Granjas",
+    es: "Campos",
     ay: "Uywanaka",
     qu: "Chakrakuna",
     gn: "Ñemitỹha",
@@ -315,7 +315,7 @@ export const sidebarTranslations = {
   },
   addFarm: {
     en: "Add Farm",
-    es: "Agregar Granja",
+    es: "Agregar Campos",
     ay: "Uywanaka yapxata",
     qu: "Chakranata yapay",
     gn: "Moĩ peteĩ ñemitỹha",
@@ -516,21 +516,21 @@ export const newBookingTranslations = {
   },
   selectFarm: {
     en: "Select Farm",
-    es: "Seleccionar Granja",
+    es: "Seleccionar Campos",
     ay: "Taqañani Uru",
     qu: "Pacharinchik",
     gn: "Rogueroguapy",
   },
   loadingFarmList: {
     en: "Loading Farm List",
-    es: "Cargando Lista de Granjas",
+    es: "Cargando Lista de Campos",
     ay: "Lista Uru Qullqa",
     qu: "Wasinata Kawsariyninchik",
     gn: "Lista rogueroguapy ohupyty",
   },
   chooseAFarm: {
     en: "Choose a Farm",
-    es: "Elija una Granja",
+    es: "Elija una Campo",
     ay: "Suma Uru Ajllañani",
     qu: "Pacharinchik Ajllarina",
     gn: "Rogueroguapy mboaje",
