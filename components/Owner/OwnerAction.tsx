@@ -1,12 +1,11 @@
-// part-2
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Sheet,
-  SheetClose,
   SheetContent,
   SheetDescription,
   SheetFooter,
@@ -16,7 +15,6 @@ import {
 } from "@/components/ui/sheet";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { useCookie } from "next-cookie";
-import { MouseEvent, useState } from "react";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { CircularProgress } from "@mui/material";
 import { CheckCircle, XCircle } from "lucide-react";
@@ -45,6 +43,7 @@ interface UserDetails {
   mobile?: string | null;
   phoneVerified?: boolean | null;
   country_code?: string | null;
+  image?: string | null;
 }
 
 interface DocumentDetails {
@@ -61,7 +60,7 @@ interface LocationDetails {
   zip_code?: string;
   country?: string;
   lat?: string;
-  lan?: string;
+  lng?: string; // ✅ fixed lan → lng
 }
 
 interface OwnerActionProps {
@@ -78,6 +77,7 @@ interface OwnerActionProps {
   user?: UserDetails;
   document?: DocumentDetails;
   location?: LocationDetails;
+  onUpdate?: () => void; // ✅ optional callback instead of reload
 }
 
 const OwnerAction = ({
@@ -94,112 +94,102 @@ const OwnerAction = ({
   user,
   document,
   location,
+  onUpdate,
 }: OwnerActionProps) => {
-  const [loading, setLoading] = useState(false);
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
 
-  // ✅ FIXED: Changed to PATCH method for soft delete
-  function DeleteOwner(e: MouseEvent<HTMLButtonElement>) {
-    e.stopPropagation();
-    e.preventDefault();
-    setLoading(true);
-    
-    // Using PATCH method to change status to "deleted" instead of actually deleting
-    renderInstance
-      .patch(
-        `/owner/delete_owner/${id}`, // Keep the same endpoint
-        {}, // Empty body - the server will handle changing status to "deleted"
-        { 
-          headers: { 
-            Authorization: `Bearer ${access_token}` // Same auth as other functions
-          } 
-        }
-      )
-      .then(() => {
-        successMessage("Owner deleted successfully");
-        window.location.reload(); // Refresh to show updated data
-      })
-      .catch(() => errorMessage("Failed to delete. Try again"))
-      .finally(() => setLoading(false));
-  }
+  // ✅ one state object for all buttons
+  const [loading, setLoading] = useState<{
+    delete: boolean;
+    active: boolean;
+    inactive: boolean;
+  }>({
+    delete: false,
+    active: false,
+    inactive: false,
+  });
 
-  function InactiveOwner(e: MouseEvent<HTMLButtonElement>) {
-    e.stopPropagation();
-    e.preventDefault();
-    setLoading(true);
-    renderInstance
-      .patch(
-        `/owner/inactivate_owner/${id}`,
-        {},
-        { headers: { Authorization: `Bearer ${access_token}` } }
-      )
-      .then(() => {
-        successMessage("Success");
-        window.location.reload();
-      })
-      .catch(() => errorMessage("Try again"))
-      .finally(() => setLoading(false));
-  }
+  const updateOwnerStatus = async (
+    endpoint: string,
+    type: keyof typeof loading,
+    success: string
+  ) => {
+    setLoading((prev) => ({ ...prev, [type]: true }));
+    try {
+      await renderInstance.patch(endpoint, {}, {
+        headers: { Authorization: `Bearer ${access_token}` },
+      });
+      successMessage(success);
+      onUpdate?.(); // ✅ call parent refresh
+    } catch (err: any) {
+      errorMessage(err?.response?.data?.message || "Try again");
+    } finally {
+      setLoading((prev) => ({ ...prev, [type]: false }));
+    }
+  };
 
-  function ActiveOwner(e: MouseEvent<HTMLButtonElement>) {
-    e.stopPropagation();
-    e.preventDefault();
-    setLoading(true);
-    renderInstance
-      .patch(
-        `/owner/activate_owner/${id}`,
-        {},
-        { headers: { Authorization: `Bearer ${access_token}` } }
-      )
-      .then(() => {
-        successMessage("Success");
-        window.location.reload();
-      })
-      .catch(() => errorMessage("Try again"))
-      .finally(() => setLoading(false));
-  }
+  const DeleteOwner = () =>
+    updateOwnerStatus(
+      `/owner/delete_owner/${id}`,
+      "delete",
+      "Owner deleted successfully"
+    );
 
-  
+  const ActiveOwner = () =>
+    updateOwnerStatus(
+      `/owner/activate_owner/${id}`,
+      "active",
+      "Activated successfully"
+    );
+
+  const InactiveOwner = () =>
+    updateOwnerStatus(
+      `/owner/inactivate_owner/${id}`,
+      "inactive",
+      "Inactivated successfully"
+    );
+
   return (
     <Sheet>
       <SheetTrigger asChild>
         <div className="text-[18px] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer hover:bg-white transition-all duration-500">
           <p className="w-[100px]">{index + 1}</p>
-          <p className="w-[140px]">
+          <p className="w-[140px] truncate" title={name}>
             {mailHover === index ? name : `${name.slice(0, 5)}...`}
           </p>
           <p
-            className={`transition ${
+            className={`transition truncate ${
               index === mailHover ? "w-fit" : "w-[140px]"
             }`}
+            title={email}
           >
             {mailHover === index ? email : `${email.slice(0, 5)}...`}
           </p>
           <div
             className={`px-[10px] text-[14px] py-[6px] ${
-              emailVerified ? "text-[#3e875e]" : "text-red-400"
+              emailVerified ? "text-green-600" : "text-red-600"
             } bg-[#dfe4e2] text-center w-[140px] rounded-full`}
           >
             {emailVerified ? "Yes" : "No"}
           </div>
           <p
             className={`px-[10px] text-[14px] py-[6px] ${
-              status === 1 ? "text-[#3e875e]" : "text-red-400"
+              status === 1 ? "text-green-600" : "text-red-600"
             } bg-[#dfe4e2] text-center w-[140px] rounded-full`}
           >
             {status === 1 ? "Active" : "Inactive"}
           </p>
-          <p className="w-[180px]">
+          <p className="w-[180px] truncate" title={creatDate}>
             {mailHover === index ? creatDate : `${creatDate.slice(0, 12)}...`}
           </p>
-          <p className="w-[180px]">
+          <p className="w-[180px] truncate" title={updateDate}>
             {mailHover === index ? updateDate : `${updateDate.slice(0, 12)}...`}
           </p>
         </div>
       </SheetTrigger>
 
-      <SheetContent className="flex flex-col h-full">
+      <SheetContent className="flex flex-col h-full overflow-hidden">
         <SheetHeader>
           <SheetTitle>Update status of {name}</SheetTitle>
           <SheetDescription className="text-red-600">
@@ -209,25 +199,20 @@ const OwnerAction = ({
           </SheetDescription>
         </SheetHeader>
 
-        {/* Main Content Sections */}
+        {/* Main Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
-          {screenshots?.length > 0 ? (
-            screenshots.map((img, i) => (
-              <Image
-                key={i}
-                src={img && img.trim() !== "" ? img : "/pic.jpg"}
-                alt="Payment Screenshot"
-                width={400}
-                height={400}
-                className="w-[90%] mx-auto rounded-lg border object-cover"
-                onError={(e) =>
-                  ((e.currentTarget as HTMLImageElement).src = "/pic.jpg")
-                }
-              />
-            ))
-          ) : (
-            <p className="text-gray-500">No payment screenshots uploaded</p>
-          )}
+          {/* ✅ User Profile */}
+          <div className="flex flex-col items-center mb-6">
+            <Image
+              src={
+                user?.image && user.image.trim() !== "" ? user.image : "/pic.jpg"
+              }
+              alt={`${name}'s profile`}
+              width={120}
+              height={120}
+              className="w-[120px] h-[120px] rounded-full object-cover border-2 shadow-md"
+            />
+          </div>
 
           {/* ✅ Owner Details */}
           <div>
@@ -245,7 +230,6 @@ const OwnerAction = ({
                   <Input value={user.gender} readOnly />
                 </div>
               )}
-
               {user?.dob && (
                 <div>
                   <Label>Date of Birth</Label>
@@ -282,23 +266,28 @@ const OwnerAction = ({
             </div>
           </div>
 
-          {/* ✅ Payment Details */}
+          {/* ✅ Payment Details with Screenshots */}
           <div>
             <h3 className="text-xl font-semibold border-b pb-2">
               Payment Details
             </h3>
-
             {screenshots?.length > 0 ? (
-              <div className="space-y-3 mt-3">
+              <div className="mt-3">
                 {screenshots.map((src, i) => (
-                  <div key={i} className=" rounded-lg space-y-2">
-                    <div>
+                  <div
+                    key={i}
+                    className="rounded-lg border p-3 flex flex-col items-center bg-gray-50"
+                  >
+                    <Image
+                      src={src && src.trim() !== "" ? src : "/pic.jpg"}
+                      alt={`Payment Screenshot ${i + 1}`}
+                      width={300}
+                      height={200}
+                      className="rounded-lg object-cover border mb-2"
+                    />
+                    <div className="w-full space-y-1">
                       <Label>Screenshot ID</Label>
                       <Input value={`${i + 1}`} readOnly />
-                    </div>
-                    <div>
-                      <Label>Screenshot URL</Label>
-                      <Input value={src} readOnly />
                     </div>
                   </div>
                 ))}
@@ -321,10 +310,7 @@ const OwnerAction = ({
               {document?.expire_date && (
                 <div>
                   <Label>Expiry Date</Label>
-                  <Input
-                    value={formatDateOnly(document.expire_date)}
-                    readOnly
-                  />
+                  <Input value={formatDateOnly(document.expire_date)} readOnly />
                 </div>
               )}
             </div>
@@ -356,33 +342,45 @@ const OwnerAction = ({
               </div>
               <div>
                 <Label>Longitude</Label>
-                <Input value={location?.lan || "N/A"} readOnly />
+                <Input value={location?.lng || "N/A"} readOnly />
               </div>
             </div>
           </div>
         </div>
 
+        {/* ✅ Footer Actions */}
         <SheetFooter className="flex justify-between items-center mt-auto pt-4">
-          {/* ✅ FIXED Delete button */}
           <Button
+            type="button"
             variant="destructive"
-            onClick={(e) => DeleteOwner(e)}
-            disabled={loading}
+            onClick={DeleteOwner}
+            disabled={loading.delete}
           >
-            {loading ? <CircularProgress size={16} /> : "Delete"}
+            {loading.delete ? <CircularProgress size={16} /> : "Delete"}
           </Button>
 
           <div className="flex gap-3">
             {status === 1 ? (
-              <Button variant="outline" onClick={(e) => InactiveOwner(e)}>
-                {loading ? <CircularProgress size={16} /> : "Inactive"}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={InactiveOwner}
+                disabled={loading.inactive}
+              >
+                {loading.inactive ? (
+                  <CircularProgress size={16} />
+                ) : (
+                  "Inactive"
+                )}
               </Button>
             ) : (
               <Button
+                type="button"
                 className="bg-green-800 hover:bg-green-700"
-                onClick={(e) => ActiveOwner(e)}
+                onClick={ActiveOwner}
+                disabled={loading.active}
               >
-                {loading ? <CircularProgress size={16} /> : "Active"}
+                {loading.active ? <CircularProgress size={16} /> : "Active"}
               </Button>
             )}
           </div>
