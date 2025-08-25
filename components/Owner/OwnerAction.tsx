@@ -194,7 +194,7 @@ const OwnerAction = ({
           <SheetTitle>Update status of {name}</SheetTitle>
           <SheetDescription className="text-red-600">
             {status === 1
-              ? `${name} is an active operator`
+              ? `${name} is an active Owner`
               : `${name} is inactive. Click "Active" to activate.`}
           </SheetDescription>
         </SheetHeader>
