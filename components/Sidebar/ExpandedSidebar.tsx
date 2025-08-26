@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef } from "react"
-import { motion } from "framer-motion"
-import LOGO from "@/assets/traclog.png"
-import Image from "next/image"
-import ToogleButton from "./ToogleButton"
+import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
+import LOGO from "@/assets/traclog.png";
+import Image from "next/image";
+import ToogleButton from "./ToogleButton";
 import {
   AgentIcon,
   BookingIcon,
@@ -28,46 +28,51 @@ import {
   RolesIcon,
   UsersIcon,
   FarmerIcon,
-} from "@/assets/sidebar/SidebarImages"
-import type { RootState } from "@/redux/store"
-import { usePathname } from "next/navigation"
-import { useDispatch, useSelector } from "react-redux"
-import { updateActiveMenu } from "@/redux/Sidebar/SidebarShow"
-import Link from "next/link"
-import { ChevronDown } from "lucide-react"
+} from "@/assets/sidebar/SidebarImages";
+import type { RootState } from "@/redux/store";
+import { usePathname } from "next/navigation";
+import { useDispatch, useSelector } from "react-redux";
+import { updateActiveMenu } from "@/redux/Sidebar/SidebarShow";
+import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 
 const getTranslation = (locale: string, translations: any) => {
-  return translations[locale] || translations["en"]
-}
+  return translations[locale] || translations["en"];
+};
 
 type Translations = {
-  inventory: string
-  billing: string
-  settings: string
-  bookings: string
-  users: string
-}
+  inventory: string;
+  billing: string;
+  settings: string;
+  bookings: string;
+  users: string;
+};
 
 const ExpandedSidebar = () => {
-  const [activeLeftSIdeTag, setActiveLeftSideTag] = useState("Dashboard")
-  const [inventoryShow, setInventoryShow] = useState(false)
-  const [billingShow, setBillingShow] = useState(false)
-  const [bookingShow, setBookingShow] = useState(false)
-  const [settingShow, setSettingShow] = useState(false)
-  const [userShow, setUserShow] = useState(false)
+  const [activeLeftSIdeTag, setActiveLeftSideTag] = useState("Dashboard");
+  const [inventoryShow, setInventoryShow] = useState(false);
+  const [billingShow, setBillingShow] = useState(false);
+  const [bookingShow, setBookingShow] = useState(false);
+  const [settingShow, setSettingShow] = useState(false);
+  const [userShow, setUserShow] = useState(false);
 
-  const sectionRef = useRef<HTMLDivElement>(null)
+  const sectionRef = useRef<HTMLDivElement>(null);
 
-  const pathname = usePathname()
+  const pathname = usePathname();
 
-  const dispatch = useDispatch()
+  const dispatch = useDispatch();
 
-  const { activeMenu: LeftSideSctiveItem, sidebarShow } = useSelector((root: RootState) => root.SidebarShow)
-  const { language: locale } = useSelector((root: RootState) => root.ActiveLanguage)
+  const { activeMenu: LeftSideSctiveItem, sidebarShow } = useSelector(
+    (root: RootState) => root.SidebarShow
+  );
+  const { language: locale } = useSelector(
+    (root: RootState) => root.ActiveLanguage
+  );
 
   const pathMap: { [key: string]: string } = {
     "/": "Dashboard",
     "/ParticularBooking": "Bookings",
+    "/services": "services",
     "/SingleOperator": "Operators",
     "/Operators": "Operators",
     "/Farms": "Farms",
@@ -91,33 +96,35 @@ const ExpandedSidebar = () => {
     "/Accounting": "Accounting",
     "/Attachments": "Attachments",
     "/Store": "Store",
-  }
+  };
 
   useEffect(() => {
-    const activeTag = Object.keys(pathMap).find((key) => pathname.includes(key))
+    const activeTag = Object.keys(pathMap).find((key) =>
+      pathname.includes(key)
+    );
     if (activeTag && pathMap[activeTag] !== activeLeftSIdeTag) {
-      setActiveLeftSideTag(pathMap[activeTag])
-      dispatch(updateActiveMenu(pathMap[activeTag])) // Dispatch action to update the store
+      setActiveLeftSideTag(pathMap[activeTag]);
+      dispatch(updateActiveMenu(pathMap[activeTag])); // Dispatch action to update the store
     }
-  }, [pathname, activeLeftSIdeTag, dispatch])
+  }, [pathname, activeLeftSIdeTag, dispatch]);
 
   useEffect(() => {
     const handleScroll = (e: WheelEvent) => {
-      const target = e.currentTarget as HTMLDivElement
-      target.scrollTop += e.deltaY
-    }
+      const target = e.currentTarget as HTMLDivElement;
+      target.scrollTop += e.deltaY;
+    };
 
-    const section = sectionRef.current
+    const section = sectionRef.current;
     if (section) {
-      section.addEventListener("wheel", handleScroll)
+      section.addEventListener("wheel", handleScroll);
     }
 
     return () => {
       if (section) {
-        section.removeEventListener("wheel", handleScroll)
+        section.removeEventListener("wheel", handleScroll);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   const topLeftSideList = [
     {
@@ -177,7 +184,7 @@ const ExpandedSidebar = () => {
       }),
       route: "#",
     },
-  ]
+  ];
 
   const inventoryList = [
     {
@@ -237,7 +244,26 @@ const ExpandedSidebar = () => {
       }),
       route: "/Store",
     },
-  ]
+    {
+      icon: (
+        <Image
+          src={BusinessIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="service"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "service",
+        es: "Servicios",
+        ay: "",
+        qu: "",
+        gn: "",
+      }),
+      route: "/Services",
+    }
+  ];
 
   const middleLeftSideList = [
     {
@@ -316,7 +342,7 @@ const ExpandedSidebar = () => {
       }),
       route: "#",
     },
-  ]
+  ];
 
   const bookingList = [
     {
@@ -414,7 +440,7 @@ const ExpandedSidebar = () => {
       }),
       route: "/booking-inquiry",
     },
-  ]
+  ];
 
   const SettingsOptions = [
     {
@@ -512,7 +538,7 @@ const ExpandedSidebar = () => {
       }),
       route: "/Logs",
     },
-  ]
+  ];
 
   const UsersOptions = [
     {
@@ -629,7 +655,7 @@ const ExpandedSidebar = () => {
       }),
       route: "/Admin",
     },
-  ]
+  ];
 
   // Define translations for "Inventory", "Billing", and "Settings"
   const translations: Record<string, Translations> = {
@@ -668,11 +694,13 @@ const ExpandedSidebar = () => {
       bookings: "Jehechauka",
       users: "Póry",
     },
-  }
+  };
 
   return (
     <motion.div
-      className={`w-[200px] p-5 flex flex-col gap-[20px] box-content bg-[#ededed] h-screen transition-all duration-500 absolute ${sidebarShow ? "translate-x-0" : "-translate-x-full"} top-0 z-10 overflow-auto`}
+      className={`w-[200px] p-5 flex flex-col gap-[20px] box-content bg-[#ededed] h-screen transition-all duration-500 absolute ${
+        sidebarShow ? "translate-x-0" : "-translate-x-full"
+      } top-0 z-10 overflow-auto`}
       ref={sectionRef}
       style={{
         scrollbarWidth: "none",
@@ -682,7 +710,11 @@ const ExpandedSidebar = () => {
                 Holatractor
             </p> */}
 
-      <Image alt="Logo" src={LOGO || "/placeholder.svg"} className="w-[80%] h-auto object-cover mx-auto" />
+      <Image
+        alt="Logo"
+        src={LOGO || "/placeholder.svg"}
+        className="w-[80%] h-auto object-cover mx-auto"
+      />
 
       <ToogleButton />
 
@@ -695,15 +727,23 @@ const ExpandedSidebar = () => {
               href={`${listItem.route}`}
               key={index}
               className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
-                LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
+                LeftSideSctiveItem === listItem.name
+                  ? "bg-[#d5ebd6]"
+                  : "hover:bg-gray-200"
               } drop-shadow-md rounded transition-all duration-500 relative`}
             >
               {listItem.icon}
-              <span className={`${LeftSideSctiveItem === listItem.name ? "text-black" : "text-gray-600"}`}>
+              <span
+                className={`${
+                  LeftSideSctiveItem === listItem.name
+                    ? "text-black"
+                    : "text-gray-600"
+                }`}
+              >
                 {listItem.name}
               </span>
             </Link>
-          )
+          );
         })}
       </ul>
 
@@ -717,7 +757,7 @@ const ExpandedSidebar = () => {
 
           <div
             onClick={() => {
-              setUserShow((pre) => !pre)
+              setUserShow((pre) => !pre);
             }}
           >
             {userShow ? (
@@ -736,15 +776,23 @@ const ExpandedSidebar = () => {
                   href={`${listItem.route}`}
                   key={index}
                   className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
-                    LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
+                    LeftSideSctiveItem === listItem.name
+                      ? "bg-[#d5ebd6]"
+                      : "hover:bg-gray-200"
                   } drop-shadow-md rounded transition-all duration-500 relative`}
                 >
                   {listItem.icon}
-                  <span className={`${LeftSideSctiveItem === listItem.name ? "text-black" : "text-gray-600"}`}>
+                  <span
+                    className={`${
+                      LeftSideSctiveItem === listItem.name
+                        ? "text-black"
+                        : "text-gray-600"
+                    }`}
+                  >
                     {listItem.name}
                   </span>
                 </Link>
-              )
+              );
             })}
         </ul>
       </div>
@@ -759,7 +807,7 @@ const ExpandedSidebar = () => {
 
           <div
             onClick={() => {
-              setBookingShow((pre) => !pre)
+              setBookingShow((pre) => !pre);
             }}
           >
             {bookingShow ? (
@@ -778,15 +826,23 @@ const ExpandedSidebar = () => {
                   href={`${listItem.route}`}
                   key={index}
                   className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
-                    LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
+                    LeftSideSctiveItem === listItem.name
+                      ? "bg-[#d5ebd6]"
+                      : "hover:bg-gray-200"
                   } drop-shadow-md rounded transition-all duration-500 relative`}
                 >
                   {listItem.icon}
-                  <span className={`${LeftSideSctiveItem === listItem.name ? "text-black" : "text-gray-600"}`}>
+                  <span
+                    className={`${
+                      LeftSideSctiveItem === listItem.name
+                        ? "text-black"
+                        : "text-gray-600"
+                    }`}
+                  >
                     {listItem.name}
                   </span>
                 </Link>
-              )
+              );
             })}
         </ul>
       </div>
@@ -801,7 +857,7 @@ const ExpandedSidebar = () => {
 
           <div
             onClick={() => {
-              setInventoryShow((pre) => !pre)
+              setInventoryShow((pre) => !pre);
             }}
           >
             {inventoryShow ? (
@@ -820,15 +876,23 @@ const ExpandedSidebar = () => {
                   href={`${listItem.route}`}
                   key={index}
                   className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
-                    LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
+                    LeftSideSctiveItem === listItem.name
+                      ? "bg-[#d5ebd6]"
+                      : "hover:bg-gray-200"
                   } drop-shadow-md rounded transition-all duration-500 relative`}
                 >
                   {listItem.icon}
-                  <span className={`${LeftSideSctiveItem === listItem.name ? "text-black" : "text-gray-600"}`}>
+                  <span
+                    className={`${
+                      LeftSideSctiveItem === listItem.name
+                        ? "text-black"
+                        : "text-gray-600"
+                    }`}
+                  >
                     {listItem.name}
                   </span>
                 </Link>
-              )
+              );
             })}
         </ul>
       </div>
@@ -843,7 +907,7 @@ const ExpandedSidebar = () => {
 
           <div
             onClick={() => {
-              setBillingShow((pre) => !pre)
+              setBillingShow((pre) => !pre);
             }}
           >
             {billingShow ? (
@@ -862,15 +926,23 @@ const ExpandedSidebar = () => {
                   href={`${listItem.route}`}
                   key={index}
                   className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
-                    LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
+                    LeftSideSctiveItem === listItem.name
+                      ? "bg-[#d5ebd6]"
+                      : "hover:bg-gray-200"
                   } drop-shadow-md rounded transition-all duration-500 relative`}
                 >
                   {listItem.icon}
-                  <span className={`${LeftSideSctiveItem === listItem.name ? "text-black" : "text-gray-600"}`}>
+                  <span
+                    className={`${
+                      LeftSideSctiveItem === listItem.name
+                        ? "text-black"
+                        : "text-gray-600"
+                    }`}
+                  >
                     {listItem.name}
                   </span>
                 </Link>
-              )
+              );
             })}
         </ul>
       </div>
@@ -885,7 +957,7 @@ const ExpandedSidebar = () => {
 
           <div
             onClick={() => {
-              setSettingShow((pre) => !pre)
+              setSettingShow((pre) => !pre);
             }}
           >
             {settingShow ? (
@@ -904,20 +976,28 @@ const ExpandedSidebar = () => {
                   href={`${listItem.route}`}
                   key={index}
                   className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
-                    LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
+                    LeftSideSctiveItem === listItem.name
+                      ? "bg-[#d5ebd6]"
+                      : "hover:bg-gray-200"
                   } drop-shadow-md rounded transition-all duration-500 relative`}
                 >
                   {listItem.icon}
-                  <span className={`${LeftSideSctiveItem === listItem.name ? "text-black" : "text-gray-600"}`}>
+                  <span
+                    className={`${
+                      LeftSideSctiveItem === listItem.name
+                        ? "text-black"
+                        : "text-gray-600"
+                    }`}
+                  >
                     {listItem.name}
                   </span>
                 </Link>
-              )
+              );
             })}
         </ul>
       </div>
     </motion.div>
-  )
-}
+  );
+};
 
-export default ExpandedSidebar
+export default ExpandedSidebar;
