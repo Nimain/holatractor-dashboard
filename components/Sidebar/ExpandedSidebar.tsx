@@ -302,7 +302,7 @@ const ExpandedSidebar = () => {
         qu: "Qullqi ch’akchinay",
         gn: "Rekuérdo repóha",
       }),
-      route: "#",
+      route: "/PaymentHistory",
     },
     {
       icon: (

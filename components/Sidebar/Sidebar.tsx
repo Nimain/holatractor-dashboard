@@ -297,7 +297,7 @@ const Sidebar = () => {
         qu: "Qullqi ch’akchinay",
         gn: "Rekuérdo repóha",
       }),
-      route: "#",
+      route: "/PaymentHistory",
     },
     {
       icon: (
