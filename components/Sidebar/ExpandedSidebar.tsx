@@ -163,7 +163,7 @@ const ExpandedSidebar = () => {
         qu: "Qichwasqa",
         gn: "Ñemityha",
       }),
-      route: "#",
+      route: "/Farms",
     },
     {
       icon: (
