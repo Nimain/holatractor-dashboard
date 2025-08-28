@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, ArrowUp, MoreVertical, User } from "lucide-react";
+import { Plus, User } from "lucide-react";
 
 type ServiceStatus = "Available" | "Unavailable";
 
@@ -17,7 +17,6 @@ interface Service {
 export default function ServiceSection() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeHover, setActiveHover] = useState("");
   const [openModal, setOpenModal] = useState(false);
 
   const [form, setForm] = useState({
@@ -28,7 +27,9 @@ export default function ServiceSection() {
     image: "",
   });
 
-  // mimic API call
+  const rowLayout =
+    "grid grid-cols-[50px_100px_2fr_1.5fr_1.5fr_1fr] items-center gap-x-4 p-5";
+
   useEffect(() => {
     setTimeout(() => {
       setServices([
@@ -76,7 +77,7 @@ export default function ServiceSection() {
   };
 
   return (
-    <div className="w-full py-[20px]">
+    <div className="w-full py-5">
       {loading && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="animate-spin rounded-full h-10 w-10 border-4 border-white border-t-transparent"></div>
@@ -84,14 +85,13 @@ export default function ServiceSection() {
       )}
 
       {/* Top Bar */}
-      <div className="w-full flex items-center justify-between gap-[20px]">
-        <p className="text-[20px]">
-          <span className="font-[600]">Total Services: {services.length}</span>
+      <div className="w-full flex items-center justify-between gap-5 px-5">
+        <p className="text-xl">
+          <span className="font-semibold">Total Services: {services.length}</span>
         </p>
-
         <button
           onClick={() => setOpenModal(true)}
-          className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto"
+          className="px-5 py-2.5 text-lg rounded-md bg-black text-white w-fit flex items-center justify-center gap-2.5 ml-auto"
         >
           <Plus size={20} />
           <span>Add Service</span>
@@ -99,32 +99,34 @@ export default function ServiceSection() {
       </div>
 
       {/* Header Row */}
-      <div className="text-[20px] font-[600] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded mt-[30px]">
-        <p className="w-[50px]">ID</p>
-        <p className="w-[150px]">Name</p>
-        <p className="w-[150px]">Category</p>
-        <p className="w-[150px]">Date</p>
-        <p className="w-[150px]">Status</p>
+      <div
+        className={`${rowLayout} group text-xl font-semibold bg-[#ededed] rounded mt-8 transition-colors duration-300 hover:bg-white`}
+      >
+        <p className="transition-transform duration-300 group-hover:-translate-y-1">ID</p>
+        <p className="transition-transform duration-300 group-hover:-translate-y-1">Image</p>
+        <p className="transition-transform duration-300 group-hover:-translate-y-1">Name</p>
+        <p className="transition-transform duration-300 group-hover:-translate-y-1">Category</p>
+        <p className="transition-transform duration-300 group-hover:-translate-y-1">Date</p>
+        <p className="transition-transform duration-300 group-hover:-translate-y-1">Status</p>
       </div>
 
       {/* Service List */}
-      <div className="flex flex-col gap-[5px] mt-[20px]">
+      <div className="flex flex-col gap-2 mt-5">
         {services.length === 0 ? (
-          <div className="w-full h-full min-h-[80vh] flex items-center justify-center">
-            <div className="w-[400px] lg:w-[700px] h-auto flex items-center justify-center text-gray-400">
-              <p>No services found</p>
-            </div>
+          <div className="w-full min-h-[70vh] flex items-center justify-center">
+            <p className="text-gray-400">No services found</p>
           </div>
         ) : (
-          services.map((serviceDetails, index) => {
-            return (
-              <a
-                href={`/Service/${serviceDetails.id}`}
-                className="text-[18px] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer transition-all duration-500 hover:bg-white"
-                key={index}
-              >
-                <p className="w-[50px]">{serviceDetails.id}</p>
-
+          services.map((serviceDetails, index) => (
+            <a
+              href={`/Service/${serviceDetails.id}`}
+              className={`${rowLayout} group text-lg bg-[#fafafa] rounded cursor-pointer transition-colors duration-300 hover:bg-white`}
+              key={index}
+            >
+              <p className="transition-transform duration-300 group-hover:-translate-y-1">{serviceDetails.id}</p>
+              
+              {/* Image container - no hover effect */}
+              <div>
                 {serviceDetails.image ? (
                   <img
                     src={serviceDetails.image}
@@ -136,25 +138,26 @@ export default function ServiceSection() {
                     <User size={20} />
                   </div>
                 )}
+              </div>
 
-                <p className="w-[150px]">{serviceDetails.name}</p>
-                <p className="w-[150px]">{serviceDetails.category}</p>
-                <p className="w-[150px]">{serviceDetails.date}</p>
+              <p className="transition-transform duration-300 group-hover:-translate-y-1">{serviceDetails.name}</p>
+              <p className="transition-transform duration-300 group-hover:-translate-y-1">{serviceDetails.category}</p>
+              <p className="transition-transform duration-300 group-hover:-translate-y-1">{serviceDetails.date}</p>
 
-                <div className="w-[150px]">
-                  <span
-                    className={`px-[8px] py-[4px] rounded text-[14px] font-[500] ${
-                      serviceDetails.status === "Available"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
-                    }`}
-                  >
-                    {serviceDetails.status}
-                  </span>
-                </div>
-              </a>
-            );
-          })
+              {/* Status container - no hover effect */}
+              <div>
+                <span
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium ${
+                    serviceDetails.status === "Available"
+                      ? "bg-green-100 text-green-800"
+                      : "bg-red-100 text-red-800"
+                  }`}
+                >
+                  {serviceDetails.status}
+                </span>
+              </div>
+            </a>
+          ))
         )}
       </div>
 
@@ -163,7 +166,6 @@ export default function ServiceSection() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-[400px] relative">
             <h2 className="text-xl font-semibold mb-4">Add New Service</h2>
-
             <div className="flex flex-col gap-3">
               <input
                 type="text"
@@ -172,23 +174,21 @@ export default function ServiceSection() {
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 className="w-full border rounded p-2"
               />
-
               <input
                 type="text"
                 placeholder="Category"
                 value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, category: e.target.value })
+                }
                 className="w-full border rounded p-2"
               />
-
               <input
                 type="date"
                 value={form.date}
                 onChange={(e) => setForm({ ...form, date: e.target.value })}
                 className="w-full border rounded p-2"
               />
-
-              {/* Status Dropdown */}
               <select
                 value={form.status}
                 onChange={(e) =>
@@ -199,8 +199,6 @@ export default function ServiceSection() {
                 <option value="Available">Available</option>
                 <option value="Unavailable">Unavailable</option>
               </select>
-
-              {/* Image URL */}
               <div>
                 <label className="block text-sm font-medium mb-1">
                   Image URL
@@ -214,7 +212,6 @@ export default function ServiceSection() {
                   }
                   className="w-full border rounded p-2"
                 />
-
                 {form.image && (
                   <img
                     src={form.image}
@@ -223,8 +220,6 @@ export default function ServiceSection() {
                   />
                 )}
               </div>
-
-              {/* File Upload */}
               <div>
                 <label className="block text-sm font-medium mb-1">
                   Or Upload Image
@@ -243,7 +238,6 @@ export default function ServiceSection() {
                 />
               </div>
             </div>
-
             <div className="flex justify-end gap-3 mt-4">
               <button
                 onClick={() => setOpenModal(false)}

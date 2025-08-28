@@ -18,8 +18,10 @@ import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
+import { Edit, Eye, MoreVertical, Trash2 } from "lucide-react";
+import { Popover } from "@mui/material";
+import { PopoverContent, PopoverTrigger } from "@radix-ui/react-popover";
 
-// Define the Farm interface based on the actual API response
 interface Farm {
   id: string;
   owner_id: string;
@@ -29,10 +31,12 @@ interface Farm {
   description: string;
   boundary: {
     area: number;
-    coordinates: Array<{
-      lat: string | number;
-      lng: string | number;
-    }> | Array<Array<number>>;
+    coordinates:
+      | Array<{
+          lat: string | number;
+          lng: string | number;
+        }>
+      | Array<Array<number>>;
   };
   createdAt: string;
   updatedAt: string;
@@ -70,12 +74,19 @@ const FarmSection = () => {
   const [newFarmName, setNewFarmName] = useState("");
   const [newFarmDescription, setNewFarmDescription] = useState("");
 
-  // Sort farms by updatedAt in descending order (most recent first)
+  // New state for actions
+  const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editFarmName, setEditFarmName] = useState("");
+  const [editFarmDescription, setEditFarmDescription] = useState("");
+
   const sortFarmsByUpdateDate = (farmsList: Farm[]) => {
     return farmsList.sort((a, b) => {
       const dateA = new Date(a.updatedAt).getTime();
       const dateB = new Date(b.updatedAt).getTime();
-      return dateB - dateA; // Descending order (most recent first)
+      return dateB - dateA;
     });
   };
 
@@ -84,22 +95,16 @@ const FarmSection = () => {
     renderInstance
       .get("/farm")
       .then((res) => {
-        // Sort the data before setting it to state
         const sortedFarms = sortFarmsByUpdateDate(res.data);
         setFarms(sortedFarms);
       })
-      .catch((err) => {
+      .catch(() => {
         errorMessage("Error fetching farm list");
       })
       .finally(() => {
         setLoading(false);
       });
   }
-
-  // Function to refresh the list after updates
-  const refreshFarmsList = () => {
-    fetchAllFarms();
-  };
 
   useEffect(() => {
     fetchAllFarms();
@@ -128,10 +133,114 @@ const FarmSection = () => {
     }
   };
 
-  const getOwnerFullName = (owner: Farm['Owner']): string => {
+  const getOwnerFullName = (owner: Farm["Owner"]): string => {
     return `${owner.first_name} ${
       owner.middle_name ? owner.middle_name + " " : ""
     }${owner.last_name}`.trim();
+  };
+
+  // Action handlers
+  const handleViewFarm = (farm: Farm) => {
+    setSelectedFarm(farm);
+    setViewDialogOpen(true);
+  };
+
+  const handleEditFarm = (farm: Farm) => {
+    setSelectedFarm(farm);
+    setEditFarmName(farm.name);
+    setEditFarmDescription(farm.description);
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateFarm = async () => {
+    if (!selectedFarm || !editFarmName.trim()) {
+      errorMessage("Please enter farm name");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Try different possible API endpoint formats
+      console.log("Updating farm with ID:", selectedFarm.id);
+      console.log("Update payload:", {
+        name: editFarmName.trim(),
+        description: editFarmDescription.trim(),
+      });
+
+      // Try PATCH instead of PUT (some APIs prefer PATCH for partial updates)
+      const response = await renderInstance.patch(`/farm/${selectedFarm.id}`, {
+        name: editFarmName.trim(),
+        description: editFarmDescription.trim(),
+      });
+
+      console.log("Update response:", response.data);
+
+      // Update the farm in the local state
+      setFarms(prevFarms => 
+        prevFarms.map(farm => 
+          farm.id === selectedFarm.id 
+            ? { ...farm, name: editFarmName, description: editFarmDescription, updatedAt: new Date().toISOString() }
+            : farm
+        )
+      );
+
+      setEditDialogOpen(false);
+      setEditFarmName("");
+      setEditFarmDescription("");
+      setSelectedFarm(null);
+      
+      // You can add a success message here if you have it
+      // successMessage("Farm updated successfully");
+      
+    } catch (error: any) {
+      console.error("Error updating farm:", error);
+      console.error("Error response:", error.response?.data);
+      console.error("Error status:", error.response?.status);
+      
+      // More specific error messages
+      if (error.response?.status === 404) {
+        errorMessage("Farm not found");
+      } else if (error.response?.status === 400) {
+        errorMessage("Invalid farm data provided");
+      } else if (error.response?.status === 403) {
+        errorMessage("You don't have permission to edit this farm");
+      } else if (error.response?.data?.message) {
+        errorMessage(error.response.data.message);
+      } else {
+        errorMessage("Failed to update farm");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteFarm = (farm: Farm) => {
+    setSelectedFarm(farm);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedFarm) return;
+
+    setLoading(true);
+    try {
+      await renderInstance.delete(`/farm/${selectedFarm.id}`);
+      
+      // Remove farm from local state
+      setFarms(prevFarms => prevFarms.filter(farm => farm.id !== selectedFarm.id));
+      
+      setDeleteDialogOpen(false);
+      setSelectedFarm(null);
+      
+      // You can add a success message here if you have it
+      // successMessage("Farm deleted successfully");
+      
+    } catch (error) {
+      console.error("Error deleting farm:", error);
+      errorMessage("Failed to delete farm");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -151,10 +260,7 @@ const FarmSection = () => {
             </Button>
           </DialogTrigger>
 
-          <DialogContent
-            className="bg-white h-fit min-w-[400px] max-w-[400px] overflow-auto"
-            style={{ scrollbarWidth: "none" }}
-          >
+          <DialogContent className="bg-white h-fit min-w-[400px] max-w-[400px] overflow-auto">
             <Label className="mb-2 text-lg font-medium">Farm Name</Label>
             <Input
               value={newFarmName}
@@ -191,8 +297,9 @@ const FarmSection = () => {
                     errorMessage("Please enter farm name");
                     return;
                   }
-                  // Here you would typically call an API to create a new farm
-                  errorMessage("Farm creation functionality needs to be implemented");
+                  errorMessage(
+                    "Farm creation functionality needs to be implemented"
+                  );
                 }}
               >
                 Create
@@ -202,14 +309,15 @@ const FarmSection = () => {
         </Dialog>
       </div>
 
+      {/* Table Header */}
       <div className="text-[20px] font-[600] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer">
         <div className="w-[100px] flex items-center justify-between group">
           Id
           <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
               <ArrowUpwardIcon />
             </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
               <MoreVertIcon />
             </div>
           </div>
@@ -218,34 +326,22 @@ const FarmSection = () => {
         <div className="w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
           Name
           <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
               <ArrowUpwardIcon />
             </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
               <MoreVertIcon />
             </div>
           </div>
         </div>
 
         <div className="w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
-          Owner
+          Farmer
           <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
               <ArrowUpwardIcon />
             </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              <MoreVertIcon />
-            </div>
-          </div>
-        </div>
-
-        <div className="w-[120px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
-          Type
-          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              <ArrowUpwardIcon />
-            </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
               <MoreVertIcon />
             </div>
           </div>
@@ -254,10 +350,10 @@ const FarmSection = () => {
         <div className="w-[120px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
           Area
           <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
               <ArrowUpwardIcon />
             </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
               <MoreVertIcon />
             </div>
           </div>
@@ -265,19 +361,15 @@ const FarmSection = () => {
 
         <div
           className="w-[180px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
-          onMouseEnter={() => {
-            setActiveHover("Created at");
-          }}
-          onMouseLeave={() => {
-            setActiveHover("");
-          }}
+          onMouseEnter={() => setActiveHover("Created at")}
+          onMouseLeave={() => setActiveHover("")}
         >
           {activeHover === "Created at" ? "Crea..." : "Created at"}
           <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
               <ArrowUpwardIcon />
             </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
               <MoreVertIcon />
             </div>
           </div>
@@ -285,25 +377,24 @@ const FarmSection = () => {
 
         <div
           className="w-[180px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
-          onMouseEnter={() => {
-            setActiveHover("Updated at");
-          }}
-          onMouseLeave={() => {
-            setActiveHover("");
-          }}
+          onMouseEnter={() => setActiveHover("Updated at")}
+          onMouseLeave={() => setActiveHover("")}
         >
           {activeHover === "Updated at" ? "Upda..." : "Updated at"}
           <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
               <ArrowUpwardIcon />
             </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
               <MoreVertIcon />
             </div>
           </div>
         </div>
+
+        <div className="w-[80px] text-center">Actions</div>
       </div>
 
+      {/* Farm rows */}
       <div className="flex flex-col gap-[5px] mt-[20px]">
         {loading ? (
           <p>Fetching farms</p>
@@ -315,7 +406,7 @@ const FarmSection = () => {
               className="w-[400px] lg:w-[700px] h-auto object-cover"
               width={400}
               height={400}
-              unoptimized={true}
+              unoptimized
             />
           </div>
         ) : (
@@ -324,12 +415,8 @@ const FarmSection = () => {
             return (
               <div
                 key={farm.id}
-                onMouseEnter={() => {
-                  setFarmHover(index);
-                }}
-                onMouseLeave={() => {
-                  setFarmHover(-1);
-                }}
+                onMouseEnter={() => setFarmHover(index)}
+                onMouseLeave={() => setFarmHover(-1)}
                 className={`text-[18px] flex items-center justify-between gap-[10px] p-[20px] rounded cursor-pointer transition-all duration-500 ${
                   farmHover === index
                     ? "bg-white shadow-lg"
@@ -348,37 +435,186 @@ const FarmSection = () => {
                   {ownerName}
                 </div>
 
-                <div className="w-[120px] text-[16px] capitalize">
-                  {farm.type}
-                </div>
-
                 <div className="w-[120px] text-[16px]">
                   {formatArea(farm.boundary.area)}
                 </div>
 
-                <div className="w-[180px] text-[16px]">
+                <div className="w-[220px] text-[16px] whitespace-nowrap">
                   {formatDate(farm.createdAt)}
                 </div>
 
-                <div className="w-[180px] text-[16px]">
+                <div className="w-[220px] text-[16px] whitespace-nowrap">
                   {formatDate(farm.updatedAt)}
                 </div>
 
-                {farmHover === index && (
-                  <div className="flex items-center gap-[6px]">
-                    <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                      <ArrowUpwardIcon />
-                    </div>
-                    <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                      <MoreVertIcon />
-                    </div>
-                  </div>
-                )}
+                {/* Actions column with buttons */}
+                <div className="w-[80px] flex flex-col items-center gap-2">
+                  <button
+                    onClick={() => handleViewFarm(farm)}
+                    className="flex items-center gap-1 px-2 py-1 rounded bg-blue-500 text-white text-xs hover:bg-blue-600 w-full justify-center"
+                  >
+                    <Eye size={14} /> View
+                  </button>
+
+                  <button
+                    onClick={() => handleEditFarm(farm)}
+                    className="flex items-center gap-1 px-2 py-1 rounded bg-green-500 text-white text-xs hover:bg-green-600 w-full justify-center"
+                  >
+                    <Edit size={14} /> Edit
+                  </button>
+
+                  <button
+                    onClick={() => handleDeleteFarm(farm)}
+                    className="flex items-center gap-1 px-2 py-1 rounded bg-red-500 text-white text-xs hover:bg-red-600 w-full justify-center"
+                  >
+                    <Trash2 size={14} /> Delete
+                  </button>
+                </div>
               </div>
             );
           })
         )}
       </div>
+
+      {/* VIEW FARM DIALOG */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="bg-white h-fit min-w-[500px] max-w-[500px] overflow-auto">
+          {selectedFarm && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold">Farm Details</h2>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="font-medium">Name:</Label>
+                  <p className="text-gray-700">{selectedFarm.name}</p>
+                </div>
+                
+                <div>
+                  <Label className="font-medium">Area:</Label>
+                  <p className="text-gray-700">{formatArea(selectedFarm.boundary.area)}</p>
+                </div>
+                
+                <div>
+                  <Label className="font-medium">Type:</Label>
+                  <p className="text-gray-700">{selectedFarm.type}</p>
+                </div>
+                
+                <div>
+                  <Label className="font-medium">Owner:</Label>
+                  <p className="text-gray-700">{getOwnerFullName(selectedFarm.Owner)}</p>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="font-medium">Description:</Label>
+                <p className="text-gray-700 mt-1">{selectedFarm.description || "No description available"}</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="font-medium">Created:</Label>
+                  <p className="text-gray-700">{formatDate(selectedFarm.createdAt)}</p>
+                </div>
+                
+                <div>
+                  <Label className="font-medium">Updated:</Label>
+                  <p className="text-gray-700">{formatDate(selectedFarm.updatedAt)}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button onClick={() => setViewDialogOpen(false)}>Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* EDIT FARM DIALOG */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="bg-white h-fit min-w-[400px] max-w-[400px] overflow-auto">
+          <h2 className="text-xl font-semibold mb-4">Edit Farm</h2>
+          
+          <Label className="mb-2 text-lg font-medium">Farm Name</Label>
+          <Input
+            value={editFarmName}
+            onChange={(e) => setEditFarmName(e.target.value)}
+            className="w-full mb-4"
+            placeholder="Enter farm name"
+          />
+
+          <Label className="mb-2 text-lg font-medium">Description</Label>
+          <Textarea
+            value={editFarmDescription}
+            onChange={(e) => setEditFarmDescription(e.target.value)}
+            className="w-full"
+            placeholder="Enter farm description"
+          />
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button
+                onClick={() => {
+                  setEditDialogOpen(false);
+                  setEditFarmName("");
+                  setEditFarmDescription("");
+                  setSelectedFarm(null);
+                }}
+              >
+                Cancel
+              </Button>
+            </DialogClose>
+
+            <Button
+              onClick={handleUpdateFarm}
+              disabled={loading}
+            >
+              {loading ? "Updating..." : "Update"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DELETE CONFIRMATION DIALOG */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="bg-white h-fit min-w-[400px] max-w-[400px]">
+          <h2 className="text-xl font-semibold mb-4">Delete Farm</h2>
+          
+          {selectedFarm && (
+            <div className="mb-4">
+              <p className="text-gray-700">
+                Are you sure you want to delete the farm "{selectedFarm.name}"?
+              </p>
+              <p className="text-red-600 text-sm mt-2">
+                This action cannot be undone.
+              </p>
+            </div>
+          )}
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button
+                onClick={() => {
+                  setDeleteDialogOpen(false);
+                  setSelectedFarm(null);
+                }}
+              >
+                Cancel
+              </Button>
+            </DialogClose>
+
+            <Button
+              onClick={handleConfirmDelete}
+              disabled={loading}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              {loading ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
