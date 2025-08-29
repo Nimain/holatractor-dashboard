@@ -2,92 +2,118 @@
 
 import { useState, useEffect } from "react";
 import { Plus, User } from "lucide-react";
+import axios from "axios";
 
-type ServiceStatus = "Available" | "Unavailable";
+interface Category {
+  id: string;
+  name: string;
+}
 
 interface Service {
-  id: number;
-  image: string;
+  id: string;
   name: string;
-  category: string;
-  date: string;
-  status: ServiceStatus;
+  image: string;
+  description: string;
+  price: string;
+  createdAt: string;
+  category: {
+    id: string;
+    name: string;
+    slug: string;
+    image?: string;
+  };
 }
 
 export default function ServiceSection() {
   const [services, setServices] = useState<Service[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
-    category: "",
-    date: "",
-    status: "Available" as ServiceStatus,
+    slug: "",
+    description: "",
+    price: "",
+    category_id: "",
     image: "",
   });
 
   const rowLayout =
-    "grid grid-cols-[50px_100px_2fr_1.5fr_1.5fr_1fr] items-center gap-x-4 p-5";
+    "grid grid-cols-[60px_120px_2fr_2fr_120px_2fr_160px] items-center gap-x-4 p-5";
 
+  // Fetch services
   useEffect(() => {
-    setTimeout(() => {
-      setServices([
-        {
-          id: 1,
-          image: "https://via.placeholder.com/100",
-          name: "Tractor Rental",
-          category: "Farming",
-          date: "2025-08-25",
-          status: "Available",
-        },
-        {
-          id: 2,
-          image: "https://via.placeholder.com/100",
-          name: "Ploughing Service",
-          category: "Agriculture",
-          date: "2025-08-20",
-          status: "Unavailable",
-        },
-      ]);
-      setLoading(false);
-    }, 800);
+    axios
+      .get("https://holatractor-backend-render.onrender.com/services")
+      .then((res) => {
+        setServices(res.data);
+      })
+      .catch((err) => console.error("Error fetching services:", err))
+      .finally(() => setLoading(false));
+
+    axios
+      .get("https://holatractor-backend-render.onrender.com/servicecategory")
+      .then((res) => {
+        setCategories(res.data);
+      })
+      .catch((err) => console.error("Error fetching categories:", err));
   }, []);
 
-  const handleAddService = () => {
-    if (!form.name || !form.category || !form.date) {
-      alert("Please fill all required fields.");
+  // Handle POST new service
+  const handleAddService = async () => {
+    if (
+      !form.name ||
+      !form.slug ||
+      !form.description ||
+      !form.price ||
+      !form.category_id
+    ) {
+      alert("Please fill all required fields");
       return;
     }
 
-    const newService: Service = {
-      id: services.length + 1,
-      ...form,
-    };
+    try {
+      const token = localStorage.getItem("access_token"); // make sure you set token after login
+      const res = await axios.post(
+        "https://holatractor-backend-render.onrender.com/services",
+        form,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-    setServices([...services, newService]);
-    setForm({
-      name: "",
-      category: "",
-      date: "",
-      status: "Available",
-      image: "",
-    });
-    setOpenModal(false);
+      // Refresh list after add
+      setServices((prev) => [...prev, res.data]);
+      setForm({
+        name: "",
+        slug: "",
+        description: "",
+        price: "",
+        category_id: "",
+        image: "",
+      });
+      setOpenModal(false);
+    } catch (err) {
+      console.error("Error adding service:", err);
+      alert("Failed to add service. Check console for details.");
+    }
   };
 
   return (
     <div className="w-full py-5">
       {loading && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="animate-spin rounded-full h-10 w-10 border-4 border-white border-t-transparent"></div>
         </div>
       )}
 
       {/* Top Bar */}
       <div className="w-full flex items-center justify-between gap-5 px-5">
-        <p className="text-xl">
-          <span className="font-semibold">Total Services: {services.length}</span>
+        <p className="text-xl font-semibold">
+          Total Services: {services.length}
         </p>
         <button
           onClick={() => setOpenModal(true)}
@@ -98,163 +124,179 @@ export default function ServiceSection() {
         </button>
       </div>
 
-      {/* Header Row */}
+      {/* Header */}
       <div
-        className={`${rowLayout} group text-xl font-semibold bg-[#ededed] rounded mt-8 transition-colors duration-300 hover:bg-white`}
+        className={`${rowLayout} text-lg font-semibold bg-[#ededed] rounded mt-8`}
       >
-        <p className="transition-transform duration-300 group-hover:-translate-y-1">ID</p>
-        <p className="transition-transform duration-300 group-hover:-translate-y-1">Image</p>
-        <p className="transition-transform duration-300 group-hover:-translate-y-1">Name</p>
-        <p className="transition-transform duration-300 group-hover:-translate-y-1">Category</p>
-        <p className="transition-transform duration-300 group-hover:-translate-y-1">Date</p>
-        <p className="transition-transform duration-300 group-hover:-translate-y-1">Status</p>
+        <p>Sl No</p>
+        <p>Image</p>
+        <p>Service ID</p>
+        <p>Name</p>
+        <p>Price</p>
+        <p>Category</p>
+        <p>Created</p>
       </div>
 
-      {/* Service List */}
+      {/* Service Rows */}
       <div className="flex flex-col gap-2 mt-5">
         {services.length === 0 ? (
-          <div className="w-full min-h-[70vh] flex items-center justify-center">
+          <div className="w-full min-h-[60vh] flex items-center justify-center">
             <p className="text-gray-400">No services found</p>
           </div>
         ) : (
-          services.map((serviceDetails, index) => (
-            <a
-              href={`/Service/${serviceDetails.id}`}
-              className={`${rowLayout} group text-lg bg-[#fafafa] rounded cursor-pointer transition-colors duration-300 hover:bg-white`}
-              key={index}
+          services.map((service, index) => (
+            <div
+              key={service.id}
+              className={`${rowLayout} text-base bg-[#fafafa] rounded cursor-pointer transition-colors duration-300 hover:bg-white`}
             >
-              <p className="transition-transform duration-300 group-hover:-translate-y-1">{serviceDetails.id}</p>
-              
-              {/* Image container - no hover effect */}
-              <div>
-                {serviceDetails.image ? (
-                  <img
-                    src={serviceDetails.image}
-                    className="w-[50px] h-[50px] rounded-full object-cover"
-                    alt={serviceDetails.name}
-                  />
-                ) : (
-                  <div className="w-[50px] h-[50px] bg-gray-300 rounded-full flex items-center justify-center">
-                    <User size={20} />
-                  </div>
-                )}
-              </div>
+              {/* Sl No */}
+              <p>{index + 1}</p>
 
-              <p className="transition-transform duration-300 group-hover:-translate-y-1">{serviceDetails.name}</p>
-              <p className="transition-transform duration-300 group-hover:-translate-y-1">{serviceDetails.category}</p>
-              <p className="transition-transform duration-300 group-hover:-translate-y-1">{serviceDetails.date}</p>
+              {/* Image */}
+              {service.image ? (
+                <img
+                  src={service.image}
+                  className="w-[50px] h-[50px] rounded-full object-cover"
+                  alt={service.name}
+                />
+              ) : (
+                <div className="w-[50px] h-[50px] bg-gray-300 rounded-full flex items-center justify-center">
+                  <User size={20} />
+                </div>
+              )}
 
-              {/* Status container - no hover effect */}
-              <div>
-                <span
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium ${
-                    serviceDetails.status === "Available"
-                      ? "bg-green-100 text-green-800"
-                      : "bg-red-100 text-red-800"
-                  }`}
-                >
-                  {serviceDetails.status}
-                </span>
-              </div>
-            </a>
+              {/* Service ID */}
+              <p className="truncate">{service.id}</p>
+
+              {/* Service Name */}
+              <p>{service.name}</p>
+
+              {/* Price */}
+              <p>{service.price}</p>
+
+              {/* Category */}
+              <p>{service.category?.name || "N/A"}</p>
+
+              {/* Created */}
+              <p>
+                {new Date(service.createdAt).toLocaleDateString("en-GB", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </p>
+            </div>
           ))
         )}
       </div>
 
       {/* Add Service Modal */}
-      {openModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-[400px] relative">
-            <h2 className="text-xl font-semibold mb-4">Add New Service</h2>
-            <div className="flex flex-col gap-3">
-              <input
-                type="text"
-                placeholder="Service Name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border rounded p-2"
-              />
-              <input
-                type="text"
-                placeholder="Category"
-                value={form.category}
-                onChange={(e) =>
-                  setForm({ ...form, category: e.target.value })
-                }
-                className="w-full border rounded p-2"
-              />
-              <input
-                type="date"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-                className="w-full border rounded p-2"
-              />
-              <select
-                value={form.status}
-                onChange={(e) =>
-                  setForm({ ...form, status: e.target.value as ServiceStatus })
-                }
-                className="w-full border rounded p-2"
-              >
-                <option value="Available">Available</option>
-                <option value="Unavailable">Unavailable</option>
-              </select>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Image URL
-                </label>
-                <input
-                  type="text"
-                  placeholder="https://example.com/image.jpg"
-                  value={form.image}
-                  onChange={(e) =>
-                    setForm({ ...form, image: e.target.value })
-                  }
-                  className="w-full border rounded p-2"
-                />
-                {form.image && (
-                  <img
-                    src={form.image}
-                    alt="Preview"
-                    className="mt-2 w-32 h-32 object-cover rounded border"
-                  />
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Or Upload Image
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const url = URL.createObjectURL(file);
-                      setForm({ ...form, image: url });
-                    }
-                  }}
-                  className="w-full border rounded p-2"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 mt-4">
-              <button
-                onClick={() => setOpenModal(false)}
-                className="px-4 py-2 rounded border"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddService}
-                className="px-4 py-2 rounded bg-black text-white"
-              >
-                Add
-              </button>
-            </div>
-          </div>
+    {openModal && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-lg p-6 w-[450px] relative">
+      <h2 className="text-xl font-semibold mb-4">Add New Service</h2>
+      
+      <div className="flex flex-col gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">Service Name</label>
+          <input
+            type="text"
+            placeholder="Service Name"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            className="w-full border rounded p-2"
+          />
         </div>
-      )}
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Slug</label>
+          <input
+            type="text"
+            placeholder="Slug (e.g deep-plowing)"
+            value={form.slug}
+            onChange={(e) => setForm({ ...form, slug: e.target.value })}
+            className="w-full border rounded p-2"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Description</label>
+          <textarea
+            placeholder="Description"
+            value={form.description}
+            onChange={(e) =>
+              setForm({ ...form, description: e.target.value })
+            }
+            className="w-full border rounded p-2"
+            rows={3}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Price</label>
+          <input
+            type="text"
+            placeholder="Price (e.g 30$)"
+            value={form.price}
+            onChange={(e) => setForm({ ...form, price: e.target.value })}
+            className="w-full border rounded p-2"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Category</label>
+          <select
+            value={form.category_id}
+            onChange={(e) =>
+              setForm({ ...form, category_id: e.target.value })
+            }
+            className="w-full border rounded p-2"
+          >
+            <option value="">Select Category</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Image URL</label>
+          <input
+            type="text"
+            placeholder="Image URL"
+            value={form.image}
+            onChange={(e) => setForm({ ...form, image: e.target.value })}
+            className="w-full border rounded p-2"
+          />
+          {form.image && (
+            <img
+              src={form.image}
+              alt="Preview"
+              className="mt-2 w-32 h-32 object-cover rounded border"
+            />
+          )}
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-3 mt-6">
+        <button
+          onClick={() => setOpenModal(false)}
+          className="px-4 py-2 rounded border hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleAddService}
+          className="px-4 py-2 rounded bg-black text-white hover:bg-gray-800"
+        >
+          Add
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

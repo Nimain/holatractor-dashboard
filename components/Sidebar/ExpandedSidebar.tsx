@@ -72,7 +72,8 @@ const ExpandedSidebar = () => {
   const pathMap: { [key: string]: string } = {
     "/": "Dashboard",
     "/ParticularBooking": "Bookings",
-    "/services": "services",
+    "/Services": "services",
+    "/Category":"Category",
     "/SingleOperator": "Operators",
     "/Operators": "Operators",
     "/Farms": "Farms",
@@ -243,6 +244,26 @@ const ExpandedSidebar = () => {
         gn: "Nda’ari",
       }),
       route: "/Store",
+    }
+    ,
+     {
+      icon: (
+        <Image
+          src={FarmerIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="service"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Category",
+        es: "Categoria",
+        ay: "Ch'iqi",
+        qu: "Suyuchay",
+        gn: "Mboja'o",
+      }),
+      route: "/Category",
     },
     {
       icon: (
@@ -255,7 +276,7 @@ const ExpandedSidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        en: "service",
+        en: "Service",
         es: "Servicios",
         ay: "",
         qu: "",
