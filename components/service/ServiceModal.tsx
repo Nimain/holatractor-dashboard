@@ -2,26 +2,31 @@
 
 import { useState, useEffect } from "react";
 import { Plus, User } from "lucide-react";
-import axios from "axios";
+import { renderInstance } from "@/utils/Axios/RenderInstance";
+import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
+import { useCookie } from "next-cookie";
+import { Backdrop, CircularProgress } from "@mui/material";
+import Image from "next/image";
 
 interface Category {
   id: string;
   name: string;
+  image: string;
+  slug: string;
 }
 
 interface Service {
   id: string;
   name: string;
-  image: string;
   description: string;
+  slug: string;
   price: string;
+  image: string;
   createdAt: string;
-  category: {
-    id: string;
-    name: string;
-    slug: string;
-    image?: string;
-  };
+  updatedAt: string;
+  base_id: string;
+  category_id: string;
+  category: Category;
 }
 
 export default function ServiceSection() {
@@ -29,6 +34,7 @@ export default function ServiceSection() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
+  const [addingService, setAddingService] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -39,29 +45,69 @@ export default function ServiceSection() {
     image: "",
   });
 
+  const { cookie } = useCookie();
+  const access_token = cookie.get("access_token");
+
   const rowLayout =
     "grid grid-cols-[60px_120px_2fr_2fr_120px_2fr_160px] items-center gap-x-4 p-5";
 
-  // Fetch services
-  useEffect(() => {
-    axios
-      .get("https://holatractor-backend-render.onrender.com/services")
+  const fetchServices = () => {
+    if (!access_token) {
+      errorMessage("Admin not logged in");
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    renderInstance
+      .get("/services", {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      })
       .then((res) => {
+        console.log("Services data:", res.data);
         setServices(res.data);
       })
-      .catch((err) => console.error("Error fetching services:", err))
+      .catch((err) => {
+        console.error("Error fetching services:", err);
+        errorMessage("Error fetching services");
+      })
       .finally(() => setLoading(false));
+  };
 
-    axios
-      .get("https://holatractor-backend-render.onrender.com/servicecategory")
+  const fetchCategories = () => {
+    if (!access_token) {
+      errorMessage("Admin not logged in");
+      return;
+    }
+
+    renderInstance
+      .get("/servicecategory", {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      })
       .then((res) => {
         setCategories(res.data);
       })
-      .catch((err) => console.error("Error fetching categories:", err));
-  }, []);
+      .catch((err) => {
+        console.error("Error fetching categories:", err);
+        errorMessage("Error fetching categories");
+      });
+  };
 
-  // Handle POST new service
+  useEffect(() => {
+    fetchServices();
+    fetchCategories();
+  }, [access_token]);
+
   const handleAddService = async () => {
+    if (!access_token) {
+      errorMessage("Admin not logged in");
+      return;
+    }
+
     if (
       !form.name ||
       !form.slug ||
@@ -69,23 +115,29 @@ export default function ServiceSection() {
       !form.price ||
       !form.category_id
     ) {
-      alert("Please fill all required fields");
+      errorMessage("Please fill all required fields");
       return;
     }
 
+    setAddingService(true);
     try {
-      const token = localStorage.getItem("access_token"); // make sure you set token after login
-      const res = await axios.post(
-        "https://holatractor-backend-render.onrender.com/services",
-        form,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const payload = {
+        name: form.name,
+        slug: form.slug,
+        description: form.description,
+        price: form.price,
+        category_id: form.category_id,
+        image: form.image || null,
+      };
 
-      // Refresh list after add
+      console.log("Sending payload:", payload);
+
+      const res = await renderInstance.post("/services", payload, {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      });
+
       setServices((prev) => [...prev, res.data]);
       setForm({
         name: "",
@@ -96,21 +148,54 @@ export default function ServiceSection() {
         image: "",
       });
       setOpenModal(false);
-    } catch (err) {
+      successMessage("Service added successfully!");
+      
+      fetchServices();
+    } catch (err: any) {
       console.error("Error adding service:", err);
-      alert("Failed to add service. Check console for details.");
+      errorMessage(err.response?.data?.message || "Failed to add service");
+    } finally {
+      setAddingService(false);
     }
+  };
+
+  // Function to check if image URL is valid and accessible
+  const isImageAvailable = (url: string | null | undefined) => {
+    if (!url) return false;
+    
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  // Function to get the appropriate image to display
+  const getDisplayImage = (service: Service) => {
+    // First try service image
+    if (isImageAvailable(service.image)) {
+      return service.image;
+    }
+    
+    // Then try category image
+    if (isImageAvailable(service.category?.image)) {
+      return service.category.image;
+    }
+    
+    // No image available
+    return null;
   };
 
   return (
     <div className="w-full py-5">
-      {loading && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="animate-spin rounded-full h-10 w-10 border-4 border-white border-t-transparent"></div>
-        </div>
-      )}
+      <Backdrop
+        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        open={loading || addingService}
+      >
+        <CircularProgress />
+      </Backdrop>
 
-      {/* Top Bar */}
       <div className="w-full flex items-center justify-between gap-5 px-5">
         <p className="text-xl font-semibold">
           Total Services: {services.length}
@@ -124,7 +209,6 @@ export default function ServiceSection() {
         </button>
       </div>
 
-      {/* Header */}
       <div
         className={`${rowLayout} text-lg font-semibold bg-[#ededed] rounded mt-8`}
       >
@@ -137,166 +221,196 @@ export default function ServiceSection() {
         <p>Created</p>
       </div>
 
-      {/* Service Rows */}
       <div className="flex flex-col gap-2 mt-5">
         {services.length === 0 ? (
           <div className="w-full min-h-[60vh] flex items-center justify-center">
             <p className="text-gray-400">No services found</p>
           </div>
         ) : (
-          services.map((service, index) => (
-            <div
-              key={service.id}
-              className={`${rowLayout} text-base bg-[#fafafa] rounded cursor-pointer transition-colors duration-300 hover:bg-white`}
-            >
-              {/* Sl No */}
-              <p>{index + 1}</p>
+          services.map((service, index) => {
+            const displayImage = getDisplayImage(service);
+            
+            return (
+              <div
+                key={service.id}
+                className={`${rowLayout} text-base bg-[#fafafa] rounded cursor-pointer transition-colors duration-300 hover:bg-white`}
+              >
+                <p>{index + 1}</p>
 
-              {/* Image */}
-              {service.image ? (
-                <img
-                  src={service.image}
-                  className="w-[50px] h-[50px] rounded-full object-cover"
-                  alt={service.name}
-                />
-              ) : (
-                <div className="w-[50px] h-[50px] bg-gray-300 rounded-full flex items-center justify-center">
-                  <User size={20} />
+                {/* Updated Image Display - Uses category image as fallback */}
+                <div className="w-[50px] h-[50px] flex items-center justify-center">
+                  {displayImage ? (
+                    <div className="w-full h-full relative">
+                      <Image
+                        src={displayImage}
+                        alt={service.name}
+                        fill
+                        className="rounded-full object-cover"
+                        onError={(e) => {
+                          console.error("Image failed to load:", displayImage);
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          
+                          const parent = target.parentElement;
+                          if (parent && !parent.querySelector('.fallback-icon')) {
+                            const fallback = document.createElement('div');
+                            fallback.className = 'fallback-icon w-[50px] h-[50px] bg-gray-300 rounded-full flex items-center justify-center';
+                            fallback.innerHTML = '<svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>';
+                            parent.appendChild(fallback);
+                          }
+                        }}
+                        onLoad={() => {
+                          console.log("Image loaded successfully:", displayImage);
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-[50px] h-[50px] bg-gray-300 rounded-full flex items-center justify-center">
+                      <User size={20} className="text-gray-500" />
+                    </div>
+                  )}
                 </div>
-              )}
 
-              {/* Service ID */}
-              <p className="truncate">{service.id}</p>
-
-              {/* Service Name */}
-              <p>{service.name}</p>
-
-              {/* Price */}
-              <p>{service.price}</p>
-
-              {/* Category */}
-              <p>{service.category?.name || "N/A"}</p>
-
-              {/* Created */}
-              <p>
-                {new Date(service.createdAt).toLocaleDateString("en-GB", {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                })}
-              </p>
-            </div>
-          ))
+                <p className="truncate text-xs">{service.id}</p>
+                <p className="truncate">{service.name}</p>
+                <p>{service.price}</p>
+                <p className="truncate">{service.category?.name || "N/A"}</p>
+                <p className="text-sm">
+                  {new Date(service.createdAt).toLocaleDateString("en-GB", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </p>
+              </div>
+            );
+          })
         )}
       </div>
 
-      {/* Add Service Modal */}
-    {openModal && (
-  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-    <div className="bg-white rounded-lg p-6 w-[450px] relative">
-      <h2 className="text-xl font-semibold mb-4">Add New Service</h2>
-      
-      <div className="flex flex-col gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Service Name</label>
-          <input
-            type="text"
-            placeholder="Service Name"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full border rounded p-2"
-          />
-        </div>
+      {openModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-[450px] relative max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-semibold mb-4">Add New Service</h2>
+            
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Service Name *</label>
+                <input
+                  type="text"
+                  placeholder="Service Name"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="w-full border rounded p-2"
+                  required
+                />
+              </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Slug</label>
-          <input
-            type="text"
-            placeholder="Slug (e.g deep-plowing)"
-            value={form.slug}
-            onChange={(e) => setForm({ ...form, slug: e.target.value })}
-            className="w-full border rounded p-2"
-          />
-        </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Slug *</label>
+                <input
+                  type="text"
+                  placeholder="Slug (e.g deep-plowing)"
+                  value={form.slug}
+                  onChange={(e) => setForm({ ...form, slug: e.target.value })}
+                  className="w-full border rounded p-2"
+                  required
+                />
+              </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Description</label>
-          <textarea
-            placeholder="Description"
-            value={form.description}
-            onChange={(e) =>
-              setForm({ ...form, description: e.target.value })
-            }
-            className="w-full border rounded p-2"
-            rows={3}
-          />
-        </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Description *</label>
+                <textarea
+                  placeholder="Description"
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm({ ...form, description: e.target.value })
+                  }
+                  className="w-full border rounded p-2"
+                  rows={3}
+                  required
+                />
+              </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Price</label>
-          <input
-            type="text"
-            placeholder="Price (e.g 30$)"
-            value={form.price}
-            onChange={(e) => setForm({ ...form, price: e.target.value })}
-            className="w-full border rounded p-2"
-          />
-        </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Price *</label>
+                <input
+                  type="text"
+                  placeholder="Price (e.g 30$)"
+                  value={form.price}
+                  onChange={(e) => setForm({ ...form, price: e.target.value })}
+                  className="w-full border rounded p-2"
+                  required
+                />
+              </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Category</label>
-          <select
-            value={form.category_id}
-            onChange={(e) =>
-              setForm({ ...form, category_id: e.target.value })
-            }
-            className="w-full border rounded p-2"
-          >
-            <option value="">Select Category</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
-        </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Category *</label>
+                <select
+                  value={form.category_id}
+                  onChange={(e) =>
+                    setForm({ ...form, category_id: e.target.value })
+                  }
+                  className="w-full border rounded p-2"
+                  required
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Image URL</label>
-          <input
-            type="text"
-            placeholder="Image URL"
-            value={form.image}
-            onChange={(e) => setForm({ ...form, image: e.target.value })}
-            className="w-full border rounded p-2"
-          />
-          {form.image && (
-            <img
-              src={form.image}
-              alt="Preview"
-              className="mt-2 w-32 h-32 object-cover rounded border"
-            />
-          )}
-        </div>
-      </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Image URL</label>
+                <input
+                  type="url"
+                  placeholder="https://example.com/image.jpg"
+                  value={form.image}
+                  onChange={(e) => setForm({ ...form, image: e.target.value })}
+                  className="w-full border rounded p-2"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  If no image is provided, category image will be used as fallback
+                </p>
+                {form.image && isImageAvailable(form.image) && (
+                  <div className="mt-2 w-32 h-32 relative border rounded">
+                    <Image
+                      src={form.image}
+                      alt="Preview"
+                      fill
+                      className="object-cover rounded"
+                      onError={(e) => {
+                        const target = e.target as HTMLElement;
+                        target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
 
-      <div className="flex justify-end gap-3 mt-6">
-        <button
-          onClick={() => setOpenModal(false)}
-          className="px-4 py-2 rounded border hover:bg-gray-50"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleAddService}
-          className="px-4 py-2 rounded bg-black text-white hover:bg-gray-800"
-        >
-          Add
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setOpenModal(false)}
+                className="px-4 py-2 rounded border hover:bg-gray-50"
+                disabled={addingService}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddService}
+                disabled={addingService}
+                className="px-4 py-2 rounded bg-black text-white hover:bg-gray-800 disabled:opacity-50"
+              >
+                {addingService ? "Adding..." : "Add Service"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

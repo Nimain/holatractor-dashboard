@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { errorMessage } from "@/utils/Toastify/Messages";
+import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { Backdrop, CircularProgress } from "@mui/material";
 import Image from "next/image";
 import NullImage from "@/assets/AnimateIcons/Tractor.svg";
-import axios from "axios";
 import { Plus } from "lucide-react";
+import { renderInstance } from "@/utils/Axios/RenderInstance"; // Your axios instance
+import { useCookie } from "next-cookie"; // For cookie management
 
 interface Category {
   id: string;
@@ -20,6 +21,7 @@ interface Category {
 const Categories = () => {
   const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
+  const [addingCategory, setAddingCategory] = useState(false);
   const [openModal, setOpenModal] = useState(false);
 
   const [form, setForm] = useState({
@@ -28,60 +30,109 @@ const Categories = () => {
     image: "",
   });
 
+  // Get token from cookies (same as previous components)
+  const { cookie } = useCookie();
+  const access_token = cookie.get("access_token");
+
+  // Function to generate slug from name
+  const generateSlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^\w\-]+/g, '')
+      .replace(/\-\-+/g, '-')
+      .replace(/^-+/, '')
+      .replace(/-+$/, '');
+  };
+
+  // Fetch categories with proper authentication
   async function fetchCategories() {
+    if (!access_token) {
+      errorMessage("Admin not logged in");
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await axios.get(
-        "https://holatractor-backend-render.onrender.com/servicecategory"
+      const res = await renderInstance.get(
+        "/servicecategory",
+        {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+          },
+        }
       );
       setAllCategories(res.data);
     } catch (err) {
+      console.error("Error fetching categories:", err);
       errorMessage("Error fetching category list");
     } finally {
       setLoading(false);
     }
   }
 
+  // Add category with proper authentication
   async function handleAddCategory() {
-    if (!form.name || !form.slug) {
-      alert("Please fill all required fields.");
+    if (!access_token) {
+      errorMessage("Admin not logged in");
       return;
     }
 
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      alert("Missing token. Please login first.");
+    if (!form.name) {
+      errorMessage("Please enter a category name.");
       return;
     }
 
+    // Auto-generate slug if empty
+    const finalSlug = form.slug || generateSlug(form.name);
+
+    setAddingCategory(true);
     try {
-      const res = await axios.post(
-        "https://holatractor-backend-render.onrender.com/servicecategory",
-        form,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const res = await renderInstance.post(
+        "/servicecategory",
+        {
+          ...form,
+          slug: finalSlug
+        },
+        { 
+          headers: { 
+            Authorization: `Bearer ${access_token}` 
+          } 
+        }
       );
 
       setAllCategories((prev) => [...prev, res.data]);
-
       setForm({ name: "", slug: "", image: "" });
       setOpenModal(false);
+      successMessage("Category added successfully!");
     } catch (err: any) {
-      console.error("Error adding category", err);
-      alert(err.response?.data?.message || "Failed to add category");
+      console.error("Error adding category:", err);
+      errorMessage(err.response?.data?.message || "Failed to add category");
+    } finally {
+      setAddingCategory(false);
     }
   }
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [access_token]); // Re-fetch when token changes
+
+  // Auto-generate slug when name changes
+  useEffect(() => {
+    if (form.name && !form.slug) {
+      const generatedSlug = generateSlug(form.name);
+      setForm(prev => ({ ...prev, slug: generatedSlug }));
+    }
+  }, [form.name]);
 
   return (
     <div className="py-[40px] w-full">
       <Backdrop
         sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-        open={loading}
+        open={loading || addingCategory}
       >
-        {loading && <CircularProgress />}
+        <CircularProgress />
       </Backdrop>
 
       {/* Top bar */}
@@ -168,7 +219,7 @@ const Categories = () => {
                 )}
               </p>
 
-              {/* Created Date (raw, no timezone shift) */}
+              {/* Created Date */}
               <p>{cat.createdAt?.split("T")[0]}</p>
             </div>
           ))
@@ -183,18 +234,12 @@ const Categories = () => {
             
             <div className="flex flex-col gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Category Name</label>
+                <label className="block text-sm font-medium mb-1">Category Name *</label>
                 <input
                   type="text"
                   placeholder="Category Name"
                   value={form.name}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      name: e.target.value,
-                      slug: e.target.value.toLowerCase().replace(/\s+/g, "-"),
-                    })
-                  }
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
                   className="w-full border rounded p-2"
                 />
               </div>
@@ -203,11 +248,14 @@ const Categories = () => {
                 <label className="block text-sm font-medium mb-1">Category Slug</label>
                 <input
                   type="text"
-                  placeholder="Slug"
+                  placeholder="Slug (auto-generated)"
                   value={form.slug}
                   onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                  className="w-full border rounded p-2"
+                  className="w-full border rounded p-2 bg-gray-50"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Auto-generated from name. You can customize it if needed.
+                </p>
               </div>
 
               <div>
@@ -223,7 +271,10 @@ const Categories = () => {
                   <img
                     src={form.image}
                     alt="Preview"
-                    className="mt-2 w-20 h-20 object-cover rounded"
+                    className="mt-2 w-20 h-20 object-cover rounded border"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
                 )}
               </div>
@@ -231,16 +282,21 @@ const Categories = () => {
 
             <div className="flex justify-end gap-3 mt-6">
               <button
-                onClick={() => setOpenModal(false)}
+                onClick={() => {
+                  setOpenModal(false);
+                  setForm({ name: "", slug: "", image: "" });
+                }}
                 className="px-4 py-2 rounded border hover:bg-gray-50"
+                disabled={addingCategory}
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddCategory}
-                className="px-4 py-2 rounded bg-black text-white hover:bg-gray-800"
+                disabled={addingCategory}
+                className="px-4 py-2 rounded bg-black text-white hover:bg-gray-800 disabled:opacity-50"
               >
-                Add
+                {addingCategory ? "Adding..." : "Add Category"}
               </button>
             </div>
           </div>
