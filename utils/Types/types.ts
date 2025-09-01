@@ -215,6 +215,32 @@ export interface Attachment {
   BookingStandaloneAttachment: BookingStandaloneAttachment[];
 }
 
+// Base Service
+export interface Service {
+  id: string;
+  name: string;
+  description?: string;
+  images: string[];
+  base_id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  ServiceInStore: ServiceInStore[];
+}
+
+// Service inside a Store
+export interface ServiceInStore {
+  id: string;
+  baseServiceId: string;
+  base_id: string;
+  price: number;
+  store_id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  baseService: Service;
+  base: Base;
+  store: Store;
+}
+
 export interface BookingTractor {
   bookingId: string;
   tractorId: string;
@@ -367,6 +393,7 @@ export interface Store {
   AttachmentInStore: AttachmentInStore[];
   OperatorInStore: OperatorInStore[];
   OperatorStoreCon: OperatorStoreCon[];
+  ServiceInStore: ServiceInStore[];
 }
 
 export interface TractorInStore {

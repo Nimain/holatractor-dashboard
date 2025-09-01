@@ -5,7 +5,7 @@ import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { Backdrop, CircularProgress } from "@mui/material";
 import Image from "next/image";
 import NullImage from "@/assets/AnimateIcons/Tractor.svg";
-import { Plus } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { renderInstance } from "@/utils/Axios/RenderInstance"; // Your axios instance
 import { useCookie } from "next-cookie"; // For cookie management
 
@@ -23,6 +23,8 @@ const Categories = () => {
   const [loading, setLoading] = useState(false);
   const [addingCategory, setAddingCategory] = useState(false);
   const [openModal, setOpenModal] = useState(false);
+  const [checkingSlug, setCheckingSlug] = useState(false);
+  const [slugCheckTimeout, setSlugCheckTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -39,12 +41,109 @@ const Categories = () => {
     return name
       .toLowerCase()
       .trim()
-      .replace(/\s+/g, '-')
-      .replace(/[^\w\-]+/g, '')
-      .replace(/\-\-+/g, '-')
-      .replace(/^-+/, '')
-      .replace(/-+$/, '');
+      .replace(/[^\w\s-]/g, '') // Remove special characters
+      .replace(/[\s_-]+/g, '-') // Replace spaces, underscores, multiple hyphens with single hyphen
+      .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
   };
+
+  // Function to check if slug is available via API
+  const checkSlugAvailability = async (slug: string) => {
+    if (!slug || !access_token) return true;
+
+    try {
+      const response = await renderInstance.get(`/servicecategory/check-slug/${slug}`, {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      });
+      
+      // Assuming API returns { available: boolean } or { exists: boolean }
+      // Adjust based on your actual API response
+      return response.data.available !== false && response.data.exists !== true;
+    } catch (error) {
+      console.error("Error checking slug:", error);
+      // If API doesn't exist or fails, just return true to not block the user
+      return true;
+    }
+  };
+
+  // Function to generate unique slug with debounced API check
+  const generateUniqueSlug = async (baseName: string) => {
+    let baseSlug = generateSlug(baseName);
+    let finalSlug = baseSlug;
+    let counter = 1;
+
+    // Check if base slug is available
+    let isAvailable = await checkSlugAvailability(finalSlug);
+    
+    // If not available, try with numbers
+    while (!isAvailable && counter <= 10) {
+      finalSlug = `${baseSlug}-${counter}`;
+      isAvailable = await checkSlugAvailability(finalSlug);
+      counter++;
+    }
+
+    return finalSlug;
+  };
+
+  // Handle name change with immediate slug generation (no API check)
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newName = e.target.value;
+    
+    // Immediately update name and generate basic slug (no API check)
+    const basicSlug = newName.trim() ? generateSlug(newName) : "";
+    setForm({ ...form, name: newName, slug: basicSlug });
+
+    // Clear previous timeout
+    if (slugCheckTimeout) {
+      clearTimeout(slugCheckTimeout);
+    }
+
+    // Only check API availability after user stops typing for 1 second
+    if (newName.trim()) {
+      const newTimeout = setTimeout(async () => {
+        setCheckingSlug(true);
+        try {
+          const uniqueSlug = await generateUniqueSlug(newName);
+          setForm(prev => ({ ...prev, slug: uniqueSlug }));
+        } catch (error) {
+          console.error("Error generating unique slug:", error);
+        } finally {
+          setCheckingSlug(false);
+        }
+      }, 1000);
+      
+      setSlugCheckTimeout(newTimeout);
+    }
+  };
+
+  // Manual slug regeneration
+  const handleRegenerateSlug = async () => {
+    if (!form.name.trim()) {
+      errorMessage("Please enter a category name first");
+      return;
+    }
+
+    setCheckingSlug(true);
+    try {
+      const uniqueSlug = await generateUniqueSlug(form.name);
+      setForm(prev => ({ ...prev, slug: uniqueSlug }));
+    } catch (error) {
+      console.error("Error regenerating slug:", error);
+      errorMessage("Failed to regenerate slug");
+    } finally {
+      setCheckingSlug(false);
+    }
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (slugCheckTimeout) {
+        clearTimeout(slugCheckTimeout);
+      }
+    };
+  }, [slugCheckTimeout]);
 
   // Fetch categories with proper authentication
   async function fetchCategories() {
@@ -84,16 +183,19 @@ const Categories = () => {
       return;
     }
 
-    // Auto-generate slug if empty
-    const finalSlug = form.slug || generateSlug(form.name);
+    if (!form.slug) {
+      errorMessage("Please wait for slug generation to complete.");
+      return;
+    }
 
     setAddingCategory(true);
     try {
       const res = await renderInstance.post(
         "/servicecategory",
         {
-          ...form,
-          slug: finalSlug
+          name: form.name,
+          slug: form.slug,
+          image: form.image || null,
         },
         { 
           headers: { 
@@ -117,14 +219,6 @@ const Categories = () => {
   useEffect(() => {
     fetchCategories();
   }, [access_token]); // Re-fetch when token changes
-
-  // Auto-generate slug when name changes
-  useEffect(() => {
-    if (form.name && !form.slug) {
-      const generatedSlug = generateSlug(form.name);
-      setForm(prev => ({ ...prev, slug: generatedSlug }));
-    }
-  }, [form.name]);
 
   return (
     <div className="py-[40px] w-full">
@@ -237,25 +331,45 @@ const Categories = () => {
                 <label className="block text-sm font-medium mb-1">Category Name *</label>
                 <input
                   type="text"
-                  placeholder="Category Name"
+                  placeholder="Category Name (e.g., Agriculture)"
                   value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  onChange={handleNameChange}
                   className="w-full border rounded p-2"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Category Slug</label>
-                <input
-                  type="text"
-                  placeholder="Slug (auto-generated)"
-                  value={form.slug}
-                  onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                  className="w-full border rounded p-2 bg-gray-50"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Auto-generated from name. You can customize it if needed.
-                </p>
+                <label className="block text-sm font-medium mb-1">
+                  URL Slug * 
+                  <span className="text-xs text-gray-500 ml-1">(Auto-generated from name)</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Auto-generated slug"
+                    value={form.slug}
+                    onChange={(e) => setForm({ ...form, slug: e.target.value })}
+                    className="flex-1 border rounded p-2 bg-gray-50"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRegenerateSlug}
+                    disabled={!form.name.trim() || checkingSlug}
+                    className="px-3 py-2 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    title="Regenerate slug from name"
+                  >
+                    <RefreshCw size={16} className={checkingSlug ? "animate-spin" : ""} />
+                  </button>
+                </div>
+                {form.slug && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    URL will be: <span className="font-mono bg-gray-100 px-1 rounded">/{form.slug}</span>
+                  </p>
+                )}
+                {checkingSlug && (
+                  <p className="text-xs text-blue-500 mt-1">Checking availability...</p>
+                )}
               </div>
 
               <div>
@@ -293,7 +407,7 @@ const Categories = () => {
               </button>
               <button
                 onClick={handleAddCategory}
-                disabled={addingCategory}
+                disabled={addingCategory || checkingSlug}
                 className="px-4 py-2 rounded bg-black text-white hover:bg-gray-800 disabled:opacity-50"
               >
                 {addingCategory ? "Adding..." : "Add Category"}
