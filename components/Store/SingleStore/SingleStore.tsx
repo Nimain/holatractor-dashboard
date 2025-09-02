@@ -10,7 +10,7 @@ import "swiper/css/pagination";
 import "swiper/css/scrollbar";
 import { useParams, useRouter } from "next/navigation";
 import { useCookie } from "next-cookie";
-import { Inventory, Store } from "@/utils/Types/types";
+import { Inventory, Store, Service } from "@/utils/Types/types";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import Image from "next/image";
@@ -42,8 +42,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
-import { Backdrop } from "@mui/material";
-import AddService from "./AddService";
+import { Backdrop, CircularProgress } from "@mui/material";
 
 const SingleStore = () => {
   const [fetchingStoreDetails, setFetchingStoreDetails] = useState(false);
@@ -65,14 +64,26 @@ const SingleStore = () => {
     new Date().getFullYear()
   );
   const [attachment, setattachment] = useState<File | null>(null);
-  const [inventory_id, set_inventoey_id] = useState("");
+  const [inventory_id, set_inventory_id] = useState("");
+
+  // Add service states
+  const [serviceOpen, setServiceOpen] = useState(false);
+  const [creatingService, setCreatingService] = useState(false);
+  const [selectedServiceId, setSelectedServiceId] = useState("");
+  const [allServices, setAllServices] = useState<Service[]>([]);
+  const [fetchingServices, setFetchingServices] = useState(false);
+  const [serviceMinPrice, setServiceMinPrice] = useState<number>(0);
+  const [serviceMaxPrice, setServiceMaxPrice] = useState<number>(0);
+  const [serviceFormData, setServiceFormData] = useState({
+    name: "",
+    description: "",
+    hourly_price: "",
+    category: "",
+    image_url: "",
+  });
 
   const { refresh } = useRouter();
-
-  // Add tractor states last
-
   const { slug } = useParams();
-
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
 
@@ -109,7 +120,7 @@ const SingleStore = () => {
   function formatDateOnly(dateTimeStr: string | number | Date) {
     const date = new Date(dateTimeStr);
     const year = date.getUTCFullYear().toString();
-    const month = (date.getUTCMonth() + 1).toString().padStart(2, "0"); // Months are zero-based
+    const month = (date.getUTCMonth() + 1).toString().padStart(2, "0");
     const day = date.getUTCDate().toString().padStart(2, "0");
     return `${year}-${month}-${day}`;
   }
@@ -122,13 +133,11 @@ const SingleStore = () => {
     zip_code: string;
   }) {
     const { address: street, city, state, country, zip_code } = address;
-
     return `${street}, ${city}, ${state}, ${zip_code}, ${country}`;
   }
 
-  // Add tractor to store functions
   function fetchAllTractors() {
-    if (access_token) {
+    if (access_token && storeDetails) {
       setFetchingRoles(true);
       renderInstance
         .get("/inventory")
@@ -136,7 +145,7 @@ const SingleStore = () => {
           if (res.status === 200) {
             const availableTractors = res.data.filter(
               (tractor: Inventory) =>
-                !storeDetails?.TractorInStore.some(
+                !storeDetails.TractorInStore.some(
                   (existingTractor) =>
                     existingTractor.baseTractorId === tractor.tractor.id
                 )
@@ -150,10 +159,37 @@ const SingleStore = () => {
         .finally(() => {
           setFetchingRoles(false);
         });
-    } else errorMessage("Admin not logged in");
+    }
   }
 
-  // Handle date selection with the chosen year
+  function fetchAllServices() {
+    if (access_token && storeDetails) {
+      setFetchingServices(true);
+      renderInstance
+        .get("/service", {
+          headers: { Authorization: `Bearer ${access_token}` },
+        })
+        .then((res) => {
+          if (res.status === 200) {
+            const availableServices = res.data.filter(
+              (service: Service) =>
+                !storeDetails.ServiceInStore?.some(
+                  (existingService) =>
+                    existingService.baseServiceId === service.id
+                )
+            );
+            setAllServices(availableServices);
+          }
+        })
+        .catch((err) => {
+          errorMessage("Error in fetching service lists");
+        })
+        .finally(() => {
+          setFetchingServices(false);
+        });
+    }
+  }
+
   const handleExpiryDateChange = (newDate: Date | undefined) => {
     if (newDate) {
       const updatedDate = setYear(newDate, expiry_date_year);
@@ -163,8 +199,11 @@ const SingleStore = () => {
   };
 
   useEffect(() => {
-    fetchAllTractors();
-  }, []);
+    if (storeDetails) {
+      fetchAllTractors();
+      fetchAllServices();
+    }
+  }, [storeDetails]);
 
   async function saveTractor() {
     if (!hourlyPrice) {
@@ -230,18 +269,84 @@ const SingleStore = () => {
       });
   }
 
-  //   Add tractor to store functions
+  // Handle service selection
+  const handleServiceSelect = (service: Service) => {
+    setSelectedServiceId(service.id);
+    setServiceFormData({
+      name: service.name,
+      description: service.description ?? "", // THIS IS THE FIX
+      hourly_price: "",
+      category: service.category || "",
+      image_url: Array.isArray(service.images) ? service.images[0] : (service.images as string) || "",
+    });
+    setServiceMinPrice(Number(service.min_price) || 0);
+    setServiceMaxPrice(Number(service.max_price) || 1000);
+  };
+
+  // Save service to store
+  async function saveService() {
+    if (!serviceFormData.hourly_price) {
+      errorMessage("Hourly price is required");
+      return;
+    }
+
+    const hourlyPriceNum = parseFloat(serviceFormData.hourly_price);
+    if (hourlyPriceNum > serviceMaxPrice || hourlyPriceNum < serviceMinPrice) {
+      errorMessage(
+        `Price should be between ${serviceMinPrice} and ${serviceMaxPrice}`
+      );
+      return;
+    }
+
+    if (!selectedServiceId) {
+      errorMessage("Please select a service");
+      return;
+    }
+
+    const addServiceDto = {
+      service_ids: [selectedServiceId],
+      hourly_price: serviceFormData.hourly_price,
+      store_id: slug,
+    };
+
+    setCreatingService(true);
+    renderInstance
+      .post("/store/addServices", addServiceDto, {
+        headers: { Authorization: `Bearer ${access_token}` },
+      })
+      .then((res) => {
+        successMessage("Service successfully added to store!");
+        setServiceOpen(false);
+        setSelectedServiceId("");
+        setServiceFormData({
+          name: "",
+          description: "",
+          hourly_price: "",
+          category: "",
+          image_url: "",
+        });
+        fetchStoreDetails();
+        refresh();
+      })
+      .catch((err) => {
+        console.error("Error adding service:", err);
+        errorMessage("Some error occurred while adding service");
+      })
+      .finally(() => {
+        setCreatingService(false);
+      });
+  }
 
   useEffect(() => {
-    fetchStoreDetails();
+    if(slug) fetchStoreDetails();
   }, [slug]);
 
   if (fetchingStoreDetails) {
-    return <div>Loading...</div>;
+    return <div className="flex items-center justify-center h-screen"><CircularProgress /></div>;
   }
 
   if (!storeDetails) {
-    return <div>No store details details available.</div>;
+    return <div className="text-center p-10">No store details available.</div>;
   }
 
   return (
@@ -249,13 +354,11 @@ const SingleStore = () => {
       <div className="w-full grid grid-cols-3 gap-[20px]">
         <div className="px-[20px] py-[20px] rounded-md bg-white flex flex-col gap-[10px]">
           <p className="text-[16px] text-gray-600">Store name</p>
-
           <p className="text-[20px] font-[600]">{storeDetails.name}</p>
         </div>
 
         <div className="px-[20px] py-[20px] rounded-md bg-white flex flex-col gap-[10px]">
           <p className="text-[16px] text-gray-600">Store owner</p>
-
           <p className="text-[20px] font-[600]">
             {storeDetails.agentOwner
               ? `${storeDetails.agentOwner.user.first_name} ${
@@ -269,7 +372,6 @@ const SingleStore = () => {
 
         <div className="px-[20px] py-[20px] rounded-md bg-white flex flex-col gap-[10px]">
           <p className="text-[16px] text-gray-600">Opening time</p>
-
           <p className="text-[20px] font-[600]">
             {formatTimeOnly(storeDetails.opening_time)}
           </p>
@@ -277,7 +379,6 @@ const SingleStore = () => {
 
         <div className="px-[20px] py-[20px] rounded-md bg-white flex flex-col gap-[10px]">
           <p className="text-[16px] text-gray-600">Closing time</p>
-
           <p className="text-[20px] font-[600]">
             {formatTimeOnly(storeDetails.closing_time)}
           </p>
@@ -285,7 +386,6 @@ const SingleStore = () => {
 
         <div className="px-[20px] py-[20px] rounded-md bg-white flex flex-col gap-[10px]">
           <p className="text-[16px] text-gray-600">Closed days</p>
-
           <p className="text-[20px] font-[600]">
             {storeDetails.closing_days.map((day) => {
               return <li key={day}>{day}</li>;
@@ -295,7 +395,6 @@ const SingleStore = () => {
 
         <div className="px-[20px] py-[20px] rounded-md bg-white flex flex-col gap-[10px] col-span-2">
           <p className="text-[16px] text-gray-600">Description</p>
-
           <p className="text-[20px] font-[600]">{storeDetails.description}</p>
         </div>
       </div>
@@ -315,6 +414,7 @@ const SingleStore = () => {
         )}
       </div>
 
+      {/* Tractors Section */}
       <div className="w-full space-y-2">
         <div className="w-full flex items-center justify-between gap-5 flex-wrap">
           <p className="text-xl font-medium">
@@ -396,9 +496,9 @@ const SingleStore = () => {
                             >
                               <path
                                 stroke="currentColor"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
                                 d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
                               />
                             </svg>
@@ -566,7 +666,7 @@ const SingleStore = () => {
                             setSelectedTractorId(details.tractor_id);
                             setHMinPrice(Number(details.min_price));
                             setMaxPrice(Number(details.max_price));
-                            set_inventoey_id(details.id);
+                            set_inventory_id(details.id);
                           }}
                         >
                           Select
@@ -649,13 +749,13 @@ const SingleStore = () => {
           )}
         </div>
       </div>
-      {/* Attachment */}
+
+      {/* Attachment Section */}
       <div className="w-full space-y-2">
         <div className="w-full flex items-center justify-between gap-5 flex-wrap">
           <p className="text-xl font-medium">
             Total attachment: {storeDetails.AttachmentInStore.length}
           </p>
-
           <AddAttachment alreadyTractors={storeDetails.AttachmentInStore} />
         </div>
 
@@ -719,108 +819,205 @@ const SingleStore = () => {
         </div>
       </div>
 
-      {/* Services */}
+      {/* Services Section */}
       <div className="w-full space-y-2">
-  {/* Header row */}
-  <div className="w-full flex items-center justify-between gap-5 flex-wrap">
-    {/* <p className="text-xl font-medium">
-      Total services: {storeDetails.ServiceInStore?.length || 0}
-    </p> */}
+        <div className="w-full flex items-center justify-between gap-5 flex-wrap">
+          <p className="text-xl font-medium">
+            Total services: {storeDetails?.ServiceInStore?.length || 0}
+          </p>
 
-    <AddService
-  storeId={storeDetails.id}
-  alreadyServices={storeDetails?.ServiceInStore ?? []}
-/>
-
-  </div>
-
-  {/* Service cards grid */}
-  <div className="w-full grid grid-cols-3 gap-[20px]">
-    {!storeDetails?.ServiceInStore || storeDetails.ServiceInStore.length === 0 ? (
-      <p>You have not added any services</p>
-    ) : (
-      storeDetails.ServiceInStore.map((srv, i) => {
-        // Safely get the service data
-        const service = srv.baseService || {};
-        
-        // Safely get the image URL with better error handling
-        let serviceImage = "https://via.placeholder.com/300x200?text=No+Image";
-        
-        if (service.images) {
-          if (Array.isArray(service.images) && service.images.length > 0) {
-            serviceImage = service.images[0];
-          } else if (typeof service.images === "string") {
-            serviceImage = service.images;
-          }
-        }
-
-        return (
-          <div
-            key={i}
-            className="border-2 rounded-xl w-full flex flex-col gap-3 p-3"
-          >
-            {/* Image - Use Swiper like attachment section if multiple images exist */}
-            {service.images && Array.isArray(service.images) && service.images.length > 1 ? (
-              <Swiper
-                modules={[Autoplay, Pagination]}
-                spaceBetween={0}
-                slidesPerView={1}
-                loop={true}
-                pagination={true}
-                autoplay={true}
-                className="w-full h-32"
-              >
-                {service.images.map((image, imgIndex) => (
-                  <SwiperSlide key={imgIndex}>
-                    <Image
-                      src={image}
-                      alt="service_image"
-                      className="w-full h-full object-cover rounded-xl"
-                      width={300}
-                      height={400}
-                      unoptimized={true}
-                      onError={(e) => {
-                        e.currentTarget.src = "https://via.placeholder.com/300x200?text=Image+Error";
-                      }}
-                    />
-                  </SwiperSlide>
-                ))}
-              </Swiper>
-            ) : (
-              <Image
-                src={serviceImage}
-                alt="service_image"
-                className="w-full h-32 object-cover rounded-xl"
-                width={300}
-                height={400}
-                unoptimized={true}
-                onError={(e) => {
-                  e.currentTarget.src = "https://via.placeholder.com/300x200?text=Image+Error";
+          <Dialog open={serviceOpen} onOpenChange={setServiceOpen}>
+            <DialogTrigger asChild>
+              <button
+                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto"
+                onClick={() => {
+                  setServiceOpen(true);
                 }}
-              />
-            )}
+              >
+                <AddIcon />
+                <span>Add service</span>
+              </button>
+            </DialogTrigger>
 
-            {/* Service details */}
-            <div className="overflow-hidden">
-              <strong className="block truncate text-sm">
-                {service.name || "Unnamed Service"}
-              </strong>
-              <p className="text-xs text-gray-600 line-clamp-2 h-10 overflow-hidden">
-                <span>
-                  {service.description || "No description available"}
-                </span>
-              </p>
-              <p className="text-sm font-medium mt-1">
-                <strong>Price:</strong> <span>{srv.price || "N/A"}</span>
-              </p>
+            <DialogContent
+              className="bg-white max-h-[90vh] w-[90vw] max-w-[900px] overflow-auto"
+              style={{ scrollbarWidth: "none" }}
+            >
+              <DialogHeader>
+                <p className="text-2xl font-bold text-center">
+                  {selectedServiceId
+                    ? "Enter service details"
+                    : "Select a service"}
+                </p>
+              </DialogHeader>
 
-            </div>
-          </div>
-        );
-      })
-    )}
-  </div>
-</div>
+              <div
+                className={`bg-white rounded-xl p-[30px] ${
+                  !selectedServiceId && "grid grid-cols-4"
+                } gap-5 relative overflow-auto`}
+                style={{ scrollbarWidth: "none" }}
+              >
+                {fetchingServices ? (
+                  <div className="flex items-center justify-center col-span-4 py-10">
+                    <CircularProgress />
+                  </div>
+                ) : allServices.length === 0 ? (
+                  <div className="flex items-center justify-center col-span-4 py-10">
+                    <p>No new services available to add</p>
+                  </div>
+                ) : selectedServiceId ? (
+                  <div className="w-full max-w-md mx-auto h-full flex flex-col items-center justify-center gap-5">
+                    <div className="bg-gray-50 p-4 rounded-lg w-full">
+                      <h4 className="font-medium">Selected Service:</h4>
+                      <p className="text-sm text-gray-600 mt-1">
+                        <strong>Name:</strong> {serviceFormData.name}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        <strong>Description:</strong>{" "}
+                        {serviceFormData.description}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        <strong>Price Range:</strong> ${serviceMinPrice} - $
+                        {serviceMaxPrice}/hour
+                      </p>
+                    </div>
+
+                    <div className="space-y-2 w-full">
+                      <Label htmlFor="serviceHourlyPrice">
+                        Hourly Price ($)
+                      </Label>
+                      <Input
+                        id="serviceHourlyPrice"
+                        type="number"
+                        placeholder={`Enter price between ${serviceMinPrice} - ${serviceMaxPrice}`}
+                        value={serviceFormData.hourly_price}
+                        min={serviceMinPrice}
+                        max={serviceMaxPrice}
+                        onChange={(e) =>
+                          setServiceFormData((prev) => ({
+                            ...prev,
+                            hourly_price: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    
+                    <div className="w-full flex gap-2 mt-4">
+                        <Button variant="outline" className="w-full" onClick={() => setSelectedServiceId("")}>Back</Button>
+                        <Button
+                            className="w-full"
+                            onClick={saveService}
+                            disabled={
+                            !serviceFormData.hourly_price || creatingService
+                            }
+                        >
+                            {creatingService ? "Adding..." : "Add to Store"}
+                        </Button>
+                    </div>
+                  </div>
+                ) : (
+                  allServices.map((service, index) => {
+                    const serviceImage = Array.isArray(service.images) ? service.images[0] : service.images;
+                    return (
+                      <div
+                        key={index}
+                        className="border-2 rounded-xl flex flex-col gap-3 p-3 hover:shadow-lg transition-shadow cursor-pointer"
+                        onClick={() => handleServiceSelect(service)}
+                      >
+                        <div className="w-full h-32 relative">
+                            <Image
+                                src={serviceImage || "https://via.placeholder.com/300"}
+                                alt="service_image"
+                                className="w-full h-full object-cover rounded-xl"
+                                fill
+                                unoptimized={true}
+                            />
+                        </div>
+                        <div className="flex-1 flex flex-col">
+                          <h3 className="font-semibold text-sm">
+                            {service.name}
+                          </h3>
+                          <p className="text-xs text-gray-600 mt-1 line-clamp-2 flex-grow">
+                            {service.description}
+                          </p>
+                          <p className="text-xs text-green-600 mt-1">
+                            ${service.min_price || 0} - $
+                            {service.max_price || 'N/A'}/hour
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleServiceSelect(service);
+                          }}
+                        >
+                          Select
+                        </Button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+              <Backdrop
+                sx={{
+                  color: "#fff",
+                  zIndex: (theme) => theme.zIndex.drawer + 1,
+                }}
+                open={creatingService}
+              >
+                {creatingService && <p>Adding service to store...</p>}
+              </Backdrop>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <div className="w-full grid grid-cols-3 gap-[20px]">
+          {!storeDetails?.ServiceInStore ||
+          storeDetails.ServiceInStore.length === 0 ? (
+            <p>You have not added any services</p>
+          ) : (
+            storeDetails.ServiceInStore.map((srv, i) => {
+              const service = srv.baseService;
+              if(!service) return null; // Defensive check
+
+              const serviceImage = Array.isArray(service.images) ? service.images[0] : service.images;
+              return (
+                <div
+                  key={i}
+                  className="border-2 rounded-xl w-full flex flex-col gap-3 p-3"
+                >
+                  <div className="w-full h-32 relative">
+                    <Image
+                        src={serviceImage || "https://via.placeholder.com/300"}
+                        alt="service_image"
+                        className="w-full h-full object-cover rounded-xl"
+                        fill
+                        unoptimized={true}
+                    />
+                  </div>
+                  <div className="overflow-hidden">
+                    <strong className="block truncate text-sm">
+                      {service.name || "Unnamed Service"}
+                    </strong>
+                    <p className="text-xs text-gray-600 line-clamp-2 h-10 overflow-hidden">
+                      <span>
+                        {service.description || "No description available"}
+                      </span>
+                    </p>
+                    <p className="text-sm font-medium mt-1">
+                      <strong>Price:</strong>{" "}
+                      <span>
+                        ${(srv as any).hourly_price || srv.price || "N/A"}/hour
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
     </div>
   );
 };

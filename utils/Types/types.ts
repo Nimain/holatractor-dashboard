@@ -196,6 +196,7 @@ export interface Attachment {
   id: string;
   name: string;
   description: string;
+    category?: string;
   es_name?: String;
   es_description?: string;
   ay_name?: string;
@@ -224,7 +225,10 @@ export interface Service {
   base_id: string;
   createdAt: Date;
   updatedAt: Date;
+  min_price?: string | number; // Make optional if it can be null
+  max_price?: string | number; // Make optional if it can be null
   ServiceInStore: ServiceInStore[];
+  category?:string
 }
 
 // Service inside a Store

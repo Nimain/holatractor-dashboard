@@ -103,6 +103,7 @@ const AddAttachment = ({
       });
   }, [access_token]);
 
+
   // Handle attachment selection
   const handleAttachmentSelect = (attachment: Attachment) => {
     setSelectedAttachment(attachment);

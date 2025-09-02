@@ -214,7 +214,7 @@ const FarmBooking = () => {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white border-none w-[700px]">
           <Card className="bg-transparent border-0 shadow-none">
-            <CardHeader >
+            <CardHeader>
               <CardTitle className="text-2xl font-bold text-white">
                 <TranslatedText
                   greetings={farmDetailsTranslations.giveFarmDetails}
@@ -233,7 +233,7 @@ const FarmBooking = () => {
                   onChange={(e) => setFarmName(e.target.value)}
                   required={true}
                   readOnly={adding}
-                  className="bg-transparent  placeholder:text-gray-400"
+                  className="bg-transparent text-white placeholder:text-gray-400" // Added text-white here
                 />
               </div>
               <div className="space-y-2">
@@ -245,7 +245,7 @@ const FarmBooking = () => {
                 <Textarea
                   value={farmDescription}
                   onChange={(e) => setFarmDescription(e.target.value)}
-                  className="resize-none bg-transparent  placeholder:text-gray-400"
+                  className="resize-none bg-transparent text-white placeholder:text-gray-400" // Added text-white here
                   readOnly={adding}
                 />
               </div>
@@ -254,7 +254,7 @@ const FarmBooking = () => {
               <Button
                 onClick={handleAddFarm}
                 disabled={adding}
-                className=" bg-yellow-500 hover:bg-yellow-700 text-white font-bold"
+                className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold"
               >
                 {adding ? (
                   <CircularProgress size={24} color="inherit" />
