@@ -243,6 +243,7 @@ export interface ServiceInStore {
   baseService: Service;
   base: Base;
   store: Store;
+  hourly_price:number;
 }
 
 export interface BookingTractor {
