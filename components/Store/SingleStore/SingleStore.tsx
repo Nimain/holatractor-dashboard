@@ -823,7 +823,7 @@ const SingleStore = () => {
             })
           )}
         </div>
-      </div>                                                                                                                                                                             match with the add service section
+      </div>                                                                                                                                                                          
     </div>
   );
 };
