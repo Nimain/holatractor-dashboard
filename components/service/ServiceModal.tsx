@@ -29,7 +29,11 @@ interface Service {
   category: Category;
 }
 
-export default function ServiceSection() {
+interface ServiceSectionProps {
+  theme?: "light" | "dark";
+}
+
+export default function ServiceSection({ theme = "light" }: ServiceSectionProps) {
   const [services, setServices] = useState<Service[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,36 +56,45 @@ export default function ServiceSection() {
   const rowLayout =
     "grid grid-cols-[60px_120px_2fr_2fr_120px_2fr_160px] items-center gap-x-4 p-5";
 
+  // Theme classes
+  const bgColor = theme === "dark" ? "bg-gray-800" : "bg-white";
+  const textColor = theme === "dark" ? "text-white" : "text-gray-900";
+  const cardBg = theme === "dark" ? "bg-gray-700" : "bg-[#fafafa]";
+  const headerBg = theme === "dark" ? "bg-gray-600" : "bg-[#ededed]";
+  const borderColor = theme === "dark" ? "border-gray-600" : "border-gray-200";
+  const inputBg = theme === "dark" ? "bg-gray-600 text-white" : "bg-white text-gray-900";
+
   // Function to generate slug from name
   const generateSlug = (name: string) => {
     return name
       .toLowerCase()
       .trim()
-      .replace(/[^\w\s-]/g, '') // Remove special characters
-      .replace(/[\s_-]+/g, '-') // Replace spaces, underscores, multiple hyphens with single hyphen
-      .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+      .replace(/[^\w\s-]/g, "") // Remove special characters
+      .replace(/[\s_-]+/g, "-") // Replace spaces, underscores, multiple hyphens with single hyphen
+      .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
   };
 
   // Debounced slug check
-  const [slugCheckTimeout, setSlugCheckTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [slugCheckTimeout, setSlugCheckTimeout] =
+    useState<NodeJS.Timeout | null>(null);
 
   // Function to check if slug is available via API
   const checkSlugAvailability = async (slug: string) => {
     if (!slug || !access_token) return true;
 
     try {
-      const response = await renderInstance.get(`/services/check-slug/${slug}`, {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      });
-      
-      // Assuming API returns { available: boolean } or { exists: boolean }
-      // Adjust based on your actual API response
+      const response = await renderInstance.get(
+        `/services/check-slug/${slug}`,
+        {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+          },
+        }
+      );
+
       return response.data.available !== false && response.data.exists !== true;
     } catch (error) {
       console.error("Error checking slug:", error);
-      // If API doesn't exist or fails, just return true to not block the user
       return true;
     }
   };
@@ -92,10 +105,8 @@ export default function ServiceSection() {
     let finalSlug = baseSlug;
     let counter = 1;
 
-    // Check if base slug is available
     let isAvailable = await checkSlugAvailability(finalSlug);
-    
-    // If not available, try with numbers
+
     while (!isAvailable && counter <= 10) {
       finalSlug = `${baseSlug}-${counter}`;
       isAvailable = await checkSlugAvailability(finalSlug);
@@ -105,33 +116,29 @@ export default function ServiceSection() {
     return finalSlug;
   };
 
-  // Handle name change with immediate slug generation (no API check)
+  // Handle name change with immediate slug generation
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newName = e.target.value;
-    
-    // Immediately update name and generate basic slug (no API check)
     const basicSlug = newName.trim() ? generateSlug(newName) : "";
     setForm({ ...form, name: newName, slug: basicSlug });
 
-    // Clear previous timeout
     if (slugCheckTimeout) {
       clearTimeout(slugCheckTimeout);
     }
 
-    // Only check API availability after user stops typing for 1 second
     if (newName.trim()) {
       const newTimeout = setTimeout(async () => {
         setCheckingSlug(true);
         try {
           const uniqueSlug = await generateUniqueSlug(newName);
-          setForm(prev => ({ ...prev, slug: uniqueSlug }));
+          setForm((prev) => ({ ...prev, slug: uniqueSlug }));
         } catch (error) {
           console.error("Error generating unique slug:", error);
         } finally {
           setCheckingSlug(false);
         }
       }, 1000);
-      
+
       setSlugCheckTimeout(newTimeout);
     }
   };
@@ -146,7 +153,7 @@ export default function ServiceSection() {
     setCheckingSlug(true);
     try {
       const uniqueSlug = await generateUniqueSlug(form.name);
-      setForm(prev => ({ ...prev, slug: uniqueSlug }));
+      setForm((prev) => ({ ...prev, slug: uniqueSlug }));
     } catch (error) {
       console.error("Error regenerating slug:", error);
       errorMessage("Failed to regenerate slug");
@@ -179,7 +186,6 @@ export default function ServiceSection() {
         },
       })
       .then((res) => {
-        console.log("Services data:", res.data);
         setServices(res.data);
       })
       .catch((err) => {
@@ -221,29 +227,27 @@ export default function ServiceSection() {
       return;
     }
 
-    if (
-      !form.name ||
-      !form.slug ||
-      !form.description ||
-      !form.price ||
-      !form.category_id
-    ) {
+    if (!form.name || !form.slug || !form.description || !form.price || !form.category_id) {
       errorMessage("Please fill all required fields");
       return;
     }
 
     setAddingService(true);
     try {
+      // Get the category image as fallback
+      const selectedCategory = categories.find(cat => cat.id === form.category_id);
+      const fallbackImage = selectedCategory?.image || "";
+
       const payload = {
         name: form.name,
         slug: form.slug,
         description: form.description,
-        price: form.price,
+        price: form.price.replace('$', '').trim(), // Remove dollar sign if present
         category_id: form.category_id,
-        image: form.image || null,
+        image: form.image.trim() || fallbackImage, // Use form image or fallback to category image
       };
 
-      console.log("Sending payload:", payload);
+      console.log("Sending payload to backend:", payload);
 
       const res = await renderInstance.post("/services", payload, {
         headers: {
@@ -262,7 +266,7 @@ export default function ServiceSection() {
       });
       setOpenModal(false);
       successMessage("Service added successfully!");
-      
+
       fetchServices();
     } catch (err: any) {
       console.error("Error adding service:", err);
@@ -272,10 +276,9 @@ export default function ServiceSection() {
     }
   };
 
-  // Function to check if image URL is valid and accessible
+  // Function to check if image URL is valid
   const isImageAvailable = (url: string | null | undefined) => {
     if (!url) return false;
-    
     try {
       new URL(url);
       return true;
@@ -286,22 +289,22 @@ export default function ServiceSection() {
 
   // Function to get the appropriate image to display
   const getDisplayImage = (service: Service) => {
-    // First try service image
     if (isImageAvailable(service.image)) {
       return service.image;
     }
-    
-    // Then try category image
     if (isImageAvailable(service.category?.image)) {
       return service.category.image;
     }
-    
-    // No image available
     return null;
   };
 
+  // Format price for display
+  const formatPrice = (price: string) => {
+    return `$${price}`;
+  };
+
   return (
-    <div className="w-full py-5">
+    <div className={`w-full py-5 ${bgColor} ${textColor}`}>
       <Backdrop
         sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
         open={loading || addingService}
@@ -323,7 +326,7 @@ export default function ServiceSection() {
       </div>
 
       <div
-        className={`${rowLayout} text-lg font-semibold bg-[#ededed] rounded mt-8`}
+        className={`${rowLayout} text-lg font-semibold ${headerBg} rounded mt-8 ${textColor}`}
       >
         <p>Sl No</p>
         <p>Image</p>
@@ -342,15 +345,14 @@ export default function ServiceSection() {
         ) : (
           services.map((service, index) => {
             const displayImage = getDisplayImage(service);
-            
+
             return (
               <div
                 key={service.id}
-                className={`${rowLayout} text-base bg-[#fafafa] rounded cursor-pointer transition-colors duration-300 hover:bg-white`}
+                className={`${rowLayout} text-base ${cardBg} rounded cursor-pointer transition-colors duration-300 hover:${theme === "dark" ? "bg-gray-600" : "bg-white"} ${textColor} ${borderColor} border`}
               >
                 <p>{index + 1}</p>
 
-                {/* Updated Image Display - Uses category image as fallback */}
                 <div className="w-[50px] h-[50px] flex items-center justify-center">
                   {displayImage ? (
                     <div className="w-full h-full relative">
@@ -360,20 +362,15 @@ export default function ServiceSection() {
                         fill
                         className="rounded-full object-cover"
                         onError={(e) => {
-                          console.error("Image failed to load:", displayImage);
                           const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          
+                          target.style.display = "none";
                           const parent = target.parentElement;
-                          if (parent && !parent.querySelector('.fallback-icon')) {
-                            const fallback = document.createElement('div');
-                            fallback.className = 'fallback-icon w-[50px] h-[50px] bg-gray-300 rounded-full flex items-center justify-center';
+                          if (parent && !parent.querySelector(".fallback-icon")) {
+                            const fallback = document.createElement("div");
+                            fallback.className = "fallback-icon w-[50px] h-[50px] bg-gray-300 rounded-full flex items-center justify-center";
                             fallback.innerHTML = '<svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>';
                             parent.appendChild(fallback);
                           }
-                        }}
-                        onLoad={() => {
-                          console.log("Image loaded successfully:", displayImage);
                         }}
                       />
                     </div>
@@ -386,7 +383,7 @@ export default function ServiceSection() {
 
                 <p className="truncate text-xs">{service.id}</p>
                 <p className="truncate">{service.name}</p>
-                <p>{service.price}</p>
+                <p>{formatPrice(service.price)}</p>
                 <p className="truncate">{service.category?.name || "N/A"}</p>
                 <p className="text-sm">
                   {new Date(service.createdAt).toLocaleDateString("en-GB", {
@@ -403,26 +400,30 @@ export default function ServiceSection() {
 
       {openModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-[450px] relative max-h-[90vh] overflow-y-auto">
+          <div className={`${bgColor} rounded-lg p-6 w-[450px] relative max-h-[90vh] overflow-y-auto ${textColor}`}>
             <h2 className="text-xl font-semibold mb-4">Add New Service</h2>
-            
+
             <div className="flex flex-col gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Service Name *</label>
+                <label className="block text-sm font-medium mb-1">
+                  Service Name *
+                </label>
                 <input
                   type="text"
                   placeholder="Service Name (e.g., Land Preparation)"
                   value={form.name}
                   onChange={handleNameChange}
-                  className="w-full border rounded p-2"
+                  className={`w-full border rounded p-2 ${inputBg} ${borderColor}`}
                   required
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  URL Slug * 
-                  <span className="text-xs text-gray-500 ml-1">(Auto-generated from name)</span>
+                  URL Slug *
+                  <span className="text-xs text-gray-500 ml-1">
+                    (Auto-generated from name)
+                  </span>
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -430,7 +431,7 @@ export default function ServiceSection() {
                     placeholder="Auto-generated slug"
                     value={form.slug}
                     onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                    className="flex-1 border rounded p-2 bg-gray-50"
+                    className={`flex-1 border rounded p-2 ${inputBg} ${borderColor}`}
                     required
                   />
                   <button
@@ -440,53 +441,70 @@ export default function ServiceSection() {
                     className="px-3 py-2 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                     title="Regenerate slug from name"
                   >
-                    <RefreshCw size={16} className={checkingSlug ? "animate-spin" : ""} />
+                    <RefreshCw
+                      size={16}
+                      className={checkingSlug ? "animate-spin" : ""}
+                    />
                   </button>
                 </div>
                 {form.slug && (
                   <p className="text-xs text-gray-500 mt-1">
-                    URL will be: <span className="font-mono bg-gray-100 px-1 rounded">/{form.slug}</span>
+                    URL will be:{" "}
+                    <span className="font-mono bg-gray-100 px-1 rounded">
+                      /{form.slug}
+                    </span>
                   </p>
                 )}
                 {checkingSlug && (
-                  <p className="text-xs text-blue-500 mt-1">Checking availability...</p>
+                  <p className="text-xs text-blue-500 mt-1">
+                    Checking availability...
+                  </p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Description *</label>
+                <label className="block text-sm font-medium mb-1">
+                  Description *
+                </label>
                 <textarea
                   placeholder="Description"
                   value={form.description}
                   onChange={(e) =>
                     setForm({ ...form, description: e.target.value })
                   }
-                  className="w-full border rounded p-2"
+                  className={`w-full border rounded p-2 ${inputBg} ${borderColor}`}
                   rows={3}
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Price *</label>
+                <label className="block text-sm font-medium mb-1">
+                  Price *
+                </label>
                 <input
                   type="text"
-                  placeholder="Price (e.g 30$)"
+                  placeholder="Price (e.g 30)"
                   value={form.price}
                   onChange={(e) => setForm({ ...form, price: e.target.value })}
-                  className="w-full border rounded p-2"
+                  className={`w-full border rounded p-2 ${inputBg} ${borderColor}`}
                   required
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter numbers only (e.g., 30). Dollar sign will be added automatically.
+                </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Category *</label>
+                <label className="block text-sm font-medium mb-1">
+                  Category *
+                </label>
                 <select
                   value={form.category_id}
                   onChange={(e) =>
                     setForm({ ...form, category_id: e.target.value })
                   }
-                  className="w-full border rounded p-2"
+                  className={`w-full border rounded p-2 ${inputBg} ${borderColor}`}
                   required
                 >
                   <option value="">Select Category</option>
@@ -499,16 +517,18 @@ export default function ServiceSection() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Image URL</label>
+                <label className="block text-sm font-medium mb-1">
+                  Image URL (Optional)
+                </label>
                 <input
                   type="url"
                   placeholder="https://example.com/image.jpg"
                   value={form.image}
                   onChange={(e) => setForm({ ...form, image: e.target.value })}
-                  className="w-full border rounded p-2"
+                  className={`w-full border rounded p-2 ${inputBg} ${borderColor}`}
                 />
                 <p className="text-sm text-gray-500 mt-1">
-                  If no image is provided, category image will be used as fallback
+                  If no image is provided, the category image will be used automatically
                 </p>
                 {form.image && isImageAvailable(form.image) && (
                   <div className="mt-2 w-32 h-32 relative border rounded">
@@ -519,7 +539,7 @@ export default function ServiceSection() {
                       className="object-cover rounded"
                       onError={(e) => {
                         const target = e.target as HTMLElement;
-                        target.style.display = 'none';
+                        target.style.display = "none";
                       }}
                     />
                   </div>
