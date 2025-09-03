@@ -394,6 +394,7 @@ export interface Store {
   agentOwner: Owner;
   creator: User;
   base: Base;
+  service:string;
   rating: Rating[];
   Booking: Booking[];
   TractorInStore: TractorInStore[];

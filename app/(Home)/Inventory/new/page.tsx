@@ -168,6 +168,145 @@ const NewInventory = () => {
     { name: "Guarani", locale: "gn" },
   ];
 
+  // Translation object
+  const translations = {
+    en: {
+      tractorName: "Tractor name",
+      tractorNamePlaceholder: "e.g - John deere",
+      tractorModel: "Tractor model",
+      tractorModelPlaceholder: "e.g - DLIII",
+      selectTractorType: "Select tractor type",
+      selectTractorTypePlaceholder: "Select tractor type",
+      small: "Small",
+      medium: "Medium",
+      large: "Large",
+      selectYear: "Select year of purchase",
+      selectYearPlaceholder: "Select Year",
+      city: "City",
+      cityPlaceholder: "e.g - Berlin",
+      selectCity: "Select city...",
+      tractorDescription: "Tractor description",
+      descriptionPlaceholder: "Type your message here.",
+      priceRange: "Select minimum and maximum price per hour",
+      minPrice: "Min price (in dollar $)",
+      maxPrice: "Max price (in dollar $)",
+      fixedPrice: "Fixed price (in dollar $)",
+      hourlyPricePlaceholder: "Hourly price",
+      dragDrop: "Drag 'n' drop an image here, or click to select one",
+      submit: "Submit",
+      creatingInventory: "Creating inventory",
+      uploadingImage: "Uploading image"
+    },
+    es: {
+      tractorName: "Nombre del tractor",
+      tractorNamePlaceholder: "ej. - John Deere",
+      tractorModel: "Modelo del tractor",
+      tractorModelPlaceholder: "ej. - DLIII",
+      selectTractorType: "Seleccionar tipo de tractor",
+      selectTractorTypePlaceholder: "Seleccionar tipo de tractor",
+      small: "Pequeño",
+      medium: "Mediano",
+      large: "Grande",
+      selectYear: "Seleccionar año de compra",
+      selectYearPlaceholder: "Seleccionar año",
+      city: "Ciudad",
+      cityPlaceholder: "ej. - Berlín",
+      selectCity: "Seleccionar ciudad...",
+      tractorDescription: "Descripción del tractor",
+      descriptionPlaceholder: "Escriba su mensaje aquí.",
+      priceRange: "Seleccionar precio mínimo y máximo por hora",
+      minPrice: "Precio mínimo (en dólares $)",
+      maxPrice: "Precio máximo (en dólares $)",
+      fixedPrice: "Precio fijo (en dólares $)",
+      hourlyPricePlaceholder: "Precio por hora",
+      dragDrop: "Arrastra y suelta una imagen aquí, o haz clic para seleccionar una",
+      submit: "Enviar",
+      creatingInventory: "Creando inventario",
+      uploadingImage: "Subiendo imagen"
+    },
+    ay: {
+      tractorName: "Tractor suti",
+      tractorNamePlaceholder: "amuyu - John Deere",
+      tractorModel: "Tractor modelo",
+      tractorModelPlaceholder: "amuyu - DLIII",
+      selectTractorType: "Tractor laya ajlliña",
+      selectTractorTypePlaceholder: "Tractor laya ajlliña",
+      small: "Jisk'a",
+      medium: "Taypi",
+      large: "Jach'a",
+      selectYear: "Aljañ mara ajlliña",
+      selectYearPlaceholder: "Mara ajlliña",
+      city: "Marka",
+      cityPlaceholder: "amuyu - Berlín",
+      selectCity: "Marka ajlliña...",
+      tractorDescription: "Tractor qhanañchawi",
+      descriptionPlaceholder: "Yati amuyt'añama uñt'ayaña.",
+      priceRange: "Sapa hora jisk'a ukat jach'a chani ajlliña",
+      minPrice: "Jisk'a chani (dólar $)",
+      maxPrice: "Jach'a chani (dólar $)",
+      fixedPrice: "Chiqapa chani (dólar $)",
+      hourlyPricePlaceholder: "Hora chani",
+      dragDrop: "Rixiña uñacht'äwi apaniña, jan ukhaxa mayampi ajlliñataki ch'iqtaña",
+      submit: "Apayaña",
+      creatingInventory: "Yänak luraña",
+      uploadingImage: "Rixiña apayaña"
+    },
+    qu: {
+      tractorName: "Tractor suti",
+      tractorNamePlaceholder: "kayhinata - John Deere",
+      tractorModel: "Tractor modelo",
+      tractorModelPlaceholder: "kayhinata - DLIII",
+      selectTractorType: "Tractor laya akllana",
+      selectTractorTypePlaceholder: "Tractor laya akllana",
+      small: "Huch'uy",
+      medium: "Chaupi",
+      large: "Hatun",
+      selectYear: "Rantiy wata akllana",
+      selectYearPlaceholder: "Wata akllana",
+      city: "Llaqta",
+      cityPlaceholder: "kayhinata - Berlín",
+      selectCity: "Llaqta akllana...",
+      tractorDescription: "Tractor willakuy",
+      descriptionPlaceholder: "Kaypi willakuykita qillqay.",
+      priceRange: "Sapa hora aswan pisi hinaspa aswan achka chanin akllana",
+      minPrice: "Aswan pisi chanin (dólar $)",
+      maxPrice: "Aswan achka chanin (dólar $)",
+      fixedPrice: "Mana kuyuq chanin (dólar $)",
+      hourlyPricePlaceholder: "Hora chanin",
+      dragDrop: "Siq'ita kaypi churay otaq ñit'iy huk akllanayku",
+      submit: "Kachay",
+      creatingInventory: "Yachana ruwaspa",
+      uploadingImage: "Siq'i wichay"
+    },
+    gn: {
+      tractorName: "Tractor réra",
+      tractorNamePlaceholder: "techapyrã - John Deere",
+      tractorModel: "Tractor modelo",
+      tractorModelPlaceholder: "techapyrã - DLIII",
+      selectTractorType: "Tractor mba'eichagua poravõ",
+      selectTractorTypePlaceholder: "Tractor mba'eichagua poravõ",
+      small: "Michĩ",
+      medium: "Mbytepegua",
+      large: "Tuicha",
+      selectYear: "Jogua ary poravõ",
+      selectYearPlaceholder: "Ary poravõ",
+      city: "Táva",
+      cityPlaceholder: "techapyrã - Berlín",
+      selectCity: "Táva poravõ...",
+      tractorDescription: "Tractor mba'emimi",
+      descriptionPlaceholder: "Ko'ápe ehai ne ñe'ẽ.",
+      priceRange: "Aravo pukukue michĩvéva ha tuichavéva poravõ",
+      minPrice: "Tepykue michĩvéva (dólar $)",
+      maxPrice: "Tepykue tuichavéva (dólar $)",
+      fixedPrice: "Tepykue oñembokatuetéva (dólar $)",
+      hourlyPricePlaceholder: "Aravo tepykue",
+      dragDrop: "Ta'ãnga ko'ápe gueraa térã eikutu eiporavo hag̃ua",
+      submit: "Mondo",
+      creatingInventory: "Mba'erepy moheñoihína",
+      uploadingImage: "Ta'ãnga hupihápe"
+    }
+  };
+
   function fetchAllCity() {
     setFetchingCity(true);
     renderInstance
@@ -187,6 +326,235 @@ const NewInventory = () => {
     fetchAllCity()
   },[])
 
+  const currentTranslation = translations[activeLanguage as keyof typeof translations];
+
+  const renderForm = () => (
+    <Card className="max-w-[600px] w-full p-5">
+      <CardContent className="max-w-[600px] w-full space-y-4">
+
+        <div className="max-w-[600px] mx-auto">
+          <div
+            {...getRootProps()}
+            className="dropzone text-center border-dashed border-2 border-gray-300 p-6 rounded-md w-full"
+          >
+            <input {...getInputProps()} />
+            <p className="text-gray-600">
+              {currentTranslation.dragDrop}
+            </p>
+          </div>
+        </div>
+
+        <div className="w-full max-w-[600px] my-[4px] flex items-center flex-wrap gap-5 mx-auto">
+          {selectedImage.length > 0 &&
+            selectedImage.map((image, index) => {
+              return (
+                <Image
+                  alt="image"
+                  src={URL.createObjectURL(image)}
+                  key={index}
+                  width={80}
+                  height={80}
+                  className="object-cover w-[80px] h-[80px] cursor-pointer rounded-md"
+                  unoptimized={true}
+                />
+              );
+            })}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="tractor_name">{currentTranslation.tractorName}</Label>
+          <Input
+            id="tractor_name"
+            className="w-full"
+            placeholder={currentTranslation.tractorNamePlaceholder}
+            value={tractorName}
+            onChange={(e) => {
+              setTractorName(e.target.value);
+            }} />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="tractor_model">{currentTranslation.tractorModel}</Label>
+          <Input
+            id="tractor_model"
+            className="w-full"
+            placeholder={currentTranslation.tractorModelPlaceholder}
+            value={tractorModel}
+            onChange={(e) => {
+              setTractorModel(e.target.value);
+            }} />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="tractor_type">{currentTranslation.selectTractorType}</Label>
+          <Select
+            onValueChange={(value) => setTractorType(value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={currentTranslation.selectTractorTypePlaceholder} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={"small"}>
+                {currentTranslation.small}
+              </SelectItem>
+              <SelectItem value={"medium"}>
+                {currentTranslation.medium}
+              </SelectItem>
+              <SelectItem value={"large"}>
+                {currentTranslation.large}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="tractor_year">{currentTranslation.selectYear}</Label>
+          <Select
+            onValueChange={(value) => setDobDate(value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={currentTranslation.selectYearPlaceholder} />
+            </SelectTrigger>
+            <SelectContent>
+              {[...Array(20)].map((_, index) => {
+                const yearValue = new Date().getFullYear() - index
+                return (
+                  <SelectItem key={yearValue} value={yearValue.toString()}>
+                    {yearValue}
+                  </SelectItem>
+                )
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="location_city">{currentTranslation.city}</Label>
+          {activeLanguage === "en" ? (
+            fetchingCity ?
+              <p>Fetching cities</p>
+              :
+              allcity.length === 0 ?
+                <p>No cities are available for this country</p>
+                :
+                <div className="w-full space-y-2">
+                  <Popover open={popoverOpenCity} onOpenChange={setPopoverOpenCity}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between"
+                      >
+                        {city
+                          ? allcity.find((cityDetails) => cityDetails.name === city) && city
+                          : currentTranslation.selectCity}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput placeholder="Search country..." />
+                        <CommandList>
+                          <CommandEmpty>No city found.</CommandEmpty>
+                          <CommandGroup className='w-full'>
+                            {allcity.map((cityDetails) => (
+                              <CommandItem
+                                key={cityDetails.name}
+                                value={cityDetails.name}
+                                onSelect={(currentValue) => {
+                                  setCity(cityDetails.name)
+                                  setPopoverOpenCity(false)
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    city === cityDetails.name ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {cityDetails.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+          ) : (
+            <Input
+              id="location_city"
+              className="w-full"
+              placeholder={currentTranslation.cityPlaceholder}
+              value={city}
+              onChange={(e) => {
+                setCity(e.target.value);
+              }} />
+          )}
+        </div>
+
+        <div className="grid w-full gap-1.5">
+          <Label htmlFor="message">{currentTranslation.tractorDescription}</Label>
+          <Textarea
+            placeholder={currentTranslation.descriptionPlaceholder}
+            id="message" value={tractorDesc}
+            className="resize-none w-full"
+            onChange={(e) => {
+              setTractorDesc(e.target.value);
+            }} />
+        </div>
+
+        <div className="space-y-1 w-full">
+          <Label>
+            {currentTranslation.priceRange}
+          </Label>
+          <Slider
+            getAriaLabel={() => 'Temperature range'}
+            value={value}
+            onChange={handleChange}
+            valueLabelDisplay="auto"
+            getAriaValueText={valuetext}
+          />
+        </div>
+
+        <div className="w-full flex flex-col gap-4">
+          <div className="flex flex-col gap-2 w-fit">
+            <Label>{currentTranslation.minPrice}</Label>
+            <Input
+              type="number"
+              placeholder={currentTranslation.hourlyPricePlaceholder}
+              value={value[0]}
+              onChange={(e) => {
+                setValue([Number(e.target.value), value[1]]);
+              }}
+            />
+          </div>
+          <div className="flex flex-col gap-2 w-fit">
+            <Label>{currentTranslation.maxPrice}</Label>
+            <Input
+              type="number"
+              value={value[1]}
+              onChange={(e) => {
+                setValue([value[0], Number(e.target.value)]);
+              }}
+            />
+          </div>
+          <div className="flex flex-col gap-[4px] w-fit">
+            <Label>{currentTranslation.fixedPrice}</Label>
+            <Input
+              type="number"
+              value={fixedPrice}
+              onChange={(e) => {
+                setFixedPrice(parseInt(e.target.value));
+              }}
+            />
+          </div>
+        </div>
+
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="w-full py-10 px-4 flex flex-col gap-5 items-center">
       <Menubar pagename={"New inventory"} />
@@ -195,9 +563,8 @@ const NewInventory = () => {
         sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
         open={imageLoading || loading}
       >
-        {loading && <p>Creating inventory</p>}
-
-        {imageLoading && <p>Uploading image</p>}
+        {loading && <p>{currentTranslation.creatingInventory}</p>}
+        {imageLoading && <p>{currentTranslation.uploadingImage}</p>}
       </Backdrop>
 
       <div className="w-full flex flex-wrap gap-5 items-center justify-center">
@@ -219,920 +586,7 @@ const NewInventory = () => {
         })}
       </div>
 
-      {activeLanguage === "en" && (
-        <Card className="max-w-[600px] w-full p-5">
-          <CardContent className="max-w-[600px] w-full space-y-4">
-
-            <div className="max-w-[600px] mx-auto">
-              <div
-                {...getRootProps()}
-                className="dropzone text-center border-dashed border-2 border-gray-300 p-6 rounded-md w-full"
-              >
-                <input {...getInputProps()} />
-                <p className="text-gray-600">
-                  Drag 'n' drop an image here, or click to select one
-                </p>
-              </div>
-            </div>
-
-            <div className="w-full max-w-[600px] my-[4px] flex items-center flex-wrap gap-5 mx-auto">
-              {selectedImage.length > 0 &&
-                selectedImage.map((image, index) => {
-                  return (
-                    <Image
-                      alt="image"
-                      src={URL.createObjectURL(image)}
-                      key={index}
-                      width={80}
-                      height={80}
-                      className="object-cover w-[80px] h-[80px] cursor-pointer rounded-md"
-                      unoptimized={true}
-                    />
-                  );
-                })}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="tractor_name">Tractor name</Label>
-              <Input
-                id="tractor_name"
-                className="w-full"
-                placeholder='e.g - John deere'
-                value={tractorName}
-                onChange={(e) => {
-                  setTractorName(e.target.value);
-                }} />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="tractor_model">Tractor model</Label>
-              <Input
-                id="tractor_model"
-                className="w-full"
-                placeholder='e.g - DLIII'
-                value={tractorModel}
-                onChange={(e) => {
-                  setTractorModel(e.target.value);
-                }} />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="tractor_type">Select tractor type</Label>
-              <Select
-                onValueChange={(value) => setTractorType(value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select tractor type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={"small"}>
-                    Small
-                  </SelectItem>
-                  <SelectItem value={"medium"}>
-                    Medium
-                  </SelectItem>
-                  <SelectItem value={"large"}>
-                    Large
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="tractor_year">Select year of purchase</Label>
-              <Select
-                onValueChange={(value) => setDobDate(value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {[...Array(20)].map((_, index) => {
-                    const yearValue = new Date().getFullYear() - index
-                    return (
-                      <SelectItem key={yearValue} value={yearValue.toString()}>
-                        {yearValue}
-                      </SelectItem>
-                    )
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="location_city">City</Label>
-                {
-                    fetchingCity ?
-                      <p>Fetching cities</p>
-                      :
-                      allcity.length === 0 ?
-                        <p>No cities are available for this country</p>
-                        :
-                        <div className="w-full space-y-2">
-                          <Popover open={popoverOpenCity} onOpenChange={setPopoverOpenCity}>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                role="combobox"
-                                // aria-expanded={popoverOpen}
-                                className="w-full justify-between"
-                              >
-                                {city
-                                  ? allcity.find((cityDetails) => cityDetails.name === city) && city
-                                  : "Select city..."}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
-                              <Command>
-                                <CommandInput placeholder="Search country..." />
-                                <CommandList>
-                                  <CommandEmpty>No city found.</CommandEmpty>
-                                  <CommandGroup className='w-full'>
-                                    {allcity.map((cityDetails) => (
-                                      <CommandItem
-                                        key={cityDetails.name}
-                                        value={cityDetails.name}
-                                        onSelect={(currentValue) => {
-                                          setCity(cityDetails.name)
-                                          setPopoverOpenCity(false)
-                                        }}
-                                      >
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            city === cityDetails.name ? "opacity-100" : "opacity-0"
-                                          )}
-                                        />
-                                        {cityDetails.name}
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-}
-            </div>
-
-            <div className="grid w-full gap-1.5">
-              <Label htmlFor="message">Tractor description</Label>
-              <Textarea
-                placeholder="Type your message here."
-                id="message" value={tractorDesc}
-                className="resize-none w-full"
-                onChange={(e) => {
-                  setTractorDesc(e.target.value);
-                }} />
-            </div>
-
-            <div className="space-y-1 w-full">
-              <Label>
-                Select minimum and maximum price per hour
-              </Label>
-              <Slider
-                getAriaLabel={() => 'Temperature range'}
-                value={value}
-                onChange={handleChange}
-                valueLabelDisplay="auto"
-                getAriaValueText={valuetext}
-              />
-            </div>
-
-            <div className="w-full flex flex-col gap-4">
-              <div className="flex flex-col gap-2 w-fit">
-                <Label>Min price (in dollar $)</Label>
-                <Input
-                  type="number"
-                  placeholder="Hourly price"
-                  value={value[0]}
-                  onChange={(e) => {
-                    setValue([Number(e.target.value), value[1]]);
-                  }}
-                />
-              </div>
-              <div className="flex flex-col gap-2 w-fit">
-                <Label>Max price (in dollar $)</Label>
-                <Input
-                  type="number"
-                  value={value[1]}
-                  onChange={(e) => {
-                    setValue([value[0], Number(e.target.value)]);
-                  }}
-                />
-              </div>
-              <div className="flex flex-col gap-[4px] w-fit">
-              <Label>Fixed price (in dollar $)</Label>
-              <Input
-                type="number"
-                value={fixedPrice}
-                onChange={(e) => {
-                  setFixedPrice(parseInt(e.target.value));
-                }}
-              />
-            </div>
-            </div>
-
-          </CardContent>
-        </Card>
-      )}
-
-      {activeLanguage === "es" && (
-        <Card className="max-w-[600px] w-full p-5">
-        <CardContent className="max-w-[600px] w-full space-y-4">
-
-          <div className="max-w-[600px] mx-auto">
-            <div
-              {...getRootProps()}
-              className="dropzone text-center border-dashed border-2 border-gray-300 p-6 rounded-md w-full"
-            >
-              <input {...getInputProps()} />
-              <p className="text-gray-600">
-                Drag 'n' drop an image here, or click to select one
-              </p>
-            </div>
-          </div>
-
-          <div className="w-full max-w-[600px] my-[4px] flex items-center flex-wrap gap-5 mx-auto">
-            {selectedImage.length > 0 &&
-              selectedImage.map((image, index) => {
-                return (
-                  <Image
-                    alt="image"
-                    src={URL.createObjectURL(image)}
-                    key={index}
-                    width={80}
-                    height={80}
-                    className="object-cover w-[80px] h-[80px] cursor-pointer rounded-md"
-                    unoptimized={true}
-                  />
-                );
-              })}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tractor_name">Tractor name</Label>
-            <Input
-              id="tractor_name"
-              className="w-full"
-              placeholder='e.g - John deere'
-              value={tractorName}
-              onChange={(e) => {
-                setTractorName(e.target.value);
-              }} />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tractor_model">Tractor model</Label>
-            <Input
-              id="tractor_model"
-              className="w-full"
-              placeholder='e.g - DLIII'
-              value={tractorModel}
-              onChange={(e) => {
-                setTractorModel(e.target.value);
-              }} />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tractor_type">Select tractor type</Label>
-            <Select
-              onValueChange={(value) => setTractorType(value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select tractor type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={"small"}>
-                  Small
-                </SelectItem>
-                <SelectItem value={"medium"}>
-                  Medium
-                </SelectItem>
-                <SelectItem value={"large"}>
-                  Large
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tractor_year">Select year of purchase</Label>
-            <Select
-              onValueChange={(value) => setDobDate(value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Year" />
-              </SelectTrigger>
-              <SelectContent>
-                {[...Array(20)].map((_, index) => {
-                  const yearValue = new Date().getFullYear() - index
-                  return (
-                    <SelectItem key={yearValue} value={yearValue.toString()}>
-                      {yearValue}
-                    </SelectItem>
-                  )
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="location_city">City</Label>
-            <Input
-              id="location_city"
-              className="w-full"
-              placeholder='e.g - Berlin'
-              value={city}
-              onChange={(e) => {
-                setCity(e.target.value);
-              }} />
-          </div>
-
-          <div className="grid w-full gap-1.5">
-            <Label htmlFor="message">Your message</Label>
-            <Textarea
-              placeholder="Type your message here."
-              id="message" value={tractorDesc}
-              className="resize-none w-full"
-              onChange={(e) => {
-                setTractorDesc(e.target.value);
-              }} />
-          </div>
-
-          <div className="space-y-1 w-full">
-            <Label>
-              Select minimum and maximum price per hour
-            </Label>
-            <Slider
-              getAriaLabel={() => 'Temperature range'}
-              value={value}
-              onChange={handleChange}
-              valueLabelDisplay="auto"
-              getAriaValueText={valuetext}
-            />
-          </div>
-
-          <div className="w-full">
-            <div className="flex flex-col gap-[4px] w-fit">
-              <Label>Min price (in dollar $)</Label>
-              <Input
-                type="number"
-                placeholder="Hourly price"
-                value={value[0]}
-                onChange={(e) => {
-                  setValue([Number(e.target.value), value[1]]);
-                }}
-              />
-            </div>
-            <div className="flex flex-col gap-[4px] w-fit">
-              <Label>Max price (in dollar $)</Label>
-              <Input
-                type="number"
-                value={value[1]}
-                onChange={(e) => {
-                  setValue([value[0], Number(e.target.value)]);
-                }}
-              />
-            </div>
-            <div className="flex flex-col gap-[4px] w-fit">
-              <Label>Fixed price (in dollar $)</Label>
-              <Input
-                type="number"
-                value={fixedPrice}
-                onChange={(e) => {
-                  setFixedPrice(parseInt(e.target.value));
-                }}
-              />
-            </div>
-          </div>
-
-        </CardContent>
-      </Card>
-      )}
-
-      {activeLanguage === "ay" && (
-        <Card className="max-w-[600px] w-full p-5">
-        <CardContent className="max-w-[600px] w-full space-y-4">
-
-          <div className="max-w-[600px] mx-auto">
-            <div
-              {...getRootProps()}
-              className="dropzone text-center border-dashed border-2 border-gray-300 p-6 rounded-md w-full"
-            >
-              <input {...getInputProps()} />
-              <p className="text-gray-600">
-                Drag 'n' drop an image here, or click to select one
-              </p>
-            </div>
-          </div>
-
-          <div className="w-full max-w-[600px] my-[4px] flex items-center flex-wrap gap-5 mx-auto">
-            {selectedImage.length > 0 &&
-              selectedImage.map((image, index) => {
-                return (
-                  <Image
-                    alt="image"
-                    src={URL.createObjectURL(image)}
-                    key={index}
-                    width={80}
-                    height={80}
-                    className="object-cover w-[80px] h-[80px] cursor-pointer rounded-md"
-                    unoptimized={true}
-                  />
-                );
-              })}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tractor_name">Tractor name</Label>
-            <Input
-              id="tractor_name"
-              className="w-full"
-              placeholder='e.g - John deere'
-              value={tractorName}
-              onChange={(e) => {
-                setTractorName(e.target.value);
-              }} />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tractor_model">Tractor model</Label>
-            <Input
-              id="tractor_model"
-              className="w-full"
-              placeholder='e.g - DLIII'
-              value={tractorModel}
-              onChange={(e) => {
-                setTractorModel(e.target.value);
-              }} />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tractor_type">Select tractor type</Label>
-            <Select
-              onValueChange={(value) => setTractorType(value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select tractor type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={"small"}>
-                  Small
-                </SelectItem>
-                <SelectItem value={"medium"}>
-                  Medium
-                </SelectItem>
-                <SelectItem value={"large"}>
-                  Large
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tractor_year">Select year of purchase</Label>
-            <Select
-              onValueChange={(value) => setDobDate(value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Year" />
-              </SelectTrigger>
-              <SelectContent>
-                {[...Array(20)].map((_, index) => {
-                  const yearValue = new Date().getFullYear() - index
-                  return (
-                    <SelectItem key={yearValue} value={yearValue.toString()}>
-                      {yearValue}
-                    </SelectItem>
-                  )
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="location_city">City</Label>
-            <Input
-              id="location_city"
-              className="w-full"
-              placeholder='e.g - Berlin'
-              value={city}
-              onChange={(e) => {
-                setCity(e.target.value);
-              }} />
-          </div>
-
-          <div className="grid w-full gap-1.5">
-            <Label htmlFor="message">Your message</Label>
-            <Textarea
-              placeholder="Type your message here."
-              id="message" value={tractorDesc}
-              className="resize-none w-full"
-              onChange={(e) => {
-                setTractorDesc(e.target.value);
-              }} />
-          </div>
-
-          <div className="space-y-1 w-full">
-            <Label>
-              Select minimum and maximum price per hour
-            </Label>
-            <Slider
-              getAriaLabel={() => 'Temperature range'}
-              value={value}
-              onChange={handleChange}
-              valueLabelDisplay="auto"
-              getAriaValueText={valuetext}
-            />
-          </div>
-
-          <div className="w-full">
-            <div className="flex flex-col gap-[4px] w-fit">
-              <Label>Min price (in dollar $)</Label>
-              <Input
-                type="number"
-                placeholder="Hourly price"
-                value={value[0]}
-                onChange={(e) => {
-                  setValue([Number(e.target.value), value[1]]);
-                }}
-              />
-            </div>
-            <div className="flex flex-col gap-[4px] w-fit">
-              <Label>Max price (in dollar $)</Label>
-              <Input
-                type="number"
-                value={value[1]}
-                onChange={(e) => {
-                  setValue([value[0], Number(e.target.value)]);
-                }}
-              />
-            </div>
-            <div className="flex flex-col gap-[4px] w-fit">
-              <Label>Fixed price (in dollar $)</Label>
-              <Input
-                type="number"
-                value={fixedPrice}
-                onChange={(e) => {
-                  setFixedPrice(parseInt(e.target.value));
-                }}
-              />
-            </div>
-          </div>
-
-        </CardContent>
-      </Card>
-      )}
-
-      {activeLanguage === "qu" && (
-        <Card className="max-w-[600px] w-full p-5">
-        <CardContent className="max-w-[600px] w-full space-y-4">
-
-          <div className="max-w-[600px] mx-auto">
-            <div
-              {...getRootProps()}
-              className="dropzone text-center border-dashed border-2 border-gray-300 p-6 rounded-md w-full"
-            >
-              <input {...getInputProps()} />
-              <p className="text-gray-600">
-                Drag 'n' drop an image here, or click to select one
-              </p>
-            </div>
-          </div>
-
-          <div className="w-full max-w-[600px] my-[4px] flex items-center flex-wrap gap-5 mx-auto">
-            {selectedImage.length > 0 &&
-              selectedImage.map((image, index) => {
-                return (
-                  <Image
-                    alt="image"
-                    src={URL.createObjectURL(image)}
-                    key={index}
-                    width={80}
-                    height={80}
-                    className="object-cover w-[80px] h-[80px] cursor-pointer rounded-md"
-                    unoptimized={true}
-                  />
-                );
-              })}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tractor_name">Tractor name</Label>
-            <Input
-              id="tractor_name"
-              className="w-full"
-              placeholder='e.g - John deere'
-              value={tractorName}
-              onChange={(e) => {
-                setTractorName(e.target.value);
-              }} />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tractor_model">Tractor model</Label>
-            <Input
-              id="tractor_model"
-              className="w-full"
-              placeholder='e.g - DLIII'
-              value={tractorModel}
-              onChange={(e) => {
-                setTractorModel(e.target.value);
-              }} />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tractor_type">Select tractor type</Label>
-            <Select
-              onValueChange={(value) => setTractorType(value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select tractor type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={"small"}>
-                  Small
-                </SelectItem>
-                <SelectItem value={"medium"}>
-                  Medium
-                </SelectItem>
-                <SelectItem value={"large"}>
-                  Large
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tractor_year">Select year of purchase</Label>
-            <Select
-              onValueChange={(value) => setDobDate(value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Year" />
-              </SelectTrigger>
-              <SelectContent>
-                {[...Array(20)].map((_, index) => {
-                  const yearValue = new Date().getFullYear() - index
-                  return (
-                    <SelectItem key={yearValue} value={yearValue.toString()}>
-                      {yearValue}
-                    </SelectItem>
-                  )
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="location_city">City</Label>
-            <Input
-              id="location_city"
-              className="w-full"
-              placeholder='e.g - Berlin'
-              value={city}
-              onChange={(e) => {
-                setCity(e.target.value);
-              }} />
-          </div>
-
-          <div className="grid w-full gap-1.5">
-            <Label htmlFor="message">Your message</Label>
-            <Textarea
-              placeholder="Type your message here."
-              id="message" value={tractorDesc}
-              className="resize-none w-full"
-              onChange={(e) => {
-                setTractorDesc(e.target.value);
-              }} />
-          </div>
-
-          <div className="space-y-1 w-full">
-            <Label>
-              Select minimum and maximum price per hour
-            </Label>
-            <Slider
-              getAriaLabel={() => 'Temperature range'}
-              value={value}
-              onChange={handleChange}
-              valueLabelDisplay="auto"
-              getAriaValueText={valuetext}
-            />
-          </div>
-
-          <div className="w-full">
-            <div className="flex flex-col gap-[4px] w-fit">
-              <Label>Min price (in dollar $)</Label>
-              <Input
-                type="number"
-                placeholder="Hourly price"
-                value={value[0]}
-                onChange={(e) => {
-                  setValue([Number(e.target.value), value[1]]);
-                }}
-              />
-            </div>
-            <div className="flex flex-col gap-[4px] w-fit">
-              <Label>Max price (in dollar $)</Label>
-              <Input
-                type="number"
-                value={value[1]}
-                onChange={(e) => {
-                  setValue([value[0], Number(e.target.value)]);
-                }}
-              />
-            </div>
-            <div className="flex flex-col gap-[4px] w-fit">
-              <Label>Fixed price (in dollar $)</Label>
-              <Input
-                type="number"
-                value={fixedPrice}
-                onChange={(e) => {
-                  setFixedPrice(parseInt(e.target.value));
-                }}
-              />
-            </div>
-          </div>
-
-        </CardContent>
-      </Card>
-      )}
-
-      {activeLanguage === "gn" && (
-        <Card className="max-w-[600px] w-full p-5">
-        <CardContent className="max-w-[600px] w-full space-y-4">
-
-          <div className="max-w-[600px] mx-auto">
-            <div
-              {...getRootProps()}
-              className="dropzone text-center border-dashed border-2 border-gray-300 p-6 rounded-md w-full"
-            >
-              <input {...getInputProps()} />
-              <p className="text-gray-600">
-                Drag 'n' drop an image here, or click to select one
-              </p>
-            </div>
-          </div>
-
-          <div className="w-full max-w-[600px] my-[4px] flex items-center flex-wrap gap-5 mx-auto">
-            {selectedImage.length > 0 &&
-              selectedImage.map((image, index) => {
-                return (
-                  <Image
-                    alt="image"
-                    src={URL.createObjectURL(image)}
-                    key={index}
-                    width={80}
-                    height={80}
-                    className="object-cover w-[80px] h-[80px] cursor-pointer rounded-md"
-                    unoptimized={true}
-                  />
-                );
-              })}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tractor_name">Tractor name</Label>
-            <Input
-              id="tractor_name"
-              className="w-full"
-              placeholder='e.g - John deere'
-              value={tractorName}
-              onChange={(e) => {
-                setTractorName(e.target.value);
-              }} />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tractor_model">Tractor model</Label>
-            <Input
-              id="tractor_model"
-              className="w-full"
-              placeholder='e.g - DLIII'
-              value={tractorModel}
-              onChange={(e) => {
-                setTractorModel(e.target.value);
-              }} />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tractor_type">Select tractor type</Label>
-            <Select
-              onValueChange={(value) => setTractorType(value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select tractor type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={"small"}>
-                  Small
-                </SelectItem>
-                <SelectItem value={"medium"}>
-                  Medium
-                </SelectItem>
-                <SelectItem value={"large"}>
-                  Large
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tractor_year">Select year of purchase</Label>
-            <Select
-              onValueChange={(value) => setDobDate(value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Year" />
-              </SelectTrigger>
-              <SelectContent>
-                {[...Array(20)].map((_, index) => {
-                  const yearValue = new Date().getFullYear() - index
-                  return (
-                    <SelectItem key={yearValue} value={yearValue.toString()}>
-                      {yearValue}
-                    </SelectItem>
-                  )
-                })}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="location_city">City</Label>
-            <Input
-              id="location_city"
-              className="w-full"
-              placeholder='e.g - Berlin'
-              value={city}
-              onChange={(e) => {
-                setCity(e.target.value);
-              }} />
-          </div>
-
-          <div className="grid w-full gap-1.5">
-            <Label htmlFor="message">Your message</Label>
-            <Textarea
-              placeholder="Type your message here."
-              id="message" value={tractorDesc}
-              className="resize-none w-full"
-              onChange={(e) => {
-                setTractorDesc(e.target.value);
-              }} />
-          </div>
-
-          <div className="space-y-1 w-full">
-            <Label>
-              Select minimum and maximum price per hour
-            </Label>
-            <Slider
-              getAriaLabel={() => 'Temperature range'}
-              value={value}
-              onChange={handleChange}
-              valueLabelDisplay="auto"
-              getAriaValueText={valuetext}
-            />
-          </div>
-
-          <div className="w-full">
-            <div className="flex flex-col gap-[4px] w-fit">
-              <Label>Min price (in dollar $)</Label>
-              <Input
-                type="number"
-                placeholder="Hourly price"
-                value={value[0]}
-                onChange={(e) => {
-                  setValue([Number(e.target.value), value[1]]);
-                }}
-              />
-            </div>
-            <div className="flex flex-col gap-[4px] w-fit">
-              <Label>Max price (in dollar $)</Label>
-              <Input
-                type="number"
-                value={value[1]}
-                onChange={(e) => {
-                  setValue([value[0], Number(e.target.value)]);
-                }}
-              />
-            </div>
-            <div className="flex flex-col gap-[4px] w-fit">
-              <Label>Fixed price (in dollar $)</Label>
-              <Input
-                type="number"
-                value={fixedPrice}
-                onChange={(e) => {
-                  setFixedPrice(parseInt(e.target.value));
-                }}
-              />
-            </div>
-          </div>
-
-        </CardContent>
-      </Card>
-      )}
+      {renderForm()}
 
       <button
         name="submit_button"
@@ -1141,7 +595,7 @@ const NewInventory = () => {
           handleAddInventory();
         }}
       >
-        Submit
+        {currentTranslation.submit}
       </button>
     </div>
   );
