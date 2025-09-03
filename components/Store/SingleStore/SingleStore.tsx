@@ -48,6 +48,7 @@ import AddService from "./AddService";
 const SingleStore = () => {
   const [fetchingStoreDetails, setFetchingStoreDetails] = useState(false);
   const [storeDetails, setStoreDetails] = useState<Store>();
+  console.log(storeDetails)
 
   // Add tractor states
   const [open, setOpen] = useState(false);
@@ -719,111 +720,91 @@ const SingleStore = () => {
         </div>
       </div>
 
+      {/* Services */}
       <div className="w-full space-y-2">
-        {/* Header row */}
         <div className="w-full flex items-center justify-between gap-5 flex-wrap">
-          {/* <p className="text-xl font-medium">
-      Total services: {storeDetails.ServiceInStore?.length || 0}
-    </p> */}
-
-          <AddService storeId={storeDetails.id} alreadyServices={storeDetails?.ServiceInStore ?? []} />
+          <p className="text-xl font-medium">
+            Total services: {storeDetails.ServiceInStore.length}
+          </p>
+          <div>
+            <AddService
+              storeId={storeDetails.id}
+              alreadyServices={storeDetails.ServiceInStore ?? []}
+            />
+          </div>
         </div>
 
         {/* Service cards grid */}
         <div className="w-full grid grid-cols-3 gap-[20px]">
-          {!storeDetails?.ServiceInStore ||
-          storeDetails.ServiceInStore.length === 0 ? (
-            <p>You have not added any services</p>
-          ) : (
-            storeDetails.ServiceInStore.map((srv, i) => {
-              // Safely get the service data
-              const service = srv.baseService || {};
+          {storeDetails.ServiceInStore.map((srv, i) => {
+            const service = srv.service; // base service info
 
-              // Safely get the image URL with better error handling
-              let serviceImage =
-                "https://via.placeholder.com/300x200?text=No+Image";
-
-              if (service.images) {
-                if (
-                  Array.isArray(service.images) &&
-                  service.images.length > 0
-                ) {
-                  serviceImage = service.images[0];
-                } else if (typeof service.images === "string") {
-                  serviceImage = service.images;
-                }
-              }
-
+            if (!service) {
               return (
                 <div
                   key={i}
                   className="border-2 rounded-xl w-full flex flex-col gap-3 p-3"
                 >
-                  {/* Image - Use Swiper like attachment section if multiple images exist */}
-                  {service.images &&
-                  Array.isArray(service.images) &&
-                  service.images.length > 1 ? (
-                    <Swiper
-                      modules={[Autoplay, Pagination]}
-                      spaceBetween={0}
-                      slidesPerView={1}
-                      loop={true}
-                      pagination={true}
-                      autoplay={true}
-                      className="w-full h-32"
-                    >
-                      {service.images.map((image, imgIndex) => (
-                        <SwiperSlide key={imgIndex}>
-                          <Image
-                            src={image}
-                            alt="service_image"
-                            className="w-full h-full object-cover rounded-xl"
-                            width={300}
-                            height={400}
-                            unoptimized={true}
-                            onError={(e) => {
-                              e.currentTarget.src =
-                                "https://via.placeholder.com/300x200?text=Image+Error";
-                            }}
-                          />
-                        </SwiperSlide>
-                      ))}
-                    </Swiper>
-                  ) : (
-                    <Image
-                      src={serviceImage}
-                      alt="service_image"
-                      className="w-full h-32 object-cover rounded-xl"
-                      width={300}
-                      height={400}
-                      unoptimized={true}
-                      onError={(e) => {
-                        e.currentTarget.src =
-                          "https://via.placeholder.com/300x200?text=Image+Error";
-                      }}
-                    />
-                  )}
-
-                  {/* Service details */}
+                  <Image
+                    src="https://wallpapercave.com/wp/wp13088808.jpg"
+                    alt="no_service_image"
+                    className="w-full h-[250px] object-cover rounded-xl"
+                    width={300}
+                    height={400}
+                    unoptimized={true}
+                  />
                   <div className="overflow-hidden">
                     <strong className="block truncate text-sm">
-                      {service.name || "Unnamed Service"}
+                      Unknown Service
                     </strong>
                     <p className="text-xs text-gray-600 line-clamp-2 h-10 overflow-hidden">
-                      <span>
-                        {service.description || "No description available"}
-                      </span>
+                      No description available
                     </p>
                     <p className="text-sm font-medium mt-1">
-                      <strong>Price:</strong> <span>{srv.price || "N/A"}</span>
+                      <strong>Price:</strong>{" "}
+                      <span>{srv.hourly_price || "N/A"}</span>
                     </p>
                   </div>
                 </div>
               );
-            })
-          )}
+            }
+
+            const serviceImage =
+              service.image && service.image.length > 0
+                ? service.image
+                : "https://wallpapercave.com/wp/wp13088808.jpg";
+
+            return (
+              <div
+                key={i}
+                className="border-2 rounded-xl w-full flex flex-col gap-3 p-3"
+              >
+                <Image
+                  src={serviceImage}
+                  alt={service.name || "service_image"}
+                  className="w-full h-[300px] object-cover rounded-xl"
+                  width={300}
+                  height={400}
+                  unoptimized={true}
+                />
+
+                <div className="overflow-hidden">
+                  <strong className="block truncate text-sm">
+                    {service.name || "Unnamed Service"}
+                  </strong>
+                  <p className="text-xs text-gray-600 line-clamp-2 h-10 overflow-hidden">
+                    {service.description || "No description available"}
+                  </p>
+                  <p className="text-sm font-medium mt-1">
+                    <strong>Price:</strong>{" "}
+                    <span>{srv.hourly_price || "N/A"}</span>
+                  </p>
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </div>                                                                                                                                                                          
+      </div>
     </div>
   );
 };

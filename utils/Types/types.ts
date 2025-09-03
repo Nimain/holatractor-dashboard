@@ -244,6 +244,8 @@ export interface ServiceInStore {
   base: Base;
   store: Store;
   hourly_price:number;
+  description:string;
+  name:string;
 }
 
 export interface BookingTractor {
