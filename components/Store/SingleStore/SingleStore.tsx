@@ -45,10 +45,25 @@ import { Calendar } from "@/components/ui/calendar";
 import { Backdrop } from "@mui/material";
 import AddService from "./AddService";
 
+// Category type for dropdown
+interface ServiceCategory {
+  id: string;
+  name: string;
+}
+
 const SingleStore = () => {
   const [fetchingStoreDetails, setFetchingStoreDetails] = useState(false);
-  const [storeDetails, setStoreDetails] = useState<Store>();
-  console.log(storeDetails)
+  const [storeDetails, setStoreDetails] = useState<Store | undefined>(undefined);
+
+  // ---- Category & services states (NEW) ----
+  const [allCategories, setAllCategories] = useState<ServiceCategory[]>([]);
+  const [allServices, setAllServices] = useState<any[]>([]); // raw from /store/get_all_services
+  const [storeServices, setStoreServices] = useState<any[]>([]); // services for this store
+  const [filteredServices, setFilteredServices] = useState<any[]>([]); // what we render
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [loadingServices, setLoadingServices] = useState(false);
+  // -------------------------------------------
 
   // Add tractor states
   const [open, setOpen] = useState(false);
@@ -56,11 +71,11 @@ const SingleStore = () => {
   const [selectedTractorId, setSelectedTractorId] = useState("");
   const [allTractors, setAllTractors] = useState<Inventory[]>([]);
   const [fetchingRoles, setFetchingRoles] = useState(false);
-  const [hourlyPrice, setHourlyPrice] = useState<number>();
+  const [hourlyPrice, setHourlyPrice] = useState<number | undefined>(undefined);
   const [minPrice, setHMinPrice] = useState<number>(0);
   const [maxPrice, setMaxPrice] = useState<number>(0);
   const [document_number, set_document_number] = useState("");
-  const [expiry_date, set_expiry_date] = useState<Date>();
+  const [expiry_date, set_expiry_date] = useState<Date | undefined>(undefined);
   const [expiry_date_false, set_expiry_date_false] = useState(false);
   const [expiry_date_year, set_expiry_date_year] = useState<number>(
     new Date().getFullYear()
@@ -70,13 +85,12 @@ const SingleStore = () => {
 
   const { refresh } = useRouter();
 
-  // Add tractor states last
-
   const { slug } = useParams();
 
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
 
+  // --------------------------- Existing: fetchStoreDetails ---------------------------
   function fetchStoreDetails() {
     if (slug) {
       setFetchingStoreDetails(true);
@@ -88,46 +102,118 @@ const SingleStore = () => {
         })
         .then((res) => {
           setStoreDetails(res.data);
+
+          // If storeDetails includes ServiceInStore, preliminarily set filteredServices
+          if (res.data && res.data.ServiceInStore) {
+            // keep fallback (in case allServices hasn't loaded yet)
+            setFilteredServices(res.data.ServiceInStore);
+          }
         })
         .catch((err) => {
           errorMessage("Error fetching store details");
-          console.log(err);
+          console.error("fetchStoreDetails error:", err);
         })
         .finally(() => {
           setFetchingStoreDetails(false);
         });
     }
   }
+  // -------------------------------------------------------------------------------
 
-  function formatTimeOnly(dateTimeStr: string | number | Date) {
-    const date = new Date(dateTimeStr);
-    const hours = date.getUTCHours().toString().padStart(2, "0");
-    const minutes = date.getUTCMinutes().toString().padStart(2, "0");
-    const seconds = date.getUTCSeconds().toString().padStart(2, "0");
-    return `${hours}:${minutes}:${seconds}`;
+  // --------------------------- NEW: fetch categories from /servicecategory ---------------------------
+  async function fetchCategories() {
+    setLoadingCategories(true);
+    try {
+      // include Authorization header if token is present (Categories API may require auth)
+      const headers = access_token ? { Authorization: `Bearer ${access_token}` } : {};
+      const res = await renderInstance.get("/servicecategory", { headers });
+      if (Array.isArray(res.data)) {
+        // Map to { id, name } only
+        const names = res.data.map((c: any) => ({ id: c.id, name: c.name }));
+        setAllCategories(names);
+      } else {
+        console.warn("Unexpected categories response:", res.data);
+      }
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+      // Not fatal — categories list may be empty
+      errorMessage("Failed to load categories");
+    } finally {
+      setLoadingCategories(false);
+    }
   }
+  // -----------------------------------------------------------------------------------------------
 
-  function formatDateOnly(dateTimeStr: string | number | Date) {
-    const date = new Date(dateTimeStr);
-    const year = date.getUTCFullYear().toString();
-    const month = (date.getUTCMonth() + 1).toString().padStart(2, "0"); // Months are zero-based
-    const day = date.getUTCDate().toString().padStart(2, "0");
-    return `${year}-${month}-${day}`;
+  // --------------------------- NEW: fetch all services from /store/get_all_services ---------------------------
+  async function fetchAllServices() {
+    setLoadingServices(true);
+    try {
+      const headers = access_token ? { Authorization: `Bearer ${access_token}` } : {};
+      const res = await renderInstance.get("/store/get_all_services", { headers });
+      if (Array.isArray(res.data)) {
+        setAllServices(res.data);
+      } else {
+        console.warn("Unexpected get_all_services response:", res.data);
+      }
+    } catch (err) {
+      console.error("Error fetching all services:", err);
+      errorMessage("Failed to load services");
+    } finally {
+      setLoadingServices(false);
+    }
   }
+  // -----------------------------------------------------------------------------------------------
 
-  function formatAddress(address: {
-    address: string;
-    city: string;
-    state: string;
-    country: string;
-    zip_code: string;
-  }) {
-    const { address: street, city, state, country, zip_code } = address;
+  // When storeDetails or allServices changes, compute services that belong to this store
+  useEffect(() => {
+    if (!storeDetails) {
+      setStoreServices([]);
+      setFilteredServices([]);
+      return;
+    }
 
-    return `${street}, ${city}, ${state}, ${zip_code}, ${country}`;
-  }
+    // prefer allServices if present (filtered by store id), else fallback to storeDetails.ServiceInStore
+    if (allServices && allServices.length > 0) {
+      const sid = storeDetails.id;
+      const sServices = allServices.filter((item) => {
+        // many backends may have store under `store` object or `store_id`
+        const storeIdFromItem =
+          (item.store && item.store.id) || item.store_id || item.storeId || null;
+        return storeIdFromItem === sid;
+      });
 
-  // Add tractor to store functions
+      setStoreServices(sServices);
+
+      // apply category filter
+      if (selectedCategory === "all") {
+        setFilteredServices(sServices);
+      } else {
+        const filtered = sServices.filter((srv) => {
+          return srv?.service?.category?.id === selectedCategory;
+        });
+        setFilteredServices(filtered);
+      }
+    } else {
+      // fallback to storeDetails.ServiceInStore if available
+      if (storeDetails.ServiceInStore) {
+        setStoreServices(storeDetails.ServiceInStore);
+        if (selectedCategory === "all") {
+          setFilteredServices(storeDetails.ServiceInStore);
+        } else {
+          const filtered = storeDetails.ServiceInStore.filter(
+            (srv: any) => srv?.service?.category?.id === selectedCategory
+          );
+          setFilteredServices(filtered);
+        }
+      } else {
+        setStoreServices([]);
+        setFilteredServices([]);
+      }
+    }
+  }, [storeDetails, allServices, selectedCategory]);
+  // -----------------------------------------------------------------------------------------------
+
+  // Add tractor to store functions (existing)
   function fetchAllTractors() {
     if (access_token) {
       setFetchingRoles(true);
@@ -147,6 +233,7 @@ const SingleStore = () => {
         })
         .catch((err) => {
           errorMessage("Error in fetching inventory lists");
+          console.error("fetchAllTractors error:", err);
         })
         .finally(() => {
           setFetchingRoles(false);
@@ -154,7 +241,6 @@ const SingleStore = () => {
     } else errorMessage("Admin not logged in");
   }
 
-  // Handle date selection with the chosen year
   const handleExpiryDateChange = (newDate: Date | undefined) => {
     if (newDate) {
       const updatedDate = setYear(newDate, expiry_date_year);
@@ -165,7 +251,7 @@ const SingleStore = () => {
 
   useEffect(() => {
     fetchAllTractors();
-  }, []);
+  }, []); // run once
 
   async function saveTractor() {
     if (!hourlyPrice) {
@@ -197,6 +283,7 @@ const SingleStore = () => {
 
       if (!attachmentLink) {
         errorMessage("Something went wrong in uploading the attachment");
+        setCreating(false);
         return;
       }
     }
@@ -224,6 +311,7 @@ const SingleStore = () => {
         refresh();
       })
       .catch((err) => {
+        console.error("saveTractor error:", err);
         errorMessage("Some error occurred");
       })
       .finally(() => {
@@ -231,11 +319,41 @@ const SingleStore = () => {
       });
   }
 
-  //   Add tractor to store functions
-
   useEffect(() => {
+    // Run initial fetches whenever slug changes
     fetchStoreDetails();
+    fetchCategories();
+    fetchAllServices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
+
+  function formatTimeOnly(dateTimeStr: string | number | Date) {
+    const date = new Date(dateTimeStr);
+    const hours = date.getUTCHours().toString().padStart(2, "0");
+    const minutes = date.getUTCMinutes().toString().padStart(2, "0");
+    const seconds = date.getUTCSeconds().toString().padStart(2, "0");
+    return `${hours}:${minutes}:${seconds}`;
+  }
+
+  function formatDateOnly(dateTimeStr: string | number | Date) {
+    const date = new Date(dateTimeStr);
+    const year = date.getUTCFullYear().toString();
+    const month = (date.getUTCMonth() + 1).toString().padStart(2, "0"); // Months are zero-based
+    const day = date.getUTCDate().toString().padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  function formatAddress(address: {
+    address: string;
+    city: string;
+    state: string;
+    country: string;
+    zip_code: string;
+  }) {
+    const { address: street, city, state, country, zip_code } = address;
+
+    return `${street}, ${city}, ${state}, ${zip_code}, ${country}`;
+  }
 
   if (fetchingStoreDetails) {
     return <div>Loading...</div>;
@@ -724,7 +842,7 @@ const SingleStore = () => {
       <div className="w-full space-y-2">
         <div className="w-full flex items-center justify-between gap-5 flex-wrap">
           <p className="text-xl font-medium">
-            Total services: {storeDetails.ServiceInStore.length}
+            Total services: {filteredServices.length}
           </p>
           <div>
             <AddService
@@ -734,75 +852,101 @@ const SingleStore = () => {
           </div>
         </div>
 
+        {/* Category Filter */}
+        <div className="flex items-center gap-3">
+          <p className="text-sm font-medium">Category:</p>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">All Categories</option>
+            {allCategories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Service cards grid */}
         <div className="w-full grid grid-cols-3 gap-[20px]">
-          {storeDetails.ServiceInStore.map((srv, i) => {
-            const service = srv.service; // base service info
+          {filteredServices.length > 0 ? (
+            filteredServices.map((srv: any, i: number) => {
+              const service = srv.service; // base service info
 
-            if (!service) {
+              if (!service) {
+                return (
+                  <div
+                    key={i}
+                    className="border-2 rounded-xl w-full flex flex-col gap-3 p-3"
+                  >
+                    <Image
+                      src="https://wallpapercave.com/wp/wp13088808.jpg"
+                      alt="no_service_image"
+                      className="w-full h-[250px] object-cover rounded-xl"
+                      width={300}
+                      height={400}
+                      unoptimized={true}
+                    />
+                    <div className="overflow-hidden">
+                      <strong className="block truncate text-sm">
+                        Unknown Service
+                      </strong>
+                      <p className="text-xs text-gray-600 line-clamp-2 h-10 overflow-hidden">
+                        No description available
+                      </p>
+                      <p className="text-sm font-medium mt-1">
+                        <strong>Price:</strong>{" "}
+                        <span>{srv.hourly_price || "N/A"}</span>
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+
+              const serviceImage =
+                service.image && service.image.length > 0
+                  ? service.image
+                  : "https://wallpapercave.com/wp/wp13088808.jpg";
+
               return (
                 <div
                   key={i}
                   className="border-2 rounded-xl w-full flex flex-col gap-3 p-3"
                 >
                   <Image
-                    src="https://wallpapercave.com/wp/wp13088808.jpg"
-                    alt="no_service_image"
-                    className="w-full h-[250px] object-cover rounded-xl"
+                    src={serviceImage}
+                    alt={service.name || "service_image"}
+                    className="w-full h-[300px] object-cover rounded-xl"
                     width={300}
                     height={400}
                     unoptimized={true}
                   />
+
                   <div className="overflow-hidden">
                     <strong className="block truncate text-sm">
-                      Unknown Service
+                      {service.name || "Unnamed Service"}
                     </strong>
                     <p className="text-xs text-gray-600 line-clamp-2 h-10 overflow-hidden">
-                      No description available
+                      {service.description || "No description available"}
                     </p>
                     <p className="text-sm font-medium mt-1">
                       <strong>Price:</strong>{" "}
                       <span>{srv.hourly_price || "N/A"}</span>
                     </p>
+                    {service.category && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Category: {service.category.name}
+                      </p>
+                    )}
                   </div>
                 </div>
               );
-            }
-
-            const serviceImage =
-              service.image && service.image.length > 0
-                ? service.image
-                : "https://wallpapercave.com/wp/wp13088808.jpg";
-
-            return (
-              <div
-                key={i}
-                className="border-2 rounded-xl w-full flex flex-col gap-3 p-3"
-              >
-                <Image
-                  src={serviceImage}
-                  alt={service.name || "service_image"}
-                  className="w-full h-[300px] object-cover rounded-xl"
-                  width={300}
-                  height={400}
-                  unoptimized={true}
-                />
-
-                <div className="overflow-hidden">
-                  <strong className="block truncate text-sm">
-                    {service.name || "Unnamed Service"}
-                  </strong>
-                  <p className="text-xs text-gray-600 line-clamp-2 h-10 overflow-hidden">
-                    {service.description || "No description available"}
-                  </p>
-                  <p className="text-sm font-medium mt-1">
-                    <strong>Price:</strong>{" "}
-                    <span>{srv.hourly_price || "N/A"}</span>
-                  </p>
-                </div>
-              </div>
-            );
-          })}
+            })
+          ) : (
+            <p className="col-span-3">No services available for the selected category.</p>
+          )}
         </div>
       </div>
     </div>
