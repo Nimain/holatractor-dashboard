@@ -8,6 +8,7 @@ import NullImage from "@/assets/AnimateIcons/Tractor.svg";
 import { Plus, RefreshCw } from "lucide-react";
 import { renderInstance } from "@/utils/Axios/RenderInstance"; // Your axios instance
 import { useCookie } from "next-cookie"; // For cookie management
+import Link from "next/link";
 
 interface Category {
   id: string;
@@ -234,13 +235,14 @@ const Categories = () => {
         <p className="text-[20px] font-bold">
           Total Categories: {allCategories.length}
         </p>
-        <button
-          onClick={() => setOpenModal(true)}
-          className="px-5 py-2.5 text-lg rounded-md bg-black text-white flex items-center gap-2"
-        >
-          <Plus size={20} />
-          Add Category
-        </button>
+     <Link
+  href="/Category/new"
+  className="px-5 py-2.5 text-lg rounded-md bg-black text-white flex items-center gap-2"
+>
+  <Plus size={20} />
+  <span>Add Category</span>
+</Link>
+
       </div>
 
       {/* ---------- Header ---------- */}
@@ -321,7 +323,7 @@ const Categories = () => {
       </div>
 
       {/* ---------- Add Category Modal ---------- */}
-      {openModal && (
+      {/* {openModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-[400px] relative">
             <h2 className="text-xl font-semibold mb-4">Add New Category</h2>
@@ -415,7 +417,7 @@ const Categories = () => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 };
