@@ -9,9 +9,8 @@ const Market = dynamic(() => import("@/components/Dashboards/Dealer/Market/Analy
 const LeadsPage = () => {
   return (
     <div >
-      
-      <Market />
-    </div>
+  <Market />
+</div>
   )
 }
 

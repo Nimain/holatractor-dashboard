@@ -107,7 +107,7 @@ export default function ResponsiveDealerDashboard() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 p-3">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-4 md:p-6 bg-white shadow-sm">
         <div className="relative w-full md:w-1/2 max-w-md">

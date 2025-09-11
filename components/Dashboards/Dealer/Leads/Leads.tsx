@@ -297,9 +297,9 @@ export default function EnhancedTractorRentalTable() {
   }
 
   return (
-    <div className="w-full bg-white">
+    <div className="w-full p-3">
       {/* Top Header Section - Improved Responsive Layout */}
-      <div className="bg-transparent px-4 py-4">
+      <div className="bg-transparent  py-4 pt-0">
         <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
           {/* Filter Buttons */}
           <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
@@ -328,7 +328,7 @@ export default function EnhancedTractorRentalTable() {
       </div>
 
       {/* Secondary Header - Improved Layout */}
-      <div className="bg-red-500 px-4 md:px-6 py-3">
+      <div className="bg-red-500 rounded-t-lg px-4 md:px-6 py-3">
         <div className="flex flex-col space-y-3 md:flex-row md:items-center md:justify-between md:space-y-0">
           <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-6">
             <h1 className="text-white font-semibold text-lg">

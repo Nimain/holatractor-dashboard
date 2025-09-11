@@ -140,7 +140,7 @@ const LogInPage = () => {
     try {
       const res = await renderInstance.post("/user/login", {
         email: email.trim(),
-        password: passwrd, 
+        password: encryptedPassword,
         authType: "EMAIL",
       });
 

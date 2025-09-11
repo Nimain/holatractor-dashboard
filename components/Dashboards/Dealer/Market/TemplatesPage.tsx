@@ -15,7 +15,7 @@ const TemplatesPage = () => {
     { id: 3, title: "Template 3" },
   ]
   return (
-    <div className="w-full max-w-7xl mx-auto p-6 bg-gray-100 min-h-screen">
+    <div className="w-full mx-auto p-3 bg-gray-100 min-h-screen">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-red-600 mb-2">Templates</h1>

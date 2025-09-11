@@ -87,7 +87,7 @@ export default function Dashboard() {
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-gray-50/50">
-      <main className="flex-2 space-y-3 p-6">
+      <main className="flex-2 space-y-3 p-8">
         <div className="flex gap-4">
           {/* First column with two cards */}
           <div className="w-1/4 space-y-4">

@@ -8,7 +8,7 @@ const Market = dynamic(() => import("@/components/Dashboards/Dealer/Notification
 
 const LeadsPage = () => {
   return (
-    <div className="container mx-auto py-8">
+    <div>
       <Market />
     </div>
   )

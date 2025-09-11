@@ -350,7 +350,7 @@ const AutomationWorkflow: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-200 p-4 relative">
+    <div className="min-h-screen  bg-gray-200 p-4 relative">
       {/* Header */}
       <div className="flex justify-between items-start mb-4">
         <div>

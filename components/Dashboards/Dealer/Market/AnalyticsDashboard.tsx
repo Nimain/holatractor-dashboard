@@ -157,7 +157,7 @@ const DevicesCard = () => {
   ];
 
   return (
-    <div className="bg-gradient-to-br from-red-700 to-red-900 rounded-2xl p-6 text-white shadow-xl h-full flex flex-col">
+    <div className="bg-gradient-to-br from-red-700 to-red-900 rounded-2xl  text-white shadow-xl h-full flex flex-col">
       <h2 className="text-2xl font-bold mb-8">Devices</h2>
       <div className="flex justify-between items-end flex-1 px-4">
         {deviceData.map((device, index) => {
@@ -207,7 +207,7 @@ const DevicesCard = () => {
 
 export default function AnalyticsDashboard() {
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
+    <div className="p-3 bg-gray-100 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-4xl font-bold text-red-600 mb-8">Analytics</h1>
         
