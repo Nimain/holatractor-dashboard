@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
-import { Backdrop, CircularProgress, Switch } from "@mui/material";
+import { Backdrop, CircularProgress } from "@mui/material";
 import { Plus } from "lucide-react";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { useCookie } from "next-cookie";
+import CurrencyAction from "./CurrencyAction";
 
-// Updated interface to match your API response
 interface Currency {
   id: string;
   name: string;
@@ -30,20 +30,19 @@ const CurrencyManagement = () => {
     code: "",
     symbol: "",
     exchange_rate: "1",
-    country_codes: "", // Storing as comma-separated string for input
+    country_codes: "",
   });
 
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
 
-  async function fetchCurrencies() {
+   async function fetchCurrencies() {
     if (!access_token) return;
     setLoading(true);
     try {
-      const res = await renderInstance.get("/credits/currencies", { // API Endpoint updated
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
+      // ✅ **FIX APPLIED HERE**
+      const res = await renderInstance.get("/credits/currencies?isActive=true", {
+        headers: { Authorization: `Bearer ${access_token}` },
       });
       setAllCurrencies(res.data);
     } catch (err) {
@@ -67,17 +66,16 @@ const CurrencyManagement = () => {
     const payload = {
       ...form,
       exchange_rate: parseFloat(form.exchange_rate) || 1.0,
-      country_codes: form.country_codes.split(",").map(code => code.trim()),
+      country_codes: form.country_codes.split(",").map((code) => code.trim()),
     };
 
     try {
-      const res = await renderInstance.post("/credits/currencies", payload, {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
+      await renderInstance.post("/credits/currencies", payload, {
+        headers: { Authorization: `Bearer ${access_token}` },
       });
-      fetchCurrencies(); // Refetch the list to get the latest data
+      fetchCurrencies();
       setOpenModal(false);
+      setForm({ name: "", code: "", symbol: "", exchange_rate: "1", country_codes: "" });
       successMessage("Currency added successfully!");
     } catch (err: any) {
       errorMessage(err.response?.data?.message || "Failed to add currency.");
@@ -85,23 +83,9 @@ const CurrencyManagement = () => {
       setAddingCurrency(false);
     }
   };
-  
-    const handleStatusToggle = async (currencyId: string, currentStatus: boolean) => {
-    try {
-      await renderInstance.patch(`/credits/currencies/${currencyId}`, { is_active: !currentStatus }, {
-        headers: { Authorization: `Bearer ${access_token}` },
-      });
-      successMessage("Status updated successfully!");
-      // Update the state locally for a faster UI response
-      setAllCurrencies(prev => prev.map(c => c.id === currencyId ? { ...c, is_active: !currentStatus } : c));
-    } catch (err) {
-      errorMessage("Failed to update status.");
-    }
-  };
-
 
   return (
-    <div className="py-10 w-full">
+    <div className="py-10 px-8 w-full bg-white rounded-lg shadow-md">
       <Backdrop
         sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
         open={loading || addingCurrency}
@@ -109,64 +93,54 @@ const CurrencyManagement = () => {
         <CircularProgress />
       </Backdrop>
 
-      <div className="w-full flex items-center justify-between gap-5 mb-10 px-2">
-        <h2 className="text-2xl font-bold">Total Currencies: {allCurrencies.length}</h2>
+      <div className="w-full flex items-center justify-between gap-5 mb-8">
+        <h2 className="text-2xl font-bold text-gray-800">
+          Currency Management ({allCurrencies.length})
+        </h2>
         <button
           onClick={() => setOpenModal(true)}
-          className="px-5 py-2.5 text-lg rounded-md bg-black text-white flex items-center gap-2"
+          className="px-5 py-2.5 text-base font-medium rounded-md bg-black text-white flex items-center gap-2 hover:bg-gray-800 transition-colors"
         >
           <Plus size={20} />
           <span>Add Currency</span>
         </button>
       </div>
 
-      <div className="text-lg font-semibold grid grid-cols-[60px_2fr_1fr_1fr_2fr_1.5fr_1fr_1.5fr] items-center gap-x-4 bg-[#ededed] p-5 rounded">
-        <p>#</p>
+      <div className="text-sm font-semibold text-gray-500 grid grid-cols-[40px_3fr_1fr_1fr_1.5fr_1fr_1fr_1fr] items-center gap-x-4 bg-gray-50 p-4 rounded-t-lg border-b">
+        <p>Sl No</p>
         <p>Name</p>
         <p>Code</p>
         <p>Symbol</p>
-        <p>Country Codes</p>
         <p>Exchange Rate</p>
         <p>Status</p>
         <p>Created</p>
+        <p className="text-center">Actions</p>
       </div>
 
-      <div className="flex flex-col gap-2 mt-5">
+      <div className="flex flex-col">
         {allCurrencies.length === 0 && !loading ? (
-            <div className="w-full h-full min-h-[60vh] flex items-center justify-center">
-                 <p className="text-gray-500 text-xl">No currencies found.</p>
-            </div>
+          <div className="w-full h-full min-h-[40vh] flex items-center justify-center">
+            <p className="text-gray-500 text-xl">No currencies found.</p>
+          </div>
         ) : (
           allCurrencies.map((currency, index) => (
-            <div
+            <CurrencyAction
               key={currency.id}
-              className="text-base grid grid-cols-[60px_2fr_1fr_1fr_2fr_1.5fr_1fr_1.5fr] items-center gap-x-4 px-5 py-4 rounded bg-[#fafafa] hover:bg-white transition-all duration-300"
-            >
-              <p>{index + 1}</p>
-              <p className="font-medium">{currency.name}</p>
-              <p className="text-gray-600 font-mono">{currency.code}</p>
-              <p className="font-bold text-center">{currency.symbol}</p>
-              <p className="text-gray-600 font-mono">{currency.country_codes.join(", ")}</p>
-              <p>{currency.exchange_rate}</p>
-              <p>
-                 <Switch
-                    checked={currency.is_active}
-                    onChange={() => handleStatusToggle(currency.id, currency.is_active)}
-                    color="success"
-                  />
-              </p>
-              <p>{new Date(currency.createdAt).toLocaleDateString()}</p>
-            </div>
+              currency={currency}
+              index={index}
+              onUpdate={fetchCurrencies}
+            />
           ))
         )}
       </div>
 
+      {/* Add Currency Modal */}
       {openModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-[450px] text-gray-900">
             <h3 className="text-xl font-semibold mb-4">Add New Currency</h3>
             <div className="flex flex-col gap-4">
-               <div>
+              <div>
                 <label className="block text-sm font-medium mb-1">Currency Name *</label>
                 <input
                   type="text"
@@ -176,7 +150,7 @@ const CurrencyManagement = () => {
                   className="w-full border rounded p-2"
                 />
               </div>
-               <div>
+              <div>
                 <label className="block text-sm font-medium mb-1">Currency Code *</label>
                 <input
                   type="text"
@@ -196,7 +170,7 @@ const CurrencyManagement = () => {
                   className="w-full border rounded p-2"
                 />
               </div>
-               <div>
+              <div>
                 <label className="block text-sm font-medium mb-1">Country Codes *</label>
                 <input
                   type="text"
@@ -205,7 +179,7 @@ const CurrencyManagement = () => {
                   onChange={(e) => setForm({ ...form, country_codes: e.target.value })}
                   className="w-full border rounded p-2"
                 />
-                 <small className="text-gray-500">Use commas to separate multiple codes.</small>
+                <small className="text-gray-500">Use commas to separate multiple codes.</small>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Exchange Rate</label>
