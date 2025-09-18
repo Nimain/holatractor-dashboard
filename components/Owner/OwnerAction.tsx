@@ -19,6 +19,8 @@ import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { CircularProgress } from "@mui/material";
 import { CheckCircle, XCircle } from "lucide-react";
 import Image from "next/image";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 
 // utils/formatDate.ts
 export function formatDateOnly(dateString?: string | null) {
@@ -99,6 +101,16 @@ const OwnerAction = ({
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
 
+  // Get language from Redux store
+  const { language: locale } = useSelector(
+    (root: RootState) => root.ActiveLanguage
+  );
+
+  // Helper function for translations
+  const getTranslation = (locale: string, translations: any) => {
+    return translations[locale] || translations["en"];
+  };
+
   // ✅ one state object for all buttons
   const [loading, setLoading] = useState<{
     delete: boolean;
@@ -123,7 +135,13 @@ const OwnerAction = ({
       successMessage(success);
       onUpdate?.(); // ✅ call parent refresh
     } catch (err: any) {
-      errorMessage(err?.response?.data?.message || "Try again");
+      errorMessage(err?.response?.data?.message || getTranslation(locale, {
+        en: "Try again",
+        es: "Inténtalo de nuevo",
+        ay: "Wasitat yant'aña",
+        qu: "Huk kutitapas ruway",
+        gn: "Eha jevy",
+      }));
     } finally {
       setLoading((prev) => ({ ...prev, [type]: false }));
     }
@@ -133,21 +151,39 @@ const OwnerAction = ({
     updateOwnerStatus(
       `/owner/delete_owner/${id}`,
       "delete",
-      "Owner deleted successfully"
+      getTranslation(locale, {
+        en: "Owner deleted successfully",
+        es: "Propietario eliminado exitosamente",
+        ay: "Jilata suma chhaqtayata",
+        qu: "Dueño allinta chinkachisqa",
+        gn: "Jára oñemboguete porã",
+      })
     );
 
   const ActiveOwner = () =>
     updateOwnerStatus(
       `/owner/activate_owner/${id}`,
       "active",
-      "Activated successfully"
+      getTranslation(locale, {
+        en: "Activated successfully",
+        es: "Activado exitosamente",
+        ay: "Suma ch'amanchata",
+        qu: "Allinta llamk'achisqa",
+        gn: "Oñemyendy porã",
+      })
     );
 
   const InactiveOwner = () =>
     updateOwnerStatus(
       `/owner/inactivate_owner/${id}`,
       "inactive",
-      "Inactivated successfully"
+      getTranslation(locale, {
+        en: "Inactivated successfully",
+        es: "Desactivado exitosamente",
+        ay: "Suma jani ch'amanchata",
+        qu: "Allinta sayachisqa",
+        gn: "Oñembogue porã",
+      })
     );
 
   return (
@@ -171,14 +207,38 @@ const OwnerAction = ({
               emailVerified ? "text-green-600" : "text-red-600"
             } bg-[#dfe4e2] text-center w-[140px] rounded-full`}
           >
-            {emailVerified ? "Yes" : "No"}
+            {emailVerified ? getTranslation(locale, {
+              en: "Yes",
+              es: "Sí",
+              ay: "Jisa",
+              qu: "Arí",
+              gn: "Héẽ",
+            }) : getTranslation(locale, {
+              en: "No",
+              es: "No",
+              ay: "Janiwa",
+              qu: "Mana",
+              gn: "Nahániri",
+            })}
           </div>
           <p
             className={`px-[10px] text-[14px] py-[6px] ${
               status === 1 ? "text-green-600" : "text-red-600"
             } bg-[#dfe4e2] text-center w-[140px] rounded-full`}
           >
-            {status === 1 ? "Active" : "Inactive"}
+            {status === 1 ? getTranslation(locale, {
+              en: "Active",
+              es: "Activo",
+              ay: "Ch'aman",
+              qu: "Llamk'aq",
+              gn: "Oiko",
+            }) : getTranslation(locale, {
+              en: "Inactive",
+              es: "Inactivo",
+              ay: "Jani ch'aman",
+              qu: "Mana llamk'aq",
+              gn: "Ndoikói",
+            })}
           </p>
           <p className="w-[180px] truncate" title={creatDate}>
             {mailHover === index ? creatDate : `${creatDate.slice(0, 12)}...`}
@@ -191,11 +251,31 @@ const OwnerAction = ({
 
       <SheetContent className="flex flex-col h-full overflow-hidden">
         <SheetHeader>
-          <SheetTitle>Update status of {name}</SheetTitle>
+          <SheetTitle>
+            {getTranslation(locale, {
+              en: `Update status of ${name}`,
+              es: `Actualizar estado de ${name}`,
+              ay: `${name} kawsawi machaña`,
+              qu: `${name} -pa kawsaynintas hukchachinayki`,
+              gn: `${name} rerekotee mboheko`,
+            })}
+          </SheetTitle>
           <SheetDescription className="text-red-600">
             {status === 1
-              ? `${name} is an active Owner`
-              : `${name} is inactive. Click "Active" to activate.`}
+              ? getTranslation(locale, {
+                  en: `${name} is an active Owner`,
+                  es: `${name} es un propietario activo`,
+                  ay: `${name} ukax ch'aman jilata`,
+                  qu: `${name} huk llamk'aq dueño`,
+                  gn: `${name} ha'e jára oikóva`,
+                })
+              : getTranslation(locale, {
+                  en: `${name} is inactive. Click "Active" to activate.`,
+                  es: `${name} está inactivo. Haz clic en "Activo" para activar.`,
+                  ay: `${name} ukax jani ch'amaniti. "Ch'aman" ch'iqt'aña ch'amanchaña.`,
+                  qu: `${name} mana llamk'aqchu. "Llamk'aq" ñit'iykuy llamk'achinayki.`,
+                  gn: `${name} ndoikói. Eikutu "Oiko" emyendy hag̃ua.`,
+                })}
           </SheetDescription>
         </SheetHeader>
 
@@ -217,28 +297,65 @@ const OwnerAction = ({
           {/* ✅ Owner Details */}
           <div>
             <h3 className="text-xl font-semibold border-b pb-2">
-              Owner Details
+              {getTranslation(locale, {
+                en: "Owner Details",
+                es: "Detalles del Propietario",
+                ay: "Jilata yatiyawinaka",
+                qu: "Dueño willakuykuna",
+                gn: "Jára marandu",
+              })}
             </h3>
             <div className="space-y-3 mt-3">
               <div>
-                <Label>Name</Label>
+                <Label>
+                  {getTranslation(locale, {
+                    en: "Name",
+                    es: "Nombre",
+                    ay: "Suti",
+                    qu: "Suti",
+                    gn: "Téra",
+                  })}
+                </Label>
                 <Input value={name} readOnly />
               </div>
               {user?.gender && (
                 <div>
-                  <Label>Gender</Label>
+                  <Label>
+                    {getTranslation(locale, {
+                      en: "Gender",
+                      es: "Género",
+                      ay: "Chacha warmi",
+                      qu: "Qhari warmi",
+                      gn: "Kuña ha kuimba'e",
+                    })}
+                  </Label>
                   <Input value={user.gender} readOnly />
                 </div>
               )}
               {user?.dob && (
                 <div>
-                  <Label>Date of Birth</Label>
+                  <Label>
+                    {getTranslation(locale, {
+                      en: "Date of Birth",
+                      es: "Fecha de Nacimiento",
+                      ay: "Yurina uru",
+                      qu: "Paqarisqa p'unchay",
+                      gn: "Heñóimby ára",
+                    })}
+                  </Label>
                   <Input value={formatDateOnly(user.dob)} readOnly />
                 </div>
               )}
               <div>
                 <Label className="flex items-center gap-2">
-                  Email{" "}
+                  {getTranslation(locale, {
+                    en: "Email",
+                    es: "Correo electrónico",
+                    ay: "Chaski qillqiri",
+                    qu: "Willay qillqa",
+                    gn: "Ñanduti veve",
+                  })}
+                  {" "}
                   {user?.emailVerified ? (
                     <CheckCircle className="text-green-500 w-4 h-4" />
                   ) : (
@@ -250,7 +367,14 @@ const OwnerAction = ({
               {user?.mobile && (
                 <div>
                   <Label className="flex items-center gap-2">
-                    Mobile{" "}
+                    {getTranslation(locale, {
+                      en: "Mobile",
+                      es: "Móvil",
+                      ay: "Jach'a telefono",
+                      qu: "Kuyuchiq telefono",
+                      gn: "Pumbyry popeguasu",
+                    })}
+                    {" "}
                     {user?.phoneVerified ? (
                       <CheckCircle className="text-green-500 w-4 h-4" />
                     ) : (
@@ -269,7 +393,13 @@ const OwnerAction = ({
           {/* ✅ Payment Details with Screenshots */}
           <div>
             <h3 className="text-xl font-semibold border-b pb-2">
-              Payment Details
+              {getTranslation(locale, {
+                en: "Payment Details",
+                es: "Detalles de Pago",
+                ay: "Phuqhaña yatiyawinaka",
+                qu: "Qullqi quy willakuykuna",
+                gn: "Tepyme marandu",
+              })}
             </h3>
             {screenshots?.length > 0 ? (
               <div className="mt-3">
@@ -286,7 +416,15 @@ const OwnerAction = ({
                       className="rounded-lg object-cover border mb-2"
                     />
                     <div className="w-full space-y-1">
-                      <Label>Screenshot ID</Label>
+                      <Label>
+                        {getTranslation(locale, {
+                          en: "Screenshot ID",
+                          es: "ID de Captura",
+                          ay: "Rixita ID",
+                          qu: "Hap'ina ID",
+                          gn: "Ta'anga japyha ID",
+                        })}
+                      </Label>
                       <Input value={`${i + 1}`} readOnly />
                     </div>
                   </div>
@@ -294,22 +432,52 @@ const OwnerAction = ({
               </div>
             ) : (
               <p className="text-gray-500 mt-3">
-                No payment screenshots uploaded
+                {getTranslation(locale, {
+                  en: "No payment screenshots uploaded",
+                  es: "No se han subido capturas de pago",
+                  ay: "Janiw phuqhaña rixitanakax apaqataniti",
+                  qu: "Mana qullqi quy hap'inanakun churasqachu",
+                  gn: "Ndaipóri tepyme ta'anga japyha oñehupivarekue",
+                })}
               </p>
             )}
           </div>
 
           {/* ✅ Document */}
           <div>
-            <h3 className="text-xl font-semibold border-b pb-2">Document</h3>
+            <h3 className="text-xl font-semibold border-b pb-2">
+              {getTranslation(locale, {
+                en: "Document",
+                es: "Documento",
+                ay: "Qillqa",
+                qu: "Qillqa",
+                gn: "Kuatia",
+              })}
+            </h3>
             <div className="space-y-3 mt-3">
               <div>
-                <Label>Document Number</Label>
+                <Label>
+                  {getTranslation(locale, {
+                    en: "Document Number",
+                    es: "Número de Documento",
+                    ay: "Qillqa jakhuwi",
+                    qu: "Qillqa yupayna",
+                    gn: "Kuatia papapy",
+                  })}
+                </Label>
                 <Input value={document?.document_number || "N/A"} readOnly />
               </div>
               {document?.expire_date && (
                 <div>
-                  <Label>Expiry Date</Label>
+                  <Label>
+                    {getTranslation(locale, {
+                      en: "Expiry Date",
+                      es: "Fecha de Vencimiento",
+                      ay: "Tukuña uru",
+                      qu: "Tukuq p'unchay",
+                      gn: "Opáva ára",
+                    })}
+                  </Label>
                   <Input value={formatDateOnly(document.expire_date)} readOnly />
                 </div>
               )}
@@ -318,30 +486,86 @@ const OwnerAction = ({
 
           {/* ✅ Location */}
           <div>
-            <h3 className="text-xl font-semibold border-b pb-2">Location</h3>
+            <h3 className="text-xl font-semibold border-b pb-2">
+              {getTranslation(locale, {
+                en: "Location",
+                es: "Ubicación",
+                ay: "Chiqanaka",
+                qu: "Maypi kaq",
+                gn: "Tendápe",
+              })}
+            </h3>
             <div className="grid grid-cols-2 gap-3 mt-3">
               <div>
-                <Label>City</Label>
+                <Label>
+                  {getTranslation(locale, {
+                    en: "City",
+                    es: "Ciudad",
+                    ay: "Marka",
+                    qu: "Llaqta",
+                    gn: "Táva",
+                  })}
+                </Label>
                 <Input value={location?.city || "N/A"} readOnly />
               </div>
               <div>
-                <Label>State</Label>
+                <Label>
+                  {getTranslation(locale, {
+                    en: "State",
+                    es: "Estado",
+                    ay: "Departamento",
+                    qu: "Suyu",
+                    gn: "Tetã",
+                  })}
+                </Label>
                 <Input value={location?.state || "N/A"} readOnly />
               </div>
               <div>
-                <Label>Country</Label>
+                <Label>
+                  {getTranslation(locale, {
+                    en: "Country",
+                    es: "País",
+                    ay: "Jacha suyu",
+                    qu: "Mama llaqta",
+                    gn: "Tetã tuicha",
+                  })}
+                </Label>
                 <Input value={location?.country || "N/A"} readOnly />
               </div>
               <div>
-                <Label>Zip Code</Label>
+                <Label>
+                  {getTranslation(locale, {
+                    en: "Zip Code",
+                    es: "Código Postal",
+                    ay: "Postal chimpuq",
+                    qu: "Postal chimpuy",
+                    gn: "Código postal",
+                  })}
+                </Label>
                 <Input value={location?.zip_code || "N/A"} readOnly />
               </div>
               <div>
-                <Label>Latitude</Label>
+                <Label>
+                  {getTranslation(locale, {
+                    en: "Latitude",
+                    es: "Latitud",
+                    ay: "Latitud",
+                    qu: "Latitud",
+                    gn: "Latitud",
+                  })}
+                </Label>
                 <Input value={location?.lat || "N/A"} readOnly />
               </div>
               <div>
-                <Label>Longitude</Label>
+                <Label>
+                  {getTranslation(locale, {
+                    en: "Longitude",
+                    es: "Longitud",
+                    ay: "Longitud",
+                    qu: "Longitud",
+                    gn: "Longitud",
+                  })}
+                </Label>
                 <Input value={location?.lng || "N/A"} readOnly />
               </div>
             </div>
@@ -356,7 +580,17 @@ const OwnerAction = ({
             onClick={DeleteOwner}
             disabled={loading.delete}
           >
-            {loading.delete ? <CircularProgress size={16} /> : "Delete"}
+            {loading.delete ? (
+              <CircularProgress size={16} />
+            ) : (
+              getTranslation(locale, {
+                en: "Delete",
+                es: "Eliminar",
+                ay: "Chhaqtayaña",
+                qu: "Chinkachiy",
+                gn: "Mboguete",
+              })
+            )}
           </Button>
 
           <div className="flex gap-3">
@@ -370,7 +604,13 @@ const OwnerAction = ({
                 {loading.inactive ? (
                   <CircularProgress size={16} />
                 ) : (
-                  "Inactive"
+                  getTranslation(locale, {
+                    en: "Inactive",
+                    es: "Inactivo",
+                    ay: "Jani ch'aman",
+                    qu: "Mana llamk'aq",
+                    gn: "Ndoikói",
+                  })
                 )}
               </Button>
             ) : (
@@ -380,7 +620,17 @@ const OwnerAction = ({
                 onClick={ActiveOwner}
                 disabled={loading.active}
               >
-                {loading.active ? <CircularProgress size={16} /> : "Active"}
+                {loading.active ? (
+                  <CircularProgress size={16} />
+                ) : (
+                  getTranslation(locale, {
+                    en: "Active",
+                    es: "Activo",
+                    ay: "Ch'aman",
+                    qu: "Llamk'aq",
+                    gn: "Oiko",
+                  })
+                )}
               </Button>
             )}
           </div>

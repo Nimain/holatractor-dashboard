@@ -1,3 +1,4 @@
+// ExpandedSidebar.tsx - CORRECTED CODE
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -46,6 +47,7 @@ type Translations = {
   settings: string;
   bookings: string;
   users: string;
+  credit: string;
 };
 
 const ExpandedSidebar = () => {
@@ -55,11 +57,10 @@ const ExpandedSidebar = () => {
   const [bookingShow, setBookingShow] = useState(false);
   const [settingShow, setSettingShow] = useState(false);
   const [userShow, setUserShow] = useState(false);
+  const [creditShow, setCreditShow] = useState(false);
 
   const sectionRef = useRef<HTMLDivElement>(null);
-
   const pathname = usePathname();
-
   const dispatch = useDispatch();
 
   const { activeMenu: LeftSideSctiveItem, sidebarShow } = useSelector(
@@ -73,7 +74,7 @@ const ExpandedSidebar = () => {
     "/": "Dashboard",
     "/ParticularBooking": "Bookings",
     "/Services": "services",
-    "/Category":"Category",
+    "/Category": "Category",
     "/SingleOperator": "Operators",
     "/Operators": "Operators",
     "/Farms": "Farms",
@@ -97,6 +98,8 @@ const ExpandedSidebar = () => {
     "/Accounting": "Accounting",
     "/Attachments": "Attachments",
     "/Store": "Store",
+    "/Currencymanagement": "Currency Management",
+    "/Creditpackage": "Credit Package",
   };
 
   useEffect(() => {
@@ -105,7 +108,7 @@ const ExpandedSidebar = () => {
     );
     if (activeTag && pathMap[activeTag] !== activeLeftSIdeTag) {
       setActiveLeftSideTag(pathMap[activeTag]);
-      dispatch(updateActiveMenu(pathMap[activeTag])); // Dispatch action to update the store
+      dispatch(updateActiveMenu(pathMap[activeTag]));
     }
   }, [pathname, activeLeftSIdeTag, dispatch]);
 
@@ -114,12 +117,10 @@ const ExpandedSidebar = () => {
       const target = e.currentTarget as HTMLDivElement;
       target.scrollTop += e.deltaY;
     };
-
     const section = sectionRef.current;
     if (section) {
       section.addEventListener("wheel", handleScroll);
     }
-
     return () => {
       if (section) {
         section.removeEventListener("wheel", handleScroll);
@@ -244,9 +245,8 @@ const ExpandedSidebar = () => {
         gn: "Nda’ari",
       }),
       route: "/Store",
-    }
-    ,
-     {
+    },
+    {
       icon: (
         <Image
           src={FarmerIcon || "/placeholder.svg"}
@@ -283,7 +283,7 @@ const ExpandedSidebar = () => {
         gn: "",
       }),
       route: "/Services",
-    }
+    },
   ];
 
   const middleLeftSideList = [
@@ -460,6 +460,47 @@ const ExpandedSidebar = () => {
         gn: "",
       }),
       route: "/booking-inquiry",
+    },
+  ];
+
+  const creditList = [
+    {
+      icon: (
+        <Image
+          src={StatementsIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Currency Management"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Currency Management",
+        es: "Gestión de Moneda",
+        ay: "Qullqi apnaqawi",
+        qu: "Qullqi kamachiy",
+        gn: "Viru ñangareko",
+      }),
+      route: "/Currencymanagement",
+    },
+    {
+      icon: (
+        <Image
+          src={PaymentHistoryIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Credit Package"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Credit Package",
+        es: "Paquete de Crédito",
+        ay: "Qullqi ch’ani",
+        qu: "Qullqi ch’aniq",
+        gn: "Crédito mba’e’aty",
+      }),
+      route: "/Creditpackage",
     },
   ];
 
@@ -678,7 +719,6 @@ const ExpandedSidebar = () => {
     },
   ];
 
-  // Define translations for "Inventory", "Billing", and "Settings"
   const translations: Record<string, Translations> = {
     en: {
       inventory: "Inventory",
@@ -686,6 +726,7 @@ const ExpandedSidebar = () => {
       settings: "Settings",
       bookings: "Bookings",
       users: "Users",
+      credit: "Credit",
     },
     es: {
       inventory: "Inventario",
@@ -693,6 +734,7 @@ const ExpandedSidebar = () => {
       settings: "Configuraciones",
       bookings: "Reservas",
       users: "Usuarios",
+      credit: "Crédito",
     },
     ay: {
       inventory: "Lurawi utanaka",
@@ -700,6 +742,7 @@ const ExpandedSidebar = () => {
       settings: "Qillqatanaka",
       bookings: "Qillqatapxañani",
       users: "Jach'a uywiri",
+      credit: "Qullqi",
     },
     qu: {
       inventory: "Hawa llaqtaqmasi",
@@ -707,6 +750,7 @@ const ExpandedSidebar = () => {
       settings: "Chaskiykuna",
       bookings: "Llamk'apay",
       users: "Runa",
+      credit: "Qullqi",
     },
     gn: {
       inventory: "Ñemitype",
@@ -714,6 +758,7 @@ const ExpandedSidebar = () => {
       settings: "Ñemohenda",
       bookings: "Jehechauka",
       users: "Póry",
+      credit: "Crédito",
     },
   };
 
@@ -727,55 +772,43 @@ const ExpandedSidebar = () => {
         scrollbarWidth: "none",
       }}
     >
-      {/* <p className='text-primaryColor hidden text-[20px] font-[600] w-full 1200px:flex items-center justify-center'>
-                Holatractor
-            </p> */}
-
       <Image
         alt="Logo"
         src={LOGO || "/placeholder.svg"}
         className="w-[80%] h-auto object-cover mx-auto"
       />
-
       <ToogleButton />
-
       <div className="w-full h-[2px] bg-gray-300 rounded-full" />
-
       <ul className="flex flex-col gap-[8px]">
-        {topLeftSideList.map((listItem, index) => {
-          return (
-            <Link
-              href={`${listItem.route}`}
-              key={index}
-              className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
+        {topLeftSideList.map((listItem, index) => (
+          <Link
+            href={`${listItem.route}`}
+            key={index}
+            className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
+              LeftSideSctiveItem === listItem.name
+                ? "bg-[#d5ebd6]"
+                : "hover:bg-gray-200"
+            } drop-shadow-md rounded transition-all duration-500 relative`}
+          >
+            {listItem.icon}
+            <span
+              className={`${
                 LeftSideSctiveItem === listItem.name
-                  ? "bg-[#d5ebd6]"
-                  : "hover:bg-gray-200"
-              } drop-shadow-md rounded transition-all duration-500 relative`}
+                  ? "text-black"
+                  : "text-gray-600"
+              }`}
             >
-              {listItem.icon}
-              <span
-                className={`${
-                  LeftSideSctiveItem === listItem.name
-                    ? "text-black"
-                    : "text-gray-600"
-                }`}
-              >
-                {listItem.name}
-              </span>
-            </Link>
-          );
-        })}
+              {listItem.name}
+            </span>
+          </Link>
+        ))}
       </ul>
-
       <div className="w-full h-[2px] bg-gray-300 rounded-full" />
-
       <div>
         <div className="flex items-center justify-between">
           <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
             {translations[locale]?.users || translations.en.users}
           </p>
-
           <div
             onClick={() => {
               setUserShow((pre) => !pre);
@@ -788,44 +821,38 @@ const ExpandedSidebar = () => {
             )}
           </div>
         </div>
-
         <ul className="flex flex-col gap-[8px] mt-[8px]">
           {userShow &&
-            UsersOptions.map((listItem, index) => {
-              return (
-                <Link
-                  href={`${listItem.route}`}
-                  key={index}
-                  className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
+            UsersOptions.map((listItem, index) => (
+              <Link
+                href={`${listItem.route}`}
+                key={index}
+                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
+                  LeftSideSctiveItem === listItem.name
+                    ? "bg-[#d5ebd6]"
+                    : "hover:bg-gray-200"
+                } drop-shadow-md rounded transition-all duration-500 relative`}
+              >
+                {listItem.icon}
+                <span
+                  className={`${
                     LeftSideSctiveItem === listItem.name
-                      ? "bg-[#d5ebd6]"
-                      : "hover:bg-gray-200"
-                  } drop-shadow-md rounded transition-all duration-500 relative`}
+                      ? "text-black"
+                      : "text-gray-600"
+                  }`}
                 >
-                  {listItem.icon}
-                  <span
-                    className={`${
-                      LeftSideSctiveItem === listItem.name
-                        ? "text-black"
-                        : "text-gray-600"
-                    }`}
-                  >
-                    {listItem.name}
-                  </span>
-                </Link>
-              );
-            })}
+                  {listItem.name}
+                </span>
+              </Link>
+            ))}
         </ul>
       </div>
-
       <div className="w-full h-[2px] bg-gray-300 rounded-full" />
-
       <div>
         <div className="flex items-center justify-between">
           <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
             {translations[locale]?.bookings || translations.en.bookings}
           </p>
-
           <div
             onClick={() => {
               setBookingShow((pre) => !pre);
@@ -838,44 +865,38 @@ const ExpandedSidebar = () => {
             )}
           </div>
         </div>
-
         <ul className="flex flex-col gap-[8px] mt-[8px]">
           {bookingShow &&
-            bookingList.map((listItem, index) => {
-              return (
-                <Link
-                  href={`${listItem.route}`}
-                  key={index}
-                  className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
+            bookingList.map((listItem, index) => (
+              <Link
+                href={`${listItem.route}`}
+                key={index}
+                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
+                  LeftSideSctiveItem === listItem.name
+                    ? "bg-[#d5ebd6]"
+                    : "hover:bg-gray-200"
+                } drop-shadow-md rounded transition-all duration-500 relative`}
+              >
+                {listItem.icon}
+                <span
+                  className={`${
                     LeftSideSctiveItem === listItem.name
-                      ? "bg-[#d5ebd6]"
-                      : "hover:bg-gray-200"
-                  } drop-shadow-md rounded transition-all duration-500 relative`}
+                      ? "text-black"
+                      : "text-gray-600"
+                  }`}
                 >
-                  {listItem.icon}
-                  <span
-                    className={`${
-                      LeftSideSctiveItem === listItem.name
-                        ? "text-black"
-                        : "text-gray-600"
-                    }`}
-                  >
-                    {listItem.name}
-                  </span>
-                </Link>
-              );
-            })}
+                  {listItem.name}
+                </span>
+              </Link>
+            ))}
         </ul>
       </div>
-
       <div className="w-full h-[2px] bg-gray-300 rounded-full" />
-
       <div>
         <div className="flex items-center justify-between">
           <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
             {translations[locale]?.inventory || translations.en.inventory}
           </p>
-
           <div
             onClick={() => {
               setInventoryShow((pre) => !pre);
@@ -888,44 +909,38 @@ const ExpandedSidebar = () => {
             )}
           </div>
         </div>
-
         <ul className="flex flex-col gap-[8px] mt-[8px]">
           {inventoryShow &&
-            inventoryList.map((listItem, index) => {
-              return (
-                <Link
-                  href={`${listItem.route}`}
-                  key={index}
-                  className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
+            inventoryList.map((listItem, index) => (
+              <Link
+                href={`${listItem.route}`}
+                key={index}
+                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
+                  LeftSideSctiveItem === listItem.name
+                    ? "bg-[#d5ebd6]"
+                    : "hover:bg-gray-200"
+                } drop-shadow-md rounded transition-all duration-500 relative`}
+              >
+                {listItem.icon}
+                <span
+                  className={`${
                     LeftSideSctiveItem === listItem.name
-                      ? "bg-[#d5ebd6]"
-                      : "hover:bg-gray-200"
-                  } drop-shadow-md rounded transition-all duration-500 relative`}
+                      ? "text-black"
+                      : "text-gray-600"
+                  }`}
                 >
-                  {listItem.icon}
-                  <span
-                    className={`${
-                      LeftSideSctiveItem === listItem.name
-                        ? "text-black"
-                        : "text-gray-600"
-                    }`}
-                  >
-                    {listItem.name}
-                  </span>
-                </Link>
-              );
-            })}
+                  {listItem.name}
+                </span>
+              </Link>
+            ))}
         </ul>
       </div>
-
       <div className="w-full h-[2px] bg-gray-300 rounded-full" />
-
       <div>
         <div className="flex items-center justify-between">
           <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
             {translations[locale]?.billing || translations.en.billing}
           </p>
-
           <div
             onClick={() => {
               setBillingShow((pre) => !pre);
@@ -938,44 +953,82 @@ const ExpandedSidebar = () => {
             )}
           </div>
         </div>
-
         <ul className="flex flex-col gap-[8px] mt-[8px]">
           {billingShow &&
-            middleLeftSideList.map((listItem, index) => {
-              return (
-                <Link
-                  href={`${listItem.route}`}
-                  key={index}
-                  className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
+            middleLeftSideList.map((listItem, index) => (
+              <Link
+                href={`${listItem.route}`}
+                key={index}
+                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
+                  LeftSideSctiveItem === listItem.name
+                    ? "bg-[#d5ebd6]"
+                    : "hover:bg-gray-200"
+                } drop-shadow-md rounded transition-all duration-500 relative`}
+              >
+                {listItem.icon}
+                <span
+                  className={`${
                     LeftSideSctiveItem === listItem.name
-                      ? "bg-[#d5ebd6]"
-                      : "hover:bg-gray-200"
-                  } drop-shadow-md rounded transition-all duration-500 relative`}
+                      ? "text-black"
+                      : "text-gray-600"
+                  }`}
                 >
-                  {listItem.icon}
-                  <span
-                    className={`${
-                      LeftSideSctiveItem === listItem.name
-                        ? "text-black"
-                        : "text-gray-600"
-                    }`}
-                  >
-                    {listItem.name}
-                  </span>
-                </Link>
-              );
-            })}
+                  {listItem.name}
+                </span>
+              </Link>
+            ))}
         </ul>
       </div>
-
       <div className="w-full h-[2px] bg-gray-300 rounded-full" />
-
+      <div>
+        <div className="flex items-center justify-between">
+          <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
+            {translations[locale]?.credit || translations.en.credit}
+          </p>
+          <div
+            onClick={() => {
+              setCreditShow((pre) => !pre);
+            }}
+          >
+            {creditShow ? (
+              <ChevronDown className="rotate-180 transition-all duration-500" />
+            ) : (
+              <ChevronDown className="rotate-0 transition-all duration-500" />
+            )}
+          </div>
+        </div>
+        <ul className="flex flex-col gap-[8px] mt-[8px]">
+          {creditShow &&
+            creditList.map((listItem, index) => (
+              <Link
+                href={`${listItem.route}`}
+                key={index}
+                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
+                  LeftSideSctiveItem === listItem.name
+                    ? "bg-[#d5ebd6]"
+                    : "hover:bg-gray-200"
+                } drop-shadow-md rounded transition-all duration-500 relative`}
+              >
+                {listItem.icon}
+                <span
+                  className={`${
+                    LeftSideSctiveItem === listItem.name
+                      ? "text-black"
+                      : "text-gray-600"
+                  }`}
+                >
+                  {listItem.name}
+                </span>
+              </Link>
+            ))}
+        </ul>
+      </div>
+      <div className="w-full h-[2px] bg-gray-300 rounded-full" />
       <div>
         <div className="flex items-center justify-between">
           <p className="pl-[4px] text-[18px] font-[500] text-gray-700">
             {translations[locale]?.settings || translations.en.settings}
           </p>
-
           <div
             onClick={() => {
               setSettingShow((pre) => !pre);
@@ -988,33 +1041,30 @@ const ExpandedSidebar = () => {
             )}
           </div>
         </div>
-
         <ul className="flex flex-col gap-[8px] mt-[8px]">
           {settingShow &&
-            SettingsOptions.map((listItem, index) => {
-              return (
-                <Link
-                  href={`${listItem.route}`}
-                  key={index}
-                  className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
+            SettingsOptions.map((listItem, index) => (
+              <Link
+                href={`${listItem.route}`}
+                key={index}
+                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
+                  LeftSideSctiveItem === listItem.name
+                    ? "bg-[#d5ebd6]"
+                    : "hover:bg-gray-200"
+                } drop-shadow-md rounded transition-all duration-500 relative`}
+              >
+                {listItem.icon}
+                <span
+                  className={`${
                     LeftSideSctiveItem === listItem.name
-                      ? "bg-[#d5ebd6]"
-                      : "hover:bg-gray-200"
-                  } drop-shadow-md rounded transition-all duration-500 relative`}
+                      ? "text-black"
+                      : "text-gray-600"
+                  }`}
                 >
-                  {listItem.icon}
-                  <span
-                    className={`${
-                      LeftSideSctiveItem === listItem.name
-                        ? "text-black"
-                        : "text-gray-600"
-                    }`}
-                  >
-                    {listItem.name}
-                  </span>
-                </Link>
-              );
-            })}
+                  {listItem.name}
+                </span>
+              </Link>
+            ))}
         </ul>
       </div>
     </motion.div>

@@ -20,6 +20,8 @@ import OwnerRegister from "../Authentication/OwnerRegister";
 import Image from "next/image";
 import NullImage from "@/assets/AnimateIcons/Owner.svg";
 import OwnerAction from "./OwnerAction";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 
 const OwnerSection = () => {
   const [activeHover, setActiveHover] = useState("");
@@ -57,6 +59,15 @@ const OwnerSection = () => {
       });
   }
 
+   const { language: locale } = useSelector(
+      (root: RootState) => root.ActiveLanguage
+    );
+  
+    // 🔥 Same helper you use in ExpandedSidebar
+    const getTranslation = (locale: string, translations: any) => {
+      return translations[locale] || translations["en"];
+    };
+  
   const splitFullName = (fullName: string) => {
     const nameParts = fullName.trim().split(/\s+/); // Split by spaces
     const firstName = nameParts.shift(); // Take the first element as the first name
@@ -101,7 +112,13 @@ const OwnerSection = () => {
   return (
     <div className="mt-[40px] text-[18px]">
       <div className="mb-[20px] w-full flex items-center justify-between">
-        <p className="text-[22px] font-[600]">Total owners: {users.length}</p>
+        <p className="text-[22px] font-[600]">{getTranslation(locale, {
+            en: "Total owners:",
+            es: "Propietarios totales:",
+            ay: "Taqpacha jilatanaka:",
+            qu: "Lliw dueñoqkuna:",
+            gn: "Opa jára:",
+          })} {users.length}</p>
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -111,7 +128,13 @@ const OwnerSection = () => {
                 setOpen(true);
               }}
             >
-              New owner
+             {getTranslation(locale, {
+                             en: "New owner",
+                             es: "Nuevo propietario",
+                             ay: "Machaqa jilata",
+                             qu: "Musuq dueño",
+                             gn: "Jára pyahu",
+                           })}
             </Button>
           </DialogTrigger>
 
@@ -119,7 +142,13 @@ const OwnerSection = () => {
             className="bg-white h-fit min-w-[400px] max-w-[400px] overflow-auto"
             style={{ scrollbarWidth: "none" }}
           >
-            <Label className="mb-2 text-lg font-medium">Name</Label>
+            <Label className="mb-2 text-lg font-medium">{getTranslation(locale, {
+                en: "Name",
+                es: "Nombre",
+                ay: "Suti",
+                qu: "Suti",
+                gn: "Téra",
+              })}</Label>
 
             <Input
               value={newOwnerName}
@@ -136,7 +165,13 @@ const OwnerSection = () => {
                     setOpen(false);
                   }}
                 >
-                  Cancel
+                {getTranslation(locale, {
+                    en: "Cancel",
+                    es: "Cancelar",
+                    ay: "Tukuyaña",
+                    qu: "Chinkachiy",
+                    gn: "Ñemboty",
+                  })}
                 </Button>
               </DialogClose>
 
@@ -149,7 +184,13 @@ const OwnerSection = () => {
                     errorMessage("Please give your name");
                   }}
                 >
-                  Next
+                                   {getTranslation(locale, {
+                    en: "Next",
+                    es: "Siguiente",
+                    ay: "Jutiri",
+                    qu: "Ñawpaq",
+                    gn: "Upeigua",
+                  })}
                 </Button>
               )}
             </DialogFooter>
@@ -159,7 +200,13 @@ const OwnerSection = () => {
 
       <div className="text-[20px] font-[600] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer">
         <div className="w-[100px] flex items-center justify-between group">
-          Id
+         {getTranslation(locale, {
+            en: "Id",
+            es: "Id",
+            ay: "Id",
+            qu: "Id",
+            gn: "Id",
+          })}
           <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
             <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
               <ArrowUpwardIcon />
@@ -174,7 +221,13 @@ const OwnerSection = () => {
         </div>
 
         <div className="w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
-          Name
+        {getTranslation(locale, {
+                    en: "Name",
+                    es: "Nombre",
+                    ay: "Suti",
+                    qu: "Suti",
+                    gn: "Téra",
+                  })}
           <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
             <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
               <ArrowUpwardIcon />
@@ -186,7 +239,13 @@ const OwnerSection = () => {
         </div>
 
         <div className="w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
-          Email
+                    {getTranslation(locale, {
+            en: "Email",
+            es: "Correo electrónico",
+            ay: "Chaski qillqiri",
+            qu: "Willay qillqa",
+            gn: "Ñanduti veve",
+          })}
           <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
             <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
               <ArrowUpwardIcon />
@@ -198,27 +257,47 @@ const OwnerSection = () => {
         </div>
 
         <div
-          className="w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
-          onMouseEnter={() => {
-            setActiveHover("Verified");
-          }}
-          onMouseLeave={() => {
-            setActiveHover("");
-          }}
-        >
-          {activeHover === "Verified" ? "Veri..." : "Verified"}
-          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              <ArrowUpwardIcon />
-            </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              <MoreVertIcon />
-            </div>
-          </div>
-        </div>
+  className="w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
+  onMouseEnter={() => {
+    setActiveHover("Verified");
+  }}
+  onMouseLeave={() => {
+    setActiveHover("");
+  }}
+>
+  {activeHover === "Verified"
+    ? getTranslation(locale, {
+        en: "Verified",
+        es: "Verificado",
+        ay: "Chiqachata",
+        qu: "Kachkan",
+        gn: "Oñemoneĩ",
+      })
+    : getTranslation(locale, {
+        en: "Verified",
+        es: "Verif...",
+        ay: "Chiq...",
+        qu: "Kach...",
+        gn: "Oñe...",
+      })}
+  <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
+    <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+      <ArrowUpwardIcon />
+    </div>
+    <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+      <MoreVertIcon />
+    </div>
+  </div>
+</div>
 
         <div className="w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
-          Status
+          {getTranslation(locale, {
+            en: "Status",
+            es: "Estado",
+            ay: "Kawsawi",
+            qu: "Kawsay",
+            gn: "Tekotee",
+          })}
           <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
             <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
               <ArrowUpwardIcon />
@@ -230,49 +309,84 @@ const OwnerSection = () => {
         </div>
 
         <div
-          className="w-[180px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
-          onMouseEnter={() => {
-            setActiveHover("Joined at");
-          }}
-          onMouseLeave={() => {
-            setActiveHover("");
-          }}
-        >
-          {activeHover === "Joined at" ? "Join..." : "Joined at"}
-          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              <ArrowUpwardIcon />
-            </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              <MoreVertIcon />
-            </div>
-          </div>
-        </div>
+  className="w-[180px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
+  onMouseEnter={() => {
+    setActiveHover("Joined at");
+  }}
+  onMouseLeave={() => {
+    setActiveHover("");
+  }}
+>
+  {activeHover === "Joined at"
+    ? getTranslation(locale, {
+        en: "Joined at",
+        es: "Unido el",
+        ay: "Chiqachata",
+        qu: "Qillqaykama",
+        gn: "Ojejapo",
+      })
+    : getTranslation(locale, {
+        en: "Joined at",
+        es: "Uni...",
+        ay: "Chi...",
+        qu: "Qill...",
+        gn: "Oje...",
+      })}
+  <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
+    <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+      <ArrowUpwardIcon />
+    </div>
+    <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+      <MoreVertIcon />
+    </div>
+  </div>
+</div>
 
-        <div
-          className="w-[180px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
-          onMouseEnter={() => {
-            setActiveHover("Updated at");
-          }}
-          onMouseLeave={() => {
-            setActiveHover("");
-          }}
-        >
-          {activeHover === "Updated at" ? "Upda..." : "Updated at"}
-          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              <ArrowUpwardIcon />
-            </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              <MoreVertIcon />
-            </div>
-          </div>
-        </div>
+<div
+  className="w-[180px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
+  onMouseEnter={() => {
+    setActiveHover("Updated at");
+  }}
+  onMouseLeave={() => {
+    setActiveHover("");
+  }}
+>
+  {activeHover === "Updated at"
+    ? getTranslation(locale, {
+        en: "Updated at",
+        es: "Actualizado el",
+        ay: "Qillqata",
+        qu: "Rimaykuy",
+        gn: "Guarã",
+      })
+    : getTranslation(locale, {
+        en: "Updated at",
+        es: "Actu...",
+        ay: "Qill...",
+        qu: "Rima...",
+        gn: "Gua...",
+      })}
+  <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
+    <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+      <ArrowUpwardIcon />
+    </div>
+    <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+      <MoreVertIcon />
+    </div>
+  </div>
+</div>
+
       </div>
 
       <div className="flex flex-col gap-[5px] mt-[20px]">
         {loading ? (
-          <p>Fetching owner</p>
+          <p>{getTranslation(locale, {
+              en: "Fetching owner",
+              es: "Obteniendo propietario",
+              ay: "Jilata katuqkasa",
+              qu: "Dueño apanayta",
+              gn: "Oñembyaty jára",
+            })}</p>
         ) : users.length === 0 ? (
           <div className="w-full h-full min-h-[80vh] flex items-center justify-center">
             <Image

@@ -1,3 +1,5 @@
+// Sidebar.tsx - CORRECTED CODE
+
 "use client";
 
 import type { RootState } from "@/redux/store";
@@ -48,6 +50,7 @@ type Translations = {
   settings: string;
   bookings: string;
   users: string;
+  credit: string; // <<< ADDED
 };
 
 const Sidebar = () => {
@@ -68,7 +71,7 @@ const Sidebar = () => {
     "/": "Dashboard",
     "/ParticularBooking": "Bookings",
     "/Services": "Services",
-    "/Category":"Category",
+    "/Category": "Category",
     "/SingleOperator": "Operators",
     "/Operators": "Operators",
     "/Farms": "Farms",
@@ -93,6 +96,9 @@ const Sidebar = () => {
     "/Attachments": "Attachments",
     "/Store": "Store",
     "/Farmers": "Farmer",
+    // <<< ADDED
+    "/Currencymanagement": "Currency Management",
+    "/Creditpackage": "Credit Package",
   };
 
   useEffect(() => {
@@ -239,8 +245,7 @@ const Sidebar = () => {
         gn: "Nda’ari",
       }),
       route: "/Store",
-    }
-    ,
+    },
     {
       icon: (
         <Image
@@ -260,7 +265,7 @@ const Sidebar = () => {
       }),
       route: "/Category",
     },
-     {
+    {
       icon: (
         <Image
           src={BusinessIcon || "/placeholder.svg"}
@@ -278,7 +283,7 @@ const Sidebar = () => {
         gn: "",
       }),
       route: "/Services",
-    }
+    },
   ];
 
   const middleLeftSideList = [
@@ -455,6 +460,48 @@ const Sidebar = () => {
         gn: "",
       }),
       route: "/booking-inquiry",
+    },
+  ];
+
+  // <<< ADDED: NEW DATA LIST FOR CREDIT SECTION
+  const creditList = [
+    {
+      icon: (
+        <Image
+          src={StatementsIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Currency Management"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Currency Management",
+        es: "Gestión de Moneda",
+        ay: "Qullqi apnaqawi",
+        qu: "Qullqi kamachiy",
+        gn: "Viru ñangareko",
+      }),
+      route: "/Currencymanagement",
+    },
+    {
+      icon: (
+        <Image
+          src={PaymentHistoryIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Credit Package"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Credit Package",
+        es: "Paquete de Crédito",
+        ay: "Qullqi ch’ani",
+        qu: "Qullqi ch’aniq",
+        gn: "Crédito mba’e’aty",
+      }),
+      route: "/Creditpackage",
     },
   ];
 
@@ -681,6 +728,7 @@ const Sidebar = () => {
       settings: "Settings",
       bookings: "Bookings",
       users: "Users",
+      credit: "Credit", // <<< ADDED
     },
     es: {
       inventory: "Inventario",
@@ -688,6 +736,7 @@ const Sidebar = () => {
       settings: "Configuraciones",
       bookings: "Reservas",
       users: "Usuarios",
+      credit: "Crédito", // <<< ADDED
     },
     ay: {
       inventory: "Lurawi utanaka",
@@ -695,6 +744,7 @@ const Sidebar = () => {
       settings: "Qillqatanaka",
       bookings: "Qillqatapxañani",
       users: "Jach'a uywiri",
+      credit: "Qullqi", // <<< ADDED
     },
     qu: {
       inventory: "Hawa llaqtaqmasi",
@@ -702,6 +752,7 @@ const Sidebar = () => {
       settings: "Chaskiykuna",
       bookings: "Llamk'apay",
       users: "Runa",
+      credit: "Qullqi", // <<< ADDED
     },
     gn: {
       inventory: "Ñemitype",
@@ -709,6 +760,7 @@ const Sidebar = () => {
       settings: "Ñemohenda",
       bookings: "Jehechauka",
       users: "Póry",
+      credit: "Crédito", // <<< ADDED
     },
   };
 
@@ -767,11 +819,11 @@ const Sidebar = () => {
               placement="right"
             >
               <Image
-                src={InsuranceIcon || "/placeholder.svg"}
+                src={UsersIcon || "/placeholder.svg"} // <<< CORRECTED ICON
                 className="w-[20px] h-auto object-cover"
                 width={20}
                 height={20}
-                alt="Bookings"
+                alt="Users"
               />
             </Tooltip>
           </div>
@@ -809,7 +861,7 @@ const Sidebar = () => {
               placement="right"
             >
               <Image
-                src={InsuranceIcon || "/placeholder.svg"}
+                src={BookingIcon || "/placeholder.svg"} // <<< CORRECTED ICON
                 className="w-[20px] h-auto object-cover"
                 width={20}
                 height={20}
@@ -853,11 +905,11 @@ const Sidebar = () => {
               placement="right"
             >
               <Image
-                src={InsuranceIcon || "/placeholder.svg"}
+                src={TractorsIcon || "/placeholder.svg"} // <<< CORRECTED ICON
                 className="w-[20px] h-auto object-cover"
                 width={20}
                 height={20}
-                alt="Statements"
+                alt="Inventory"
               />
             </Tooltip>
           </div>
@@ -885,6 +937,52 @@ const Sidebar = () => {
             })}
           </ul>
         </div>
+
+        {/* <<< ADDED: NEW JSX BLOCK FOR CREDIT SECTION >>> */}
+        <div className="w-full h-[2px] bg-gray-300 rounded-full" />
+
+        <div>
+          <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
+            <Tooltip
+              title={translations[locale]?.credit || translations.en.credit}
+              placement="right"
+            >
+              <Image
+                src={LoanssIcon || "/placeholder.svg"}
+                className="w-[20px] h-auto object-cover"
+                width={20}
+                height={20}
+                alt="Credit"
+              />
+            </Tooltip>
+          </div>
+
+          <ul className="flex flex-col gap-[8px] mt-[8px]">
+            {creditList.map((listItem, index) => {
+              return (
+                <Link
+                  href={`${listItem.route}`}
+                  key={index}
+                  className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
+                    LeftSideSctiveItem === listItem.name
+                      ? "bg-[#d5ebd6]"
+                      : "hover:bg-gray-200"
+                  } drop-shadow-md rounded transition-all duration-500 relative`}
+                  onClick={() => {
+                    setActiveLeftSideTag(listItem.name);
+                  }}
+                >
+                  <Tooltip title={listItem.name} placement="right">
+                    {listItem.icon}
+                  </Tooltip>
+                </Link>
+              );
+            })}
+          </ul>
+        </div>
+        {/* <<< END OF ADDED SECTION >>> */}
+
+        <div className="w-full h-[2px] bg-gray-300 rounded-full" />
 
         <div>
           <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
