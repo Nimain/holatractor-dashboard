@@ -82,7 +82,7 @@ const Sidebar = () => {
     "/Users": "Users",
     "/Inventory": "Tractors",
     "/Subscription": "Subscriptions",
-    "/Business": "Business",
+    "/Devices": "Devices",
     "/Dealers": "Dealers",
     "/Affiliation": "Affiliation",
     "/Logs": "Logs",
@@ -174,17 +174,17 @@ const Sidebar = () => {
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
-          alt="Business"
+          alt="Devices"
         />
       ),
       name: getTranslation(locale, {
-        en: "Business",
-        es: "Negocio",
-        ay: "Kamani",
-        qu: "Ruwasqa",
-        gn: "Negósio",
+        en: "Devices",
+           es: "Dispositivos",
+    ay: "Uñt’awinaka",
+    qu: "Ruranakuna",
+    gn: "Mba’e’okárape",
       }),
-      route: "#",
+      route: "/Devices",
     },
   ];
 
