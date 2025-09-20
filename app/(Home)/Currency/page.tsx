@@ -1,5 +1,5 @@
 
-import CurrencyContainer from "@/components/Credit/currency-management/CurrencyContainer";
+import CurrencyContainer from "@/components/Credit/currency/CurrencyContainer";
 import React from "react";
 
 const CurrencyManagementPage = () => {

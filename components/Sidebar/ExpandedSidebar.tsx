@@ -98,8 +98,9 @@ const ExpandedSidebar = () => {
     "/Accounting": "Accounting",
     "/Attachments": "Attachments",
     "/Store": "Store",
-    "/Currencymanagement": "Currency Management",
-    "/Creditpackage": "Credit Package",
+    "/Currency": "Currency",
+    "/Credit": "Credit",
+    "/Coupon":"Coupon"
   };
 
   useEffect(() => {
@@ -464,45 +465,65 @@ const ExpandedSidebar = () => {
   ];
 
   const creditList = [
-    {
-      icon: (
-        <Image
-          src={StatementsIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Currency Management"
-        />
-      ),
-      name: getTranslation(locale, {
-        en: "Currency Management",
-        es: "Gestión de Moneda",
-        ay: "Qullqi apnaqawi",
-        qu: "Qullqi kamachiy",
-        gn: "Viru ñangareko",
-      }),
-      route: "/Currencymanagement",
-    },
-    {
-      icon: (
-        <Image
-          src={PaymentHistoryIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Credit Package"
-        />
-      ),
-      name: getTranslation(locale, {
-        en: "Credit Package",
-        es: "Paquete de Crédito",
-        ay: "Qullqi ch’ani",
-        qu: "Qullqi ch’aniq",
-        gn: "Crédito mba’e’aty",
-      }),
-      route: "/Creditpackage",
-    },
-  ];
+  {
+    icon: (
+      <Image
+        src={StatementsIcon || "/placeholder.svg"}
+        className="w-[20px] h-auto object-cover"
+        width={20}
+        height={20}
+        alt="Currency"
+      />
+    ),
+    name: getTranslation(locale, {
+      en: "Currency",
+      es: "Moneda",
+      ay: "Qullqi",
+      qu: "Qullqi",
+      gn: "Viru",
+    }),
+    route: "/Currency",
+  },
+  {
+    icon: (
+      <Image
+        src={PaymentHistoryIcon || "/placeholder.svg"}
+        className="w-[20px] h-auto object-cover"
+        width={20}
+        height={20}
+        alt="Credit"
+      />
+    ),
+    name: getTranslation(locale, {
+      en: "Credit",
+      es: "Crédito",
+      ay: "Qullqi ch’ani",
+      qu: "Qullqi chani",
+      gn: "Crédito",
+    }),
+    route: "/Credit",
+  },
+  {
+    icon: (
+      <Image
+        src={AffiliationIcon || "/placeholder.svg"}
+        className="w-[20px] h-auto object-cover"
+        width={20}
+        height={20}
+        alt="Coupon"
+      />
+    ),
+    name: getTranslation(locale, {
+      en: "Coupon",
+      es: "Cupón",
+      ay: "Kuponi",
+      qu: "Kupon",
+      gn: "Kupon",
+    }),
+    route: "/Coupon",
+  },
+];
+
 
   const SettingsOptions = [
     {
