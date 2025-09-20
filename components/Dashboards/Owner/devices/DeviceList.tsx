@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Wifi, WifiOff, Truck, MapPin, Clock, Plus, RefreshCw, Trash2 } from "lucide-react"
+import { Wifi, WifiOff, Truck, MapPin, Clock, Plus, RefreshCw, Trash2, Globe } from "lucide-react"
 import DeviceApiService, { type Device } from "./Device"
 import { AddDeviceModal } from "./AddDeviceModal"
 import { DeviceMapModal } from "./DeviceMapModal"
@@ -36,12 +36,15 @@ export function DeviceList({ language = "en" }: DeviceListProps) {
       offline: "Offline",
       model: "Model:",
       imei: "IMEI:",
+      region: "Region:",
       hour: "hour",
       viewLocation: "View Location",
       removeDevice: "Remove Device",
       confirmRemove: "Are you sure you want to remove this device?",
       deviceRemoved: "Device removed successfully",
       errorRemoving: "Failed to remove device",
+      southwest: "Southwest (Negative Coords)",
+      northeast: "Northeast (Positive Coords)",
     },
     es: {
       title: "Mis Dispositivos",
@@ -55,12 +58,15 @@ export function DeviceList({ language = "en" }: DeviceListProps) {
       offline: "Desconectado",
       model: "Modelo:",
       imei: "IMEI:",
+      region: "Región:",
       hour: "hora",
       viewLocation: "Ver Ubicación",
       removeDevice: "Eliminar Dispositivo",
       confirmRemove: "¿Estás seguro de que quieres eliminar este dispositivo?",
       deviceRemoved: "Dispositivo eliminado exitosamente",
       errorRemoving: "Error al eliminar el dispositivo",
+      southwest: "Suroeste (Coordenadas Negativas)",
+      northeast: "Noreste (Coordenadas Positivas)",
     },
   }
 
@@ -74,6 +80,10 @@ export function DeviceList({ language = "en" }: DeviceListProps) {
     try {
       setLoading(true)
       const devicesData = await DeviceApiService.getAllDevices()
+      // Log device regions for debugging
+      devicesData.forEach(device => {
+        console.log(`[DeviceList] Device ${device.device_imei} has region: ${device.device_region}`)
+      })
       setDevices(devicesData)
     } catch (error) {
       console.error("Error fetching devices:", error)
@@ -105,6 +115,12 @@ export function DeviceList({ language = "en" }: DeviceListProps) {
     }
   }
 
+  const handleViewLocation = (device: Device) => {
+    console.log(`[DeviceList] Opening map for device ${device.device_imei} with region ${device.device_region}`)
+    setSelectedDevice(device)
+    setMapModalOpen(true)
+  }
+
   const formatTime = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
@@ -118,6 +134,10 @@ export function DeviceList({ language = "en" }: DeviceListProps) {
 
   const getDeviceStatus = (status: number) => {
     return status === 1 ? "online" : "offline"
+  }
+
+  const getRegionDisplayName = (region: string) => {
+    return region === "SW" ? t.southwest : t.northeast
   }
 
   if (loading && devices.length === 0) {
@@ -199,10 +219,17 @@ export function DeviceList({ language = "en" }: DeviceListProps) {
                         </p>
                       </div>
                     </div>
-                    <Badge variant={isOnline ? "default" : "secondary"} className="flex items-center gap-1">
-                      {isOnline ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-                      {isOnline ? t.online : t.offline}
-                    </Badge>
+                    <div className="flex flex-col gap-1">
+                      <Badge variant={isOnline ? "default" : "secondary"} className="flex items-center gap-1">
+                        {isOnline ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+                        {isOnline ? t.online : t.offline}
+                      </Badge>
+                      {/* Region badge */}
+                      <Badge variant={device.device_region === "SW" ? "destructive" : "default"} className="text-xs">
+                        <Globe className="h-3 w-3 mr-1" />
+                        {device.device_region}
+                      </Badge>
+                    </div>
                   </div>
                 </CardHeader>
 
@@ -211,6 +238,10 @@ export function DeviceList({ language = "en" }: DeviceListProps) {
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t.imei}:</span>
                       <span className="font-mono">{device.device_imei}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{t.region}:</span>
+                      <span className="text-xs">{getRegionDisplayName(device.device_region)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Price:</span>
@@ -232,10 +263,7 @@ export function DeviceList({ language = "en" }: DeviceListProps) {
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      onClick={() => {
-                        setSelectedDevice(device)
-                        setMapModalOpen(true)
-                      }}
+                      onClick={() => handleViewLocation(device)}
                     >
                       <MapPin className="h-4 w-4 mr-1" />
                       {t.viewLocation}
@@ -259,7 +287,13 @@ export function DeviceList({ language = "en" }: DeviceListProps) {
         language={language}
       />
 
-      <DeviceMapModal open={mapModalOpen} onOpenChange={setMapModalOpen} device={selectedDevice} language={language} />
+      {/* Pass the complete device object with region information to the map modal */}
+      <DeviceMapModal 
+        open={mapModalOpen} 
+        onOpenChange={setMapModalOpen} 
+        device={selectedDevice} 
+        language={language} 
+      />
     </div>
   )
 }

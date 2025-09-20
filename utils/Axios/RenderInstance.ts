@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const NestJsBaseURL = "https://holatractor-backend-render.onrender.com/"
-  export const DeviceBaseURL = "https://device.holatractor.com/api/"
+  export const DeviceBaseURL = "https://device.holatractor.com/"
 
   // export const NestJsBaseURL = "http://localhost:5000/"
 
