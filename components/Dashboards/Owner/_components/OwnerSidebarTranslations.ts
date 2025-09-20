@@ -41,6 +41,13 @@ export const ownerSidebar = {
       qu: "Rantinaypi",
       gn: "Ñemuha"
     },
+    Devices:{
+      en: "Devices",
+      es: "Dispositivos",
+      ay: "Utjawi",
+      qu: "Ruraykuna",
+      gn: "Mbaeporã"
+    },
     payment: {
       en: "Payment",
       es: "Pago",

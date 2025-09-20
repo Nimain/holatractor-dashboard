@@ -69,7 +69,7 @@ const Languages = () => {
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogTrigger asChild>
         <Button
-        className="bg-primaryColor"
+        className="bg-red-500 hover:bg-red-600"
           onClick={() => {
             setDialogOpen(true);
           }}

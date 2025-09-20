@@ -86,7 +86,7 @@ const AssignOperator = ({ selectedRequest, storeId }: { selectedRequest: string;
         <Dialog open={isAssignOpen} onOpenChange={setIsAssignOpen}>
             <DialogTrigger asChild>
                 <Button
-                    className="w-full mt-6"
+                    className="w-full mt-6 bg-orange-500 hover:bg-orange-600"
                     onClick={() => {
                         setIsAssignOpen(true)
                     }}
@@ -94,9 +94,9 @@ const AssignOperator = ({ selectedRequest, storeId }: { selectedRequest: string;
                     <TranslatedText greetings={ownerBookingsTranslation.assignOperator} />
                 </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className=' bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white'>
                 <DialogHeader>
-                    <DialogTitle><TranslatedText greetings={ownerBookingsTranslation.assignOperator} /></DialogTitle>
+                    <DialogTitle className='text-2xl font-bold'><TranslatedText greetings={ownerBookingsTranslation.assignOperator} /></DialogTitle>
                 </DialogHeader>
                 {
                     fetchingOperators ?
@@ -117,21 +117,21 @@ const AssignOperator = ({ selectedRequest, storeId }: { selectedRequest: string;
                                                 <div className="flex items-center space-x-4">
                                                     <Avatar className="h-12 w-12">
                                                         <AvatarImage src={operator.operator.user.image || ''} alt={`${operator.operator.user.first_name} ${operator.operator.user.last_name}`} />
-                                                        <AvatarFallback>{operator.operator.user.first_name[0]}{operator.operator.user.last_name[0]}</AvatarFallback>
+                                                        <AvatarFallback className='bg-orange-600 text-white'>{operator.operator.user.first_name[0]}{operator.operator.user.last_name[0]}</AvatarFallback>
                                                     </Avatar>
                                                     <div>
-                                                        <CardTitle>{operator.operator.user.first_name} {operator.operator.user.middle_name ?? ""} {operator.operator.user.last_name}</CardTitle>
+                                                        <CardTitle className='text-red-500 font-bold'>{operator.operator.user.first_name} {operator.operator.user.middle_name ?? ""} {operator.operator.user.last_name}</CardTitle>
                                                     </div>
                                                 </div>
                                             </CardHeader>
-                                            <CardContent className="space-y-2">
+                                            <CardContent className="space-y-2 text-red-600 ">
                                                 <div className="flex items-center">
                                                     <Mail className="mr-2 h-4 w-4" />
-                                                    <span className="text-sm">{operator.operator.user.email}</span>
+                                                    <span>{operator.operator.user.email}</span>
                                                 </div>
                                                 <div className="flex items-center">
                                                     <Phone className="mr-2 h-4 w-4" />
-                                                    <span className="text-sm">{operator.operator.user.mobile}</span>
+                                                    <span>{operator.operator.user.mobile}</span>
                                                 </div>
                                                 {operator.operator.OperatorBookingJob.length > 0 && (
                                                     <div className="flex items-center">
@@ -141,7 +141,7 @@ const AssignOperator = ({ selectedRequest, storeId }: { selectedRequest: string;
                                                 )}
                                             </CardContent>
                                             <CardFooter>
-                                                <Button className="w-full" disabled={assigning[operator.operator_id]} onClick={() => { handleAssign(operator.operator_id) }}>
+                                                <Button className="w-full bg-orange-500 " disabled={assigning[operator.operator_id]} onClick={() => { handleAssign(operator.operator_id) }}>
                                                     {
                                                         assigning[operator.operator_id] ? <TranslatedText greetings={ownerBookingsTranslation.assigning} /> : <TranslatedText greetings={ownerBookingsTranslation.assign} />
                                                     }

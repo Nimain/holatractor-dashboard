@@ -74,8 +74,8 @@ const Header = () => {
     }, []);
 
     return (
-        <div className="bg-white text-white p-4 flex flex-col 1050px:flex-row items-start 1050px:items-center justify-start 1050px:justify-between gap-4 shadow-md rounded-2xl mb-4">
-            <h1 className="text-xl md:text-3xl font-bold text-gray-700"><TranslatedText greetings={WelcomeTranslation} /> {user.name}</h1>
+        <div className=" text-white p-4 h-14 flex flex-col 1050px:flex-row items-start 1050px:items-center justify-start 1050px:justify-between gap-4 border border-black rounded-md ">
+            <h1 className="text-xl md:text-2xl font-bold text-red-500"><TranslatedText greetings={WelcomeTranslation} /> {user.name}</h1>
 
             <div className="flex items-center space-x-6">
 
@@ -86,7 +86,7 @@ const Header = () => {
                         className="p-2 pl-10 pr-4 rounded-full text-gray-800 shadow-md border-2 w-full 768px:w-72"
                     />
                     {/* Search Icon */}
-                    <svg
+                    {/* <svg
                         xmlns="http://www.w3.org/2000/svg"
                         className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500"
                         viewBox="0 0 20 20"
@@ -97,7 +97,7 @@ const Header = () => {
                             d="M8.5 3a5.5 5.5 0 11-5.5 5.5A5.507 5.507 0 018.5 3zm0 1a4.5 4.5 0 10-4.5 4.5A4.507 4.507 0 008.5 4zM14 14a6 6 0 11-2.13-4.73l4.9 4.9a1 1 0 011.41-1.42l-4.9-4.9A5.979 5.979 0 0114 14z"
                             clipRule="evenodd"
                         />
-                    </svg>
+                    </svg> */}
                 </div>
 
                 <Button

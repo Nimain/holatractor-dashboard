@@ -6,6 +6,7 @@ import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
 import TranslatedText from '@/components/Menubar/TranslatedText';
 import { ownerPaymentHistoryTranslations } from './PaymentHistoryTrnslation';
+import { Download } from 'lucide-react';
 
 // Define styles for PDF
 const styles = StyleSheet.create({
@@ -164,7 +165,9 @@ export const DownloadSinglePDFButton: React.FC<{ payment: Payment; }> = async ({
             asChild>
             <a href={url as string} download={"payment.pdf"}>
               <TranslatedText greetings={ownerPaymentHistoryTranslations.download} />
+              <Download className='mx-1 size-5'/>
             </a>
+            
           </Button>
         );
       }}

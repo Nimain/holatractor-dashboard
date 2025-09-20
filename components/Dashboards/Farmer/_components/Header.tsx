@@ -101,8 +101,8 @@ const Header = () => {
   if(!user) return null
 
   return (
-    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 mt-4">
-          <div className="flex items-center mb-4 md:mb-0">
+    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 mt-4 border-2 border-black p-4 rounded-xl">
+          <div className="flex items-center mb-4 md:mb-0 text-red-600">
             <h1 className="text-xl md:text-3xl font-bold"><TranslatedText greetings={WelcomeTranslation} /> {user.name}!</h1>
           </div>
           <div className="flex items-center gap-6 ml-auto">
@@ -159,7 +159,7 @@ const Header = () => {
                 user.image &&
                 <AvatarImage src={user.image} alt={`${user.name}`} />
               }
-              <AvatarFallback className="bg-white drop-shadow-md">{user.name[0]}{user.name[1]}</AvatarFallback>
+              <AvatarFallback className="bg-red-600 text-white drop-shadow-md">{user.name[0]}{user.name[1]}</AvatarFallback>
             </Avatar>
           </div>
         </div>

@@ -58,6 +58,7 @@ import { useDispatch, useSelector } from "react-redux"
 import { RootState } from "@/redux/store"
 import { changeFarm } from "@/redux/ActiveFarm/ActiveFarm"
 import LatestBookingComponent from "./_components/LatestBookingComponent"
+import { ClassNames } from "@emotion/react"
 
 interface user {
   userId: string;
@@ -218,45 +219,45 @@ const FarmerDashboard = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 1200px:grid-cols-4 gap-6 mb-8">
-              <Card className="rounded-2xl space-y-2 bg-[#D0E1E9]">
+              <Card className="rounded-2xl space-y-2 bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
                     <TranslatedText greetings={activeBookings} />
                   </CardTitle>
-                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                  <CalendarIcon className="h-4 w-4 text-muted" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{totalBookings}</div>
                 </CardContent>
               </Card>
-              <Card className="rounded-2xl space-y-2 bg-[#D0E1E9]">
+              <Card className="rounded-2xl space-y-2 bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
                     <TranslatedText greetings={completedBookings} />
                   </CardTitle>
-                  <TractorIcon className="h-4 w-4 text-muted-foreground" />
+                  <TractorIcon className="h-4 w-4 text-muted" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{completedBookingsCount}</div>
                 </CardContent>
               </Card>
-              <Card className="rounded-2xl space-y-2 bg-[#D0E1E9]">
+              <Card className="rounded-2xl space-y-2 bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
                     <TranslatedText greetings={totalPaidTranslation} />
                   </CardTitle>
-                  <ClipboardListIcon className="h-4 w-4 text-muted-foreground" />
+                  <ClipboardListIcon className="h-4 w-4 text-muted" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{totalPaid.toFixed(2)}</div>
                 </CardContent>
               </Card>
-              <Card className="rounded-2xl space-y-2 bg-[#D0E1E9]">
+              <Card className="rounded-2xl space-y-2 bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
                     <TranslatedText greetings={totalUnpaidTranslation} />
                   </CardTitle>
-                  <BarChartIcon className="h-4 w-4 text-muted-foreground" />
+                  <BarChartIcon className="h-4 w-4 text-muted" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{totalUnpaid.toFixed(2)}</div>
@@ -267,23 +268,23 @@ const FarmerDashboard = () => {
             <div className="w-full grid grid-cols-1 md:grid-cols-2 1200px:grid-cols-4 gap-6">
 
               <div className="grid grid-cols-1 md:grid-cols-2 1200px:flex 1200px:flex-col gap-6 col-span-2 1200px:col-span-1">
-                <Card className="rounded-2xl space-y-2 bg-[#D0E1E9]">
+                <Card className="rounded-2xl space-y-2 bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">
                       <TranslatedText greetings={totalFarms} />
                     </CardTitle>
-                    <Pickaxe className="h-4 w-4 text-muted-foreground" />
+                    <Pickaxe className="h-4 w-4 text-muted" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{farms.length}</div>
                   </CardContent>
                 </Card>
-                <Card className="rounded-2xl space-y-2 bg-[#D0E1E9]">
+                <Card className="rounded-2xl space-y-2 bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">
                       <TranslatedText greetings={totalLandArea} />
                     </CardTitle>
-                    <LandPlot className="h-4 w-4 text-muted-foreground" />
+                    <LandPlot className="h-4 w-4 text-muted" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold flex items-center gap-2 flex-wrap">
@@ -341,26 +342,26 @@ const FarmerDashboard = () => {
                 fetchingLogs ?
                   <p><TranslatedText greetings={logTranslations.logsLoading} />...</p>
                   :
-                  <>
-                    <h1 className="text-center mb-3 text-2xl font-bold">
+                  <div className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white">
+                    <h1 className="text-center mb-3 text-2xl font-bold bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white">
                       <TranslatedText greetings={logTranslations.systemActivity} />
                     </h1>
-                    <Table>
-                      <TableCaption>
+                    <Table  className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white">
+                      <TableCaption className="text-white">
                         <TranslatedText greetings={logTranslations.recentActivitiesList} />
                       </TableCaption>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="font-bold">
+                          <TableHead className="font-bold text-white">
                             <TranslatedText greetings={logTranslations.slNo} />
                           </TableHead>
-                          <TableHead className="font-bold">
+                          <TableHead className="font-bold text-white">
                             <TranslatedText greetings={logTranslations.action} />
                           </TableHead>
-                          <TableHead className="font-bold">
+                          <TableHead className="font-bold text-white">
                             <TranslatedText greetings={logTranslations.details} />
                           </TableHead>
-                          <TableHead className="font-bold">
+                          <TableHead className="font-bold text-white">
                             <TranslatedText greetings={logTranslations.time} />
                           </TableHead>
                         </TableRow>
@@ -371,7 +372,7 @@ const FarmerDashboard = () => {
                             key={index}>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <TableRow>
+                                <TableRow >
                                   <TableCell>{index + 1}</TableCell>
                                   <TableCell>{log.action}</TableCell>
                                   <TableCell>{truncateDetails(log.details)}</TableCell>
@@ -379,14 +380,14 @@ const FarmerDashboard = () => {
                                 </TableRow>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>{log.details}</p>
+                                <p className="text-white">{log.details}</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         ))}
                       </TableBody>
                     </Table>
-                  </>
+                  </div>
               }
             </div>
 
@@ -404,7 +405,6 @@ const FarmerDashboard = () => {
               isEmailVerified={user.email_varified}
               isOnline={true}
               name={user.name} />
-
               <LatestBookingComponent booking={bookings} bookingLength={totalBookings} />
 
             <WeatherWidget city={city} />

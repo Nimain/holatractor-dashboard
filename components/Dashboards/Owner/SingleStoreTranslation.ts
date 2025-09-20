@@ -48,6 +48,14 @@ export const singleStoreOwnerTranslations = {
         qu: "Riqsiy yachayniykuna",
         gn: "Ehecha umi mba'ekuéra"
       },
+      Contact:{
+        en: "Contact",
+        es: "Contactos",
+        ay: "	Aruskipäwinaka ",
+        qu: "Rimanakuykuna ",
+        gn: "Oñemongetáva"
+      }
+      ,
       model: {
         en: "Model",
         es: "Modelo",

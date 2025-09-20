@@ -207,28 +207,28 @@ export const farmPageTranslations = {
     },
     giveFarmDetails: {
       en: "Give farm details",
-      es: "Proporcionar detalles de la granja",
+      es: "Proporcionar detalles de la campo",
       ay: "Uñt'añani qatunaka luraqaña",
       qu: "Qhawa ruwanakan qillqa ruray",
       gn: "Eme'ẽ ñemityrenda rembiasakue"
     },
     farmName: {
       en: "Farm name",
-      es: "Nombre de la granja",
+      es: "Nombre de la campo",
       ay: "Qatunaka suti",
       qu: "Qhatun Suti",
       gn: "Ñemityrenda héra"
     },
     farmDescription: {
       en: "Farm description",
-      es: "Descripción de la granja",
+      es: "Descripción de la campo",
       ay: "Qatunaka luraqa",
       qu: "Qhatun Ruwana Qillqa",
       gn: "Ñemityrenda mba'ekuaapyre"
     },
     addFarm: {
       en: "Add Farm",
-      es: "Agregar Granja",
+      es: "Agregar Campo",
       ay: "Qatul luranta",
       qu: "Qhatun Yanapapay",
       gn: "Ñembojoapy ñemityrenda"

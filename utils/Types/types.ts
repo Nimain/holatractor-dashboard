@@ -196,6 +196,7 @@ export interface Attachment {
   id: string;
   name: string;
   description: string;
+    category?: string;
   es_name?: String;
   es_description?: string;
   ay_name?: string;
@@ -213,6 +214,36 @@ export interface Attachment {
   AttachmentInStore: AttachmentInStore[];
   AttachmentLead: AttachmentLead[];
   BookingStandaloneAttachment: BookingStandaloneAttachment[];
+}
+
+// Base Service
+export interface Service {
+  id: string;
+  name: string;
+  description?: string;
+  images: string[];
+  base_id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  min_price?: string | number; // Make optional if it can be null
+  max_price?: string | number; // Make optional if it can be null
+  ServiceInStore: ServiceInStore[];
+  category?:string
+}
+
+// Service inside a Store
+export interface ServiceInStore {
+  id: string;
+  baseServiceId: string;
+  base_id: string;
+  price: number;
+  store_id: string;
+  createdAt: Date;
+  updatedAt: Date;
+  baseService: Service;
+  base: Base;
+  store: Store;
+  hourly_price:number;
 }
 
 export interface BookingTractor {
@@ -367,6 +398,7 @@ export interface Store {
   AttachmentInStore: AttachmentInStore[];
   OperatorInStore: OperatorInStore[];
   OperatorStoreCon: OperatorStoreCon[];
+  ServiceInStore: ServiceInStore[];
 }
 
 export interface TractorInStore {
@@ -823,6 +855,7 @@ export enum PaymentStatus {
   OwnerPending,
   OwnerREJECTED,
   COMPLETED,
+  PAID
 }
 
 export interface Inquiry {
@@ -1124,3 +1157,4 @@ export enum StoreOperatorStatus {
   Inactive = 'Inactive',
   Deleted = 'Deleted'
 }
+

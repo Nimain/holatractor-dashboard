@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import type { RootState } from "@/redux/store"
-import Image from "next/image"
-import { useEffect, useRef, useState } from "react"
-import { useSelector } from "react-redux"
-import ExpandedSidebar from "./ExpandedSidebar"
+import type { RootState } from "@/redux/store";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
+import { useSelector } from "react-redux";
+import ExpandedSidebar from "./ExpandedSidebar";
 
-import LOGO from "@/assets/traclog.png"
-import ToogleButton from "./ToogleButton"
-import { usePathname } from "next/navigation"
+import LOGO from "@/assets/traclog.png";
+import ToogleButton from "./ToogleButton";
+import { usePathname } from "next/navigation";
 import {
   AgentIcon,
   BookingIcon,
@@ -33,36 +33,42 @@ import {
   LogIcon,
   LogOutIcon,
   FarmerIcon,
-} from "@/assets/sidebar/SidebarImages"
-import Link from "next/link"
-import { Tooltip } from "@mui/material"
-import { ReceiptIcon, SettingsIcon } from "lucide-react"
+} from "@/assets/sidebar/SidebarImages";
+import Link from "next/link";
+import { Tooltip } from "@mui/material";
+import { ReceiptIcon, SettingsIcon } from "lucide-react";
 
 const getTranslation = (locale: string, translations: any) => {
-  return translations[locale] || translations["en"]
-}
+  return translations[locale] || translations["en"];
+};
 
 type Translations = {
-  inventory: string
-  billing: string
-  settings: string
-  bookings: string
-  users: string
-}
+  inventory: string;
+  billing: string;
+  settings: string;
+  bookings: string;
+  users: string;
+};
 
 const Sidebar = () => {
-  const [activeLeftSIdeTag, setActiveLeftSideTag] = useState("Dashboard")
+  const [activeLeftSIdeTag, setActiveLeftSideTag] = useState("Dashboard");
 
-  const sectionRef = useRef<HTMLDivElement>(null)
+  const sectionRef = useRef<HTMLDivElement>(null);
 
-  const pathname = usePathname()
+  const pathname = usePathname();
 
-  const { sidebarShow, activeMenu: LeftSideSctiveItem } = useSelector((root: RootState) => root.SidebarShow)
-  const { language: locale } = useSelector((root: RootState) => root.ActiveLanguage)
+  const { sidebarShow, activeMenu: LeftSideSctiveItem } = useSelector(
+    (root: RootState) => root.SidebarShow
+  );
+  const { language: locale } = useSelector(
+    (root: RootState) => root.ActiveLanguage
+  );
 
   const pathMap: { [key: string]: string } = {
     "/": "Dashboard",
     "/ParticularBooking": "Bookings",
+    "/Services": "Services",
+    "/Category":"Category",
     "/SingleOperator": "Operators",
     "/Operators": "Operators",
     "/Farms": "Farms",
@@ -87,32 +93,34 @@ const Sidebar = () => {
     "/Attachments": "Attachments",
     "/Store": "Store",
     "/Farmers": "Farmer",
-  }
+  };
 
   useEffect(() => {
-    const activeTag = Object.keys(pathMap).find((key) => pathname.includes(key))
+    const activeTag = Object.keys(pathMap).find((key) =>
+      pathname.includes(key)
+    );
     if (activeTag && pathMap[activeTag] !== activeLeftSIdeTag) {
-      setActiveLeftSideTag(pathMap[activeTag])
+      setActiveLeftSideTag(pathMap[activeTag]);
     }
-  }, [pathname])
+  }, [pathname]);
 
   useEffect(() => {
     const handleScroll = (e: WheelEvent) => {
-      const target = e.currentTarget as HTMLDivElement
-      target.scrollTop += e.deltaY
-    }
+      const target = e.currentTarget as HTMLDivElement;
+      target.scrollTop += e.deltaY;
+    };
 
-    const section = sectionRef.current
+    const section = sectionRef.current;
     if (section) {
-      section.addEventListener("wheel", handleScroll)
+      section.addEventListener("wheel", handleScroll);
     }
 
     return () => {
       if (section) {
-        section.removeEventListener("wheel", handleScroll)
+        section.removeEventListener("wheel", handleScroll);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   const topLeftSideList = [
     {
@@ -146,12 +154,12 @@ const Sidebar = () => {
       ),
       name: getTranslation(locale, {
         en: "Farms",
-        es: "Granjas",
+        es: "Campos",
         ay: "Chhijllaña",
         qu: "Qichwasqa",
         gn: "Ñemityha",
       }),
-      route: "#",
+      route: "/Farms",
     },
     {
       icon: (
@@ -172,7 +180,7 @@ const Sidebar = () => {
       }),
       route: "#",
     },
-  ]
+  ];
 
   const inventoryList = [
     {
@@ -231,8 +239,47 @@ const Sidebar = () => {
         gn: "Nda’ari",
       }),
       route: "/Store",
+    }
+    ,
+    {
+      icon: (
+        <Image
+          src={FarmerIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Category"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Category",
+        es: "Categoria",
+        ay: "Ch'iqi",
+        qu: "Suyuchay",
+        gn: "Mboja'o",
+      }),
+      route: "/Category",
     },
-  ]
+     {
+      icon: (
+        <Image
+          src={BusinessIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Services"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Services",
+        es: "Servicios",
+        ay: "",
+        qu: "",
+        gn: "",
+      }),
+      route: "/Services",
+    }
+  ];
 
   const middleLeftSideList = [
     {
@@ -271,7 +318,7 @@ const Sidebar = () => {
         qu: "Qullqi ch’akchinay",
         gn: "Rekuérdo repóha",
       }),
-      route: "#",
+      route: "/PaymentHistory",
     },
     {
       icon: (
@@ -311,7 +358,7 @@ const Sidebar = () => {
       }),
       route: "#",
     },
-  ]
+  ];
 
   const bookingList = [
     {
@@ -409,7 +456,7 @@ const Sidebar = () => {
       }),
       route: "/booking-inquiry",
     },
-  ]
+  ];
 
   const SettingsOptions = [
     {
@@ -507,7 +554,7 @@ const Sidebar = () => {
       }),
       route: "/Logs",
     },
-  ]
+  ];
 
   const UsersOptions = [
     {
@@ -624,7 +671,7 @@ const Sidebar = () => {
       }),
       route: "/Admin",
     },
-  ]
+  ];
 
   // Define translations for "Inventory", "Billing", and "Settings"
   const translations: Record<string, Translations> = {
@@ -663,7 +710,7 @@ const Sidebar = () => {
       bookings: "Jehechauka",
       users: "Póry",
     },
-  }
+  };
 
   return (
     <div
@@ -674,9 +721,15 @@ const Sidebar = () => {
       }}
     >
       <div
-        className={`w-full transition-all duration-500 box-content bg-[#ededed] ${sidebarShow ? "hidden" : "flex flex-col gap-[20px]"}`}
+        className={`w-full transition-all duration-500 box-content bg-[#ededed] ${
+          sidebarShow ? "hidden" : "flex flex-col gap-[20px]"
+        }`}
       >
-        <Image alt="Logo" src={LOGO || "/placeholder.svg"} className="w-[80%] h-auto object-cover mx-auto" />
+        <Image
+          alt="Logo"
+          src={LOGO || "/placeholder.svg"}
+          className="w-[80%] h-auto object-cover mx-auto"
+        />
 
         <ToogleButton />
 
@@ -689,17 +742,19 @@ const Sidebar = () => {
                 href={`${listItem.route}`}
                 key={index}
                 className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
-                  LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
+                  LeftSideSctiveItem === listItem.name
+                    ? "bg-[#d5ebd6]"
+                    : "hover:bg-gray-200"
                 } drop-shadow-md rounded transition-all duration-500 relative`}
                 onClick={() => {
-                  setActiveLeftSideTag(listItem.name)
+                  setActiveLeftSideTag(listItem.name);
                 }}
               >
                 <Tooltip title={listItem.name} placement="right">
                   {listItem.icon}
                 </Tooltip>
               </Link>
-            )
+            );
           })}
         </ul>
 
@@ -707,7 +762,10 @@ const Sidebar = () => {
 
         <div>
           <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
-            <Tooltip title={translations[locale]?.users || translations.en.users} placement="right">
+            <Tooltip
+              title={translations[locale]?.users || translations.en.users}
+              placement="right"
+            >
               <Image
                 src={InsuranceIcon || "/placeholder.svg"}
                 className="w-[20px] h-auto object-cover"
@@ -725,17 +783,19 @@ const Sidebar = () => {
                   href={`${listItem.route}`}
                   key={index}
                   className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
-                    LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
+                    LeftSideSctiveItem === listItem.name
+                      ? "bg-[#d5ebd6]"
+                      : "hover:bg-gray-200"
                   } drop-shadow-md rounded transition-all duration-500 relative`}
                   onClick={() => {
-                    setActiveLeftSideTag(listItem.name)
+                    setActiveLeftSideTag(listItem.name);
                   }}
                 >
                   <Tooltip title={listItem.name} placement="right">
                     {listItem.icon}
                   </Tooltip>
                 </Link>
-              )
+              );
             })}
           </ul>
         </div>
@@ -744,7 +804,10 @@ const Sidebar = () => {
 
         <div>
           <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
-            <Tooltip title={translations[locale]?.bookings || translations.en.bookings} placement="right">
+            <Tooltip
+              title={translations[locale]?.bookings || translations.en.bookings}
+              placement="right"
+            >
               <Image
                 src={InsuranceIcon || "/placeholder.svg"}
                 className="w-[20px] h-auto object-cover"
@@ -762,17 +825,19 @@ const Sidebar = () => {
                   href={`${listItem.route}`}
                   key={index}
                   className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
-                    LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
+                    LeftSideSctiveItem === listItem.name
+                      ? "bg-[#d5ebd6]"
+                      : "hover:bg-gray-200"
                   } drop-shadow-md rounded transition-all duration-500 relative`}
                   onClick={() => {
-                    setActiveLeftSideTag(listItem.name)
+                    setActiveLeftSideTag(listItem.name);
                   }}
                 >
                   <Tooltip title={listItem.name} placement="right">
                     {listItem.icon}
                   </Tooltip>
                 </Link>
-              )
+              );
             })}
           </ul>
         </div>
@@ -781,7 +846,12 @@ const Sidebar = () => {
 
         <div>
           <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
-            <Tooltip title={translations[locale]?.inventory || translations.en.inventory} placement="right">
+            <Tooltip
+              title={
+                translations[locale]?.inventory || translations.en.inventory
+              }
+              placement="right"
+            >
               <Image
                 src={InsuranceIcon || "/placeholder.svg"}
                 className="w-[20px] h-auto object-cover"
@@ -799,24 +869,29 @@ const Sidebar = () => {
                   href={`${listItem.route}`}
                   key={index}
                   className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
-                    LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
+                    LeftSideSctiveItem === listItem.name
+                      ? "bg-[#d5ebd6]"
+                      : "hover:bg-gray-200"
                   } drop-shadow-md rounded transition-all duration-500 relative`}
                   onClick={() => {
-                    setActiveLeftSideTag(listItem.name)
+                    setActiveLeftSideTag(listItem.name);
                   }}
                 >
                   <Tooltip title={listItem.name} placement="right">
                     {listItem.icon}
                   </Tooltip>
                 </Link>
-              )
+              );
             })}
           </ul>
         </div>
 
         <div>
           <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
-            <Tooltip title={translations[locale]?.billing || translations.en.billing} placement="right">
+            <Tooltip
+              title={translations[locale]?.billing || translations.en.billing}
+              placement="right"
+            >
               <ReceiptIcon />
             </Tooltip>
           </div>
@@ -828,17 +903,19 @@ const Sidebar = () => {
                   href={`${listItem.route}`}
                   key={index}
                   className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
-                    LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
+                    LeftSideSctiveItem === listItem.name
+                      ? "bg-[#d5ebd6]"
+                      : "hover:bg-gray-200"
                   } drop-shadow-md rounded transition-all duration-500 relative`}
                   onClick={() => {
-                    setActiveLeftSideTag(listItem.name)
+                    setActiveLeftSideTag(listItem.name);
                   }}
                 >
                   <Tooltip title={listItem.name} placement="right">
                     {listItem.icon}
                   </Tooltip>
                 </Link>
-              )
+              );
             })}
           </ul>
         </div>
@@ -846,7 +923,10 @@ const Sidebar = () => {
         <div className="w-full h-[2px] bg-gray-300 rounded-full" />
 
         <div className="flex items-center justify-center w-full aspect-square rounded-full bg-gray-200 shadow-xl">
-          <Tooltip title={translations[locale]?.settings || translations.en.settings} placement="right">
+          <Tooltip
+            title={translations[locale]?.settings || translations.en.settings}
+            placement="right"
+          >
             <SettingsIcon />
           </Tooltip>
         </div>
@@ -858,23 +938,25 @@ const Sidebar = () => {
                 href={`${listItem.route}`}
                 key={index}
                 className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
-                  LeftSideSctiveItem === listItem.name ? "bg-[#d5ebd6]" : "hover:bg-gray-200"
+                  LeftSideSctiveItem === listItem.name
+                    ? "bg-[#d5ebd6]"
+                    : "hover:bg-gray-200"
                 } drop-shadow-md rounded transition-all duration-500 relative`}
                 onClick={() => {
-                  setActiveLeftSideTag(listItem.name)
+                  setActiveLeftSideTag(listItem.name);
                 }}
               >
                 <Tooltip title={listItem.name} placement="right">
                   {listItem.icon}
                 </Tooltip>
               </Link>
-            )
+            );
           })}
         </ul>
       </div>
       <ExpandedSidebar />
     </div>
-  )
-}
+  );
+};
 
-export default Sidebar
+export default Sidebar;

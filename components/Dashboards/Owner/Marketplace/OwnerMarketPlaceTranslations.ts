@@ -69,6 +69,13 @@ export const ownerMarketPlaceTranslations = {
         qu: "Mana manka rantiykuna kachkanchu",
         gn: "Ndaipóri ñemukata jeheka"
     },
+    // noBookingCurrentlyInprogress:{
+    //     en: "No booking currently in progress",
+    //     es: "No hay reservas abiertas disponibles",
+    //     ay: "Janiwa alañani uchawi",
+    //     qu: "Mana manka rantiykuna kachkanchu",
+    //     gn: "Ndaipóri ñemukata jeheka"
+    // },
     open: {
         en: "Open",
         es: "Abierto",
