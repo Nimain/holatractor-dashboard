@@ -73,6 +73,7 @@ const NewStore = () => {
   const [step, setStep] = useState(1);
   const [files, setFiles] = useState<File[]>([]);
   const [mainImage, setMainImage] = useState<File | null>(null);
+  const [bannerImage, setBannerImage] = useState<File | null>(null);
 
   const [error, setError] = useState<string | null>(null);
   const [location, setLocation] = useState<Location>({
@@ -97,6 +98,7 @@ const NewStore = () => {
   const access_token = cookie.get("access_token");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bannerFileRef = useRef<HTMLInputElement>(null);
 
   const { setStores } = useOwnerStoreContext();
 
@@ -116,12 +118,22 @@ const NewStore = () => {
     }
   };
 
+  const handleBannerChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      setBannerImage(e.target.files[0]);
+    }
+  };
+
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const removeMainImage = () => {
     setMainImage(null);
+  };
+
+  const removeBannerImage = () => {
+    setBannerImage(null);
   };
 
   const nextStep = () => setStep((prev) => Math.min(prev + 1, 3));
@@ -156,24 +168,50 @@ const NewStore = () => {
     setCreating(true);
 
     let storeImages = "";
+    let bannerLink = "";
 
     if (mainImage) {
-      setCreatingMessage("Uploading banner image");
-      const buffer = Buffer.from(await mainImage.arrayBuffer());
-      storeImages = await uploadFileToS3(buffer, mainImage.name);
-      setCreatingMessage("");
+      try {
+        setCreatingMessage("Uploading banner image");
+        const buffer = Buffer.from(await mainImage.arrayBuffer());
+        storeImages = await uploadFileToS3(buffer, mainImage.name);
+        setCreatingMessage("");
+      } catch (err) {
+        setCreating(false);
+        errorMessage("Failed to upload logo");
+        return;
+      }
     }
 
-    let additionalImages = [];
+    if (bannerImage) {
+      try {
+        setCreatingMessage("Uploading banner image");
+        const bufferB = Buffer.from(await bannerImage.arrayBuffer());
+        bannerLink = await uploadFileToS3(bufferB, bannerImage.name);
+        setCreatingMessage("");
+      } catch (err) {
+        setCreating(false);
+        errorMessage("Failed to upload banner");
+        return;
+      }
+    }
+
+    let additionalImages: string[] = [];
 
     if (files) {
-      setCreatingMessage("Uploading additional images");
-      for (const image of files) {
-        const buffer = Buffer.from(await image.arrayBuffer());
-        const imageLink = await uploadFileToS3(buffer, image.name);
-        additionalImages.push(imageLink);
+      try {
+        setCreatingMessage("Uploading additional images");
+        for (const image of files) {
+          const buffer = Buffer.from(await image.arrayBuffer());
+          const imageLink = await uploadFileToS3(buffer, image.name);
+          additionalImages.push(imageLink);
+        }
+        setCreatingMessage("");
+      } catch (err) {
+        setCreating(false);
+        errorMessage("Failed to upload additional images");
+        return;
       }
-      setCreatingMessage("");
     }
 
     const store = {
@@ -183,6 +221,7 @@ const NewStore = () => {
       closing_time: new Date(`1970-01-01T${closingTime}:00.000Z`),
       closing_days: closingDays,
       image: storeImages,
+      banner: bannerLink,
       owner_user_id: user.userId,
       lat: `${location.latitude}`,
       lan: `${location.longitude}`,
@@ -199,13 +238,7 @@ const NewStore = () => {
         if (res.status === 201) {
           successMessage("Store created");
           // Reset state variables
-          setName("");
-          setDescription("");
-          setOpeningTime("");
-          setClosingTime("");
-          setClosingDays([]);
-          setFiles([]);
-          setMainImage(null);
+          resetForm();
           setOpen();
           setStores((prevStores) => [...prevStores, res.data]);
         }
@@ -231,6 +264,30 @@ const NewStore = () => {
         setCreating(false);
       });
   }
+
+  const resetForm = () => {
+    setName("");
+    setDescription("");
+    setOpeningTime("");
+    setClosingTime("");
+    setClosingDays([]);
+    setFiles([]);
+    setMainImage(null);
+    setBannerImage(null);
+    // Note: not resetting location here — keep current location if you prefer.
+    setCreatingMessage("");
+    setStep(1);
+    setError(null);
+  };
+
+  // Reset form when modal is closed (so inputs don't linger)
+  useEffect(() => {
+    if (!show) {
+      // modal closed -> reset form
+      resetForm();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [show]);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -315,10 +372,10 @@ const NewStore = () => {
               </CardTitle>
             </CardHeader> */}
             <CardContent className="pt-2 space-y-4">
-                <div className="flex items-center text-2xl text-red-500">
-                    <Clock1/>
-                    <h1 className="mx-2">Store Hours</h1>
-                </div>
+              <div className="flex items-center text-2xl text-red-500">
+                <Clock1 />
+                <h1 className="mx-2">Store Hours</h1>
+              </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="openingTime" className="text-red-500 text-sm">
@@ -331,7 +388,7 @@ const NewStore = () => {
                     onChange={(e) => {
                       setOpeningTime(e.target.value);
                     }}
-                className=" text-red-500 border-black"
+                    className=" text-red-500 border-black"
                   />
                 </div>
                 <div className="space-y-2">
@@ -382,7 +439,7 @@ const NewStore = () => {
               </CardTitle>
             </CardHeader> */}
             <CardContent className="pt-2 space-y-4">
-                <div className="flex text-red-500 text-2xl items-center">
+              <div className="flex text-red-500 text-2xl items-center">
                 <Image />
                 <h1 className="mx-2">Store Media</h1>
               </div>
@@ -398,7 +455,7 @@ const NewStore = () => {
                     <p className="text-xs text-red-500">
                       SVG, JPG,PNG (max. 800x400px)
                     </p>
-                    <Input
+                    <input
                       type="file"
                       className="hidden"
                       accept="image/*"
@@ -445,26 +502,49 @@ const NewStore = () => {
                     <p className="text-xs text-red-500">
                       SVG, JPG,PNG (max. 800x400px)
                     </p>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleBannerChange}
+                      ref={bannerFileRef}
+                    />
                     <Button
                       type="button"
                       variant="ghost"
                       className="mt-2 text-red-500 hover:text-red-200"
                       onClick={() => {
-                        // Handle banner upload
+                        bannerFileRef.current?.click();
                       }}
                     >
                       Upload
                     </Button>
                   </div>
+                  {bannerImage && (
+                    <div className="flex items-center gap-2 p-2 bg-white/10 rounded">
+                      <img
+                        src={URL.createObjectURL(bannerImage)}
+                        alt="Store banner"
+                        className="w-20 h-10 object-cover rounded"
+                      />
+                      <span className="text-sm flex-1">{bannerImage.name}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={removeBannerImage}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Additional Images */}
               {files.length > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-white text-sm">
-                    Additional Images
-                  </Label>
+                  <Label className="text-white text-sm">Additional Images</Label>
                   <div className="grid grid-cols-2 gap-2">
                     {files.map((file, index) => (
                       <div

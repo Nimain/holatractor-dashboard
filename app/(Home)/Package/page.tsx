@@ -1,5 +1,5 @@
 
-import CreditPackageContainer from "@/components/Credit/credit/CreditPackageContainer";
+import CreditPackageContainer from "@/components/Credit/package/PackageContainer";
 import React from "react";
 
 const CreditPackagePage = () => {

@@ -98,7 +98,7 @@ const Sidebar = () => {
     "/Farmers": "Farmer",
     // <<< ADDED
     "/Currency": "Currency",
-    "/Credit": "Credit",
+    "/Package": "Package",
     "/Coupon":"Coupon"
   };
 
@@ -492,17 +492,18 @@ const Sidebar = () => {
         className="w-[20px] h-auto object-cover"
         width={20}
         height={20}
-        alt="Credit"
+        alt="Package"
       />
     ),
     name: getTranslation(locale, {
-      en: "Credit",
-      es: "Crédito",
-      ay: "Qullqi ch’ani",
-      qu: "Qullqi chani",
-      gn: "Crédito",
-    }),
-    route: "/Credit",
+  en: "Package",
+  es: "Paquete",
+  ay: "Qillqiri",
+  qu: "Qillqipi",
+  gn: "Paquete",
+})
+,
+    route: "/Package",
   },
   {
     icon: (
