@@ -98,6 +98,7 @@ const ExpandedSidebar = () => {
     "/Accounting": "Accounting",
     "/Attachments": "Attachments",
     "/Store": "Store",
+    "/Storetractors":"Storetractors",
     "/Currency": "Currency",
     "/Package": "Package",
     "/Coupon":"Coupon"
@@ -247,14 +248,33 @@ const ExpandedSidebar = () => {
       }),
       route: "/Store",
     },
-    {
+{
       icon: (
         <Image
           src={FarmerIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
-          alt="service"
+          alt="Storetractors"
+        />
+      ),
+      name: getTranslation(locale, {
+      en: "Storetractors",
+      es: "Tractores de Tienda",
+      ay: "Qhatu Tractoranakuna",
+      qu: "Qhatupaq Tractorkuna",
+      gn: "Ñemuhã Mymbaha",
+    }),
+      route: "/Storetractors",
+    }
+    ,{
+      icon: (
+        <Image
+          src={FarmerIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Category"
         />
       ),
       name: getTranslation(locale, {

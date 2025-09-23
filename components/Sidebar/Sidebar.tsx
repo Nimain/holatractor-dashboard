@@ -96,6 +96,7 @@ const Sidebar = () => {
     "/Attachments": "Attachments",
     "/Store": "Store",
     "/Farmers": "Farmer",
+    "/Storetractors":"Storetractors",
     // <<< ADDED
     "/Currency": "Currency",
     "/Package": "Package",
@@ -246,6 +247,25 @@ const Sidebar = () => {
         gn: "Nda’ari",
       }),
       route: "/Store",
+    },
+    {
+      icon: (
+        <Image
+          src={FarmerIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Storetractors"
+        />
+      ),
+      name: getTranslation(locale, {
+      en: "Storetractors",
+      es: "Tractores de Tienda",
+      ay: "Qhatu Tractoranakuna",
+      qu: "Qhatupaq Tractorkuna",
+      gn: "Ñemuhã Mymbaha",
+    }),
+      route: "/Storetractors",
     },
     {
       icon: (
