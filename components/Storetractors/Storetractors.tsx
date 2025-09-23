@@ -67,13 +67,13 @@ const StoreTractors = () => {
         <p className="text-[20px] font-bold">
           Store Tractors: {tractors.length}
         </p>
-        <Link
+        {/* <Link
           href="/StoreTractors/add"
           className="px-5 py-2.5 text-lg rounded-md bg-black text-white flex items-center gap-2 hover:bg-gray-800 transition-colors"
         >
           <Plus size={20} />
           <span>Add Store Tractor</span>
-        </Link>
+        </Link> */}
       </div>
 
       {/* ---------- Header ---------- */}
