@@ -98,10 +98,11 @@ const ExpandedSidebar = () => {
     "/Accounting": "Accounting",
     "/Attachments": "Attachments",
     "/Store": "Store",
-    "/Storetractors":"Storetractors",
+    "/Storetractors": "Storetractors",
     "/Currency": "Currency",
     "/Package": "Package",
-    "/Coupon":"Coupon"
+    "/Coupon": "Coupon",
+    "/Purchase": "Purchase",
   };
 
   useEffect(() => {
@@ -180,12 +181,12 @@ const ExpandedSidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-    en: "Devices",
-    es: "Dispositivos",
-    ay: "Uñt’awinaka",
-    qu: "Ruranakuna",
-    gn: "Mba’e’okárape",
-  }),
+        en: "Devices",
+        es: "Dispositivos",
+        ay: "Uñt’awinaka",
+        qu: "Ruranakuna",
+        gn: "Mba’e’okárape",
+      }),
       route: "/Devices",
     },
   ];
@@ -248,7 +249,7 @@ const ExpandedSidebar = () => {
       }),
       route: "/Store",
     },
-{
+    {
       icon: (
         <Image
           src={FarmerIcon || "/placeholder.svg"}
@@ -259,15 +260,15 @@ const ExpandedSidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-      en: "Storetractors",
-      es: "Tractores de Tienda",
-      ay: "Qhatu Tractoranakuna",
-      qu: "Qhatupaq Tractorkuna",
-      gn: "Ñemuhã Mymbaha",
-    }),
+        en: "Storetractors",
+        es: "Tractores de Tienda",
+        ay: "Qhatu Tractoranakuna",
+        qu: "Qhatupaq Tractorkuna",
+        gn: "Ñemuhã Mymbaha",
+      }),
       route: "/Storetractors",
-    }
-    ,{
+    },
+    {
       icon: (
         <Image
           src={FarmerIcon || "/placeholder.svg"}
@@ -485,66 +486,83 @@ const ExpandedSidebar = () => {
   ];
 
   const creditList = [
-  {
-    icon: (
-      <Image
-        src={StatementsIcon || "/placeholder.svg"}
-        className="w-[20px] h-auto object-cover"
-        width={20}
-        height={20}
-        alt="Currency"
-      />
-    ),
-    name: getTranslation(locale, {
-      en: "Currency",
-      es: "Moneda",
-      ay: "Qullqi",
-      qu: "Qullqi",
-      gn: "Viru",
-    }),
-    route: "/Currency",
-  },
-  {
-    icon: (
-      <Image
-        src={PaymentHistoryIcon || "/placeholder.svg"}
-        className="w-[20px] h-auto object-cover"
-        width={20}
-        height={20}
-        alt="Package"
-      />
-    ),
-    name: getTranslation(locale, {
-  en: "Package",
-  es: "Paquete",
-  ay: "Qillqiri",
-  qu: "Qillqipi",
-  gn: "Paquete",
-})
-,
-    route: "/Package",
-  },
-  {
-    icon: (
-      <Image
-        src={AffiliationIcon || "/placeholder.svg"}
-        className="w-[20px] h-auto object-cover"
-        width={20}
-        height={20}
-        alt="Coupon"
-      />
-    ),
-    name: getTranslation(locale, {
-      en: "Coupon",
-      es: "Cupón",
-      ay: "Kuponi",
-      qu: "Kupon",
-      gn: "Kupon",
-    }),
-    route: "/Coupon",
-  },
-];
-
+    {
+      icon: (
+        <Image
+          src={StatementsIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Currency"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Currency",
+        es: "Moneda",
+        ay: "Qullqi",
+        qu: "Qullqi",
+        gn: "Viru",
+      }),
+      route: "/Currency",
+    },
+    {
+      icon: (
+        <Image
+          src={PaymentHistoryIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Package"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Package",
+        es: "Paquete",
+        ay: "Qillqiri",
+        qu: "Qillqipi",
+        gn: "Paquete",
+      }),
+      route: "/Package",
+    },
+    {
+      icon: (
+        <Image
+          src={AffiliationIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Coupon"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Coupon",
+        es: "Cupón",
+        ay: "Kuponi",
+        qu: "Kupon",
+        gn: "Kupon",
+      }),
+      route: "/Coupon",
+    },
+    {
+      icon: (
+        <Image
+          src={StatementsIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Purchase"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Purchase",
+        es: "Compra",
+        ay: "Allichiy",
+        qu: "Rantiy",
+        gn: "Ñemurã",
+      }),
+      route: "/Purchase",
+    },
+  ];
 
   const SettingsOptions = [
     {

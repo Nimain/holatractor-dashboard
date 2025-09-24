@@ -96,11 +96,12 @@ const Sidebar = () => {
     "/Attachments": "Attachments",
     "/Store": "Store",
     "/Farmers": "Farmer",
-    "/Storetractors":"Storetractors",
+    "/Storetractors": "Storetractors",
     // <<< ADDED
     "/Currency": "Currency",
     "/Package": "Package",
-    "/Coupon":"Coupon"
+    "/Coupon": "Coupon",
+    "/Purchase": "Purchase",
   };
 
   useEffect(() => {
@@ -181,10 +182,10 @@ const Sidebar = () => {
       ),
       name: getTranslation(locale, {
         en: "Devices",
-           es: "Dispositivos",
-    ay: "Uñt’awinaka",
-    qu: "Ruranakuna",
-    gn: "Mba’e’okárape",
+        es: "Dispositivos",
+        ay: "Uñt’awinaka",
+        qu: "Ruranakuna",
+        gn: "Mba’e’okárape",
       }),
       route: "/Devices",
     },
@@ -259,12 +260,12 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-      en: "Storetractors",
-      es: "Tractores de Tienda",
-      ay: "Qhatu Tractoranakuna",
-      qu: "Qhatupaq Tractorkuna",
-      gn: "Ñemuhã Mymbaha",
-    }),
+        en: "Storetractors",
+        es: "Tractores de Tienda",
+        ay: "Qhatu Tractoranakuna",
+        qu: "Qhatupaq Tractorkuna",
+        gn: "Ñemuhã Mymbaha",
+      }),
       route: "/Storetractors",
     },
     {
@@ -486,66 +487,83 @@ const Sidebar = () => {
 
   // <<< ADDED: NEW DATA LIST FOR CREDIT SECTION
   const creditList = [
-  {
-    icon: (
-      <Image
-        src={StatementsIcon || "/placeholder.svg"}
-        className="w-[20px] h-auto object-cover"
-        width={20}
-        height={20}
-        alt="Currency"
-      />
-    ),
-    name: getTranslation(locale, {
-      en: "Currency",
-      es: "Moneda",
-      ay: "Qullqi",
-      qu: "Qullqi",
-      gn: "Viru",
-    }),
-    route: "/Currency",
-  },
-  {
-    icon: (
-      <Image
-        src={PaymentHistoryIcon || "/placeholder.svg"}
-        className="w-[20px] h-auto object-cover"
-        width={20}
-        height={20}
-        alt="Package"
-      />
-    ),
-    name: getTranslation(locale, {
-  en: "Package",
-  es: "Paquete",
-  ay: "Qillqiri",
-  qu: "Qillqipi",
-  gn: "Paquete",
-})
-,
-    route: "/Package",
-  },
-  {
-    icon: (
-      <Image
-        src={AffiliationIcon || "/placeholder.svg"}
-        className="w-[20px] h-auto object-cover"
-        width={20}
-        height={20}
-        alt="Coupon"
-      />
-    ),
-    name: getTranslation(locale, {
-      en: "Coupon",
-      es: "Cupón",
-      ay: "Kuponi",
-      qu: "Kupon",
-      gn: "Kupon",
-    }),
-    route: "/Coupon",
-  },
-];
-
+    {
+      icon: (
+        <Image
+          src={StatementsIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Currency"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Currency",
+        es: "Moneda",
+        ay: "Qullqi",
+        qu: "Qullqi",
+        gn: "Viru",
+      }),
+      route: "/Currency",
+    },
+    {
+      icon: (
+        <Image
+          src={PaymentHistoryIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Package"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Package",
+        es: "Paquete",
+        ay: "Qillqiri",
+        qu: "Qillqipi",
+        gn: "Paquete",
+      }),
+      route: "/Package",
+    },
+    {
+      icon: (
+        <Image
+          src={AffiliationIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Coupon"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Coupon",
+        es: "Cupón",
+        ay: "Kuponi",
+        qu: "Kupon",
+        gn: "Kupon",
+      }),
+      route: "/Coupon",
+    },
+    {
+      icon: (
+        <Image
+          src={StatementsIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Purchase"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Purchase",
+        es: "Compra",
+        ay: "Allichiy",
+        qu: "Rantiy",
+        gn: "Ñemurã",
+      }),
+      route: "/Purchase",
+    },
+  ];
 
   const SettingsOptions = [
     {
