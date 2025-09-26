@@ -12,8 +12,8 @@ import {
 } from "@mui/material";
 import { useCookie } from "next-cookie";
 import Link from "next/link";
-import { useState, useEffect } from "react";
-import { Plus, Edit, Eye, DollarSign, Search, User, X, Save } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Plus, Edit, Eye, DollarSign, Search, User, X, Save, Upload, Trash2, Camera } from "lucide-react";
 import Image from "next/image";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
@@ -34,13 +34,20 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
   const [fixedPrice, setFixedPrice] = useState("");
   const [updatingPrice, setUpdatingPrice] = useState(false);
   const [updatingAttachment, setUpdatingAttachment] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
   
   // Edit form states
   const [editForm, setEditForm] = useState({
     name: "",
     description: "",
-    fixedPrice: ""
+    fixedPrice: "",
+    images: [] as string[]
   });
+  
+  // Image upload states
+  const [newImages, setNewImages] = useState<File[]>([]);
+  const [previewImages, setPreviewImages] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
@@ -76,9 +83,15 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
             console.log("✅ State updated with fetched data");
           }
         })
-        .catch((err) => {
-          console.error("❌ Fetch error:", err);
-          console.error("❌ Error response:", err.response?.data);
+        .catch((error: unknown) => {
+          console.error("❌ Fetch error:", error);
+          if (error instanceof Error) {
+            console.error("❌ Error message:", error.message);
+          }
+          if (typeof error === 'object' && error !== null && 'response' in error) {
+            const axiosError = error as any;
+            console.error("❌ Error response:", axiosError.response?.data);
+          }
           errorMessage("Error in fetching attachment lists");
         })
         .finally(() => {
@@ -96,8 +109,11 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
     setEditForm({
       name: attachment.name,
       description: attachment.description || "",
-      fixedPrice: attachment.fixedPrice?.toString() || ""
+      fixedPrice: attachment.fixedPrice?.toString() || "",
+      images: attachment.images || []
     });
+    setNewImages([]);
+    setPreviewImages([]);
     setEditModalOpen(true);
   };
 
@@ -127,13 +143,103 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
     setEditForm({
       name: "",
       description: "",
-      fixedPrice: ""
+      fixedPrice: "",
+      images: []
     });
+    setNewImages([]);
+    setPreviewImages([]);
   };
 
   const handleViewModalClose = () => {
     setViewModalOpen(false);
     setSelectedAttachment(null);
+  };
+
+  // Handle image file selection
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    // Validate file types
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const validFiles = files.filter(file => validTypes.includes(file.type));
+    
+    if (validFiles.length !== files.length) {
+      errorMessage("Some files were skipped. Please select only image files (JPEG, PNG, GIF, WebP)");
+    }
+
+    // Validate file sizes (max 5MB per file)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const validSizeFiles = validFiles.filter(file => file.size <= maxSize);
+    
+    if (validSizeFiles.length !== validFiles.length) {
+      errorMessage("Some files were skipped. Please select files smaller than 5MB");
+    }
+
+    // Create preview URLs
+    const previews = validSizeFiles.map(file => URL.createObjectURL(file));
+    
+    setNewImages(prev => [...prev, ...validSizeFiles]);
+    setPreviewImages(prev => [...prev, ...previews]);
+  };
+
+  // Remove existing image from attachment
+  const handleRemoveExistingImage = (index: number) => {
+    setEditForm(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Remove new image before upload
+  const handleRemoveNewImage = (index: number) => {
+    // Revoke object URL to prevent memory leaks
+    URL.revokeObjectURL(previewImages[index]);
+    
+    setNewImages(prev => prev.filter((_, i) => i !== index));
+    setPreviewImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Upload images to server
+  const uploadNewImages = async (): Promise<string[]> => {
+    if (newImages.length === 0) return [];
+    
+    setUploadingImages(true);
+    const uploadedUrls: string[] = [];
+
+    try {
+      for (const file of newImages) {
+        const formData = new FormData();
+        formData.append('image', file);
+
+        const response = await renderInstance.post('/upload/image', formData, {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+            'Content-Type': 'multipart/form-data'
+          },
+        });
+
+        if (response.data?.url) {
+          uploadedUrls.push(response.data.url);
+        }
+      }
+      
+      console.log("📤 Uploaded image URLs:", uploadedUrls);
+      return uploadedUrls;
+    } catch (error: unknown) {
+      console.error("❌ Image upload error:", error);
+      if (error instanceof Error) {
+        errorMessage(`Error uploading images: ${error.message}`);
+      } else if (typeof error === 'object' && error !== null && 'response' in error) {
+        const axiosError = error as any;
+        errorMessage(`Error uploading images: ${axiosError.response?.data?.message || 'Unknown error'}`);
+      } else {
+        errorMessage("Error uploading images");
+      }
+      return [];
+    } finally {
+      setUploadingImages(false);
+    }
   };
 
   const handlePriceSave = async () => {
@@ -190,11 +296,18 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
           console.error("❌ Unexpected response status:", response.status);
           errorMessage("Unexpected response from server");
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("❌ Price update error:", error);
-        console.error("❌ Error details:", error.response?.data);
-        console.error("❌ Error status:", error.response?.status);
-        errorMessage(`Error updating fixed price: ${error.response?.data?.message || error.message}`);
+        if (error instanceof Error) {
+          errorMessage(`Error updating fixed price: ${error.message}`);
+        } else if (typeof error === 'object' && error !== null && 'response' in error) {
+          const axiosError = error as any;
+          console.error("❌ Error details:", axiosError.response?.data);
+          console.error("❌ Error status:", axiosError.response?.status);
+          errorMessage(`Error updating fixed price: ${axiosError.response?.data?.message || 'Unknown error'}`);
+        } else {
+          errorMessage("Error updating fixed price");
+        }
       } finally {
         setUpdatingPrice(false);
       }
@@ -213,10 +326,17 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
       console.log("📝 Form data:", editForm);
       
       try {
+        // First, upload new images if any
+        const uploadedImageUrls = await uploadNewImages();
+        
+        // Combine existing images with newly uploaded ones
+        const allImages = [...editForm.images, ...uploadedImageUrls];
+        
         const requestData = {
           name: editForm.name,
           description: editForm.description,
-          fixedPrice: parseFloat(editForm.fixedPrice) || 0
+          fixedPrice: parseFloat(editForm.fixedPrice) || 0,
+          images: allImages
         };
         
         console.log("📤 Sending PATCH request:", requestData);
@@ -245,7 +365,8 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
                   ...att, 
                   name: editForm.name,
                   description: editForm.description,
-                  fixedPrice: parseFloat(editForm.fixedPrice) || 0
+                  fixedPrice: parseFloat(editForm.fixedPrice) || 0,
+                  images: allImages
                 };
               }
               return att;
@@ -265,11 +386,18 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
           console.error("❌ Unexpected response status:", response.status);
           errorMessage("Unexpected response from server");
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("❌ Attachment update error:", error);
-        console.error("❌ Error details:", error.response?.data);
-        console.error("❌ Error status:", error.response?.status);
-        errorMessage(`Error updating attachment: ${error.response?.data?.message || error.message}`);
+        if (error instanceof Error) {
+          errorMessage(`Error updating attachment: ${error.message}`);
+        } else if (typeof error === 'object' && error !== null && 'response' in error) {
+          const axiosError = error as any;
+          console.error("❌ Error details:", axiosError.response?.data);
+          console.error("❌ Error status:", axiosError.response?.status);
+          errorMessage(`Error updating attachment: ${axiosError.response?.data?.message || 'Unknown error'}`);
+        } else {
+          errorMessage("Error updating attachment");
+        }
       } finally {
         setUpdatingAttachment(false);
       }
@@ -307,11 +435,18 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
     fetchAllAttachments();
   }, []);
 
+  // Cleanup preview URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      previewImages.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, []);
+
   return (
     <div className={`w-full py-5 ${bgColor} ${textColor}`}>
       <Backdrop
         sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-        open={fetchingAttachments || updatingPrice || updatingAttachment}
+        open={fetchingAttachments || updatingPrice || updatingAttachment || uploadingImages}
       >
         <CircularProgress />
       </Backdrop>
@@ -541,7 +676,7 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
       {/* Edit Modal */}
       {editModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className={`${bgColor} rounded-lg p-6 w-[500px] relative max-h-[90vh] overflow-y-auto ${textColor}`}>
+          <div className={`${bgColor} rounded-lg p-6 w-[600px] relative max-h-[90vh] overflow-y-auto ${textColor}`}>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Edit Attachment</h2>
               <button
@@ -553,7 +688,7 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
             </div>
 
             {selectedAttachment && (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="flex items-center gap-4">
                     {getDisplayImage(selectedAttachment) ? (
@@ -621,21 +756,119 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3">
+                {/* Image Management Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-medium">
+                      Images
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
+                    >
+                      <Upload size={16} />
+                      Add Images
+                    </button>
+                  </div>
+
+                  {/* Hidden file input */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                  />
+
+                  {/* Existing Images */}
+                  {editForm.images.length > 0 && (
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2">Current Images:</p>
+                      <div className="grid grid-cols-3 gap-3">
+                        {editForm.images.map((image, index) => (
+                          <div key={index} className="relative group">
+                            <div className="w-full h-24 relative bg-gray-100 rounded-lg overflow-hidden">
+                              <Image
+                                src={image}
+                                alt={`Current ${index + 1}`}
+                                fill
+                                className="object-cover"
+                                unoptimized={true}
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveExistingImage(index)}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Remove image"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* New Images Preview */}
+                  {previewImages.length > 0 && (
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2">New Images (will be uploaded):</p>
+                      <div className="grid grid-cols-3 gap-3">
+                        {previewImages.map((preview, index) => (
+                          <div key={index} className="relative group">
+                            <div className="w-full h-24 relative bg-gray-100 rounded-lg overflow-hidden">
+                              <Image
+                                src={preview}
+                                alt={`Preview ${index + 1}`}
+                                fill
+                                className="object-cover"
+                                unoptimized={true}
+                              />
+                              {/* Upload indicator */}
+                              <div className="absolute top-1 left-1 bg-blue-500 text-white px-1.5 py-0.5 rounded text-xs">
+                                New
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveNewImage(index)}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Remove image"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Image Upload Info */}
+                  <div className="text-xs text-gray-500 space-y-1">
+                    <p>• Supported formats: JPEG, PNG, GIF, WebP</p>
+                    <p>• Maximum file size: 5MB per image</p>
+                    <p>• You can upload multiple images at once</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t">
                   <button
                     onClick={handleEditModalClose}
                     className="px-4 py-2 rounded border hover:bg-gray-50"
-                    disabled={updatingAttachment}
+                    disabled={updatingAttachment || uploadingImages}
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleEditSave}
-                    disabled={!editForm.name.trim() || updatingAttachment}
+                    disabled={!editForm.name.trim() || updatingAttachment || uploadingImages}
                     className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
                   >
                     <Save size={16} />
-                    {updatingAttachment ? "Saving..." : "Save Changes"}
+                    {updatingAttachment ? "Saving..." : uploadingImages ? "Uploading..." : "Save Changes"}
                   </button>
                 </div>
               </div>
@@ -643,6 +876,7 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
           </div>
         </div>
       )}
+
       {/* View Modal */}
       {viewModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -678,7 +912,7 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
                     </div>
                   ) : (
                     <div className="text-center py-8 bg-gray-50 rounded-lg">
-                      <User size={48} className="text-gray-400 mx-auto mb-2" />
+                      <Camera size={48} className="text-gray-400 mx-auto mb-2" />
                       <p className="text-gray-500">No images available</p>
                     </div>
                   )}
