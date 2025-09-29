@@ -279,9 +279,7 @@ const InventorySection = () => {
       }
       
       // Update local state immediately
-      setAllTractors(prev => prev.map(t => 
-        t.id === selectedTractor.id ? { ...t, tractor: { ...t.tractor, ...updateData } } : t
-      ));
+      setAllTractors(prev => prev.map(t =>t.id === selectedTractor.id ? { ...t, tractor: { ...t.tractor, ...updateData } } : t));
 
       successMessage("Tractor updated successfully");
       handleEditModalClose();
