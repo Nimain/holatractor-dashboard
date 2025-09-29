@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import type React from "react";
-import { MoreHorizontal, Plus, Upload, Search } from "lucide-react";
+import { MoreHorizontal, Plus, Upload, Search, Edit2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -51,6 +51,244 @@ function CustomTooltip({
   );
 }
 
+// Delete Confirmation Modal Component
+const DeleteConfirmationModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  customerName,
+  isDeleting,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  customerName: string;
+  isDeleting: boolean;
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Confirm Delete</h2>
+        <p className="text-gray-600 mb-6">
+          Are you sure you want to delete <strong>{customerName}</strong>? This action cannot be undone.
+        </p>
+        <div className="flex gap-3 justify-end">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            disabled={isDeleting}
+          >
+            Cancel
+          </Button>
+          <Button
+            className="bg-red-500 hover:bg-red-600"
+            onClick={onConfirm}
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <>
+                <CircularProgress size={16} className="mr-2" />
+                Deleting...
+              </>
+            ) : (
+              'Delete'
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Edit Customer Modal Component
+const EditCustomerModal = ({
+  isOpen,
+  onClose,
+  customer,
+  onSubmit,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  customer: Owner | null;
+  onSubmit: () => void;
+}) => {
+  const [formData, setFormData] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    mobile: '',
+    gender: '',
+    city: '',
+    status: 'Active' as 'Active' | 'Inactive',
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const { cookie } = useCookie();
+  const access_token = cookie?.get("access_token");
+
+  useEffect(() => {
+    if (customer && isOpen) {
+      setFormData({
+        first_name: customer.first_name || '',
+        last_name: customer.last_name || '',
+        email: customer.email || '',
+        mobile: customer.mobile || '',
+        gender: customer.gender || '',
+        city: customer.city || '',
+        status: customer.status || 'Active',
+      });
+    }
+  }, [customer, isOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customer || !access_token) return;
+
+    setIsSubmitting(true);
+    try {
+      await renderInstance.patch(`/dealer/customers/${customer.id}`, formData, {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      });
+      successMessage('Customer updated successfully');
+      onSubmit();
+    } catch (error) {
+      console.error('Error updating customer:', error);
+      errorMessage('Error updating customer');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen || !customer) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Edit Customer</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                First Name
+              </label>
+              <Input
+                value={formData.first_name}
+                onChange={(e) => setFormData(prev => ({ ...prev, first_name: e.target.value }))}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Last Name
+              </label>
+              <Input
+                value={formData.last_name}
+                onChange={(e) => setFormData(prev => ({ ...prev, last_name: e.target.value }))}
+                required
+              />
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email
+            </label>
+            <Input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Mobile
+            </label>
+            <Input
+              value={formData.mobile}
+              onChange={(e) => setFormData(prev => ({ ...prev, mobile: e.target.value }))}
+              required
+            />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Gender
+              </label>
+              <select
+                value={formData.gender}
+                onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#F91F1F]/50 focus:border-[#F91F1F]"
+                required
+              >
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'Active' | 'Inactive' }))}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#F91F1F]/50 focus:border-[#F91F1F]"
+                required
+              >
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              City
+            </label>
+            <Input
+              value={formData.city}
+              onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+            />
+          </div>
+          
+          <div className="flex gap-3 justify-end pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              className="bg-[#F91F1F] hover:bg-[#E01010]"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <CircularProgress size={16} className="mr-2" />
+                  Updating...
+                </>
+              ) : (
+                'Update Customer'
+              )}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 // Added 'className' prop for custom styling
 const TableHeader = ({
   children,
@@ -81,6 +319,10 @@ export default function EnhancedOwnerTable() {
   const [owners, setOwners] = useState<Owner[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Owner | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [fetching, setFetching] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -215,6 +457,44 @@ export default function EnhancedOwnerTable() {
     setShowAddModal(false);
   };
 
+  const handleEditCustomer = (customer: Owner) => {
+    setSelectedCustomer(customer);
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = () => {
+    fetchCustomers();
+    setShowEditModal(false);
+    setSelectedCustomer(null);
+  };
+
+  const handleDeleteCustomer = (customer: Owner) => {
+    setSelectedCustomer(customer);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteCustomer = async () => {
+    if (!selectedCustomer || !access_token) return;
+
+    setIsDeleting(true);
+    try {
+      await renderInstance.delete(`/dealer/customers/${selectedCustomer.id}`, {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      });
+      successMessage('Customer deleted successfully');
+      fetchCustomers();
+      setShowDeleteModal(false);
+      setSelectedCustomer(null);
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      errorMessage('Error deleting customer');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const filteredOwners = owners.filter((owner) =>
     Object.values(owner)
       .join(" ")
@@ -298,17 +578,18 @@ export default function EnhancedOwnerTable() {
           </div>
         ) : (
           <div className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-lg shadow-xl overflow-x-auto">
-            <table className="w-full min-w-[1024px]">
+            <table className="w-full min-w-[1124px]">
               <thead className="border-b border-white/20">
                 <tr className="group">
                   <TableHeader className="w-16 text-center">ID</TableHeader>
                   <TableHeader className="w-24 text-center">Image</TableHeader>
                   <TableHeader sortable className="w-64">Name</TableHeader>
-                  <TableHeader sortable className="w-64">Email</TableHeader>
+                  <TableHeader sortable className="w-264">Email</TableHeader>
                   <TableHeader className="w-40">Mobile</TableHeader>
                   <TableHeader className="w-32 text-center">Gender</TableHeader>
                   <TableHeader className="w-40">City</TableHeader>
                   <TableHeader sortable className="w-32 text-center">Status</TableHeader>
+                  <TableHeader className="w-32 text-center">Actions</TableHeader>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
@@ -357,6 +638,28 @@ export default function EnhancedOwnerTable() {
                         {owner.status}
                       </span>
                     </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-white hover:bg-white/20 h-8 w-8 p-0"
+                          onClick={() => handleEditCustomer(owner)}
+                          title="Edit Customer"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-white hover:bg-red-500/30 h-8 w-8 p-0"
+                          onClick={() => handleDeleteCustomer(owner)}
+                          title="Delete Customer"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -365,10 +668,32 @@ export default function EnhancedOwnerTable() {
         )}
       </div>
 
+      {/* Modals */}
       <AddCustomerModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onSubmit={handleAddCustomer}
+      />
+
+      <EditCustomerModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedCustomer(null);
+        }}
+        customer={selectedCustomer}
+        onSubmit={handleEditSubmit}
+      />
+
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setSelectedCustomer(null);
+        }}
+        onConfirm={confirmDeleteCustomer}
+        customerName={selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name}` : ''}
+        isDeleting={isDeleting}
       />
     </div>
   );
