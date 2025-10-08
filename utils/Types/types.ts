@@ -208,7 +208,7 @@ export interface Attachment {
   images: string[];
   tractorId: string[];
   base_id: string;
-  fixedPrice?: number;
+  fixed_price?: number;
   createdAt: Date;
   updatedAt: Date;
   AttachmentInStore: AttachmentInStore[];

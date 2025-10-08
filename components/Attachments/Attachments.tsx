@@ -1,19 +1,21 @@
 "use client";
 
 import { Attachment } from "@/utils/Types/types";
-import { 
-  Backdrop, 
-  CircularProgress, 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
-  DialogActions, 
-  TextField
-} from "@mui/material";
+import { Backdrop, CircularProgress } from "@mui/material";
 import { useCookie } from "next-cookie";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
-import { Plus, Edit, Eye, DollarSign, Search, User, X, Save, Upload, Trash2, Camera } from "lucide-react";
+import {
+  Plus,
+  Eye,
+  DollarSign,
+  Search,
+  X,
+  Save,
+  Upload,
+  ImageIcon,
+  Camera,
+} from "lucide-react";
 import Image from "next/image";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
@@ -23,94 +25,181 @@ interface AttachmentsProps {
   theme?: "light" | "dark";
 }
 
+interface EditFormState {
+  name: string;
+  description: string;
+  fixed_price: string;
+  images: string[];
+}
+
 const Attachments = ({ theme = "light" }: AttachmentsProps) => {
+  // Data states
   const [allAttachments, setAllAttachments] = useState<Attachment[]>([]);
-  const [fetchingAttachments, setFetchingAttachments] = useState(false);
+  const [filteredAttachments, setFilteredAttachments] = useState<Attachment[]>([]);
+  const [selectedAttachment, setSelectedAttachment] = useState<Attachment | null>(null);
+
+  // UI states
   const [searchTerm, setSearchTerm] = useState("");
   const [priceModalOpen, setPriceModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [selectedAttachment, setSelectedAttachment] = useState<Attachment | null>(null);
-  const [fixedPrice, setFixedPrice] = useState("");
+
+  // Loading states
+  const [fetchingAttachments, setFetchingAttachments] = useState(false);
   const [updatingPrice, setUpdatingPrice] = useState(false);
   const [updatingAttachment, setUpdatingAttachment] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
-  
-  // Edit form states
-  const [editForm, setEditForm] = useState({
+
+  // Form states
+  const [fixedPrice, setFixedPrice] = useState("");
+  const [editForm, setEditForm] = useState<EditFormState>({
     name: "",
     description: "",
-    fixedPrice: "",
-    images: [] as string[]
+    fixed_price: "",
+    images: [],
   });
-  
-  // Image upload states
+
+  // Image states
   const [newImages, setNewImages] = useState<File[]>([]);
   const [previewImages, setPreviewImages] = useState<string[]>([]);
+  const [imageLoadErrors, setImageLoadErrors] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
 
-  // Grid layout for table rows
-  const rowLayout = "grid grid-cols-[60px_120px_2fr_2fr_120px_80px] items-center gap-x-4 p-5";
+  // Grid layout
+  const rowLayout =
+    "grid grid-cols-[60px_120px_2fr_2fr_120px_80px] items-center gap-x-4 p-5";
 
   // Theme classes
-  const bgColor = theme === "dark" ? "bg-gray-800" : "bg-white";
-  const textColor = theme === "dark" ? "text-white" : "text-gray-900";
-  const cardBg = theme === "dark" ? "bg-gray-700" : "bg-[#fafafa]";
-  const headerBg = theme === "dark" ? "bg-gray-600" : "bg-[#ededed]";
-  const borderColor = theme === "dark" ? "border-gray-600" : "border-gray-200";
-  const inputBg = theme === "dark" ? "bg-gray-600 text-white" : "bg-white text-gray-900";
+  const themeClasses = {
+    bgColor: theme === "dark" ? "bg-gray-800" : "bg-white",
+    textColor: theme === "dark" ? "text-white" : "text-gray-900",
+    cardBg: theme === "dark" ? "bg-gray-700" : "bg-[#fafafa]",
+    headerBg: theme === "dark" ? "bg-gray-600" : "bg-[#ededed]",
+    borderColor: theme === "dark" ? "border-gray-600" : "border-gray-200",
+    inputBg:
+      theme === "dark" ? "bg-gray-600 text-white" : "bg-white text-gray-900",
+    hoverBg: theme === "dark" ? "bg-gray-600" : "bg-white",
+  };
 
-  function fetchAllAttachments() {
-    if (access_token) {
-      console.log("🔄 Fetching attachments from API...");
-      setFetchingAttachments(true);
-      renderInstance
-        .get("/attachment", {
-          headers: {
-            Authorization: `Bearer ${access_token}`,
-          },
-        })
-        .then((res) => {
-          console.log("📥 API Response Status:", res.status);
-          console.log("📄 Fetched attachments data:", res.data);
-          console.log("📊 Number of attachments:", res.data?.length || 0);
-          
-          if (res.status === 200) {
-            setAllAttachments(res.data);
-            console.log("✅ State updated with fetched data");
-          }
-        })
-        .catch((error: unknown) => {
-          console.error("❌ Fetch error:", error);
-          if (error instanceof Error) {
-            console.error("❌ Error message:", error.message);
-          }
-          if (typeof error === 'object' && error !== null && 'response' in error) {
-            const axiosError = error as any;
-            console.error("❌ Error response:", axiosError.response?.data);
-          }
-          errorMessage("Error in fetching attachment lists");
-        })
-        .finally(() => {
-          setFetchingAttachments(false);
-          console.log("🏁 Fetch operation completed");
-        });
-    } else {
-      console.error("❌ No access token found");
+  // Fetch attachments from API
+  const fetchAllAttachments = async () => {
+    if (!access_token) {
       errorMessage("Admin not logged in");
+      return;
     }
-  }
 
+    setFetchingAttachments(true);
+    try {
+      const response = await renderInstance.get("/attachment", {
+        headers: { Authorization: `Bearer ${access_token}` },
+      });
+
+      if (response.status === 200) {
+        setAllAttachments(response.data);
+      }
+    } catch (error) {
+      console.error("Fetch error:", error);
+      errorMessage("Error in fetching attachment lists");
+    } finally {
+      setFetchingAttachments(false);
+    }
+  };
+
+  // Image validation
+  const isValidImageUrl = (url: string): boolean => {
+    if (!url || typeof url !== "string") return false;
+
+    try {
+      const urlObj = new URL(url);
+      if (!["http:", "https:", "data:"].includes(urlObj.protocol)) return false;
+    } catch {
+      return false;
+    }
+
+    const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)(\?.*)?$/i;
+    const isDataUrl = url.startsWith("data:image/");
+    const isCloudinaryUrl = url.includes("cloudinary.com");
+    const isAwsUrl = url.includes("amazonaws.com");
+
+    return imageExtensions.test(url) || isDataUrl || isCloudinaryUrl || isAwsUrl;
+  };
+
+  // Get first valid image
+  const getDisplayImage = (attachment: Attachment): string | null => {
+    if (!attachment.images?.length) return null;
+
+    const validImages = attachment.images.filter(
+      (img) => img && isValidImageUrl(img) && !imageLoadErrors.has(img)
+    );
+
+    return validImages.length > 0 ? validImages[0] : null;
+  };
+
+  // Safe Image Component
+  const SafeImage = ({
+    src,
+    alt,
+    className,
+  }: {
+    src: string;
+    alt: string;
+    className?: string;
+  }) => {
+    const [hasError, setHasError] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+      setHasError(imageLoadErrors.has(src));
+      setIsLoading(!imageLoadErrors.has(src));
+    }, [src]);
+
+    if (hasError || !isValidImageUrl(src)) {
+      return (
+        <div
+          className={`bg-gray-200 flex items-center justify-center ${className}`}
+        >
+          <ImageIcon size={20} className="text-gray-400" />
+        </div>
+      );
+    }
+
+    return (
+      <div className={`relative ${className}`}>
+        {isLoading && (
+          <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+        <Image
+          src={src}
+          alt={alt}
+          fill
+          className={`object-cover rounded-lg ${
+            isLoading ? "opacity-0" : "opacity-100"
+          } transition-opacity`}
+          unoptimized
+          onLoad={() => setIsLoading(false)}
+          onError={() => {
+            setHasError(true);
+            setIsLoading(false);
+            setImageLoadErrors((prev) => new Set([...prev, src]));
+          }}
+        />
+      </div>
+    );
+  };
+
+  // Modal handlers
   const handleRowClick = (attachment: Attachment) => {
     setSelectedAttachment(attachment);
     setEditForm({
       name: attachment.name,
       description: attachment.description || "",
-      fixedPrice: attachment.fixedPrice?.toString() || "",
-      images: attachment.images || []
+      fixed_price: attachment.fixedPrice?.toString() || "",
+      images: attachment.images || [],
     });
     setNewImages([]);
     setPreviewImages([]);
@@ -119,7 +208,6 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
 
   const handlePriceClick = (e: React.MouseEvent, attachment: Attachment) => {
     e.stopPropagation();
-    console.log("💰 Opening price modal for:", attachment);
     setSelectedAttachment(attachment);
     setFixedPrice(attachment.fixedPrice?.toString() || "");
     setPriceModalOpen(true);
@@ -131,346 +219,226 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
     setViewModalOpen(true);
   };
 
-  const handlePriceModalClose = () => {
+  const closeAllModals = () => {
     setPriceModalOpen(false);
+    setEditModalOpen(false);
+    setViewModalOpen(false);
     setSelectedAttachment(null);
     setFixedPrice("");
-  };
-
-  const handleEditModalClose = () => {
-    setEditModalOpen(false);
-    setSelectedAttachment(null);
-    setEditForm({
-      name: "",
-      description: "",
-      fixedPrice: "",
-      images: []
-    });
+    setEditForm({ name: "", description: "", fixed_price: "", images: [] });
     setNewImages([]);
     setPreviewImages([]);
   };
 
-  const handleViewModalClose = () => {
-    setViewModalOpen(false);
-    setSelectedAttachment(null);
-  };
-
-  // Handle image file selection
+  // Image handling
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
+    if (!files.length) return;
 
-    // Validate file types
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    const validFiles = files.filter(file => validTypes.includes(file.type));
-    
+    const validTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
+    const maxSize = 5 * 1024 * 1024;
+
+    const validFiles = files.filter((file) => {
+      if (!validTypes.includes(file.type)) return false;
+      if (file.size > maxSize) return false;
+      return true;
+    });
+
     if (validFiles.length !== files.length) {
-      errorMessage("Some files were skipped. Please select only image files (JPEG, PNG, GIF, WebP)");
+      errorMessage(
+        "Some files were invalid. Only JPEG, PNG, GIF, WebP under 5MB allowed"
+      );
     }
 
-    // Validate file sizes (max 5MB per file)
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    const validSizeFiles = validFiles.filter(file => file.size <= maxSize);
-    
-    if (validSizeFiles.length !== validFiles.length) {
-      errorMessage("Some files were skipped. Please select files smaller than 5MB");
-    }
-
-    // Create preview URLs
-    const previews = validSizeFiles.map(file => URL.createObjectURL(file));
-    
-    setNewImages(prev => [...prev, ...validSizeFiles]);
-    setPreviewImages(prev => [...prev, ...previews]);
+    const previews = validFiles.map((file) => URL.createObjectURL(file));
+    setNewImages((prev) => [...prev, ...validFiles]);
+    setPreviewImages((prev) => [...prev, ...previews]);
   };
 
-  // Remove existing image from attachment
   const handleRemoveExistingImage = (index: number) => {
-    setEditForm(prev => ({
+    setEditForm((prev) => ({
       ...prev,
-      images: prev.images.filter((_, i) => i !== index)
+      images: prev.images.filter((_, i) => i !== index),
     }));
   };
 
-  // Remove new image before upload
   const handleRemoveNewImage = (index: number) => {
-    // Revoke object URL to prevent memory leaks
     URL.revokeObjectURL(previewImages[index]);
-    
-    setNewImages(prev => prev.filter((_, i) => i !== index));
-    setPreviewImages(prev => prev.filter((_, i) => i !== index));
+    setNewImages((prev) => prev.filter((_, i) => i !== index));
+    setPreviewImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Upload images to server
   const uploadNewImages = async (): Promise<string[]> => {
-    if (newImages.length === 0) return [];
-    
+    if (!newImages.length) return [];
+
     setUploadingImages(true);
     const uploadedUrls: string[] = [];
 
     try {
       for (const file of newImages) {
         const formData = new FormData();
-        formData.append('image', file);
+        formData.append("image", file);
 
-        const response = await renderInstance.post('/upload/image', formData, {
-          headers: {
-            Authorization: `Bearer ${access_token}`,
-            'Content-Type': 'multipart/form-data'
-          },
+        const response = await renderInstance.post("/upload/image", formData, {
+          headers: { Authorization: `Bearer ${access_token}` },
         });
 
         if (response.data?.url) {
           uploadedUrls.push(response.data.url);
         }
       }
-      
-      console.log("📤 Uploaded image URLs:", uploadedUrls);
       return uploadedUrls;
-    } catch (error: unknown) {
-      console.error("❌ Image upload error:", error);
-      if (error instanceof Error) {
-        errorMessage(`Error uploading images: ${error.message}`);
-      } else if (typeof error === 'object' && error !== null && 'response' in error) {
-        const axiosError = error as any;
-        errorMessage(`Error uploading images: ${axiosError.response?.data?.message || 'Unknown error'}`);
-      } else {
-        errorMessage("Error uploading images");
-      }
+    } catch (error) {
+      console.error("Image upload error:", error);
+      errorMessage("Error uploading images");
       return [];
     } finally {
       setUploadingImages(false);
     }
   };
 
+  // Save handlers
   const handlePriceSave = async () => {
-    if (selectedAttachment && access_token) {
-      setUpdatingPrice(true);
-      console.log("🔄 Starting price update for:", selectedAttachment.id);
-      console.log("💰 New price:", fixedPrice);
-      
-      try {
-        const requestData = {
-          fixedPrice: parseFloat(fixedPrice) || 0
-        };
-        
-        console.log("📤 Sending PATCH request:", requestData);
-        
-        const response = await renderInstance.patch(
-          `/attachment/${selectedAttachment.id}`,
-          requestData,
-          {
-            headers: {
-              Authorization: `Bearer ${access_token}`,
-              'Content-Type': 'application/json'
-            },
-          }
-        );
-        
-        console.log("📥 API Response:", response);
-        console.log("📊 Response Status:", response.status);
-        console.log("📄 Response Data:", response.data);
-        
-        if (response.status === 200 || response.status === 201) {
-          const newPrice = parseFloat(fixedPrice) || 0;
-          
-          setAllAttachments(prevAttachments => {
-            const updated = prevAttachments.map(att => {
-              if (att.id === selectedAttachment.id) {
-                console.log("🔄 Updating attachment in state:", att.id, "New price:", newPrice);
-                return { ...att, fixedPrice: newPrice };
-              }
-              return att;
-            });
-            console.log("📱 Updated attachments state:", updated);
-            return updated;
-          });
-          
-          successMessage("Fixed price updated successfully");
-          handlePriceModalClose();
-          
-          setTimeout(() => {
-            console.log("🔄 Refetching data from backend...");
-            fetchAllAttachments();
-          }, 500);
-        } else {
-          console.error("❌ Unexpected response status:", response.status);
-          errorMessage("Unexpected response from server");
-        }
-      } catch (error: unknown) {
-        console.error("❌ Price update error:", error);
-        if (error instanceof Error) {
-          errorMessage(`Error updating fixed price: ${error.message}`);
-        } else if (typeof error === 'object' && error !== null && 'response' in error) {
-          const axiosError = error as any;
-          console.error("❌ Error details:", axiosError.response?.data);
-          console.error("❌ Error status:", axiosError.response?.status);
-          errorMessage(`Error updating fixed price: ${axiosError.response?.data?.message || 'Unknown error'}`);
-        } else {
-          errorMessage("Error updating fixed price");
-        }
-      } finally {
-        setUpdatingPrice(false);
-      }
-    } else {
-      console.error("❌ Missing required data:", { 
-        selectedAttachment: !!selectedAttachment, 
-        access_token: !!access_token 
-      });
+    if (!selectedAttachment || !access_token) return;
+
+    setUpdatingPrice(true);
+    try {
+      await renderInstance.patch(
+        `/attachment/${selectedAttachment.id}`,
+        { fixed_price: fixedPrice },
+        { headers: { Authorization: `Bearer ${access_token}` } }
+      );
+
+      setAllAttachments((prev) =>
+        prev.map((att) =>
+          att.id === selectedAttachment.id
+            ? { ...att, fixedPrice: parseFloat(fixedPrice) || 0 }
+            : att
+        )
+      );
+
+      successMessage("Fixed price updated successfully");
+      closeAllModals();
+      setTimeout(fetchAllAttachments, 500);
+    } catch (error) {
+      console.error("Price update error:", error);
+      errorMessage("Error updating fixed price");
+    } finally {
+      setUpdatingPrice(false);
     }
   };
 
   const handleEditSave = async () => {
-    if (selectedAttachment && access_token) {
-      setUpdatingAttachment(true);
-      console.log("🔄 Starting attachment update for:", selectedAttachment.id);
-      console.log("📝 Form data:", editForm);
-      
-      try {
-        // First, upload new images if any
-        const uploadedImageUrls = await uploadNewImages();
-        
-        // Combine existing images with newly uploaded ones
-        const allImages = [...editForm.images, ...uploadedImageUrls];
-        
-        const requestData = {
+    if (!selectedAttachment || !access_token) return;
+
+    setUpdatingAttachment(true);
+    try {
+      const uploadedImageUrls = await uploadNewImages();
+      const allImages = [...editForm.images, ...uploadedImageUrls];
+
+      await renderInstance.patch(
+        `/attachment/${selectedAttachment.id}`,
+        {
           name: editForm.name,
           description: editForm.description,
-          fixedPrice: parseFloat(editForm.fixedPrice) || 0,
-          images: allImages
-        };
-        
-        console.log("📤 Sending PATCH request:", requestData);
-        
-        const response = await renderInstance.patch(
-          `/attachment/${selectedAttachment.id}`,
-          requestData,
-          {
-            headers: {
-              Authorization: `Bearer ${access_token}`,
-              'Content-Type': 'application/json'
-            },
-          }
-        );
-        
-        console.log("📥 API Response:", response);
-        console.log("📊 Response Status:", response.status);
-        console.log("📄 Response Data:", response.data);
-        
-        if (response.status === 200 || response.status === 201) {
-          setAllAttachments(prevAttachments => {
-            const updated = prevAttachments.map(att => {
-              if (att.id === selectedAttachment.id) {
-                console.log("🔄 Updating attachment in state:", att.id);
-                return { 
-                  ...att, 
-                  name: editForm.name,
-                  description: editForm.description,
-                  fixedPrice: parseFloat(editForm.fixedPrice) || 0,
-                  images: allImages
-                };
+          fixed_price: editForm.fixed_price,
+          images: allImages,
+        },
+        { headers: { Authorization: `Bearer ${access_token}` } }
+      );
+
+      setAllAttachments((prev) =>
+        prev.map((att) =>
+          att.id === selectedAttachment.id
+            ? {
+                ...att,
+                name: editForm.name,
+                description: editForm.description,
+                fixedPrice: parseFloat(editForm.fixed_price) || 0,
+                images: allImages,
               }
-              return att;
-            });
-            console.log("📱 Updated attachments state:", updated);
-            return updated;
-          });
-          
-          successMessage("Attachment updated successfully");
-          handleEditModalClose();
-          
-          setTimeout(() => {
-            console.log("🔄 Refetching data from backend...");
-            fetchAllAttachments();
-          }, 500);
-        } else {
-          console.error("❌ Unexpected response status:", response.status);
-          errorMessage("Unexpected response from server");
-        }
-      } catch (error: unknown) {
-        console.error("❌ Attachment update error:", error);
-        if (error instanceof Error) {
-          errorMessage(`Error updating attachment: ${error.message}`);
-        } else if (typeof error === 'object' && error !== null && 'response' in error) {
-          const axiosError = error as any;
-          console.error("❌ Error details:", axiosError.response?.data);
-          console.error("❌ Error status:", axiosError.response?.status);
-          errorMessage(`Error updating attachment: ${axiosError.response?.data?.message || 'Unknown error'}`);
-        } else {
-          errorMessage("Error updating attachment");
-        }
-      } finally {
-        setUpdatingAttachment(false);
-      }
+            : att
+        )
+      );
+
+      successMessage("Attachment updated successfully");
+      closeAllModals();
+      setTimeout(fetchAllAttachments, 500);
+    } catch (error) {
+      console.error("Attachment update error:", error);
+      errorMessage("Error updating attachment");
+    } finally {
+      setUpdatingAttachment(false);
     }
   };
 
-  const handleEditFormChange = (field: string, value: string) => {
-    setEditForm(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  // Filter attachments based on search term
-  const filteredAttachments = allAttachments.filter(attachment =>
-    attachment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    attachment.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Function to check if image URL is valid and get display image
-  const getDisplayImage = (attachment: Attachment) => {
-    if (attachment.images && attachment.images.length > 0) {
-      return attachment.images[0];
-    }
-    return null;
-  };
-
-  // Format price for display
   const formatPrice = (price: number | null | undefined) => {
     if (!price || price === 0) return "Not Set";
-    return `$${price}`;
+    return `$${price.toFixed(2)}`;
   };
 
+  // Effects
   useEffect(() => {
     fetchAllAttachments();
   }, []);
 
-  // Cleanup preview URLs when component unmounts
+  useEffect(() => {
+    const filtered = allAttachments.filter(
+      (attachment) =>
+        attachment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        attachment.description
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase())
+    );
+    setFilteredAttachments(filtered);
+  }, [searchTerm, allAttachments]);
+
   useEffect(() => {
     return () => {
-      previewImages.forEach(url => URL.revokeObjectURL(url));
+      previewImages.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, []);
+  }, [previewImages]);
 
   return (
-    <div className={`w-full py-5 ${bgColor} ${textColor}`}>
+    <div
+      className={`w-full py-5 ${themeClasses.bgColor} ${themeClasses.textColor}`}
+    >
       <Backdrop
-        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-        open={fetchingAttachments || updatingPrice || updatingAttachment || uploadingImages}
+        sx={{ color: "#fff", zIndex: 1301 }}
+        open={
+          fetchingAttachments ||
+          updatingPrice ||
+          updatingAttachment ||
+          uploadingImages
+        }
       >
         <CircularProgress />
       </Backdrop>
 
-      {/* Header Section */}
+      {/* Header */}
       <div className="w-full flex items-center justify-between gap-5 px-5 mb-5">
         <div>
           <p className="text-xl font-semibold">
             Total Attachments: {allAttachments.length}
           </p>
-          <p className="text-sm text-gray-500 mt-1">
-            Click on any row to edit • Check console for debug logs
-          </p>
+          <p className="text-sm text-gray-500 mt-1">Click on any row to edit</p>
         </div>
         <Link
           href="/Attachments/new"
-          className="px-5 py-2.5 text-lg rounded-md bg-black text-white w-fit flex items-center justify-center gap-2.5 ml-auto hover:bg-gray-800 transition-colors"
+          className="px-5 py-2.5 text-lg rounded-md bg-black text-white flex items-center gap-2.5 hover:bg-gray-800 transition-colors"
         >
           <Plus size={20} />
           <span>Add Attachment</span>
         </Link>
       </div>
 
-      {/* Search Section */}
+      {/* Search */}
       <div className="px-5 mb-5">
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -479,7 +447,7 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
             placeholder="Search attachments..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className={`pl-10 pr-4 py-2 border rounded-lg w-full ${inputBg} ${borderColor} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+            className={`pl-10 pr-4 py-2 border rounded-lg w-full ${themeClasses.inputBg} ${themeClasses.borderColor} focus:outline-none focus:ring-2 focus:ring-blue-500`}
           />
         </div>
         <p className="text-sm text-gray-500 mt-2">
@@ -488,7 +456,9 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
       </div>
 
       {/* Table Header */}
-      <div className={`${rowLayout} text-lg font-semibold ${headerBg} rounded mt-8 ${textColor}`}>
+      <div
+        className={`${rowLayout} text-lg font-semibold ${themeClasses.headerBg} rounded mt-8`}
+      >
         <p className="text-center">Sl No</p>
         <p className="text-center">Image</p>
         <p>Name</p>
@@ -504,11 +474,11 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
             <div className="text-center">
               <Image
                 src={NullImage}
-                alt="No attachments found"
+                alt="No attachments"
                 className="w-48 h-48 mx-auto opacity-50"
                 width={192}
                 height={192}
-                unoptimized={true}
+                unoptimized
               />
               <p className="text-gray-400 mt-4">No attachments found</p>
             </div>
@@ -521,50 +491,43 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
               <div
                 key={attachment.id}
                 onClick={() => handleRowClick(attachment)}
-                className={`${rowLayout} text-base ${cardBg} rounded cursor-pointer transition-colors duration-300 hover:${theme === "dark" ? "bg-gray-600" : "bg-white"} ${textColor} ${borderColor} border`}
+                className={`${rowLayout} text-base ${themeClasses.cardBg} rounded cursor-pointer transition-colors hover:${themeClasses.hoverBg} ${themeClasses.borderColor} border`}
               >
                 <p className="text-center">{index + 1}</p>
 
-                <div className="w-[50px] h-[50px] flex items-center justify-center">
+                <div className="w-[60px] h-[60px] relative mx-auto">
                   {displayImage ? (
-                    <div className="w-full h-full relative">
-                      <Image
-                        src={displayImage}
-                        alt={attachment.name}
-                        fill
-                        className="rounded-full object-cover"
-                        unoptimized={true}
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = "none";
-                          const parent = target.parentElement;
-                          if (parent && !parent.querySelector(".fallback-icon")) {
-                            const fallback = document.createElement("div");
-                            fallback.className = "fallback-icon w-[50px] h-[50px] bg-gray-300 rounded-full flex items-center justify-center";
-                            fallback.innerHTML = '<svg class="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
-                            parent.appendChild(fallback);
-                          }
-                        }}
-                      />
-                    </div>
+                    <SafeImage
+                      src={displayImage}
+                      alt={attachment.name}
+                      className="w-[60px] h-[60px]"
+                    />
                   ) : (
-                    <div className="w-[50px] h-[50px] bg-gray-300 rounded-full flex items-center justify-center">
-                      <User size={20} className="text-gray-500" />
+                    <div className="w-[60px] h-[60px] bg-gray-200 rounded-lg flex items-center justify-center">
+                      <ImageIcon size={24} className="text-gray-400" />
                     </div>
                   )}
                 </div>
 
                 <div>
                   <p className="truncate font-medium">{attachment.name}</p>
-                  <p className="text-xs text-gray-500 truncate">ID: {attachment.id.slice(-8)}</p>
+                  <p className="text-xs text-gray-500 truncate">
+                    ID: {attachment.id.slice(-8)}
+                  </p>
                 </div>
 
                 <p className="truncate text-sm">
-                  {attachment.description || "No description available"}
+                  {attachment.description || "No description"}
                 </p>
 
                 <div className="text-center">
-                  <span className={`font-medium ${attachment.fixedPrice && attachment.fixedPrice > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                  <span
+                    className={`font-medium ${
+                      attachment.fixedPrice && attachment.fixedPrice > 0
+                        ? "text-green-600"
+                        : "text-gray-400"
+                    }`}
+                  >
                     {formatPrice(attachment.fixedPrice)}
                   </span>
                   <button
@@ -579,10 +542,10 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
                 <div className="flex items-center justify-center">
                   <button
                     onClick={(e) => handleViewClick(e, attachment)}
-                    className="p-1 hover:bg-gray-100 rounded transition-colors"
-                    title="View Details"
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    title="View Attachment"
                   >
-                    <Eye size={16} className="text-gray-600" />
+                    <Eye size={18} className="text-gray-600" />
                   </button>
                 </div>
               </div>
@@ -591,391 +554,261 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
         )}
       </div>
 
-      {/* Price Modal */}
-      {priceModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className={`${bgColor} rounded-lg p-6 w-[450px] relative ${textColor}`}>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Set Fixed Price</h2>
-              <button
-                onClick={handlePriceModalClose}
-                className="p-1 hover:bg-gray-100 rounded"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {selectedAttachment && (
-              <div className="space-y-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex items-center gap-4">
-                    {getDisplayImage(selectedAttachment) ? (
-                      <Image
-                        src={getDisplayImage(selectedAttachment)!}
-                        alt={selectedAttachment.name}
-                        width={50}
-                        height={50}
-                        className="rounded-lg object-cover"
-                        unoptimized={true}
-                      />
-                    ) : (
-                      <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                        <DollarSign className="text-gray-500" />
-                      </div>
-                    )}
-                    <div>
-                      <h3 className="font-semibold text-gray-800">{selectedAttachment.name}</h3>
-                      <p className="text-sm text-gray-600">Current: ${selectedAttachment.fixedPrice || 0}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Fixed Price (USD)
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                    <input
-                      type="number"
-                      value={fixedPrice}
-                      onChange={(e) => {
-                        console.log("💰 Price input changed:", e.target.value);
-                        setFixedPrice(e.target.value);
-                      }}
-                      placeholder="0.00"
-                      step="0.01"
-                      min="0"
-                      className={`w-full pl-8 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${inputBg} ${borderColor}`}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-3">
-                  <button
-                    onClick={handlePriceModalClose}
-                    className="px-4 py-2 rounded border hover:bg-gray-50"
-                    disabled={updatingPrice}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handlePriceSave}
-                    disabled={!fixedPrice || parseFloat(fixedPrice) < 0 || updatingPrice}
-                    className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
-                  >
-                    {updatingPrice ? "Saving..." : "Save Price"}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Edit Modal */}
-      {editModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className={`${bgColor} rounded-lg p-6 w-[600px] relative max-h-[90vh] overflow-y-auto ${textColor}`}>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Edit Attachment</h2>
-              <button
-                onClick={handleEditModalClose}
-                className="p-1 hover:bg-gray-100 rounded"
-              >
-                <X size={20} />
-              </button>
+      {editModalOpen && selectedAttachment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-2xl mx-4 my-8 p-6 relative">
+            <button
+              onClick={closeAllModals}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <X size={20} />
+            </button>
+
+            <h2 className="text-xl font-semibold mb-6">Edit Attachment</h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Name</label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({ ...prev, name: e.target.value }))
+                  }
+                  className={`w-full px-3 py-2 border rounded-lg ${themeClasses.inputBg} ${themeClasses.borderColor} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
+                  className={`w-full px-3 py-2 border rounded-lg h-24 ${themeClasses.inputBg} ${themeClasses.borderColor} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Fixed Price
+                </label>
+                <input
+                  type="number"
+                  value={editForm.fixed_price}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      fixed_price: e.target.value,
+                    }))
+                  }
+                  className={`w-full px-3 py-2 border rounded-lg ${themeClasses.inputBg} ${themeClasses.borderColor} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                />
+              </div>
+
+              {/* Existing Images */}
+              {editForm.images.length > 0 && (
+                <div className="grid grid-cols-3 gap-3 mb-3">
+                  {editForm.images.map((image, index) => (
+                    <div
+                      key={index}
+                      className="relative group w-full h-24 rounded-lg overflow-hidden"
+                    >
+                      <SafeImage
+                        src={image}
+                        alt={`Current ${index + 1}`}
+                        className="w-full h-full"
+                      />
+                      <button
+                        onClick={() => handleRemoveExistingImage(index)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* New Previews */}
+              {previewImages.length > 0 && (
+                <div className="grid grid-cols-3 gap-3 mb-3">
+                  {previewImages.map((preview, index) => (
+                    <div
+                      key={index}
+                      className="relative group w-full h-24 rounded-lg overflow-hidden"
+                    >
+                      <Image
+                        src={preview}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-full object-cover"
+                        fill
+                        unoptimized
+                      />
+                      <button
+                        onClick={() => handleRemoveNewImage(index)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Add Images
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  <Upload size={16} />
+                  Upload Images
+                </button>
+              </div>
             </div>
 
-            {selectedAttachment && (
-              <div className="space-y-6">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex items-center gap-4">
-                    {getDisplayImage(selectedAttachment) ? (
-                      <Image
-                        src={getDisplayImage(selectedAttachment)!}
-                        alt={selectedAttachment.name}
-                        width={60}
-                        height={60}
-                        className="rounded-lg object-cover"
-                        unoptimized={true}
-                      />
-                    ) : (
-                      <div className="w-15 h-15 bg-gray-200 rounded-lg flex items-center justify-center">
-                        <Edit className="text-gray-500" />
-                      </div>
-                    )}
-                    <div>
-                      <p className="font-medium">Editing Attachment</p>
-                      <p className="text-sm text-gray-600">ID: {selectedAttachment.id}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Attachment Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.name}
-                    onChange={(e) => handleEditFormChange('name', e.target.value)}
-                    placeholder="Enter attachment name"
-                    className={`w-full border rounded-lg p-3 ${inputBg} ${borderColor} focus:outline-none focus:ring-2 focus:ring-green-500`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    value={editForm.description}
-                    onChange={(e) => handleEditFormChange('description', e.target.value)}
-                    placeholder="Enter attachment description"
-                    rows={3}
-                    className={`w-full border rounded-lg p-3 ${inputBg} ${borderColor} focus:outline-none focus:ring-2 focus:ring-green-500`}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Fixed Price (USD)
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                    <input
-                      type="number"
-                      value={editForm.fixedPrice}
-                      onChange={(e) => handleEditFormChange('fixedPrice', e.target.value)}
-                      placeholder="0.00"
-                      step="0.01"
-                      min="0"
-                      className={`w-full pl-8 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${inputBg} ${borderColor}`}
-                    />
-                  </div>
-                </div>
-
-                {/* Image Management Section */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-sm font-medium">
-                      Images
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors flex items-center gap-2"
-                    >
-                      <Upload size={16} />
-                      Add Images
-                    </button>
-                  </div>
-
-                  {/* Hidden file input */}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleImageSelect}
-                    className="hidden"
-                  />
-
-                  {/* Existing Images */}
-                  {editForm.images.length > 0 && (
-                    <div>
-                      <p className="text-sm text-gray-600 mb-2">Current Images:</p>
-                      <div className="grid grid-cols-3 gap-3">
-                        {editForm.images.map((image, index) => (
-                          <div key={index} className="relative group">
-                            <div className="w-full h-24 relative bg-gray-100 rounded-lg overflow-hidden">
-                              <Image
-                                src={image}
-                                alt={`Current ${index + 1}`}
-                                fill
-                                className="object-cover"
-                                unoptimized={true}
-                              />
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveExistingImage(index)}
-                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                              title="Remove image"
-                            >
-                              <X size={12} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* New Images Preview */}
-                  {previewImages.length > 0 && (
-                    <div>
-                      <p className="text-sm text-gray-600 mb-2">New Images (will be uploaded):</p>
-                      <div className="grid grid-cols-3 gap-3">
-                        {previewImages.map((preview, index) => (
-                          <div key={index} className="relative group">
-                            <div className="w-full h-24 relative bg-gray-100 rounded-lg overflow-hidden">
-                              <Image
-                                src={preview}
-                                alt={`Preview ${index + 1}`}
-                                fill
-                                className="object-cover"
-                                unoptimized={true}
-                              />
-                              {/* Upload indicator */}
-                              <div className="absolute top-1 left-1 bg-blue-500 text-white px-1.5 py-0.5 rounded text-xs">
-                                New
-                              </div>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveNewImage(index)}
-                              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                              title="Remove image"
-                            >
-                              <X size={12} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Image Upload Info */}
-                  <div className="text-xs text-gray-500 space-y-1">
-                    <p>• Supported formats: JPEG, PNG, GIF, WebP</p>
-                    <p>• Maximum file size: 5MB per image</p>
-                    <p>• You can upload multiple images at once</p>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-4 border-t">
-                  <button
-                    onClick={handleEditModalClose}
-                    className="px-4 py-2 rounded border hover:bg-gray-50"
-                    disabled={updatingAttachment || uploadingImages}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleEditSave}
-                    disabled={!editForm.name.trim() || updatingAttachment || uploadingImages}
-                    className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
-                  >
-                    <Save size={16} />
-                    {updatingAttachment ? "Saving..." : uploadingImages ? "Uploading..." : "Save Changes"}
-                  </button>
-                </div>
-              </div>
-            )}
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={closeAllModals}
+                className="px-4 py-2 rounded-lg border hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditSave}
+                disabled={updatingAttachment || uploadingImages}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {updatingAttachment || uploadingImages ? "Saving..." : "Save"}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* View Modal */}
-      {viewModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className={`${bgColor} rounded-lg p-6 w-[500px] relative max-h-[90vh] overflow-y-auto ${textColor}`}>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">View Attachment Details</h2>
-              <button
-                onClick={handleViewModalClose}
-                className="p-1 hover:bg-gray-100 rounded"
-              >
-                <X size={20} />
-              </button>
-            </div>
+      {viewModalOpen && selectedAttachment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-2xl mx-4 my-8 p-6 relative">
+            <button
+              onClick={closeAllModals}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <X size={20} />
+            </button>
 
-            {selectedAttachment && (
-              <div className="space-y-6">
-                {/* Attachment Images */}
-                <div className="space-y-4">
-                  <h3 className="font-medium text-gray-700">Images</h3>
-                  {selectedAttachment.images && selectedAttachment.images.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-4">
-                      {selectedAttachment.images.map((image, index) => (
-                        <div key={index} className="relative h-32 bg-gray-100 rounded-lg overflow-hidden">
-                          <Image
+            <h2 className="text-xl font-semibold mb-6">Attachment Details</h2>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-500">Name</p>
+                <p className="font-medium">{selectedAttachment.name}</p>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-500">Description</p>
+                <p>{selectedAttachment.description || "No description"}</p>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-500">Fixed Price</p>
+                <p className="font-medium">
+                  {formatPrice(selectedAttachment.fixedPrice)}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-500 mb-2">Images</p>
+                {selectedAttachment.images?.length ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    {selectedAttachment.images
+                      .filter(
+                        (img) =>
+                          img && isValidImageUrl(img) && !imageLoadErrors.has(img)
+                      )
+                      .map((image, index) => (
+                        <div
+                          key={index}
+                          className="relative w-full h-32 rounded-lg overflow-hidden"
+                        >
+                          <SafeImage
                             src={image}
-                            alt={`${selectedAttachment.name} - Image ${index + 1}`}
-                            fill
-                            className="object-cover"
-                            unoptimized={true}
+                            alt={`${selectedAttachment.name} ${index + 1}`}
+                            className="w-full h-full"
                           />
                         </div>
                       ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 bg-gray-50 rounded-lg">
-                      <Camera size={48} className="text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-500">No images available</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Basic Information */}
-                <div className="space-y-4">
-                  <h3 className="font-medium text-gray-700">Basic Information</h3>
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-gray-600 font-medium">Attachment ID</p>
-                        <p className="text-sm font-mono bg-white px-2 py-1 rounded border">{selectedAttachment.id}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600 font-medium">Fixed Price</p>
-                        <p className={`text-sm font-semibold ${selectedAttachment.fixedPrice && selectedAttachment.fixedPrice > 0 ? 'text-green-600' : 'text-gray-400'}`}>
-                          {formatPrice(selectedAttachment.fixedPrice)}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <p className="text-sm text-gray-600 font-medium mb-1">Name</p>
-                      <p className="text-base">{selectedAttachment.name}</p>
-                    </div>
-                    
-                    <div>
-                      <p className="text-sm text-gray-600 font-medium mb-1">Description</p>
-                      <p className="text-base">{selectedAttachment.description || "No description available"}</p>
-                    </div>
                   </div>
-                </div>
-
-                {/* Additional Details */}
-                <div className="space-y-4">
-                  <h3 className="font-medium text-gray-700">Additional Details</h3>
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-600 font-medium">Total Images</p>
-                        <p>{selectedAttachment.images?.length || 0}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-600 font-medium">Status</p>
-                        <span className="inline-block px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
-                          Active
-                        </span>
-                      </div>
-                    </div>
+                ) : (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg">
+                    <Camera size={48} className="text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-500">No images available</p>
                   </div>
-                </div>
-
-                <div className="flex justify-end">
-                  <button
-                    onClick={handleViewModalClose}
-                    className="px-6 py-2 rounded bg-gray-600 text-white hover:bg-gray-700 transition-colors"
-                  >
-                    Close
-                  </button>
-                </div>
+                )}
               </div>
-            )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Price Modal */}
+      {priceModalOpen && selectedAttachment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md p-6 relative">
+            <button
+              onClick={closeAllModals}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <X size={20} />
+            </button>
+
+            <h2 className="text-xl font-semibold mb-6">Update Fixed Price</h2>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Fixed Price
+              </label>
+              <input
+                type="number"
+                value={fixedPrice}
+                onChange={(e) => setFixedPrice(e.target.value)}
+                className={`w-full px-3 py-2 border rounded-lg ${themeClasses.inputBg} ${themeClasses.borderColor} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={closeAllModals}
+                className="px-4 py-2 rounded-lg border hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePriceSave}
+                disabled={updatingPrice}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {updatingPrice ? "Saving..." : "Save"}
+              </button>
+            </div>
           </div>
         </div>
       )}
