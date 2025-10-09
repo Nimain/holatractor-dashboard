@@ -1,199 +1,364 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
-import { Search, Package, X, ArrowLeft } from "lucide-react";
+
+import { useState, useEffect } from "react";
+import { X, Upload, Package } from "lucide-react";
 import { useCookie } from "next-cookie";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { CircularProgress } from "@mui/material";
 
-// Type for the parts already in the main inventory
-interface InventoryPart {
-    id: string | number;
-    part_number: string;
-}
-
-// Type for the parts available to be added
-interface AvailablePart {
-    id: string | number;
-    part_name: string;
-    part_number: string;
-    description?: string;
-    tractor_model?: string;
-    category?: string;
-    brand?: string;
-    image?: string;
-}
-
-// Type for the modal's props
 interface AddPartsModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onAddSuccess: () => void;
-    inventoryData: InventoryPart[]; // Prop to receive current inventory
+  isOpen: boolean;
+  onClose: () => void;
+  onAddSuccess: () => void;
+  inventoryData: any[];
 }
+
+interface PartFormData {
+  part_name: string;
+  part_number: string;
+  category: string;
+  brand: string;
+  price: string;
+  quantity_in_stock: string;
+  dealer_id: string;
+  base_id: string;
+  description?: string;
+  tractor_model?: string;
+}
+
+const CATEGORIES = [
+  "Engine",
+  "Hydraulics",
+  "Transmission",
+  "Electrical",
+  "Brakes",
+  "Steering",
+  "Body & Cab",
+  "Tires & Wheels",
+  "Attachments",
+  "Filters & Fluids",
+  "Belts & Chains",
+  "Bearings & Seals"
+];
 
 export default function AddPartsModal({ isOpen, onClose, onAddSuccess, inventoryData }: AddPartsModalProps) {
-    const [searchTerm, setSearchTerm] = useState("");
-    const [availableParts, setAvailableParts] = useState<AvailablePart[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [step, setStep] = useState(1);
-    const [selectedPart, setSelectedPart] = useState<AvailablePart | null>(null);
-    const [stockCost, setStockCost] = useState({ stock: "", cost: "" });
-    const [isSubmitting, setIsSubmitting] = useState(false);
+  const { cookie } = useCookie();
+  const access_token = cookie?.get("access_token");
 
-    const { cookie } = useCookie();
-    const access_token = cookie?.get("access_token");
+  const [loading, setLoading] = useState(false);
+  const [dealerId, setDealerId] = useState<string>("");
+  const [baseId, setBaseId] = useState<string>("");
 
-    const fetchAvailableParts = useCallback(() => {
-        if (!access_token) return;
-        setLoading(true);
-        const params = new URLSearchParams();
-        if (searchTerm) params.append("search", searchTerm);
-        
-        renderInstance.get(`/dealer/tractor-parts/all?${params.toString()}`, { headers: { Authorization: `Bearer ${access_token}` } })
-            .then(response => {
-                const allParts = Array.isArray(response.data.parts) ? response.data.parts : [];
-                
-                const inventoryPartNumbers = new Set(inventoryData.map(p => p.part_number));
-                
-                const trulyAvailableParts = allParts.filter(
-                    (part: AvailablePart) => !inventoryPartNumbers.has(part.part_number)
-                );
+  const [formData, setFormData] = useState<PartFormData>({
+    part_name: "",
+    part_number: "",
+    category: "",
+    brand: "",
+    price: "",
+    quantity_in_stock: "",
+    dealer_id: "",
+    base_id: "",
+    description: "",
+    tractor_model: "",
 
-                setAvailableParts(trulyAvailableParts);
-            })
-            .catch(error => {
-                errorMessage("Error fetching available parts");
-                console.error("❌ Error fetching parts:", error);
-            })
-            .finally(() => setLoading(false));
-    }, [access_token, searchTerm, inventoryData]);
+  });
 
-    useEffect(() => {
-        if (isOpen && step === 1) {
-            fetchAvailableParts();
+  // Fetch dealer and base IDs on mount
+  useEffect(() => {
+    if (isOpen && access_token && !dealerId) {
+      renderInstance.get("/dealer", { 
+        headers: { Authorization: `Bearer ${access_token}` } 
+      })
+      .then((res) => {
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          const fetchedDealerId = res.data[0].id;
+          const fetchedBaseId = res.data[0].base_id || ""; // Adjust based on your API response
+          setDealerId(fetchedDealerId);
+          setBaseId(fetchedBaseId);
+          setFormData(prev => ({
+            ...prev,
+            dealer_id: fetchedDealerId,
+            base_id: fetchedBaseId
+          }));
         }
-    }, [isOpen, step, fetchAvailableParts]);
+      })
+      .catch(() => errorMessage("Failed to fetch dealer information"));
+    }
+  }, [isOpen, access_token, dealerId]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    const handleAddToInventory = () => {
-        if (!stockCost.stock || !stockCost.cost || !selectedPart) {
-            return errorMessage("Please enter both stock and price.");
-        }
-        if (!access_token) return errorMessage("User not authenticated.");
+    // Validation
+    if (!formData.part_name || !formData.part_number || !formData.category || 
+        !formData.brand || !formData.price || !formData.quantity_in_stock) {
+      errorMessage("Please fill in all required fields");
+      return;
+    }
 
-        setIsSubmitting(true);
-        renderInstance.get("/dealer", { headers: { Authorization: `Bearer ${access_token}` } })
-            .then(dealerRes => {
-                if (!Array.isArray(dealerRes.data) || dealerRes.data.length === 0) throw new Error("Dealer not found");
-                
-                // ✅ Fixed: Matches the exact API structure from your screenshot
-                const postData = {
-                    part_name: selectedPart.part_name,
-                    part_number: selectedPart.part_number,
-                    category: selectedPart.category || "Other",
-                    brand: selectedPart.brand || "Unknown",
-                    price: parseFloat(stockCost.cost),
-                    quantity_in_stock: parseInt(stockCost.stock),
-                    dealer_id: dealerRes.data[0].id,
-                    base_id: selectedPart.id.toString()  // ✅ This is the key field that was missing!
-                };
-                
-                console.log("📤 Sending data:", postData);
-                return renderInstance.post("/dealer/tractor-parts", postData, { headers: { Authorization: `Bearer ${access_token}` } });
-            })
-            .then((response) => {
-                console.log("✅ Response:", response.data);
-                successMessage("Part added to inventory!");
-                onAddSuccess();  // This triggers the parent to refresh
-                handleClose();
-            })
-            .catch(error => {
-                console.error("❌ Full error:", error.response?.data);
-                errorMessage(error.response?.data?.message || "Error adding part");
-            })
-            .finally(() => setIsSubmitting(false));
+    if (!dealerId || !baseId) {
+      errorMessage("Dealer information not loaded");
+      return;
+    }
+
+    setLoading(true);
+
+    // Prepare payload
+    const payload = {
+      part_name: formData.part_name,
+      part_number: formData.part_number,
+      category: formData.category,
+      brand: formData.brand,
+      price: parseFloat(formData.price),
+      quantity_in_stock: parseInt(formData.quantity_in_stock),
+      dealer_id: dealerId,
+      base_id: baseId,
+      ...(formData.description && { description: formData.description }),
+      ...(formData.tractor_model && { tractor_model: formData.tractor_model })
     };
 
-    const handleClose = () => {
-        setStep(1);
-        setSelectedPart(null);
-        setStockCost({ stock: "", cost: "" });
-        setSearchTerm("");
-        onClose();
-    };
+    try {
+      await renderInstance.post("/dealer/tractor-parts", payload, {
+        headers: { Authorization: `Bearer ${access_token}` }
+      });
+      
+      successMessage("Part added successfully!");
+      
+      // Reset form
+      setFormData({
+        part_name: "",
+        part_number: "",
+        category: "",
+        brand: "",
+        price: "",
+        quantity_in_stock: "",
+        dealer_id: dealerId,
+        base_id: baseId,
+        description: "",
+        tractor_model: ""
+      });
+      
+      onAddSuccess();
+    } catch (error: any) {
+      errorMessage(error?.response?.data?.message || "Failed to add part");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    if (!isOpen) return null;
+  const handleClose = () => {
+    if (!loading) {
+      setFormData({
+        part_name: "",
+        part_number: "",
+        category: "",
+        brand: "",
+        price: "",
+        quantity_in_stock: "",
+        dealer_id: dealerId,
+        base_id: baseId,
+        description: "",
+        tractor_model: ""
+      });
+      onClose();
+    }
+  };
 
-    return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="rounded-lg max-w-6xl w-full max-h-[90vh] flex flex-col" style={{ background: `linear-gradient(135deg, #A10A0C 0%, #3B0404 100%)` }}>
-                {/* Modal Header */}
-                <div className="flex items-center justify-between p-6 border-b border-red-900/30">
-                    <div className="flex items-center gap-4">
-                        {step === 2 && <button onClick={() => setStep(1)} className="text-white hover:text-gray-300"><ArrowLeft size={24} /></button>}
-                        <div>
-                            <h2 className="text-2xl font-bold text-white">{step === 1 ? "Select a Part to Add" : "Enter Stock & Price"}</h2>
-                        </div>
-                    </div>
-                    <button onClick={handleClose} className="text-white hover:text-gray-300"><X size={24} /></button>
-                </div>
+  if (!isOpen) return null;
 
-                {/* Modal Body */}
-                <div className="flex-grow overflow-y-auto">
-                    {step === 1 ? (
-                        <div>
-                            {/* Search Bar */}
-                            <div className="p-6 border-b border-red-900/30">
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-red-500" size={20} />
-                                    <input type="text" placeholder="Search available parts by name or number..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 py-3 border rounded-lg" />
-                                </div>
-                            </div>
-                            {/* Parts Grid */}
-                            <div className="p-6">
-                                {loading ? <div className="text-center text-white p-10"><CircularProgress style={{ color: 'white' }}/></div> : 
-                                availableParts.length === 0 ? <div className="text-center text-white p-10 font-semibold">No new parts available to add.</div> :
-                                (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                        {availableParts.map((part) => (
-                                            <div key={part.id} className="bg-white rounded-lg p-4 shadow-lg flex flex-col">
-                                                <div className="h-28 flex items-center justify-center bg-gray-50 rounded-lg mb-4 p-2">
-                                                    {part.image ? <img src={part.image} alt={part.part_name} className="max-h-full max-w-full object-contain" /> : <Package className="text-gray-400" size={40}/>}
-                                                </div>
-                                                <h3 className="text-sm font-semibold text-gray-800 h-10 line-clamp-2">{part.part_name}</h3>
-                                                <p className="text-xs text-gray-500 mb-4">#{part.part_number}</p>
-                                                <button onClick={() => { setSelectedPart(part); setStep(2); }} className="w-full mt-auto bg-orange-500 text-white py-2 rounded-lg font-semibold hover:bg-orange-600">Select</button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="p-8">
-                            {selectedPart && (
-                                <div className="max-w-xl mx-auto bg-white p-6 rounded-lg">
-                                    <h3 className="text-xl font-bold text-gray-800 mb-1">{selectedPart.part_name}</h3>
-                                    <p className="text-sm text-gray-500 mb-6">Part Number: {selectedPart.part_number}</p>
-                                    <div className="space-y-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">Stock Quantity</label>
-                                            <input type="number" min="1" value={stockCost.stock} onChange={(e) => setStockCost({ ...stockCost, stock: e.target.value })} placeholder="e.g., 50" className="w-full p-3 border rounded-lg" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">Price ($)</label>
-                                            <input type="number" min="0" step="0.01" value={stockCost.cost} onChange={(e) => setStockCost({ ...stockCost, cost: e.target.value })} placeholder="e.g., 450.00" className="w-full p-3 border rounded-lg" />
-                                        </div>
-                                        <button onClick={handleAddToInventory} disabled={isSubmitting || !stockCost.stock || !stockCost.cost} className="w-full mt-4 bg-orange-500 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-orange-600 disabled:bg-gray-400">
-                                            {isSubmitting ? (<><CircularProgress size={20} style={{ color: 'white' }} /> Adding...</>) : "Add to Inventory"}
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-gradient-to-r from-red-600 to-red-800 text-white p-6 flex justify-between items-center rounded-t-lg">
+          <div className="flex items-center gap-3">
+            <Package size={28} />
+            <h2 className="text-2xl font-bold">Add New Part</h2>
+          </div>
+          <button 
+            onClick={handleClose} 
+            disabled={loading}
+            className="hover:bg-red-700 p-2 rounded-full transition-colors"
+          >
+            <X size={24} />
+          </button>
         </div>
-    );
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Part Name */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Part Name <span className="text-red-600">*</span>
+              </label>
+              <input
+                type="text"
+                name="part_name"
+                value={formData.part_name}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                placeholder="e.g., Hydraulic Pump Advanced"
+                required
+              />
+            </div>
+
+            {/* Part Number */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Part Number <span className="text-red-600">*</span>
+              </label>
+              <input
+                type="text"
+                name="part_number"
+                value={formData.part_number}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                placeholder="e.g., HP-TEST-2025-001"
+                required
+              />
+            </div>
+
+            {/* Category */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Category <span className="text-red-600">*</span>
+              </label>
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                required
+              >
+                <option value="">Select Category</option>
+                {CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Brand */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Brand <span className="text-red-600">*</span>
+              </label>
+              <input
+                type="text"
+                name="brand"
+                value={formData.brand}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                placeholder="e.g., John Deere"
+                required
+              />
+            </div>
+
+            {/* Tractor Model (Optional) */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Tractor Model
+              </label>
+              <input
+                type="text"
+                name="tractor_model"
+                value={formData.tractor_model}
+                onChange={handleInputChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                placeholder="e.g., 5075E"
+              />
+            </div>
+
+            {/* Price */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Price ($) <span className="text-red-600">*</span>
+              </label>
+              <input
+                type="number"
+                name="price"
+                value={formData.price}
+                onChange={handleInputChange}
+                step="0.01"
+                min="0"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                placeholder="e.g., 2500.00"
+                required
+              />
+            </div>
+
+            {/* Quantity in Stock */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Quantity in Stock <span className="text-red-600">*</span>
+              </label>
+              <input
+                type="number"
+                name="quantity_in_stock"
+                value={formData.quantity_in_stock}
+                onChange={handleInputChange}
+                min="0"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                placeholder="e.g., 8"
+                required
+              />
+            </div>
+
+            {/* Description */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Description
+              </label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                rows={3}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                placeholder="Additional details about the part..."
+              />
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-4 mt-8">
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={loading}
+              className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-800 text-white rounded-lg font-semibold hover:from-red-700 hover:to-red-900 transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <CircularProgress size={20} style={{ color: 'white' }} />
+                  Adding...
+                </>
+              ) : (
+                <>
+                  <Upload size={20} />
+                  Add Part
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 }
