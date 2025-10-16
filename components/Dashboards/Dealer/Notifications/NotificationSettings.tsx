@@ -36,51 +36,44 @@ export default function NotificationSettings() {
   )
 
   return (
-    <div className=" bg-gray-100 p-6">
+    <div className="bg-gray-100 px-4 py-6 sm:px-6 lg:px-8">
       <div className=" mx-auto">
         {/* Header */}
-        <h1 className="text-3xl font-bold text-red-600 mb-8">Notification Settings</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-red-600 mb-6 sm:mb-8 text-center sm:text-left">
+          Notification Settings
+        </h1>
 
         {/* Settings Container */}
         <div
-          className="rounded-lg p-8 text-white"
+          className="rounded-lg px-4 py-6 sm:p-8 text-white space-y-10"
           style={{
             background: `linear-gradient(135deg, #A10A0C 0%, #3B0404 100%)`,
           }}
         >
           {/* Notifications Section */}
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-6">Notifications</h2>
+          <section className="space-y-6">
+            <h2 className="text-xl sm:text-2xl font-bold">Notifications</h2>
 
             <div className="space-y-6">
-              {/* Enable Desktop Notification */}
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold mb-1">Enable Desktop Notification</h3>
-                  <p className="text-gray-200 text-sm">
-                    Receive Notifications of all the messages,contracts and documents
-                  </p>
-                </div>
-                <ToggleSwitch
-                  isOn={settings.desktopNotification}
-                  onToggle={() => toggleSetting("desktopNotification")}
-                />
-              </div>
+              {/* Desktop Notification */}
+              <SettingItem
+                title="Enable Desktop Notification"
+                description="Receive notifications for all messages, contracts, and documents."
+                isOn={settings.desktopNotification}
+                onToggle={() => toggleSetting("desktopNotification")}
+              />
 
-              {/* Enable Unread Notification Badge */}
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold mb-1">Enable Unread Notification Badge</h3>
-                  <p className="text-gray-200 text-sm">
-                    Shows a Red badge on the app icon when you have unread message
-                  </p>
-                </div>
-                <ToggleSwitch isOn={settings.unreadBadge} onToggle={() => toggleSetting("unreadBadge")} />
-              </div>
+              {/* Unread Badge */}
+              <SettingItem
+                title="Enable Unread Notification Badge"
+                description="Shows a red badge on the app icon when you have unread messages."
+                isOn={settings.unreadBadge}
+                onToggle={() => toggleSetting("unreadBadge")}
+              />
 
-              {/* Push Notification Timeout */}
+              {/* Timeout Selector */}
               <div>
-                <h3 className="text-lg font-semibold mb-3">Push Notification Timeout</h3>
+                <h3 className="text-base sm:text-lg font-semibold mb-2">Push Notification Timeout</h3>
                 <div className="relative">
                   <select
                     value={timeoutValue}
@@ -96,52 +89,74 @@ export default function NotificationSettings() {
                 </div>
               </div>
             </div>
-          </div>
+          </section>
 
           {/* Email Notifications Section */}
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-6">Email Notifications</h2>
+          <section className="space-y-6">
+            <h2 className="text-xl sm:text-2xl font-bold">Email Notifications</h2>
 
-            <div className="space-y-6">
-              {/* Communication Emails */}
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold mb-1">Communication Emails</h3>
-                  <p className="text-gray-200 text-sm">Receive emails for messages, contracts and documents</p>
-                </div>
-                <ToggleSwitch
-                  isOn={settings.communicationEmails}
-                  onToggle={() => toggleSetting("communicationEmails")}
-                />
-              </div>
+            <SettingItem
+              title="Communication Emails"
+              description="Receive emails for messages, contracts and documents."
+              isOn={settings.communicationEmails}
+              onToggle={() => toggleSetting("communicationEmails")}
+            />
 
-              {/* Announcements and Updates */}
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold mb-1">Announcements and Updates</h3>
-                  <p className="text-gray-200 text-sm">Receive Emails about product updates, improvements etc</p>
-                </div>
-                <ToggleSwitch
-                  isOn={settings.announcementsUpdates}
-                  onToggle={() => toggleSetting("announcementsUpdates")}
-                />
-              </div>
-            </div>
-          </div>
+            <SettingItem
+              title="Announcements and Updates"
+              description="Receive emails about product updates, improvements, etc."
+              isOn={settings.announcementsUpdates}
+              onToggle={() => toggleSetting("announcementsUpdates")}
+            />
+          </section>
 
-          {/* Sounds Section */}
-          <div>
-            <h2 className="text-2xl font-bold mb-6">Sounds</h2>
+          {/* Sound Settings */}
+          <section className="space-y-6">
+            <h2 className="text-xl sm:text-2xl font-bold">Sounds</h2>
 
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold mb-1">Disable all Notification Sounds</h3>
-                <p className="text-gray-200 text-sm">Mute all notification of the messages, contracts, documents</p>
-              </div>
-              <ToggleSwitch isOn={settings.disableAllSounds} onToggle={() => toggleSetting("disableAllSounds")} />
-            </div>
-          </div>
+            <SettingItem
+              title="Disable All Notification Sounds"
+              description="Mute all notification sounds for messages, contracts, and documents."
+              isOn={settings.disableAllSounds}
+              onToggle={() => toggleSetting("disableAllSounds")}
+            />
+          </section>
         </div>
+      </div>
+    </div>
+  )
+}
+
+const SettingItem = ({
+  title,
+  description,
+  isOn,
+  onToggle,
+}: {
+  title: string
+  description: string
+  isOn: boolean
+  onToggle: () => void
+}) => {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+      <div className="flex-1">
+        <h3 className="text-base sm:text-lg font-semibold mb-1">{title}</h3>
+        <p className="text-gray-200 text-sm">{description}</p>
+      </div>
+      <div className="sm:pt-1">
+        <button
+          onClick={onToggle}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
+            isOn ? "bg-orange-500" : "bg-gray-400"
+          }`}
+        >
+          <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+              isOn ? "translate-x-6" : "translate-x-1"
+            }`}
+          />
+        </button>
       </div>
     </div>
   )

@@ -91,8 +91,8 @@ const dropdownSections = [
     label: "Repairs",
     items: [
       { icon: Calendar, label: "Schedule Repair", href: "/dealer/repair/ScheduleTractorRepair" },
-      // { icon: BookOpen, label: "Maintenance Log", href: "/dealer/repair" },
       { icon: Package, label: "Parts Inventory", href: "/dealer/repair/PartsInventory" },
+      { icon: BookOpen, label: "Mechanics", href: "/dealer/repair/Mechanics" }
     ],
   },
 ]

@@ -58,30 +58,28 @@ export default function Security() {
   }
 
   return (
-    <div className=" bg-gray-100 p-6">
+    <div className="bg-gray-100 p-4 sm:p-6">
       <div className=" mx-auto">
-        {/* Header */}
-        <h1 className="text-3xl font-bold text-red-600 mb-8">Security</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-red-600 mb-6 sm:mb-8">Security</h1>
 
-        {/* Security Container */}
         <div
-          className="rounded-lg p-8 text-white"
+          className="rounded-lg p-6 sm:p-8 text-white"
           style={{
             background: `linear-gradient(135deg, #A10A0C 0%, #3B0404 100%)`,
           }}
         >
-          {/* Basics Section */}
+          {/* Basics */}
           <div className="mb-8">
-            <h2 className="text-2xl font-bold mb-6">Basics</h2>
+            <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Basics</h2>
 
             {/* Password */}
-            <div className="border-b border-red-900/30 pb-6 mb-6">
-              <div className="flex items-center justify-between">
+            <div className="border-b border-red-900/30 pb-4 sm:pb-6 mb-4 sm:mb-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold mb-2">Password</h3>
+                  <h3 className="text-lg font-semibold mb-1 sm:mb-2">Password</h3>
                   <p className="text-gray-200 text-sm">Set a password to protect your account.</p>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
                   <div className="bg-white px-4 py-2 rounded-lg">
                     <span className="text-black font-mono">••••••••••</span>
                   </div>
@@ -93,17 +91,17 @@ export default function Security() {
               </div>
             </div>
 
-            {/* Two-step verification */}
+            {/* Two-step Verification */}
             <div>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold mb-2">Two-step verification</h3>
+                  <h3 className="text-lg font-semibold mb-1 sm:mb-2">Two-step verification</h3>
                   <p className="text-gray-200 text-sm">
                     We recommend requiring a verification code in addition to your password.
                   </p>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                  <div className="flex items-center gap-2">
                     <ToggleSwitch isOn={twoStepEnabled} onToggle={() => setTwoStepEnabled(!twoStepEnabled)} />
                     <span className="text-gray-200">Two-step verification</span>
                   </div>
@@ -115,24 +113,26 @@ export default function Security() {
             </div>
           </div>
 
-          {/* Browsers and devices Section */}
+          {/* Devices */}
           <div>
-            <h2 className="text-2xl font-bold mb-4">Browsers and devices</h2>
-            <p className="text-gray-200 text-sm mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">Browsers and devices</h2>
+            <p className="text-gray-200 text-sm mb-4 sm:mb-6">
               These browsers and devices are currently signed in to your account. Remove any unauthorized devices.
             </p>
 
-            {/* Device List */}
             <div className="space-y-4">
               {devices.map((device) => (
-                <div key={device.id} className="flex items-center justify-between border-b border-red-900/30 pb-4">
+                <div
+                  key={device.id}
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-red-900/30 pb-4"
+                >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white rounded-full"></div>
+                    <div className="w-12 h-12 bg-white rounded-full shrink-0" />
                     <div>
                       <h4 className="font-semibold">{device.name}</h4>
                     </div>
                   </div>
-                  <div className="flex items-center gap-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
                     <div className="flex items-center gap-2">
                       <MapPin size={16} className="text-gray-300" />
                       <span className="text-gray-200">{device.location}</span>
