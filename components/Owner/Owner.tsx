@@ -217,7 +217,53 @@ const OwnerSection = () => {
             >
               <MoreVertIcon />
             </div>
+<<<<<<< HEAD
+
+            <div className='flex flex-col gap-[5px] mt-[20px]'>
+
+                {
+                    loading ? <p>Fetching owner</p>
+                        :
+                        users.length === 0 ? 
+                        <div className="w-full h-full min-h-[80vh] flex items-center justify-center">
+                            <Image
+                                src={NullImage}
+                                alt="No owners found"
+                                className="w-[400px] lg:w-[700px] h-auto object-cover"
+                                width={400}
+                                height={400}
+                                priority
+                            />
+                        </div> :
+                        users.map((details, index) => {
+                            const name = `${details.user.first_name} ${details.user.middle_name ? details.user.middle_name + ' ' : ''}${details.user.last_name}`
+                            return (
+                                <div
+                                    key={index}
+                                    onMouseEnter={() => { setMailHover(index) }}
+                                    onMouseLeave={() => { setMailHover(-1) }}
+                                    className='w-full'>
+                                    <OwnerAction
+                                        creatDate={formatDate(details.createdAt)}
+                                        email={details.user.email}
+                                        emailVerified={details.user.emailVerified}
+                                        index={index}
+                                        mailHover={mailHover}
+                                        name={name}
+                                        updateDate={formatDate(details.updatedAt)}
+                                        status={details.status}
+                                        id={details.id}
+                                        screenShots={details.paymentScreenshots} />
+                                </div>
+                            )
+                        })
+                }
+
+            </div>
+
+=======
           </div>
+>>>>>>> 5fa1bd5ea09812299cb1ccc2827c42728ada2cba
         </div>
 
         <div className="w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">

@@ -40,6 +40,10 @@ const nextConfig = {
             },
             {
                 protocol: 'https',
+            hostname: "holadashboard.s3.us-west-2.amazonaws.com",
+            },
+            {
+                protocol: 'https',
                 hostname: 'holaimagesdata.s3.us-west-2.amazonaws.com',
             },
             {
