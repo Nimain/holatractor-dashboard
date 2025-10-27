@@ -82,9 +82,9 @@ export default function InteractiveMap({
 
         mapInstanceRef.current = map
 
-        console.log("[v0] Map initialized successfully")
+        console.log(" Map initialized successfully")
       } catch (error) {
-        console.error("[v0] Error initializing map:", error)
+        console.error(" Error initializing map:", error)
       }
     }
 
