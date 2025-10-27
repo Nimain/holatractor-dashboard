@@ -9,7 +9,10 @@ import { renderInstance } from '@/utils/Axios/RenderInstance'
 import { errorMessage } from '@/utils/Toastify/Messages'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import EditIcon from "@mui/icons-material/Edit"
+import CloseIcon from "@mui/icons-material/Close"
 import NullImage from "@/assets/AnimateIcons/Operator.svg"
+import { Dialog, DialogContent } from '../ui/dialog';
 
 const AdminSection = () => {
     const [activeHover, setActiveHover] = useState('')
@@ -18,6 +21,10 @@ const AdminSection = () => {
 
     const [users, setUsers] = useState<UserProfile[]>([])
     const [open, setOpen] = useState(false)
+    
+    // Mobile edit modal state
+    const [selectedAdmin, setSelectedAdmin] = useState<UserProfile | null>(null)
+    const [editOpen, setEditOpen] = useState(false)
 
     function fetchAllUsers() {
         setLoading(true)
@@ -49,21 +56,38 @@ const AdminSection = () => {
         return dateObj.toLocaleDateString(undefined, options);
     };
 
+    const formatDateMobile = (date: string | Date): string => {
+        const options: Intl.DateTimeFormatOptions = {
+            month: "short",
+            day: "numeric",
+        };
+
+        const dateObj = typeof date === "string" ? new Date(date) : date;
+
+        return dateObj.toLocaleDateString(undefined, options);
+    };
+
+    const handleMobileAdminClick = (admin: UserProfile) => {
+        setSelectedAdmin(admin)
+        setEditOpen(true)
+    }
+
     return (
-        <div className='mt-[40px] text-[18px]'>
+        <div className='mt-6 md:mt-10 text-base md:text-lg px-4 md:px-0'>
 
-            <div className='mb-[20px] w-full flex items-center justify-between'>
+            <div className='mb-5 w-full flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4'>
 
-                <p className='text-[22px] font-[600]'>
+                <p className='text-lg md:text-xl lg:text-2xl font-semibold'>
                     Total Admin: {users.length}
                 </p>
 
-                <Link href={"/create_admin"}>
+                <Link href={"/create_admin"} className="w-full sm:w-auto">
                     <Button
                         name="Name_next_button"
                         onClick={() => {
                             setOpen(true)
                         }}
+                        className="w-full sm:w-auto"
                     >
                         New Admin
                     </Button>
@@ -71,41 +95,34 @@ const AdminSection = () => {
 
             </div>
 
-            <div
-                className='text-[20px] font-[600] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer'>
+            {/* Desktop Table Header - Hidden on mobile */}
+            <div className='hidden lg:flex text-lg xl:text-xl font-semibold items-center justify-between gap-2 xl:gap-3 bg-[#ededed] p-4 xl:p-5 rounded cursor-pointer overflow-x-auto'>
 
-                <div
-                    className='w-[100px] flex items-center justify-between group'>
+                <div className='min-w-[80px] xl:w-[100px] flex items-center justify-between group'>
                     Id
-                    <div className='flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100'>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <ArrowUpwardIcon />
+                    <div className='flex items-center gap-1 xl:gap-1.5 opacity-0 transition-all duration-500 group-hover:opacity-100'>
+                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
+                            <ArrowUpwardIcon className="text-lg xl:text-xl" />
                         </div>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <MoreVertIcon />
+                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
+                            <MoreVertIcon className="text-lg xl:text-xl" />
                         </div>
                     </div>
                 </div>
 
-                
-
-                <div className='w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group'>
+                <div className='min-w-[120px] xl:w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group'>
                     Email
-                    <div className='flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100'>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <ArrowUpwardIcon />
+                    <div className='flex items-center gap-1 xl:gap-1.5 opacity-0 transition-all duration-500 group-hover:opacity-100'>
+                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
+                            <ArrowUpwardIcon className="text-lg xl:text-xl" />
                         </div>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <MoreVertIcon />
+                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
+                            <MoreVertIcon className="text-lg xl:text-xl" />
                         </div>
                     </div>
                 </div>
 
-                <div className='w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group'
+                <div className='min-w-[120px] xl:w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group'
                     onMouseEnter={() => { setActiveHover('Verified') }}
                     onMouseLeave={() => { setActiveHover('') }}>
                     {
@@ -114,33 +131,29 @@ const AdminSection = () => {
                             :
                             'Verified'
                     }
-                    <div className='flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100'>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <ArrowUpwardIcon />
+                    <div className='flex items-center gap-1 xl:gap-1.5 opacity-0 transition-all duration-500 group-hover:opacity-100'>
+                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
+                            <ArrowUpwardIcon className="text-lg xl:text-xl" />
                         </div>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <MoreVertIcon />
+                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
+                            <MoreVertIcon className="text-lg xl:text-xl" />
                         </div>
                     </div>
                 </div>
 
-                <div className='w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group'>
+                <div className='min-w-[120px] xl:w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group'>
                     Status
-                    <div className='flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100'>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <ArrowUpwardIcon />
+                    <div className='flex items-center gap-1 xl:gap-1.5 opacity-0 transition-all duration-500 group-hover:opacity-100'>
+                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
+                            <ArrowUpwardIcon className="text-lg xl:text-xl" />
                         </div>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <MoreVertIcon />
+                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
+                            <MoreVertIcon className="text-lg xl:text-xl" />
                         </div>
                     </div>
                 </div>
 
-                <div className='w-[180px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group'
+                <div className='min-w-[150px] xl:w-[180px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group'
                     onMouseEnter={() => { setActiveHover('Joined at') }}
                     onMouseLeave={() => { setActiveHover('') }}>
                     {
@@ -149,19 +162,17 @@ const AdminSection = () => {
                             :
                             'Joined at'
                     }
-                    <div className='flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100'>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <ArrowUpwardIcon />
+                    <div className='flex items-center gap-1 xl:gap-1.5 opacity-0 transition-all duration-500 group-hover:opacity-100'>
+                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
+                            <ArrowUpwardIcon className="text-lg xl:text-xl" />
                         </div>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <MoreVertIcon />
+                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
+                            <MoreVertIcon className="text-lg xl:text-xl" />
                         </div>
                     </div>
                 </div>
 
-                <div className='w-[180px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group'
+                <div className='min-w-[150px] xl:w-[180px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group'
                     onMouseEnter={() => { setActiveHover('Updated at') }}
                     onMouseLeave={() => { setActiveHover('') }}>
                     {
@@ -170,82 +181,139 @@ const AdminSection = () => {
                             :
                             'Updated at'
                     }
-                    <div className='flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100'>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <ArrowUpwardIcon />
+                    <div className='flex items-center gap-1 xl:gap-1.5 opacity-0 transition-all duration-500 group-hover:opacity-100'>
+                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
+                            <ArrowUpwardIcon className="text-lg xl:text-xl" />
                         </div>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <MoreVertIcon />
+                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
+                            <MoreVertIcon className="text-lg xl:text-xl" />
                         </div>
                     </div>
                 </div>
 
             </div>
 
-            <div className='flex flex-col gap-[5px] mt-[20px]'>
+            <div className='flex flex-col gap-3 md:gap-1.5 mt-5'>
 
                 {
-                    loading ? <p>Fetching admins</p>
+                    loading ? <p className="text-center py-8">Fetching admins...</p>
                         :
-                        users.length === 0 ? <div className="w-full h-full min-h-[80vh] flex items-center justify-center">
+                        users.length === 0 ? <div className="w-full min-h-[60vh] md:min-h-[80vh] h-full flex items-center justify-center">
                             <Image
-                                src={NullImage}
-                                alt="No image found"
-                                className="w-[400px] lg:w-[700px] h-auto object-cover"
+                                src={NullImage || "/placeholder.svg"}
+                                alt="No admins found"
+                                className="w-[250px] sm:w-[350px] md:w-[400px] lg:w-[700px] h-auto object-cover"
                                 width={400}
                                 height={400}
                                 unoptimized={true} />
                         </div> :
                             users.map((details, index) => {
                                 const name = `${details.user.first_name} ${details.user.middle_name ? details.user.middle_name + ' ' : ''}${details.user.last_name}`
+                                const firstName = details.user.first_name
+                                const email = details.user.email
+                                const isActive = details.user.emailVerified
+                                
                                 return (
-                                    <div
-                                        className='text-[18px] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer hover:bg-white transition-all duration-500'
-                                        key={index}
-                                        onMouseEnter={() => { setMailHover(index) }}
-                                        onMouseLeave={() => { setMailHover(-1) }}>
+                                    <div key={index} className='w-full'>
+                                        {/* Mobile Card View - Clickable one line box */}
+                                        <div 
+                                            className="lg:hidden bg-white border border-gray-200 rounded-lg p-3 hover:shadow-lg hover:border-indigo-300 transition-all cursor-pointer active:scale-[0.98]"
+                                            onClick={() => handleMobileAdminClick(details)}
+                                        >
+                                            <div className="flex items-center justify-between gap-2 text-sm">
+                                                {/* Avatar/Image */}
+                                                <div className="flex-shrink-0">
+                                                    {details.user.image ? (
+                                                        <Image
+                                                            src={details.user.image}
+                                                            alt={firstName}
+                                                            width={40}
+                                                            height={40}
+                                                            className="w-10 h-10 rounded-full object-cover"
+                                                            unoptimized={true}
+                                                        />
+                                                    ) : (
+                                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-blue-500 flex items-center justify-center text-white font-semibold">
+                                                            {firstName.charAt(0).toUpperCase()}
+                                                        </div>
+                                                    )}
+                                                </div>
 
-                                        <p
-                                            className='w-[100px]'>
-                                            {index + 1}
-                                        </p>
+                                                {/* Name & Email */}
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-semibold text-gray-900 truncate">{firstName}</p>
+                                                    <p className="text-xs text-gray-500 truncate">{email}</p>
+                                                </div>
 
-                                        <p className='w-[140px]'>
-                                            {name}
-                                        </p>
+                                                {/* Status Badge */}
+                                                <div className="flex-shrink-0">
+                                                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                                        isActive 
+                                                            ? 'bg-green-100 text-green-700' 
+                                                            : 'bg-gray-100 text-gray-700'
+                                                    }`}>
+                                                        {isActive ? 'Active' : 'Inactive'}
+                                                    </span>
+                                                </div>
 
-                                        <p className={`transition ${index === mailHover ? 'w-fit' : 'w-[140px]'}`}>
-                                            {mailHover === index ? details.user.email : `${details.user.email.slice(0, 5)}...`}
-                                        </p>
+                                                {/* Verified Badge */}
+                                                <div className="flex-shrink-0">
+                                                    {details.user.emailVerified ? (
+                                                        <span className="text-green-500 text-lg">✓</span>
+                                                    ) : (
+                                                        <span className="text-gray-400 text-lg">✗</span>
+                                                    )}
+                                                </div>
 
-                                        <div className={`px-[10px] text-[14px] py-[6px] ${details.user.emailVerified ? 'text-[#3e875e]' : 'text-red-400'} bg-[#dfe4e2] text-center w-[140px] rounded-full`}>
-                                            {
-                                                details.user.emailVerified ?
-                                                    'Yes'
-                                                    :
-                                                    'No'
-                                            }
+                                                {/* Edit Icon */}
+                                                <div className="flex-shrink-0">
+                                                    <EditIcon className="text-indigo-500" fontSize="small" />
+                                                </div>
+                                            </div>
                                         </div>
 
-                                        <p className={`px-[10px] text-[14px] py-[6px] ${details.user.emailVerified ? 'text-[#3e875e]' : 'text-red-400'} bg-[#dfe4e2] text-center w-[140px] rounded-full`}>
-                                            {
-                                                details.user.emailVerified ?
-                                                    'Active'
-                                                    :
-                                                    'Inactive'
-                                            }
-                                        </p>
+                                        {/* Desktop Table View */}
+                                        <div
+                                            className='hidden lg:flex text-base xl:text-lg items-center justify-between gap-2 xl:gap-3 bg-[#ededed] p-4 xl:p-5 rounded cursor-pointer hover:bg-white transition-all duration-500'
+                                            onMouseEnter={() => { setMailHover(index) }}
+                                            onMouseLeave={() => { setMailHover(-1) }}
+                                        >
 
-                                        <p className='w-[180px]'>
-                                            {mailHover === index ? formatDate(details.createdAt) : `${formatDate(details.createdAt).slice(0, 12)}...`}
-                                        </p>
+                                            <p className='min-w-[80px] xl:w-[100px]'>
+                                                {index + 1}
+                                            </p>
 
-                                        <p className='w-[180px]'>
-                                            {mailHover === index ? formatDate(details.updatedAt) : `${formatDate(details.updatedAt).slice(0, 12)}...`}
-                                        </p>
+                                            <p className={`transition ${index === mailHover ? 'w-fit' : 'min-w-[120px] xl:w-[140px] truncate'}`}>
+                                                {mailHover === index ? details.user.email : `${details.user.email.slice(0, 8)}...`}
+                                            </p>
 
+                                            <div className={`px-3 text-sm py-1.5 ${details.user.emailVerified ? 'text-[#3e875e]' : 'text-red-400'} bg-[#dfe4e2] text-center min-w-[120px] xl:w-[140px] rounded-full`}>
+                                                {
+                                                    details.user.emailVerified ?
+                                                        'Yes'
+                                                        :
+                                                        'No'
+                                                }
+                                            </div>
+
+                                            <p className={`px-3 text-sm py-1.5 ${details.user.emailVerified ? 'text-[#3e875e]' : 'text-red-400'} bg-[#dfe4e2] text-center min-w-[120px] xl:w-[140px] rounded-full`}>
+                                                {
+                                                    details.user.emailVerified ?
+                                                        'Active'
+                                                        :
+                                                        'Inactive'
+                                                }
+                                            </p>
+
+                                            <p className='min-w-[150px] xl:w-[180px]'>
+                                                {mailHover === index ? formatDate(details.createdAt) : `${formatDate(details.createdAt).slice(0, 12)}...`}
+                                            </p>
+
+                                            <p className='min-w-[150px] xl:w-[180px]'>
+                                                {mailHover === index ? formatDate(details.updatedAt) : `${formatDate(details.updatedAt).slice(0, 12)}...`}
+                                            </p>
+
+                                        </div>
                                     </div>
                                 )
                             })
@@ -253,6 +321,125 @@ const AdminSection = () => {
 
             </div>
 
+            {/* Mobile Edit Modal */}
+            {selectedAdmin && (
+                <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                    <DialogContent className="bg-white w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto p-0">
+                        {/* Header with gradient */}
+                        <div className="bg-gradient-to-r from-indigo-500 to-blue-600 p-6 relative">
+                            <button 
+                                onClick={() => setEditOpen(false)}
+                                className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full p-1 transition-colors"
+                            >
+                                <CloseIcon />
+                            </button>
+                            
+                            <div className="flex items-center gap-4">
+                                {selectedAdmin.user.image ? (
+                                    <Image
+                                        src={selectedAdmin.user.image}
+                                        alt={selectedAdmin.user.first_name}
+                                        width={80}
+                                        height={80}
+                                        className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg"
+                                        unoptimized={true}
+                                    />
+                                ) : (
+                                    <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center text-indigo-600 font-bold text-3xl shadow-lg">
+                                        {selectedAdmin.user.first_name.charAt(0).toUpperCase()}
+                                    </div>
+                                )}
+                                <div className="text-white">
+                                    <h2 className="text-2xl font-bold">
+                                        {selectedAdmin.user.first_name} {selectedAdmin.user.middle_name} {selectedAdmin.user.last_name}
+                                    </h2>
+                                    <p className="text-indigo-100 text-sm">{selectedAdmin.user.email}</p>
+                                    <p className="text-indigo-200 text-xs mt-1 font-medium">Admin</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-6 space-y-4">
+                            {/* Status & Verification */}
+                            <div className="flex gap-3">
+                                <div className="flex-1 bg-gray-50 rounded-lg p-4">
+                                    <p className="text-xs text-gray-500 mb-1">Status</p>
+                                    <span className={`inline-block px-3 py-1 text-sm font-medium rounded-full ${
+                                        selectedAdmin.user.emailVerified 
+                                            ? 'bg-green-100 text-green-700' 
+                                            : 'bg-gray-100 text-gray-700'
+                                    }`}>
+                                        {selectedAdmin.user.emailVerified ? 'Active' : 'Inactive'}
+                                    </span>
+                                </div>
+                                
+                                <div className="flex-1 bg-gray-50 rounded-lg p-4">
+                                    <p className="text-xs text-gray-500 mb-1">Email Verified</p>
+                                    <span className={`inline-block px-3 py-1 text-sm font-medium rounded-full ${
+                                        selectedAdmin.user.emailVerified 
+                                            ? 'bg-green-100 text-green-700' 
+                                            : 'bg-red-100 text-red-700'
+                                    }`}>
+                                        {selectedAdmin.user.emailVerified ? 'Verified' : 'Not Verified'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Details Grid */}
+                            <div className="space-y-3">
+                                <div className="border-b pb-3">
+                                    <p className="text-xs text-gray-500 mb-1">Admin ID</p>
+                                    <p className="font-medium text-gray-900">{selectedAdmin.id}</p>
+                                </div>
+
+                                <div className="border-b pb-3">
+                                    <p className="text-xs text-gray-500 mb-1">Full Name</p>
+                                    <p className="font-medium text-gray-900">
+                                        {selectedAdmin.user.first_name} {selectedAdmin.user.middle_name} {selectedAdmin.user.last_name}
+                                    </p>
+                                </div>
+
+                                <div className="border-b pb-3">
+                                    <p className="text-xs text-gray-500 mb-1">Email</p>
+                                    <p className="font-medium text-gray-900 break-all">{selectedAdmin.user.email}</p>
+                                </div>
+
+                                <div className="border-b pb-3">
+                                    <p className="text-xs text-gray-500 mb-1">Joined At</p>
+                                    <p className="font-medium text-gray-900">{formatDate(selectedAdmin.createdAt)}</p>
+                                </div>
+
+                                <div className="pb-3">
+                                    <p className="text-xs text-gray-500 mb-1">Last Updated</p>
+                                    <p className="font-medium text-gray-900">{formatDate(selectedAdmin.updatedAt)}</p>
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-3 pt-4">
+                                <Button 
+                                    className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                                    onClick={() => {
+                                        // Add your edit logic here
+                                        console.log('Edit admin:', selectedAdmin)
+                                    }}
+                                >
+                                    <EditIcon className="mr-2" fontSize="small" />
+                                    Edit Admin
+                                </Button>
+                                <Button 
+                                    variant="outline" 
+                                    className="flex-1"
+                                    onClick={() => setEditOpen(false)}
+                                >
+                                    Close
+                                </Button>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            )}
 
         </div>
     )

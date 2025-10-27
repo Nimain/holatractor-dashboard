@@ -95,7 +95,7 @@ const CurrencyManagement = () => {
 
       <div className="w-full flex items-center justify-between gap-5 mb-8">
         <h2 className="text-2xl font-bold text-gray-800">
-          Currency Management ({allCurrencies.length})
+          Currency({allCurrencies.length})
         </h2>
         <button
           onClick={() => setOpenModal(true)}

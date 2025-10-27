@@ -10,19 +10,19 @@ export default function Integration() {
     }),
   )
 
-  const toggleIntegration = (index: number) => {
+  const toggleIntegration = (index) => {
     setIntegrations((prev) => prev.map((item, i) => (i === index ? { ...item, enabled: !item.enabled } : item)))
   }
 
-  const ToggleSwitch = ({ isOn, onToggle }: { isOn: boolean; onToggle: () => void }) => (
+  const ToggleSwitch = ({ isOn, onToggle }) => (
     <button
       onClick={onToggle}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
+      className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 shadow-md ${
         isOn ? "bg-orange-500" : "bg-gray-400"
       }`}
     >
       <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+        className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${
           isOn ? "translate-x-6" : "translate-x-1"
         }`}
       />
@@ -30,41 +30,52 @@ export default function Integration() {
   )
 
   return (
-    <div className=" bg-gray-100 p-6">
-      <div className=" mx-auto">
+    <div className="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+      <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         {/* Header */}
-        <h1 className="text-3xl font-bold text-red-600 mb-8">Integration</h1>
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold text-red-600">Integration</h1>
+          <p className="text-gray-600 mt-2 text-sm sm:text-base">Manage your third-party integrations</p>
+        </div>
 
         {/* Integration Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {integrations.map((integration, index) => (
             <div
               key={index}
-              className="rounded-lg p-6 text-white"
+              className="rounded-2xl p-5 sm:p-6 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
               style={{
                 background: `linear-gradient(135deg, #A10A0C 0%, #3B0404 100%)`,
               }}
             >
               {/* Icon Placeholder */}
-              <div className="w-12 h-12 bg-white rounded-lg mb-4"></div>
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/90 rounded-xl mb-4 sm:mb-5 shadow-lg"></div>
 
               {/* Content */}
-              <div className="mb-6">
-                <h3 className="text-xl font-bold mb-2">{integration.name}</h3>
-                <p className="text-gray-200 text-sm">{integration.description}</p>
+              <div className="mb-5 sm:mb-6">
+                <h3 className="text-xl sm:text-2xl font-bold mb-2">{integration.name}</h3>
+                <p className="text-gray-200 text-sm sm:text-base leading-relaxed">{integration.description}</p>
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-between">
-                <div className="flex gap-3">
-                  <button className="border border-white text-white px-4 py-2 rounded-lg hover:bg-white hover:text-red-600 transition-colors">
+              <div className="space-y-4">
+                {/* Buttons Row */}
+                <div className="flex flex-col xs:flex-row gap-2 sm:gap-3">
+                  <button className="flex-1 border-2 border-white text-white px-4 py-2.5 rounded-xl hover:bg-white hover:text-red-600 transition-all font-semibold text-sm sm:text-base active:scale-95">
                     Configure
                   </button>
-                  <button className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors">
+                  <button className="flex-1 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl transition-all font-semibold text-sm sm:text-base shadow-lg active:scale-95">
                     Remove
                   </button>
                 </div>
-                <ToggleSwitch isOn={integrations[index].enabled} onToggle={() => toggleIntegration(index)} />
+
+                {/* Toggle Row */}
+                <div className="flex items-center justify-between pt-2 border-t border-white/20">
+                  <span className="text-sm sm:text-base font-medium">
+                    {integrations[index].enabled ? "Enabled" : "Disabled"}
+                  </span>
+                  <ToggleSwitch isOn={integrations[index].enabled} onToggle={() => toggleIntegration(index)} />
+                </div>
               </div>
             </div>
           ))}

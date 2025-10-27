@@ -7,7 +7,7 @@ import { useCookie } from "next-cookie";
 
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
-import CreditPackageAction from "./CreditPackageAction";
+import CreditPackageAction from "./PackageAction";
 
 // --- Types ---
 interface CreditPackage {
@@ -145,7 +145,7 @@ const CreditPackage = () => {
       {/* Header */}
       <div className="w-full flex items-center justify-between gap-5 mb-8">
         <h2 className="text-2xl font-bold text-gray-800">
-          Credit Packages ({totalPackages})
+          Package ({totalPackages})
         </h2>
         <button
           onClick={() => setOpenModal(true)}

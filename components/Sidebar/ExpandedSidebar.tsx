@@ -85,7 +85,7 @@ const ExpandedSidebar = () => {
     "/Users": "Users",
     "/Inventory": "Tractors",
     "/Subscription": "Subscriptions",
-    "/Business": "Business",
+    "/Devices": "/Devices",
     "/Dealers": "Dealers",
     "/Affiliation": "Affiliation",
     "/Logs": "Logs",
@@ -98,8 +98,11 @@ const ExpandedSidebar = () => {
     "/Accounting": "Accounting",
     "/Attachments": "Attachments",
     "/Store": "Store",
-    "/Currencymanagement": "Currency Management",
-    "/Creditpackage": "Credit Package",
+    "/Storetractors": "Storetractors",
+    "/Currency": "Currency",
+    "/Package": "Package",
+    "/Coupon": "Coupon",
+    "/Purchase": "Purchase",
   };
 
   useEffect(() => {
@@ -174,17 +177,17 @@ const ExpandedSidebar = () => {
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
-          alt="Business"
+          alt="Devices"
         />
       ),
       name: getTranslation(locale, {
-        en: "Business",
-        es: "Negocio",
-        ay: "Kamani",
-        qu: "Ruwasqa",
-        gn: "Negósio",
+        en: "Devices",
+        es: "Dispositivos",
+        ay: "Uñt’awinaka",
+        qu: "Ruranakuna",
+        gn: "Mba’e’okárape",
       }),
-      route: "#",
+      route: "/Devices",
     },
   ];
 
@@ -272,7 +275,26 @@ const ExpandedSidebar = () => {
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
-          alt="service"
+          alt="Storetractors"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Storetractors",
+        es: "Tractores de Tienda",
+        ay: "Qhatu Tractoranakuna",
+        qu: "Qhatupaq Tractorkuna",
+        gn: "Ñemuhã Mymbaha",
+      }),
+      route: "/Storetractors",
+    },
+    {
+      icon: (
+        <Image
+          src={FarmerIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Category"
         />
       ),
       name: getTranslation(locale, {
@@ -490,17 +512,17 @@ const ExpandedSidebar = () => {
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
-          alt="Currency Management"
+          alt="Currency"
         />
       ),
       name: getTranslation(locale, {
-        en: "Currency Management",
-        es: "Gestión de Moneda",
-        ay: "Qullqi apnaqawi",
-        qu: "Qullqi kamachiy",
-        gn: "Viru ñangareko",
+        en: "Currency",
+        es: "Moneda",
+        ay: "Qullqi",
+        qu: "Qullqi",
+        gn: "Viru",
       }),
-      route: "/Currencymanagement",
+      route: "/Currency",
     },
     {
       icon: (
@@ -509,17 +531,55 @@ const ExpandedSidebar = () => {
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
-          alt="Credit Package"
+          alt="Package"
         />
       ),
       name: getTranslation(locale, {
-        en: "Credit Package",
-        es: "Paquete de Crédito",
-        ay: "Qullqi ch’ani",
-        qu: "Qullqi ch’aniq",
-        gn: "Crédito mba’e’aty",
+        en: "Package",
+        es: "Paquete",
+        ay: "Qillqiri",
+        qu: "Qillqipi",
+        gn: "Paquete",
       }),
-      route: "/Creditpackage",
+      route: "/Package",
+    },
+    {
+      icon: (
+        <Image
+          src={AffiliationIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Coupon"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Coupon",
+        es: "Cupón",
+        ay: "Kuponi",
+        qu: "Kupon",
+        gn: "Kupon",
+      }),
+      route: "/Coupon",
+    },
+    {
+      icon: (
+        <Image
+          src={StatementsIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Purchase"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Purchase",
+        es: "Compra",
+        ay: "Allichiy",
+        qu: "Rantiy",
+        gn: "Ñemurã",
+      }),
+      route: "/Purchase",
     },
   ];
 

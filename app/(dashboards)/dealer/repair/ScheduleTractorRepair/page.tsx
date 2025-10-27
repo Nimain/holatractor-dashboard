@@ -1,14 +1,14 @@
 import dynamic from "next/dynamic"
 
 // Dynamically import the FacebookLinkAccount component
-const Market = dynamic(() => import("@/components/Dashboards/Dealer/Repairs/ScheduleTractorRepair"), {
+const Market = dynamic(() => import("@/components/Dashboards/Dealer/Repairs/ScheduleRepair"), {
   ssr: false, // Ensure this component is only rendered on the client-side
   loading: () => <div className="w-full h-screen flex items-center justify-center">Loading...</div>,
 })
 
 const LeadsPage = () => {
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto ">
       <Market />
     </div>
   )

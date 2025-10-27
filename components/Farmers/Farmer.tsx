@@ -19,7 +19,6 @@ import Image from "next/image"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip"
 import { RefreshCw } from "lucide-react"
 
-// Define Farmer interface
 interface Farmer {
   id: string
   user_id: string
@@ -49,7 +48,6 @@ interface Farmer {
   }
 }
 
-// Pagination interface
 interface PaginationState {
   currentPage: number
   itemsPerPage: number
@@ -90,7 +88,6 @@ const FarmerSection = () => {
     return { firstName, middleName, lastName }
   }
 
-  // Pagination calculation
   useEffect(() => {
     const totalItems = filteredFarmers.length
     const totalPages = Math.ceil(totalItems / pagination.itemsPerPage)
@@ -105,10 +102,9 @@ const FarmerSection = () => {
     setDisplayedFarmers(filteredFarmers.slice(startIndex, endIndex))
   }, [filteredFarmers, pagination.currentPage, pagination.itemsPerPage])
 
-  // Search filtering
   useEffect(() => {
     if (!searchTerm.trim()) {
-      setFilteredFarmers([...allFarmers]) // Fixed typo: setFiltered-fundamentals -> setFilteredFarmers
+      setFilteredFarmers([...allFarmers])
       return
     }
     const lowercasedSearch = searchTerm.toLowerCase()
@@ -123,10 +119,9 @@ const FarmerSection = () => {
     setPagination((prev) => ({ ...prev, currentPage: 1 }))
   }, [searchTerm, allFarmers])
 
-  // Sorting
   useEffect(() => {
     if (!sortConfig) {
-      setFilteredFarmers([...allFarmers])
+      // Don't reset filtering when sortConfig is cleared
       return
     }
     const sortedFarmers = [...filteredFarmers].sort((a, b) => {
@@ -158,7 +153,7 @@ const FarmerSection = () => {
       return 0
     })
     setFilteredFarmers(sortedFarmers)
-  }, [sortConfig, allFarmers])
+  }, [sortConfig])
 
   const fetchAllFarmers = async () => {
     setLoading(true)
@@ -217,10 +212,8 @@ const FarmerSection = () => {
 
   const handleDownloadPDF = async () => {
     try {
-      // Show loading message
       successMessage("Generating PDF, please wait...")
 
-      // Filter farmers by selected year
       const filteredByYear = allFarmers.filter((farmer) => {
         const joinedDate = new Date(farmer.createdAt)
         return joinedDate.getFullYear() === selectedYear
@@ -231,7 +224,6 @@ const FarmerSection = () => {
         return
       }
 
-      // Dynamically import jsPDF and jspdf-autotable
       const jspdfModule = await import("jspdf")
       const jsPDF = jspdfModule.default || jspdfModule.jsPDF
       const autoTableModule = await import("jspdf-autotable")
@@ -241,20 +233,16 @@ const FarmerSection = () => {
         throw new Error("Failed to load PDF generation libraries")
       }
 
-      // Create a new jsPDF instance
       const doc = new jsPDF()
 
-      // Add title and metadata
       doc.setFontSize(18)
       doc.text(`Farmers Report ${selectedYear} - Holatractor`, 14, 22)
       doc.setFontSize(11)
       doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30)
       doc.text(`Total Farmers in ${selectedYear}: ${filteredByYear.length}`, 14, 36)
 
-      // Define the columns for the table - now including Mobile
       const tableColumn = ["S.No", "ID", "Name", "Gender", "Mobile", "Verified", "Status", "Joined Date"]
 
-      // Define the rows for the table - now including Mobile
       const tableRows = filteredByYear.map((farmer, index) => {
         const name = `${farmer.user.first_name} ${farmer.user.middle_name ?? ""} ${farmer.user.last_name ?? ""}`.trim()
         const mobile =
@@ -274,7 +262,6 @@ const FarmerSection = () => {
         ]
       })
 
-      // Generate the table
       autoTable(doc, {
         head: [tableColumn],
         body: tableRows,
@@ -282,7 +269,6 @@ const FarmerSection = () => {
         styles: { fontSize: 10, cellPadding: 3 },
         headStyles: { fillColor: [66, 66, 66] },
         didDrawPage: (data) => {
-          // Add footer
           const pageSize = doc.internal.pageSize
           const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight()
           doc.setFontSize(8)
@@ -294,7 +280,6 @@ const FarmerSection = () => {
         },
       })
 
-      // Save the PDF
       doc.save(`farmers-report-${selectedYear}.pdf`)
       successMessage(`PDF for ${selectedYear} generated successfully!`)
     } catch (error) {
@@ -305,59 +290,51 @@ const FarmerSection = () => {
 
   const getSortIcon = (key: string) => {
     if (!sortConfig || sortConfig.key !== key) {
-      return <ArrowUpwardIcon />
+      return <ArrowUpwardIcon fontSize="small" />
     }
-    return sortConfig.direction === "asc" ? <ArrowUpwardIcon /> : <ArrowUpwardIcon className="rotate-180" />
+    return sortConfig.direction === "asc" ? (
+      <ArrowUpwardIcon fontSize="small" />
+    ) : (
+      <ArrowUpwardIcon fontSize="small" className="rotate-180" />
+    )
   }
 
   return (
-    <div className="text-[18px] ">
+    <div className="mt-6 md:mt-10 text-base md:text-lg">
       {/* Header section */}
-      <div className="mb-[20px] w-full flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-2">
-          <p className="text-[22px] font-[600]">Total farmers: {filteredFarmers.length}</p>
-          <Button
-            variant="outline"
-            className="ml-2 bg-white border-gray-200 hover:bg-gray-50"
-            onClick={() => setPdfYearDialogOpen(true)}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="mr-2"
+      <div className="mb-5 md:mb-8 w-full flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+            <p className="text-lg md:text-xl lg:text-2xl font-semibold">Total farmers: {filteredFarmers.length}</p>
+            <Button
+              variant="outline"
+              className="bg-white border-gray-200 hover:bg-gray-50 w-full sm:w-auto"
+              onClick={() => setPdfYearDialogOpen(true)}
             >
-              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-              <polyline points="14 2 14 8 20 8" />
-              <path d="M9 15h6" />
-              <path d="M11 18h2" />
-              <path d="M9 12h6" />
-            </svg>
-            Download Report
-          </Button>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-          <div className="relative flex-grow">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <SearchIcon className="w-5 h-5 text-gray-500" />
-            </div>
-            <Input
-              type="text"
-              className="w-full pl-10 bg-white"
-              placeholder="Search farmers..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="mr-2"
+              >
+                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                <polyline points="14 2 14 8 20 8" />
+                <path d="M9 15h6" />
+                <path d="M11 18h2" />
+                <path d="M9 12h6" />
+              </svg>
+              Download Report
+            </Button>
           </div>
           <Button
             variant="outline"
-            className="bg-white border-gray-200 hover:bg-gray-50"
+            className="bg-white border-gray-200 hover:bg-gray-50 w-full sm:w-auto"
             onClick={fetchAllFarmers}
             disabled={refreshing}
           >
@@ -366,16 +343,29 @@ const FarmerSection = () => {
           </Button>
         </div>
 
+        <div className="relative w-full">
+          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            <SearchIcon className="w-5 h-5 text-gray-500" />
+          </div>
+          <Input
+            type="text"
+            className="w-full pl-10 bg-white"
+            placeholder="Search farmers..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent
-            className="bg-white h-fit min-w-[400px] max-w-[400px] overflow-auto"
+            className="bg-white h-fit w-[90vw] max-w-[400px] overflow-auto"
             style={{ scrollbarWidth: "none" }}
           >
-            <Label className="mb-2 text-lg font-medium">Name</Label>
+            <Label className="mb-2 text-base md:text-lg font-medium">Name</Label>
             <Input value={newFarmerName} onChange={(e) => setNewFarmerName(e.target.value)} className="w-full" />
-            <DialogFooter>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
               <DialogClose asChild>
-                <Button variant="outline" onClick={() => setOpen(false)}>
+                <Button variant="outline" onClick={() => setOpen(false)} className="w-full sm:w-auto">
                   Cancel
                 </Button>
               </DialogClose>
@@ -386,20 +376,21 @@ const FarmerSection = () => {
                     errorMessage("Please enter a name")
                     return
                   }
-                  // Add farmer creation logic here
                   setOpen(false)
                   setNewFarmerName("")
                 }}
+                className="w-full sm:w-auto"
               >
                 Create Farmer
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
         <Dialog open={pdfYearDialogOpen} onOpenChange={setPdfYearDialogOpen}>
-          <DialogContent className="bg-white h-fit min-w-[400px] max-w-[400px] overflow-auto">
+          <DialogContent className="bg-white h-fit w-[90vw] max-w-[400px] overflow-auto">
             <div className="mb-4">
-              <h2 className="text-xl font-semibold mb-2">Select Year</h2>
+              <h2 className="text-lg md:text-xl font-semibold mb-2">Select Year</h2>
               <p className="text-gray-500 text-sm">Choose which year's data to include in the PDF report.</p>
             </div>
 
@@ -416,16 +407,18 @@ const FarmerSection = () => {
               ))}
             </div>
 
-            <DialogFooter className="mt-4">
+            <DialogFooter className="flex-col sm:flex-row gap-2">
               <DialogClose asChild>
-                <Button variant="outline">Cancel</Button>
+                <Button variant="outline" className="w-full sm:w-auto">
+                  Cancel
+                </Button>
               </DialogClose>
               <Button
                 onClick={() => {
                   setPdfYearDialogOpen(false)
                   handleDownloadPDF()
                 }}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
               >
                 Generate Report
               </Button>
@@ -434,122 +427,100 @@ const FarmerSection = () => {
         </Dialog>
       </div>
 
-      {/* Table header */}
-      <div className="text-[20px] font-[600] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer">
-        <div className="w-[60px] flex items-center justify-between group">S.No</div>
-        <div className="w-[100px] flex items-center justify-between group" onClick={() => handleSort("id")}>
-          Id
-          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              {getSortIcon("id")}
-            </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              <MoreVertIcon />
-            </div>
-          </div>
-        </div>
+      {/* Desktop Table View - Hidden on mobile/tablet */}
+      <div className="hidden lg:block">
+        {/* Table header */}
+       {/* Table wrapper */}
+<div className="w-full overflow-x-auto">
+  {/* Table header */}
+  <div
+    className="grid text-base lg:text-lg xl:text-xl font-semibold bg-[#ededed] p-4 xl:p-5 rounded min-w-max"
+    style={{
+      gridTemplateColumns:
+        "60px 1.2fr 2fr 1fr 1.2fr 1.2fr 1.5fr 1.5fr",
+    }}
+  >
+    <div>S.No</div>
+    <div className="cursor-pointer" onClick={() => handleSort("id")}>
+     {getSortIcon("id")} Id 
+    </div>
+    <div className="cursor-pointer " onClick={() => handleSort("name")}>
+      Name {getSortIcon("name")}
+    </div>
+    <div className="cursor-pointer " onClick={() => handleSort("gender")}>
+      Gender {getSortIcon("gender")}
+    </div>
+    <div className="cursor-pointer " onClick={() => handleSort("emailVerified")}>
+      Verified {getSortIcon("emailVerified")}
+    </div>
+    <div className="cursor-pointer " onClick={() => handleSort("Status")}>
+      Status {getSortIcon("Status")}
+    </div>
+    <div>Mobile</div>
+    <div className="cursor-pointer " onClick={() => handleSort("createdAt")}>
+      Joined At
+    </div>
+  </div>
+
+  {/* Table rows */}
+  <div className="flex flex-col mt-3 w-full gap-2">
+    {displayedFarmers.map((details, index) => {
+      const name = `${details.user.first_name} ${details.user.middle_name ?? ""} ${details.user.last_name ?? ""}`.trim()
+      return (
         <div
-          className="w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
-          onClick={() => handleSort("name")}
+          key={details.id}
+          className="grid  items-center bg-white hover:bg-gray-50 transition-all duration-300 p-4 xl:p-5 rounded text-sm lg:text-base min-w-max"
+          style={{
+            gridTemplateColumns:
+              "60px 1.2fr 2fr 1fr 1.2fr 1.2fr 1.5fr 1.5fr",
+          }}
         >
-          Name
-          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              {getSortIcon("name")}
-            </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              <MoreVertIcon />
-            </div>
+          <div className="truncate">{(pagination.currentPage - 1) * pagination.itemsPerPage + index + 1}</div>
+          <div className="truncate">{details.id.substring(0, 8)}...</div>
+          <div className="truncate">{name}</div>
+          <div className="truncate capitalize">{details.user.gender ?? "Not specified"}</div>
+          <div className="truncate">
+            <span className={details.user.emailVerified ? "text-green-500" : "text-red-500"}>
+              {details.user.emailVerified ? "Verified" : "Not Verified"}
+            </span>
           </div>
-        </div>
-        <div
-          className="w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
-          onClick={() => handleSort("gender")}
-        >
-          Gender
-          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              {getSortIcon("gender")}
-            </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              <MoreVertIcon />
-            </div>
+          <div className="truncate">
+            <span className={details.Status === 1 ? "text-green-500" : "text-red-500"}>
+              {details.Status === 1 ? "Active" : "Inactive"}
+            </span>
           </div>
-        </div>
-        <div
-          className="w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
-          onClick={() => handleSort("emailVerified")}
-          onMouseEnter={() => setActiveHover("Verified")}
-          onMouseLeave={() => setActiveHover("")}
-        >
-          {activeHover === "Verified" ? "Veri..." : "Verified"}
-          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              {getSortIcon("emailVerified")}
-            </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              <MoreVertIcon />
-            </div>
+          <div className="truncate text-blue-600">
+            {details.user.mobile && details.user.country_code
+              ? `${details.user.country_code} ${details.user.mobile}`
+              : "No number"}
           </div>
+          <div className="truncate">{formatDate(details.createdAt)}</div>
         </div>
-        <div
-          className="w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
-          onClick={() => handleSort("Status")}
-        >
-          Status
-          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              {getSortIcon("Status")}
-            </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              <MoreVertIcon />
-            </div>
-          </div>
-        </div>
-        <div className="w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
-          Mobile
-          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              <MoreVertIcon />
-            </div>
-          </div>
-        </div>
-        <div
-          className="w-[180px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
-          onClick={() => handleSort("createdAt")}
-          onMouseEnter={() => setActiveHover("Joined at")}
-          onMouseLeave={() => setActiveHover("")}
-        >
-          {activeHover === "Joined at" ? "Join..." : "Joined at"}
-          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              {getSortIcon("createdAt")}
-            </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-              <MoreVertIcon />
-            </div>
-          </div>
-        </div>
+      )
+    })}
+  </div>
+</div>
+
       </div>
 
-      {/* Table body */}
-      <div className="flex flex-col gap-[5px] mt-[20px]">
+      {/* Mobile & Tablet Card View */}
+      <div className="lg:hidden">
         {loading && displayedFarmers.length === 0 ? (
-          <div className="w-full py-20 flex flex-col items-center justify-center bg-white">
+          <div className="w-full py-20 flex flex-col items-center justify-center bg-white rounded">
             <RefreshCw className="h-8 w-8 text-blue-500 animate-spin mb-2" />
             <p className="text-gray-500">Loading farmers...</p>
           </div>
         ) : displayedFarmers.length === 0 ? (
-          <div className="w-full min-h-[80vh] flex flex-col items-center justify-center">
+          <div className="w-full min-h-[50vh] flex flex-col items-center justify-center">
             <Image
               src={NullImage || "/placeholder.svg"}
               alt="No farmers found"
-              className="w-[400px] lg:w-[700px] h-auto object-cover"
-              width={400}
-              height={400}
+              className="w-[200px] sm:w-[300px] h-auto object-cover"
+              width={300}
+              height={300}
               unoptimized
             />
-            <p className="text-gray-500 text-lg">No farmers found</p>
+            <p className="text-gray-500 text-base mt-4">No farmers found</p>
             {searchTerm && (
               <Button variant="outline" className="mt-4" onClick={() => setSearchTerm("")}>
                 Clear search
@@ -557,155 +528,98 @@ const FarmerSection = () => {
             )}
           </div>
         ) : (
-          <TooltipProvider>
-            {displayedFarmers.map((details, index) => {
-              const name =
-                `${details.user.first_name} ${details.user.middle_name ?? ""} ${details.user.last_name ?? ""}`.trim()
+          <div className="space-y-4">
+            {displayedFarmers.map((details) => {
+              const name = `${details.user.first_name} ${details.user.middle_name ?? ""} ${details.user.last_name ?? ""}`.trim()
               return (
-                <div
-                  key={index}
-                  className="text-[16px] flex items-center justify-between gap-[10px] bg-white p-[20px] rounded cursor-pointer hover:bg-gray-100 transition-all duration-300"
-                >
-                  <div className="w-[60px]">{(pagination.currentPage - 1) * pagination.itemsPerPage + index + 1}</div>
-                  <div className="w-[100px] truncate">{details.id.substring(0, 8)}...</div>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="w-[140px] truncate">{name}</div>
-                    </TooltipTrigger>
-                    <TooltipContent className="bg-white text-black p-3 rounded shadow-lg border border-gray-200 max-w-[250px] z-50">
-                      <p className="break-words font-medium">{name}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <div className="w-[140px] truncate capitalize">{details.user.gender ?? "Not specified"}</div>
-                  <div className="w-[140px] truncate">
-                    <span className={details.user.emailVerified ? "text-green-500" : "text-red-500"}>
-                      {details.user.emailVerified ? "Verified" : "Not Verified"}
-                    </span>
-                  </div>
-                  <div className="w-[140px] truncate">
-                    <span className={details.Status === 1 ? "text-green-500" : "text-red-500"}>
+                <div key={details.id} className="bg-white p-4 rounded-lg shadow-md border border-gray-100">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-bold text-lg text-gray-800">{name}</h3>
+                      <p className="text-xs text-gray-500">ID: {details.id.substring(0, 8)}...</p>
+                    </div>
+                    <div
+                      className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                        details.Status === 1
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
                       {details.Status === 1 ? "Active" : "Inactive"}
-                    </span>
+                    </div>
                   </div>
-                  <div className="w-[140px] truncate">
-                    {details.user.mobile && details.user.country_code ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="text-blue-600 hover:underline">
-                            {details.user.country_code} {details.user.mobile}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent className="bg-white text-black p-3 rounded shadow-lg border border-gray-200">
-                          <p>
-                            Call: {details.user.country_code} {details.user.mobile}
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : (
-                      <span className="text-gray-400 italic">No number</span>
-                    )}
+                  <div className="border-t my-3"></div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    <div>
+                      <p className="text-gray-500">Gender</p>
+                      <p className="font-medium capitalize">{details.user.gender ?? "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Verified</p>
+                      <p className={`font-medium ${details.user.emailVerified ? "text-green-600" : "text-red-600"}`}>
+                        {details.user.emailVerified ? "Yes" : "No"}
+                      </p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-gray-500">Mobile</p>
+                      <p className="font-medium text-blue-600">
+                        {details.user.mobile ? `${details.user.country_code} ${details.user.mobile}` : "N/A"}
+                      </p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-gray-500">Joined Date</p>
+                      <p className="font-medium">{formatDate(details.createdAt)}</p>
+                    </div>
                   </div>
-                  <div className="w-[180px] truncate">{formatDate(details.createdAt)}</div>
                 </div>
               )
             })}
-          </TooltipProvider>
+          </div>
         )}
       </div>
 
-      {/* Pagination controls */}
+      {/* Pagination Controls */}
       {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between mt-6 bg-white p-4 rounded-lg shadow-sm">
-          <div className="text-sm text-gray-500">
-            Showing {Math.min((pagination.currentPage - 1) * pagination.itemsPerPage + 1, pagination.totalItems)} to{" "}
-            {Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)} of{" "}
-            {pagination.totalItems} entries
-          </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => handlePageChange(1)}
-              disabled={pagination.currentPage === 1}
-            >
-              <FirstPageIcon className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => handlePageChange(pagination.currentPage - 1)}
-              disabled={pagination.currentPage === 1}
-            >
-              <KeyboardArrowLeftIcon className="h-4 w-4" />
-            </Button>
-            <div className="flex items-center gap-1 mx-2">
-              {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                let pageNum
-                if (pagination.totalPages <= 5) {
-                  pageNum = i + 1
-                } else {
-                  const start = Math.max(1, pagination.currentPage - 2)
-                  const end = Math.min(pagination.totalPages, start + 4)
-                  pageNum = start + i
-                  if (pageNum > end) return null
-                }
-                return (
-                  <Button
-                    key={pageNum}
-                    variant={pagination.currentPage === pageNum ? "default" : "outline"}
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => handlePageChange(pageNum)}
-                  >
-                    {pageNum}
-                  </Button>
-                )
-              })}
-            </div>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => handlePageChange(pagination.currentPage + 1)}
-              disabled={pagination.currentPage === pagination.totalPages}
-            >
-              <KeyboardArrowRightIcon className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => handlePageChange(pagination.totalPages)}
-              disabled={pagination.currentPage === pagination.totalPages}
-            >
-              <LastPageIcon className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="flex items-center gap-2">
-            <Label htmlFor="pageSize" className="text-sm whitespace-nowrap">
-              Per page:
-            </Label>
-            <select
-              id="pageSize"
-              className="h-8 rounded border-gray-200 text-sm"
-              value={pagination.itemsPerPage}
-              onChange={(e) => {
-                setPagination((prev) => ({
-                  ...prev,
-                  itemsPerPage: Number(e.target.value),
-                  currentPage: 1,
-                }))
-              }}
-            >
-              {[10, 20, 50, 100].map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="flex justify-center items-center mt-8 space-x-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => handlePageChange(1)}
+            disabled={pagination.currentPage === 1}
+            className="h-8 w-8"
+          >
+            <FirstPageIcon fontSize="small" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => handlePageChange(pagination.currentPage - 1)}
+            disabled={pagination.currentPage === 1}
+            className="h-8 w-8"
+          >
+            <KeyboardArrowLeftIcon fontSize="small" />
+          </Button>
+          <span className="text-sm text-gray-600">
+            Page {pagination.currentPage} of {pagination.totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => handlePageChange(pagination.currentPage + 1)}
+            disabled={pagination.currentPage === pagination.totalPages}
+            className="h-8 w-8"
+          >
+            <KeyboardArrowRightIcon fontSize="small" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => handlePageChange(pagination.totalPages)}
+            disabled={pagination.currentPage === pagination.totalPages}
+            className="h-8 w-8"
+          >
+            <LastPageIcon fontSize="small" />
+          </Button>
         </div>
       )}
     </div>
