@@ -96,7 +96,6 @@ const FarmSection = () => {
     (root: RootState) => root.ActiveLanguage
   );
 
-  // 🔥 Same helper you use in ExpandedSidebar
   const getTranslation = (locale: string, translations: any) => {
     return translations[locale] || translations["en"];
   };
@@ -171,22 +170,11 @@ const FarmSection = () => {
 
     setLoading(true);
     try {
-      // Try different possible API endpoint formats
-      console.log("Updating farm with ID:", selectedFarm.id);
-      console.log("Update payload:", {
-        name: editFarmName.trim(),
-        description: editFarmDescription.trim(),
-      });
-
-      // Try PATCH instead of PUT (some APIs prefer PATCH for partial updates)
       const response = await renderInstance.patch(`/farm/${selectedFarm.id}`, {
         name: editFarmName.trim(),
         description: editFarmDescription.trim(),
       });
 
-      console.log("Update response:", response.data);
-
-      // Update the farm in the local state
       setFarms((prevFarms) =>
         prevFarms.map((farm) =>
           farm.id === selectedFarm.id
@@ -204,15 +192,8 @@ const FarmSection = () => {
       setEditFarmName("");
       setEditFarmDescription("");
       setSelectedFarm(null);
-
-      // You can add a success message here if you have it
-      // successMessage("Farm updated successfully");
     } catch (error: any) {
       console.error("Error updating farm:", error);
-      console.error("Error response:", error.response?.data);
-      console.error("Error status:", error.response?.status);
-
-      // More specific error messages
       if (error.response?.status === 404) {
         errorMessage("Farm not found");
       } else if (error.response?.status === 400) {
@@ -241,16 +222,12 @@ const FarmSection = () => {
     try {
       await renderInstance.delete(`/farm/${selectedFarm.id}`);
 
-      // Remove farm from local state
       setFarms((prevFarms) =>
         prevFarms.filter((farm) => farm.id !== selectedFarm.id)
       );
 
       setDeleteDialogOpen(false);
       setSelectedFarm(null);
-
-      // You can add a success message here if you have it
-      // successMessage("Farm deleted successfully");
     } catch (error) {
       console.error("Error deleting farm:", error);
       errorMessage("Failed to delete farm");
@@ -260,16 +237,17 @@ const FarmSection = () => {
   };
 
   return (
-    <div className="mt-[40px] text-[18px]">
-      <div className="mb-[20px] w-full flex items-center justify-between">
-        <p className="text-[22px] font-[600]">
+    <div className="mt-6 md:mt-10 text-base md:text-lg">
+      {/* Header Section */}
+      <div className="mb-5 md:mb-8 w-full flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <p className="text-lg md:text-xl lg:text-2xl font-semibold">
           {getTranslation(locale, {
             en: "Total farms:",
             es: "Granjas totales:",
             ay: "Taqpacha uywa uta:",
             qu: "Lliw chakrakuna:",
             gn: "Opa ñemitỹ renda:",
-          })}
+          })}{" "}
           {farms.length}
         </p>
 
@@ -280,6 +258,7 @@ const FarmSection = () => {
               onClick={() => {
                 setOpen(true);
               }}
+              className="w-full sm:w-auto"
             >
               {getTranslation(locale, {
                 en: "New farm",
@@ -291,8 +270,8 @@ const FarmSection = () => {
             </Button>
           </DialogTrigger>
 
-          <DialogContent className="bg-white h-fit min-w-[400px] max-w-[400px] overflow-auto">
-            <Label className="mb-2 text-lg font-medium">
+          <DialogContent className="bg-white h-fit w-[90vw] max-w-[400px] overflow-auto">
+            <Label className="mb-2 text-base md:text-lg font-medium">
               {getTranslation(locale, {
                 en: "Farm Name",
                 es: "Nombre de la granja",
@@ -308,13 +287,13 @@ const FarmSection = () => {
               placeholder="Enter farm name"
             />
 
-            <Label className="mb-2 text-lg font-medium">
+            <Label className="mb-2 text-base md:text-lg font-medium">
               {getTranslation(locale, {
                 en: "Description",
                 es: "Descripción",
-                ay: "Uñt’ayawi",
+                ay: "Uñt'ayawi",
                 qu: "Willay",
-                gn: "Ñemombe’u",
+                gn: "Ñemombe'u",
               })}
             </Label>
             <Textarea
@@ -324,7 +303,7 @@ const FarmSection = () => {
               placeholder="Enter farm description"
             />
 
-            <DialogFooter>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
               <DialogClose asChild>
                 <Button
                   onClick={() => {
@@ -332,6 +311,7 @@ const FarmSection = () => {
                     setNewFarmName("");
                     setNewFarmDescription("");
                   }}
+                  className="w-full sm:w-auto"
                 >
                   {getTranslation(locale, {
                     en: "Cancel",
@@ -354,6 +334,7 @@ const FarmSection = () => {
                     "Farm creation functionality needs to be implemented"
                   );
                 }}
+                className="w-full sm:w-auto"
               >
                 {getTranslation(locale, {
                   en: "Create",
@@ -368,141 +349,232 @@ const FarmSection = () => {
         </Dialog>
       </div>
 
-      {/* Table Header */}
-      <div className="text-[20px] font-[600] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer">
-        <div className="w-[100px] flex items-center justify-between group">
-          {getTranslation(locale, {
-            en: "ID",
-            es: "ID",
-            ay: "ID",
-            qu: "ID",
-            gn: "ID",
-          })}
+      {/* Desktop Table View - Hidden on mobile/tablet */}
+      <div className="hidden lg:block">
+        {/* Table Header */}
+        <div className="text-base lg:text-lg xl:text-xl font-semibold flex items-center justify-between gap-2 xl:gap-4 bg-[#ededed] p-4 xl:p-5 rounded cursor-pointer overflow-x-auto">
+          <div className="min-w-[80px] flex items-center justify-between group">
+            {getTranslation(locale, {
+              en: "ID",
+              es: "ID",
+              ay: "ID",
+              qu: "ID",
+              gn: "ID",
+            })}
+            <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+              <div className="rounded-full w-7 h-7 flex items-center justify-center hover:bg-gray-300">
+                <ArrowUpwardIcon fontSize="small" />
+              </div>
+              <div className="rounded-full w-7 h-7 flex items-center justify-center hover:bg-gray-300">
+                <MoreVertIcon fontSize="small" />
+              </div>
+            </div>
+          </div>
 
-          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
-              <ArrowUpwardIcon />
+          <div className="min-w-[120px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
+            {getTranslation(locale, {
+              en: "Name",
+              es: "Nombre",
+              ay: "Suti",
+              qu: "Suti",
+              gn: "Téra",
+            })}
+            <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+              <div className="rounded-full w-7 h-7 flex items-center justify-center hover:bg-gray-300">
+                <ArrowUpwardIcon fontSize="small" />
+              </div>
+              <div className="rounded-full w-7 h-7 flex items-center justify-center hover:bg-gray-300">
+                <MoreVertIcon fontSize="small" />
+              </div>
             </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
-              <MoreVertIcon />
+          </div>
+
+          <div className="min-w-[120px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
+            {getTranslation(locale, {
+              en: "Farmer",
+              es: "Agricultor",
+              ay: "Uywa apnaqiri",
+              qu: "Chakra kamayuq",
+              gn: "Ñemitỹhára",
+            })}
+            <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+              <div className="rounded-full w-7 h-7 flex items-center justify-center hover:bg-gray-300">
+                <ArrowUpwardIcon fontSize="small" />
+              </div>
+              <div className="rounded-full w-7 h-7 flex items-center justify-center hover:bg-gray-300">
+                <MoreVertIcon fontSize="small" />
+              </div>
             </div>
+          </div>
+
+          <div className="min-w-[100px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
+            {getTranslation(locale, {
+              en: "Area",
+              es: "Área",
+              ay: "Ch'usa",
+              qu: "Suyu",
+              gn: "Tenda",
+            })}
+            <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+              <div className="rounded-full w-7 h-7 flex items-center justify-center hover:bg-gray-300">
+                <ArrowUpwardIcon fontSize="small" />
+              </div>
+              <div className="rounded-full w-7 h-7 flex items-center justify-center hover:bg-gray-300">
+                <MoreVertIcon fontSize="small" />
+              </div>
+            </div>
+          </div>
+
+          <div className="min-w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
+            {getTranslation(locale, {
+              en: "Created at",
+              es: "Creado en",
+              ay: "Lurata uka",
+              qu: "Kamaykuna",
+              gn: "Ojapo haguépe",
+            })}
+            <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+              <div className="rounded-full w-7 h-7 flex items-center justify-center hover:bg-gray-300">
+                <ArrowUpwardIcon fontSize="small" />
+              </div>
+              <div className="rounded-full w-7 h-7 flex items-center justify-center hover:bg-gray-300">
+                <MoreVertIcon fontSize="small" />
+              </div>
+            </div>
+          </div>
+
+          <div className="min-w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
+            {getTranslation(locale, {
+              en: "Updated at",
+              es: "Actualizado en",
+              ay: "Machaqaptata uka",
+              qu: "Musuqchariykuna",
+              gn: "Oñembohekopyahu haguépe",
+            })}
+            <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+              <div className="rounded-full w-7 h-7 flex items-center justify-center hover:bg-gray-300">
+                <ArrowUpwardIcon fontSize="small" />
+              </div>
+              <div className="rounded-full w-7 h-7 flex items-center justify-center hover:bg-gray-300">
+                <MoreVertIcon fontSize="small" />
+              </div>
+            </div>
+          </div>
+
+          <div className="min-w-[100px] text-center">
+            {getTranslation(locale, {
+              en: "Actions",
+              es: "Acciones",
+              ay: "Lurawinaka",
+              qu: "Ruraykuna",
+              gn: "Japoha rehegua",
+            })}
           </div>
         </div>
 
-        <div className="w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
-          {getTranslation(locale, {
-            en: "Name",
-            es: "Nombre",
-            ay: "Suti",
-            qu: "Suti",
-            gn: "Téra",
-          })}
-          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
-              <ArrowUpwardIcon />
+        {/* Desktop Farm rows */}
+        <div className="flex flex-col gap-2 mt-5">
+          {loading ? (
+            <p className="text-center py-8">
+              {getTranslation(locale, {
+                en: "Fetching farms",
+                es: "Cargando granjas",
+                ay: "Uywa utanaka apthapiwi",
+                qu: "Chakrakunata apaykuchkan",
+                gn: "Oñembyaty ñemitỹ renda",
+              })}
+            </p>
+          ) : farms.length === 0 ? (
+            <div className="w-full h-full min-h-[60vh] flex items-center justify-center">
+              <Image
+                src={NullImage}
+                alt="No farms found"
+                className="w-[300px] lg:w-[500px] xl:w-[700px] h-auto object-cover"
+                width={400}
+                height={400}
+                unoptimized
+              />
             </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
-              <MoreVertIcon />
-            </div>
-          </div>
-        </div>
-
-        <div className="w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
-          {getTranslation(locale, {
-            en: "Farmer",
-            es: "Agricultor",
-            ay: "Uywa apnaqiri",
-            qu: "Chakra kamayuq",
-            gn: "Ñemitỹhára",
-          })}
-
-          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
-              <ArrowUpwardIcon />
-            </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
-              <MoreVertIcon />
-            </div>
-          </div>
-        </div>
-
-        <div className="w-[120px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
-          {getTranslation(locale, {
-            en: "Area",
-            es: "Área",
-            ay: "Ch’usa",
-            qu: "Suyu",
-            gn: "Tenda",
-          })}
-          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
-              <ArrowUpwardIcon />
-            </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
-              <MoreVertIcon />
-            </div>
-          </div>
-        </div>
-
-        <div
-          className="w-[180px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
-          onMouseEnter={() => setActiveHover("Created at")}
-          onMouseLeave={() => setActiveHover("")}
-        >
-          {getTranslation(locale, {
-            en: "Created at",
-            es: "Creado en",
-            ay: "Lurata uka",
-            qu: "Kamaykuna",
-            gn: "Ojapo haguépe",
-          })}
-          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
-              <ArrowUpwardIcon />
-            </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
-              <MoreVertIcon />
-            </div>
-          </div>
-        </div>
-
-        <div
-          className="w-[180px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
-          onMouseEnter={() => setActiveHover("Updated at")}
-          onMouseLeave={() => setActiveHover("")}
-        >
-          {getTranslation(locale, {
-            en: "Updated at",
-            es: "Actualizado en",
-            ay: "Machaqaptata uka",
-            qu: "Musuqchariykuna",
-            gn: "Oñembohekopyahu haguépe",
-          })}
-          <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
-              <ArrowUpwardIcon />
-            </div>
-            <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center hover:bg-gray-300">
-              <MoreVertIcon />
-            </div>
-          </div>
-        </div>
-
-        <div className="w-[130px] text-center">
-          {getTranslation(locale, {
-            en: "Actions",
-            es: "Acciones",
-            ay: "Lurawinaka",
-            qu: "Ruraykuna",
-            gn: "Japoha rehegua",
-          })}
+          ) : (
+            farms.map((farm, index) => {
+              const ownerName = getOwnerFullName(farm.Owner);
+              return (
+                <div
+                  key={farm.id}
+                  onMouseEnter={() => setFarmHover(index)}
+                  onMouseLeave={() => setFarmHover(-1)}
+                  className={`text-sm lg:text-base flex items-center justify-between gap-2 xl:gap-4 p-4 xl:p-5 rounded cursor-pointer transition-all duration-500 ${
+                    farmHover === index
+                      ? "bg-white shadow-lg"
+                      : "bg-[#f5f5f5] hover:bg-[#f0f0f0]"
+                  }`}
+                >
+                  <div className="min-w-[80px] font-medium">{index + 1}</div>
+                  <div className="min-w-[120px] font-medium truncate">
+                    {farm.name}
+                  </div>
+                  <div className="min-w-[120px] truncate">{ownerName}</div>
+                  <div className="min-w-[100px]">
+                    {formatArea(farm.boundary.area)}
+                  </div>
+                  <div className="min-w-[140px] whitespace-nowrap">
+                    {formatDate(farm.createdAt)}
+                  </div>
+                  <div className="min-w-[140px] whitespace-nowrap">
+                    {formatDate(farm.updatedAt)}
+                  </div>
+                  <div className="min-w-[100px] flex flex-col items-center gap-2">
+                    <button
+                      onClick={() => handleViewFarm(farm)}
+                      className="flex items-center gap-1 px-2 py-1 rounded bg-blue-500 text-white text-xs hover:bg-blue-600 w-full justify-center"
+                    >
+                      <Eye size={14} />
+                      {getTranslation(locale, {
+                        en: "View",
+                        es: "Ver",
+                        ay: "Uñjaña",
+                        qu: "Qhaway",
+                        gn: "Hecha",
+                      })}
+                    </button>
+                    <button
+                      onClick={() => handleEditFarm(farm)}
+                      className="flex items-center gap-1 px-2 py-1 rounded bg-green-500 text-white text-xs hover:bg-green-600 w-full justify-center"
+                    >
+                      <Edit size={14} />
+                      {getTranslation(locale, {
+                        en: "Edit",
+                        es: "Editar",
+                        ay: "Askichataña",
+                        qu: "Huñuy",
+                        gn: "Mbosako'i",
+                      })}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteFarm(farm)}
+                      className="flex items-center gap-1 px-2 py-1 rounded bg-red-500 text-white text-xs hover:bg-red-600 w-full justify-center"
+                    >
+                      <Trash2 size={14} />
+                      {getTranslation(locale, {
+                        en: "Delete",
+                        es: "Eliminar",
+                        ay: "Chhaqtayaña",
+                        qu: "Pichay",
+                        gn: "Mbojei",
+                      })}
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
-      {/* Farm rows */}
-      <div className="flex flex-col gap-[5px] mt-[20px]">
+      {/* Mobile & Tablet Card View */}
+      <div className="lg:hidden">
         {loading ? (
-          <p>
+          <p className="text-center py-8">
             {getTranslation(locale, {
               en: "Fetching farms",
               es: "Cargando granjas",
@@ -512,120 +584,140 @@ const FarmSection = () => {
             })}
           </p>
         ) : farms.length === 0 ? (
-          <div className="w-full h-full min-h-[80vh] flex items-center justify-center">
+          <div className="w-full h-full min-h-[50vh] flex items-center justify-center">
             <Image
               src={NullImage}
               alt="No farms found"
-              className="w-[400px] lg:w-[700px] h-auto object-cover"
-              width={400}
-              height={400}
+              className="w-[200px] sm:w-[300px] h-auto object-cover"
+              width={300}
+              height={300}
               unoptimized
             />
           </div>
         ) : (
-          farms.map((farm, index) => {
-            const ownerName = getOwnerFullName(farm.Owner);
-            return (
-              <div
-                key={farm.id}
-                onMouseEnter={() => setFarmHover(index)}
-                onMouseLeave={() => setFarmHover(-1)}
-                className={`text-[18px] flex items-center justify-between gap-[10px] p-[20px] rounded cursor-pointer transition-all duration-500 ${
-                  farmHover === index
-                    ? "bg-white shadow-lg"
-                    : "bg-[#f5f5f5] hover:bg-[#f0f0f0]"
-                }`}
-              >
-                <div className="w-[100px] text-[16px] font-[500]">
-                  {index + 1}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {farms.map((farm, index) => {
+              const ownerName = getOwnerFullName(farm.Owner);
+              return (
+                <div
+                  key={farm.id}
+                  className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow"
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg mb-1 truncate">
+                        {farm.name}
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-2">
+                        #{index + 1}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 text-sm mb-4">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 font-medium">
+                        {getTranslation(locale, {
+                          en: "Farmer:",
+                          es: "Agricultor:",
+                          ay: "Uywa apnaqiri:",
+                          qu: "Chakra kamayuq:",
+                          gn: "Ñemitỹhára:",
+                        })}
+                      </span>
+                      <span className="text-gray-900 truncate ml-2">
+                        {ownerName}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 font-medium">
+                        {getTranslation(locale, {
+                          en: "Area:",
+                          es: "Área:",
+                          ay: "Ch'usa:",
+                          qu: "Suyu:",
+                          gn: "Tenda:",
+                        })}
+                      </span>
+                      <span className="text-gray-900">
+                        {formatArea(farm.boundary.area)}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 font-medium">
+                        {getTranslation(locale, {
+                          en: "Updated:",
+                          es: "Actualizado:",
+                          ay: "Jichhaptata:",
+                          qu: "Kunayaririy:",
+                          gn: "Oñembohekopyahu:",
+                        })}
+                      </span>
+                      <span className="text-gray-900 text-xs">
+                        {formatDate(farm.updatedAt)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleViewFarm(farm)}
+                      className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded bg-blue-500 text-white text-sm hover:bg-blue-600"
+                    >
+                      <Eye size={16} />
+                      {getTranslation(locale, {
+                        en: "View",
+                        es: "Ver",
+                        ay: "Uñjaña",
+                        qu: "Qhaway",
+                        gn: "Hecha",
+                      })}
+                    </button>
+                    <button
+                      onClick={() => handleEditFarm(farm)}
+                      className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded bg-green-500 text-white text-sm hover:bg-green-600"
+                    >
+                      <Edit size={16} />
+                      {getTranslation(locale, {
+                        en: "Edit",
+                        es: "Editar",
+                        ay: "Askichataña",
+                        qu: "Huñuy",
+                        gn: "Mbosako'i",
+                      })}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteFarm(farm)}
+                      className="flex items-center justify-center gap-1 px-3 py-2 rounded bg-red-500 text-white text-sm hover:bg-red-600"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
-
-                <div className="w-[140px] text-[16px] font-[500] truncate">
-                  {farm.name}
-                </div>
-
-                <div className="w-[140px] text-[16px] truncate">
-                  {ownerName}
-                </div>
-
-                <div className="w-[120px] text-[16px]">
-                  {formatArea(farm.boundary.area)}
-                </div>
-
-                <div className="w-[220px] text-[16px] whitespace-nowrap">
-                  {formatDate(farm.createdAt)}
-                </div>
-
-                <div className="w-[220px] text-[16px] whitespace-nowrap">
-                  {formatDate(farm.updatedAt)}
-                </div>
-
-                {/* Actions column with buttons */}
-                <div className="w-[80px] flex flex-col items-center gap-2">
-                  <button
-                    onClick={() => handleViewFarm(farm)}
-                    className="flex items-center gap-1 px-2 py-1 rounded bg-blue-500 text-white text-xs hover:bg-blue-600 w-full justify-center"
-                  >
-                    <Eye size={14} />{" "}
-                    {getTranslation(locale, {
-                      en: "View",
-                      es: "Ver",
-                      ay: "Uñjaña",
-                      qu: "Qhaway",
-                      gn: "Hecha",
-                    })}
-                  </button>
-
-                  <button
-                    onClick={() => handleEditFarm(farm)}
-                    className="flex items-center gap-1 px-2 py-1 rounded bg-green-500 text-white text-xs hover:bg-green-600 w-full justify-center"
-                  >
-                    <Edit size={14} />{" "}
-                    {getTranslation(locale, {
-                      en: "Edit",
-                      es: "Editar",
-                      ay: "Askichataña",
-                      qu: "Huñuy",
-                      gn: "Mbosako’i",
-                    })}
-                  </button>
-
-                  <button
-                    onClick={() => handleDeleteFarm(farm)}
-                    className="flex items-center gap-1 px-2 py-1 rounded bg-red-500 text-white text-xs hover:bg-red-600 w-full justify-center"
-                  >
-                    <Trash2 size={14} />{" "}
-                    {getTranslation(locale, {
-                      en: "Delete",
-                      es: "Eliminar",
-                      ay: "Chhaqtayaña",
-                      qu: "Pichay",
-                      gn: "Mbojei",
-                    })}
-                  </button>
-                </div>
-              </div>
-            );
-          })
+              );
+            })}
+          </div>
         )}
       </div>
 
       {/* VIEW FARM DIALOG */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="bg-white h-fit min-w-[500px] max-w-[500px] overflow-auto">
+        <DialogContent className="bg-white h-fit w-[90vw] max-w-[500px] max-h-[90vh] overflow-auto">
           {selectedFarm && (
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold">
+              <h2 className="text-lg md:text-xl font-semibold">
                 {getTranslation(locale, {
                   en: "Farm details",
                   es: "Detalles de la granja",
                   ay: "Uywa utjiri yatiwinaka",
                   qu: "Chakra ñawpaqkunata",
-                  gn: "Ñemitỹ renda mba’eteéva",
+                  gn: "Ñemitỹ renda mba'eteéva",
                 })}
               </h2>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label className="font-medium">
                     {getTranslation(locale, {
@@ -691,9 +783,9 @@ const FarmSection = () => {
                   {getTranslation(locale, {
                     en: "Description",
                     es: "Descripción",
-                    ay: "Uñt’ayawi",
+                    ay: "Uñt'ayawi",
                     qu: "Willay",
-                    gn: "Ñemombe’u",
+                    gn: "Ñemombe'u",
                   })}
                   :
                 </Label>
@@ -702,7 +794,7 @@ const FarmSection = () => {
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label className="font-medium">
                     {getTranslation(locale, {
@@ -714,7 +806,7 @@ const FarmSection = () => {
                     })}
                     :
                   </Label>
-                  <p className="text-gray-700">
+                  <p className="text-gray-700 text-sm">
                     {formatDate(selectedFarm.createdAt)}
                   </p>
                 </div>
@@ -730,7 +822,7 @@ const FarmSection = () => {
                     })}
                     :
                   </Label>
-                  <p className="text-gray-700">
+                  <p className="text-gray-700 text-sm">
                     {formatDate(selectedFarm.updatedAt)}
                   </p>
                 </div>
@@ -740,12 +832,12 @@ const FarmSection = () => {
 
           <DialogFooter>
             <DialogClose asChild>
-              <Button onClick={() => setViewDialogOpen(false)}>
+              <Button onClick={() => setViewDialogOpen(false)} className="w-full sm:w-auto">
                 {getTranslation(locale, {
                   en: "Close",
                   es: "Cerrar",
-                  ay: "Jark’aña",
-                  qu: "Wisq’ay",
+                  ay: "Jark'aña",
+                  qu: "Wisq'ay",
                   gn: "Ñemboty",
                 })}
               </Button>
@@ -756,8 +848,8 @@ const FarmSection = () => {
 
       {/* EDIT FARM DIALOG */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="bg-white h-fit min-w-[400px] max-w-[400px] overflow-auto">
-          <h2 className="text-xl font-semibold mb-4">
+        <DialogContent className="bg-white h-fit w-[90vw] max-w-[400px] max-h-[90vh] overflow-auto">
+          <h2 className="text-lg md:text-xl font-semibold mb-4">
             {getTranslation(locale, {
               en: "Edit farms",
               es: "Editar granjas",
@@ -767,7 +859,7 @@ const FarmSection = () => {
             })}
           </h2>
 
-          <Label className="mb-2 text-lg font-medium">
+          <Label className="mb-2 text-base md:text-lg font-medium">
             {getTranslation(locale, {
               en: "Farm Name",
               es: "Nombre de la granja",
@@ -783,13 +875,13 @@ const FarmSection = () => {
             placeholder="Enter farm name"
           />
 
-          <Label className="mb-2 text-lg font-medium">
+          <Label className="mb-2 text-base md:text-lg font-medium">
             {getTranslation(locale, {
               en: "Description",
               es: "Descripción",
-              ay: "Uñt’ayawi",
+              ay: "Uñt'ayawi",
               qu: "Willay",
-              gn: "Ñemombe’u",
+              gn: "Ñemombe'u",
             })}
           </Label>
           <Textarea
@@ -799,7 +891,7 @@ const FarmSection = () => {
             placeholder="Enter farm description"
           />
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <DialogClose asChild>
               <Button
                 onClick={() => {
@@ -808,6 +900,7 @@ const FarmSection = () => {
                   setEditFarmDescription("");
                   setSelectedFarm(null);
                 }}
+                className="w-full sm:w-auto"
               >
                 {getTranslation(locale, {
                   en: "Cancel",
@@ -819,7 +912,7 @@ const FarmSection = () => {
               </Button>
             </DialogClose>
 
-            <Button onClick={handleUpdateFarm} disabled={loading}>
+            <Button onClick={handleUpdateFarm} disabled={loading} className="w-full sm:w-auto">
               {loading ? "Updating..." : "Update"}
             </Button>
           </DialogFooter>
@@ -828,8 +921,8 @@ const FarmSection = () => {
 
       {/* DELETE CONFIRMATION DIALOG */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="bg-white h-fit min-w-[400px] max-w-[400px]">
-          <h2 className="text-xl font-semibold mb-4">
+        <DialogContent className="bg-white h-fit w-[90vw] max-w-[400px]">
+          <h2 className="text-lg md:text-xl font-semibold mb-4">
             {getTranslation(locale, {
               en: "Delete farm",
               es: "Eliminar granja",
@@ -848,8 +941,8 @@ const FarmSection = () => {
                   ay: "¿Chhaqtayañ munta uywa utjiri?",
                   qu: "¿Rikhuykichu chay chakrata pichanaykita munanki?",
                   gn: "¿Añetehápepa rembojeisé pe ñemitỹ renda?",
-                })}
-                {selectedFarm.name}"?
+                })}{" "}
+                "{selectedFarm.name}"?
               </p>
               <p className="text-red-600 text-sm mt-2">
                 {getTranslation(locale, {
@@ -863,13 +956,14 @@ const FarmSection = () => {
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <DialogClose asChild>
               <Button
                 onClick={() => {
                   setDeleteDialogOpen(false);
                   setSelectedFarm(null);
                 }}
+                className="w-full sm:w-auto"
               >
                 {getTranslation(locale, {
                   en: "Cancel",
@@ -884,7 +978,7 @@ const FarmSection = () => {
             <Button
               onClick={handleConfirmDelete}
               disabled={loading}
-              className="bg-red-500 hover:bg-red-600"
+              className="bg-red-500 hover:bg-red-600 w-full sm:w-auto"
             >
               {loading ? "Deleting..." : "Delete"}
             </Button>
