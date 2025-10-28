@@ -475,7 +475,7 @@ const ExpandedSidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        en: "Booking inquiry",
+        en: "inquiry",
         es: "",
         ay: "",
         qu: "",

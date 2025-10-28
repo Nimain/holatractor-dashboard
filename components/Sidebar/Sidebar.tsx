@@ -475,7 +475,7 @@ const Sidebar = () => {
         />
       ),
       name: getTranslation(locale, {
-        en: "Booking inquiry",
+        en: "inquiry",
         es: "",
         ay: "",
         qu: "",
