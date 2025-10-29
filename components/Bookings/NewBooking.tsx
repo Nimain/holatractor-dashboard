@@ -116,7 +116,7 @@ const NewBooking = ({ onBookingCreated }: NewBookingProps) => {
     <>
       <button
         name="new_tractor_add"
-        className="group relative px-4 py-3 text-lg rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden shadow-2xl hover:shadow-slate-900/50 transition-all duration-500 transform hover:scale-105 font-bold"
+        className="group relative px-4 py-3 text-base rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white overflow-hidden shadow-2xl hover:shadow-slate-900/50 transition-all duration-500 transform hover:scale-105 font-bold"
         onClick={() => setOpen(true)}
       >
         <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
