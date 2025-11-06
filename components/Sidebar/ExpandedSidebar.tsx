@@ -230,6 +230,25 @@ const ExpandedSidebar = () => {
       }),
       route: "/Attachments",
     },
+     {
+      icon: (
+        <Image
+          src={LoanssIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Attachments"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Attachments",
+        es: "Adjuntos",
+        ay: "Uchawi",
+        qu: "Aqha",
+        gn: "Jepya",
+      }),
+      route: "/Attachments",
+    },
     {
       icon: (
         <Image

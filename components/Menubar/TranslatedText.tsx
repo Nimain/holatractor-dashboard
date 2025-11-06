@@ -1,29 +1,46 @@
-"use client"
+"use client";
 
-import { RootState } from '@/redux/store';
-import { useSelector } from 'react-redux';
-import { operatorDashboardTranslations } from '../Dashboards/Operator/OperatorDashboardTranslations';
+import { RootState } from "@/redux/store";
+import { useSelector } from "react-redux";
+import { operatorDashboardTranslations } from "../Dashboards/Operator/OperatorDashboardTranslations";
 
-type LanguageCode = 'en' | 'es' | 'ay' | 'qu' | 'gn';
+type LanguageCode = "en" | "es" | "ay" | "qu" | "gn";
 
 type Greetings = {
-    en: string;
-    es: string;
-    ay: string;
-    qu: string;
-    gn: string;
-  };
+  en: string;
+  es?: string;
+  ay?: string;
+  qu?: string;
+  gn?: string;
+};
 
-const TranslatedText = ({ greetings }:{ greetings: Greetings }) => {
-    const language = useSelector((state: RootState) => state.ActiveLanguage.language) as LanguageCode;
-const activeGreeting = greetings[language] || greetings.en;
-  return activeGreeting
-}
+const TranslatedText = ({ greetings }: { greetings?: Greetings }) => {
+  const language = useSelector(
+    (state: RootState) => state.ActiveLanguage.language
+  ) as LanguageCode;
 
-export const TranslatedTaskText = ({ greetings }:{ greetings: number }) => {
-    const language = useSelector((state: RootState) => state.ActiveLanguage.language) as LanguageCode;
-const activeGreeting = operatorDashboardTranslations.tasksToday[language](greetings) || operatorDashboardTranslations.tasksToday.en(greetings);
-  return activeGreeting
-}
+  // ✅ fallback safety
+  const activeGreeting =
+    greetings?.[language] ??
+    greetings?.en ??
+    "";
 
-export default TranslatedText
+  return activeGreeting;
+};
+
+export const TranslatedTaskText = ({ greetings }: { greetings: number }) => {
+  const language = useSelector(
+    (state: RootState) => state.ActiveLanguage.language
+  ) as LanguageCode;
+
+  const fn = operatorDashboardTranslations?.tasksToday?.[language];
+
+  // ✅ safely handle function
+  if (typeof fn === "function") {
+    return fn(greetings);
+  }
+
+  return operatorDashboardTranslations.tasksToday.en(greetings);
+};
+
+export default TranslatedText;
