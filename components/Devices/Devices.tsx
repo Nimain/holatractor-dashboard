@@ -1,9 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import dynamic from "next/dynamic"
-import { useState, useEffect, useMemo, memo } from "react"
+import React, { useState, useEffect, useMemo, memo, useRef } from "react"
 import {
   Truck,
   Settings,
@@ -17,54 +14,12 @@ import {
   History,
   X,
 } from "lucide-react"
-import L from "leaflet"
-import "leaflet/dist/leaflet.css"
 import { renderInstance } from "@/utils/Axios/RenderInstance"
 import { useCookie } from "next-cookie"
 import axios from "axios"
-import Image from "next/image"
 
-// Dynamically import Leaflet components (client-only)
-const MapContainer = dynamic(async () => (await import("react-leaflet")).MapContainer, { ssr: false })
-const TileLayer = dynamic(async () => (await import("react-leaflet")).TileLayer, { ssr: false })
-const Marker = dynamic(async () => (await import("react-leaflet")).Marker, {
-  ssr: false,
-})
-const Popup = dynamic(async () => (await import("react-leaflet")).Popup, {
-  ssr: false,
-})
-const Polyline = dynamic(async () => (await import("react-leaflet")).Polyline, {
-  ssr: false,
-})
-
-// Custom tractor icon with image
-const createTractorIcon = (imageUrl: string | null, isSelected: boolean = false) => {
-  const borderColor = isSelected ? '#EF4444' : '#3B82F6'
-  const borderWidth = isSelected ? '3px' : '2px'
-  
-  return new L.DivIcon({
-    html: `<div style="
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      border: ${borderWidth} solid ${borderColor};
-      background: ${imageUrl ? `url('${imageUrl}')` : '#1F2937'} no-repeat center center;
-      background-size: cover;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-    "></div>`,
-    className: "",
-    iconSize: [48, 48],
-    iconAnchor: [24, 48],
-  })
-}
-
-// Custom GPS history icon
-const gpsHistoryIcon = L.icon({
-  iconUrl: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='8' fill='%233B82F6' stroke='%23FFF' stroke-width='2'/%3E%3C/svg%3E`,
-  iconSize: [20, 20],
-  iconAnchor: [10, 10],
-  popupAnchor: [0, -10],
-})
+// Google Maps API Key - Replace with your actual API key
+const GOOGLE_MAPS_API_KEY = "AIzaSyDjMCI0xj2Q-WTc9J7yWX-Mvh0DBM7oHbg"
 
 // Device Base URL for GPS history
 const DeviceBaseURL = "https://device.holatractor.com/"
@@ -111,13 +66,10 @@ const fixCoordinates = (lat: number, lon: number, region: string): [number, numb
   let fixedLat = lat
   let fixedLon = lon
 
-  // NE region should have positive coordinates
   if (region === "NE") {
     fixedLat = Math.abs(lat)
     fixedLon = Math.abs(lon)
-  }
-  // SW region should have negative coordinates
-  else if (region === "SW") {
+  } else if (region === "SW") {
     fixedLat = -Math.abs(lat)
     fixedLon = -Math.abs(lon)
   }
@@ -157,12 +109,39 @@ const filterGPSByTimeRange = (history: GPSLocation[], filterType: string): GPSLo
   return history.filter((h) => new Date(h.timestamp) >= startDate)
 }
 
+// Load Google Maps Script
+const loadGoogleMapsScript = (callback: () => void) => {
+  if (typeof window !== 'undefined' && window.google) {
+    callback()
+    return
+  }
+
+  const existingScript = document.getElementById('google-maps-script')
+  if (existingScript) {
+    existingScript.addEventListener('load', callback)
+    return
+  }
+
+  const script = document.createElement('script')
+  script.id = 'google-maps-script'
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry`
+  script.async = true
+  script.defer = true
+  script.addEventListener('load', callback)
+  document.head.appendChild(script)
+}
+
 const HistoryModalContent: React.FC<{
   gpsHistory: GPSLocation[]
   selectedDevice: Device | undefined
-  mapCenter: [number, number]
+  mapCenter: { lat: number; lng: number }
   selectedFilter: string
 }> = memo(({ gpsHistory, selectedDevice, mapCenter, selectedFilter }) => {
+  const mapRef = useRef<HTMLDivElement>(null)
+  const googleMapRef = useRef<google.maps.Map | null>(null)
+  const polylineRef = useRef<google.maps.Polyline | null>(null)
+  const markersRef = useRef<google.maps.Marker[]>([])
+
   const filteredHistory = useMemo(() => {
     return filterGPSByTimeRange(gpsHistory, selectedFilter)
   }, [gpsHistory, selectedFilter])
@@ -183,54 +162,111 @@ const HistoryModalContent: React.FC<{
   }, [filteredHistory, selectedDevice])
 
   const historyPath = useMemo(() => {
-    return processedLocations.map((loc) => [loc.fixedLat, loc.fixedLon] as [number, number])
+    return processedLocations.map((loc) => ({ lat: loc.fixedLat, lng: loc.fixedLon }))
   }, [processedLocations])
+
+  useEffect(() => {
+    if (!mapRef.current || !window.google) return
+
+    // Initialize map
+    if (!googleMapRef.current) {
+      googleMapRef.current = new google.maps.Map(mapRef.current, {
+        center: historyPath.length > 0 ? historyPath[0] : mapCenter,
+        zoom: 15,
+        mapTypeId: google.maps.MapTypeId.ROADMAP,
+      })
+    }
+
+    // Clear previous markers and polyline
+    markersRef.current.forEach(marker => marker.setMap(null))
+    markersRef.current = []
+    if (polylineRef.current) {
+      polylineRef.current.setMap(null)
+    }
+
+    // Draw polyline
+    if (historyPath.length > 0) {
+      polylineRef.current = new google.maps.Polyline({
+        path: historyPath,
+        geodesic: true,
+        strokeColor: '#3B82F6',
+        strokeOpacity: 0.8,
+        strokeWeight: 4,
+        map: googleMapRef.current,
+      })
+
+      // Add start marker (last in array - oldest)
+      const startMarker = new google.maps.Marker({
+        position: historyPath[historyPath.length - 1],
+        map: googleMapRef.current,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#10B981',
+          fillOpacity: 1,
+          strokeColor: '#FFFFFF',
+          strokeWeight: 2,
+        },
+        title: 'Start Point',
+      })
+
+      const startInfo = new google.maps.InfoWindow({
+        content: `
+          <div style="color: #000; padding: 5px;">
+            <strong style="color: #10B981;">Start Point</strong><br/>
+            Time: ${new Date(processedLocations[processedLocations.length - 1].timestamp).toLocaleString()}<br/>
+            Speed: ${processedLocations[processedLocations.length - 1].speed} km/h
+          </div>
+        `
+      })
+
+      startMarker.addListener('click', () => {
+        startInfo.open(googleMapRef.current, startMarker)
+      })
+
+      // Add end marker (first in array - newest)
+      const endMarker = new google.maps.Marker({
+        position: historyPath[0],
+        map: googleMapRef.current,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#EF4444',
+          fillOpacity: 1,
+          strokeColor: '#FFFFFF',
+          strokeWeight: 2,
+        },
+        title: 'End Point',
+      })
+
+      const endInfo = new google.maps.InfoWindow({
+        content: `
+          <div style="color: #000; padding: 5px;">
+            <strong style="color: #EF4444;">End Point</strong><br/>
+            Time: ${new Date(processedLocations[0].timestamp).toLocaleString()}<br/>
+            Speed: ${processedLocations[0].speed} km/h
+          </div>
+        `
+      })
+
+      endMarker.addListener('click', () => {
+        endInfo.open(googleMapRef.current, endMarker)
+      })
+
+      markersRef.current.push(startMarker, endMarker)
+
+      // Fit bounds to show all markers
+      const bounds = new google.maps.LatLngBounds()
+      historyPath.forEach(point => bounds.extend(point))
+      googleMapRef.current.fitBounds(bounds)
+    }
+  }, [historyPath, processedLocations, mapCenter])
 
   return (
     <div className="space-y-4">
       {/* Map with History Path */}
       <div className="h-96 rounded-lg overflow-hidden border border-white/20">
-        <MapContainer
-          center={historyPath.length > 0 ? historyPath[0] : mapCenter}
-          zoom={15}
-          style={{ height: "100%", width: "100%" }}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://osm.org">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          {historyPath.length > 0 && <Polyline positions={historyPath} color="#3B82F6" weight={4} opacity={0.8} />}
-          
-          {/* Show markers for start and end points */}
-          {processedLocations.length > 0 && (
-            <>
-              <Marker
-                position={[processedLocations[processedLocations.length - 1].fixedLat, processedLocations[processedLocations.length - 1].fixedLon]}
-                icon={gpsHistoryIcon}
-              >
-                <Popup>
-                  <div className="text-xs">
-                    <strong className="text-green-600">Start Point</strong>
-                    <br />Time: {new Date(processedLocations[processedLocations.length - 1].timestamp).toLocaleString()}
-                    <br />Speed: {processedLocations[processedLocations.length - 1].speed} km/h
-                  </div>
-                </Popup>
-              </Marker>
-              <Marker
-                position={[processedLocations[0].fixedLat, processedLocations[0].fixedLon]}
-                icon={gpsHistoryIcon}
-              >
-                <Popup>
-                  <div className="text-xs">
-                    <strong className="text-red-600">End Point</strong>
-                    <br />Time: {new Date(processedLocations[0].timestamp).toLocaleString()}
-                    <br />Speed: {processedLocations[0].speed} km/h
-                  </div>
-                </Popup>
-              </Marker>
-            </>
-          )}
-        </MapContainer>
+        <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
       </div>
 
       {/* Coordinate Analysis Warning */}
@@ -286,7 +322,7 @@ const HistoryModalContent: React.FC<{
       <div className="bg-white/5 rounded-lg p-4 border border-white/10">
         <h4 className="text-white font-semibold mb-3">Sample GPS Coordinates (First 3)</h4>
         <div className="space-y-2 text-xs">
-          {processedLocations.slice(0, 3).map((location, index) => (
+          {processedLocations.slice(0, 3).map((location) => (
             <div key={location._id.$oid} className="bg-white/5 p-2 rounded border border-white/10">
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -316,7 +352,8 @@ export default function DeviceSection() {
   const [devices, setDevices] = useState<Device[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
-  const [mapCenter, setMapCenter] = useState<[number, number]>([40.7128, -74.006])
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 40.7128, lng: -74.006 })
+  const [mapsLoaded, setMapsLoaded] = useState<boolean>(false)
 
   // History modal states
   const [showHistoryModal, setShowHistoryModal] = useState<boolean>(false)
@@ -325,8 +362,19 @@ export default function DeviceSection() {
   const [gpsHistory, setGpsHistory] = useState<GPSLocation[]>([])
   const [selectedFilter, setSelectedFilter] = useState<string>("today")
 
+  const mapRef = useRef<HTMLDivElement>(null)
+  const googleMapRef = useRef<google.maps.Map | null>(null)
+  const markersRef = useRef<Map<string, google.maps.Marker>>(new Map())
+
   const { cookie } = useCookie()
   const access_token = cookie.get("access_token")
+
+  // Load Google Maps
+  useEffect(() => {
+    loadGoogleMapsScript(() => {
+      setMapsLoaded(true)
+    })
+  }, [])
 
   // Fetch devices from API
   useEffect(() => {
@@ -371,7 +419,7 @@ export default function DeviceSection() {
         setDevices(transformedDevices)
         if (transformedDevices.length > 0) {
           setSelectedTractor(transformedDevices[0].id)
-          setMapCenter([transformedDevices[0].lat, transformedDevices[0].lng])
+          setMapCenter({ lat: transformedDevices[0].lat, lng: transformedDevices[0].lng })
         }
       }
     } catch (err: any) {
@@ -417,10 +465,67 @@ export default function DeviceSection() {
   const handleMarkerClick = (deviceId: string) => {
     setSelectedTractor(deviceId)
     const device = devices.find((d) => d.id === deviceId)
-    if (device) {
-      setMapCenter([device.lat, device.lng])
+    if (device && googleMapRef.current) {
+      googleMapRef.current.panTo({ lat: device.lat, lng: device.lng })
+      googleMapRef.current.setZoom(15)
     }
   }
+
+  // Initialize Google Map
+  useEffect(() => {
+    if (!mapRef.current || !mapsLoaded || !window.google) return
+
+    if (!googleMapRef.current) {
+      googleMapRef.current = new google.maps.Map(mapRef.current, {
+        center: mapCenter,
+        zoom: 13,
+        mapTypeId: google.maps.MapTypeId.ROADMAP,
+      })
+    }
+  }, [mapsLoaded, mapCenter])
+
+  // Update markers when devices change
+  useEffect(() => {
+    if (!googleMapRef.current || !mapsLoaded || !window.google) return
+
+    // Clear existing markers
+    markersRef.current.forEach(marker => marker.setMap(null))
+    markersRef.current.clear()
+
+    // Add new markers
+    devices.forEach((device) => {
+      const isSelected = selectedTractor === device.id
+      const marker = new google.maps.Marker({
+        position: { lat: device.lat, lng: device.lng },
+        map: googleMapRef.current,
+        icon: {
+          url: device.tractorImage || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><circle cx="24" cy="24" r="20" fill="%231F2937" stroke="%233B82F6" stroke-width="3"/></svg>',
+          scaledSize: new google.maps.Size(48, 48),
+          anchor: new google.maps.Point(24, 48),
+        },
+        title: device.name,
+      })
+
+      const infoWindow = new google.maps.InfoWindow({
+        content: `
+          <div style="color: #000; padding: 10px; max-width: 200px;">
+            ${device.tractorImage ? `<img src="${device.tractorImage}" style="width: 100%; border-radius: 4px; margin-bottom: 8px;" />` : ''}
+            <strong>${device.name}</strong><br/>
+            ${device.field}<br/>
+            Status: ${device.status}<br/>
+            Model: ${device.model}
+          </div>
+        `
+      })
+
+      marker.addListener('click', () => {
+        handleMarkerClick(device.id)
+        infoWindow.open(googleMapRef.current, marker)
+      })
+
+      markersRef.current.set(device.id, marker)
+    })
+  }, [devices, mapsLoaded, selectedTractor])
 
   const selectedDevice = getSelectedDevice()
 
@@ -492,43 +597,7 @@ export default function DeviceSection() {
           </button>
 
           {/* Map Container */}
-          <MapContainer
-            center={mapCenter}
-            zoom={13}
-            style={{ height: "100%", width: "100%" }}
-            key={mapCenter.join(",")}
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://osm.org">OpenStreetMap</a> contributors'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            {devices.map((device) => (
-              <Marker
-                key={device.id}
-                position={[device.lat, device.lng]}
-                icon={createTractorIcon(device.tractorImage, selectedTractor === device.id)}
-                eventHandlers={{ click: () => handleMarkerClick(device.id) }}
-              >
-                <Popup>
-                  <div className="text-sm">
-                    {device.tractorImage && (
-                      <Image 
-                        src={device.tractorImage} 
-                        alt={device.name}
-                        width={150}
-                        height={100}
-                        className="rounded mb-2 object-cover"
-                      />
-                    )}
-                    <strong>{device.name}</strong>
-                    <br /> {device.field}
-                    <br /> Status: {device.status}
-                    <br /> Model: {device.model}
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
-          </MapContainer>
+          <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
         </div>
 
         {/* CONTROL PANEL */}
@@ -567,12 +636,10 @@ export default function DeviceSection() {
                     >
                       <div className="flex items-center space-x-3">
                         {device.tractorImage && (
-                          <Image
+                          <img
                             src={device.tractorImage}
                             alt={device.name}
-                            width={48}
-                            height={48}
-                            className="rounded-full object-cover border-2 border-white/20"
+                            className="w-12 h-12 rounded-full object-cover border-2 border-white/20"
                           />
                         )}
                         <div className="flex-1">
@@ -603,11 +670,9 @@ export default function DeviceSection() {
                 <>
                   <div className="bg-white/10 p-4 rounded-xl border border-white/20">
                     {selectedDevice.tractorImage && (
-                      <Image
+                      <img
                         src={selectedDevice.tractorImage}
                         alt={selectedDevice.name}
-                        width={300}
-                        height={200}
                         className="rounded-lg mb-3 w-full object-cover"
                       />
                     )}

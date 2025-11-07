@@ -19,3 +19,12 @@ const OwnerPage = () => {
 }
 
 export default Devices
+
+// import DeviceSection from "@/components/device-section"
+// import { getGoogleMapsApiKey } from "@/lib/get-google-maps-key"
+
+// export default async function Page() {
+//   const googleMapsApiKey = await getGoogleMapsApiKey()
+
+//   return <DeviceSection googleMapsApiKey={googleMapsApiKey} />
+// }
