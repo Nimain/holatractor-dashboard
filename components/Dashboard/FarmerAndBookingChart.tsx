@@ -153,7 +153,7 @@ export function FarmerAndBookingChart() {
       // Calculate growth rates (comparing to previous month)
       calculateGrowthRates(farmers, bookings)
     } catch (err) {
-      errorMessage("Error fetching data for chart")
+      // errorMessage("Error fetching data for chart")
       console.error("Error fetching data:", err)
     } finally {
       setLoading(false)
