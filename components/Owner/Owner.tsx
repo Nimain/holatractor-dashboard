@@ -108,7 +108,7 @@ const OwnerSection = () => {
 
   return (
     <div className="mt-6 md:mt-10 px-4 md:px-6 lg:px-8 text-base md:text-lg">
-      {/* Header Section */}
+      
       <div className="mb-5 md:mb-8 w-full flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <p className="text-lg md:text-xl lg:text-2xl font-semibold">
           {getTranslation(locale, {
