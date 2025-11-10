@@ -169,7 +169,7 @@ const VerifyOTP = () => {
     try {
       const userCredential: UserCredential = await confirmationResult.confirm(finalOtp);
       const firebaseToken = await userCredential.user.getIdToken();
-      const backendResponse = await fetch('http://localhost:5001/farmer/verify-phone', {
+      const backendResponse = await fetch('https://www.holatractor.com/farmer/verify-phone', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId, firebaseToken }),
