@@ -53,6 +53,7 @@
     "dayjs": "^1.11.12",
     "destack": "^3.0.7",
     "faker": "^5.5.3",
+    "firebase": "^12.5.0",
     "framer-motion": "^11.3.24",
     "humanparser": "^2.7.0",
     "i18next": "^23.12.3",
