@@ -262,25 +262,8 @@ const OwnerAction = ({
           </SheetTitle>
           <SheetDescription className="text-red-600">
             {status === 1
-<<<<<<< HEAD
-              ? getTranslation(locale, {
-                  en: `${name} is an active Owner`,
-                  es: `${name} es un propietario activo`,
-                  ay: `${name} ukax ch'aman jilata`,
-                  qu: `${name} huk llamk'aq dueño`,
-                  gn: `${name} ha'e jára oikóva`,
-                })
-              : getTranslation(locale, {
-                  en: `${name} is inactive. Click "Active" to activate.`,
-                  es: `${name} está inactivo. Haz clic en "Activo" para activar.`,
-                  ay: `${name} ukax jani ch'amaniti. "Ch'aman" ch'iqt'aña ch'amanchaña.`,
-                  qu: `${name} mana llamk'aqchu. "Llamk'aq" ñit'iykuy llamk'achinayki.`,
-                  gn: `${name} ndoikói. Eikutu "Oiko" emyendy hag̃ua.`,
-                })}
-=======
               ? `${name} is an active operator`
               : `${name} is inactive. Click "Active" to activate.`}
->>>>>>> 59a849bd0bcd2c2dbb53392d292fe8d578a9d961
           </SheetDescription>
         </SheetHeader>
 
