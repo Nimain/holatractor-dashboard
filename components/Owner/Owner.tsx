@@ -108,7 +108,7 @@ const OwnerSection = () => {
 
   return (
     <div className="mt-6 md:mt-10 px-4 md:px-6 lg:px-8 text-base md:text-lg">
-      
+
       <div className="mb-5 md:mb-8 w-full flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <p className="text-lg md:text-xl lg:text-2xl font-semibold">
           {getTranslation(locale, {
@@ -273,19 +273,19 @@ const OwnerSection = () => {
           >
             {activeHover === "Verified"
               ? getTranslation(locale, {
-                  en: "Veri...",
-                  es: "Veri...",
-                  ay: "Chiq...",
-                  qu: "Kach...",
-                  gn: "Oñe...",
-                })
+                en: "Veri...",
+                es: "Veri...",
+                ay: "Chiq...",
+                qu: "Kach...",
+                gn: "Oñe...",
+              })
               : getTranslation(locale, {
-                  en: "Verified",
-                  es: "Verificado",
-                  ay: "Chiqachata",
-                  qu: "Kachkan",
-                  gn: "Oñemoneĩ",
-                })}
+                en: "Verified",
+                es: "Verificado",
+                ay: "Chiqachata",
+                qu: "Kachkan",
+                gn: "Oñemoneĩ",
+              })}
             <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
               <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
                 <ArrowUpwardIcon fontSize="small" />
@@ -325,19 +325,19 @@ const OwnerSection = () => {
           >
             {activeHover === "Joined at"
               ? getTranslation(locale, {
-                  en: "Join...",
-                  es: "Uni...",
-                  ay: "Chi...",
-                  qu: "Qill...",
-                  gn: "Oje...",
-                })
+                en: "Join...",
+                es: "Uni...",
+                ay: "Chi...",
+                qu: "Qill...",
+                gn: "Oje...",
+              })
               : getTranslation(locale, {
-                  en: "Joined at",
-                  es: "Unido el",
-                  ay: "Chiqachata",
-                  qu: "Qillqaykama",
-                  gn: "Ojejapo",
-                })}
+                en: "Joined at",
+                es: "Unido el",
+                ay: "Chiqachata",
+                qu: "Qillqaykama",
+                gn: "Ojejapo",
+              })}
             <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
               <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
                 <ArrowUpwardIcon fontSize="small" />
@@ -359,19 +359,19 @@ const OwnerSection = () => {
           >
             {activeHover === "Updated at"
               ? getTranslation(locale, {
-                  en: "Upda...",
-                  es: "Actu...",
-                  ay: "Qill...",
-                  qu: "Rima...",
-                  gn: "Gua...",
-                })
+                en: "Upda...",
+                es: "Actu...",
+                ay: "Qill...",
+                qu: "Rima...",
+                gn: "Gua...",
+              })
               : getTranslation(locale, {
-                  en: "Updated at",
-                  es: "Actualizado el",
-                  ay: "Qillqata",
-                  qu: "Rimaykuy",
-                  gn: "Guarã",
-                })}
+                en: "Updated at",
+                es: "Actualizado el",
+                ay: "Qillqata",
+                qu: "Rimaykuy",
+                gn: "Guarã",
+              })}
             <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
               <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
                 <ArrowUpwardIcon fontSize="small" />
@@ -408,9 +408,8 @@ const OwnerSection = () => {
             </div>
           ) : (
             users.map((details, index) => {
-              const name = `${details.user.first_name} ${
-                details.user.middle_name ? details.user.middle_name + " " : ""
-              }${details.user.last_name}`;
+              const name = `${details.user.first_name} ${details.user.middle_name ? details.user.middle_name + " " : ""
+                }${details.user.last_name}`;
               return (
                 <div
                   key={details.id}
@@ -437,12 +436,12 @@ const OwnerSection = () => {
                     document={
                       details.document
                         ? {
-                            ...details.document,
-                            expire_date:
-                              details.document.expire_date instanceof Date
-                                ? details.document.expire_date.toISOString()
-                                : details.document.expire_date ?? null,
-                          }
+                          ...details.document,
+                          expire_date:
+                            details.document.expire_date instanceof Date
+                              ? details.document.expire_date.toISOString()
+                              : details.document.expire_date ?? null,
+                        }
                         : undefined
                     }
                     location={details.location}
@@ -480,9 +479,8 @@ const OwnerSection = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {users.map((details, index) => {
-              const name = `${details.user.first_name} ${
-                details.user.middle_name ? details.user.middle_name + " " : ""
-              }${details.user.last_name}`;
+              const name = `${details.user.first_name} ${details.user.middle_name ? details.user.middle_name + " " : ""
+                }${details.user.last_name}`;
               return (
                 <div
                   key={details.id}
@@ -490,43 +488,42 @@ const OwnerSection = () => {
                 >
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1">
-  <h3
-    className="font-semibold text-lg mb-1 text-ellipsis overflow-hidden"
-    style={{
-      display: "-webkit-box",
-      WebkitLineClamp: 1, // show only one line
-      WebkitBoxOrient: "vertical",
-      overflow: "hidden",
-    }}
-  >
-    {name.split(" ").length > 6 ? name.split(" ").slice(0, 6).join(" ") + "..." : name}
-  </h3>
+                      <h3
+                        className="font-semibold text-lg mb-1 text-ellipsis overflow-hidden"
+                        style={{
+                          display: "-webkit-box",
+                          WebkitLineClamp: 1, // show only one line
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {name.split(" ").length > 6 ? name.split(" ").slice(0, 6).join(" ") + "..." : name}
+                      </h3>
 
-  <p className="text-sm text-gray-600 mb-2">#{index + 1}</p>
-</div>
+                      <p className="text-sm text-gray-600 mb-2">#{index + 1}</p>
+                    </div>
 
                     <div
-                      className={`px-2 py-1 rounded text-xs font-medium ${
-                        details.user.emailVerified
+                      className={`px-2 py-1 rounded text-xs font-medium ${details.user.emailVerified
                           ? "bg-green-100 text-green-700"
                           : "bg-yellow-100 text-yellow-700"
-                      }`}
+                        }`}
                     >
                       {details.user.emailVerified
                         ? getTranslation(locale, {
-                            en: "Verified",
-                            es: "Verificado",
-                            ay: "Chiqachata",
-                            qu: "Kachkan",
-                            gn: "Oñemoneĩ",
-                          })
+                          en: "Verified",
+                          es: "Verificado",
+                          ay: "Chiqachata",
+                          qu: "Kachkan",
+                          gn: "Oñemoneĩ",
+                        })
                         : getTranslation(locale, {
-                            en: "Not Verified",
-                            es: "No verificado",
-                            ay: "Janiw chiqachatati",
-                            qu: "Manam kachkanchu",
-                            gn: "Ndoñemoneĩri",
-                          })}
+                          en: "Not Verified",
+                          es: "No verificado",
+                          ay: "Janiw chiqachatati",
+                          qu: "Manam kachkanchu",
+                          gn: "Ndoñemoneĩri",
+                        })}
                     </div>
                   </div>
 
@@ -557,13 +554,12 @@ const OwnerSection = () => {
                         })}
                       </span>
                       <span
-                        className={`font-medium ${
-                          details.status === "active"
+                        className={`font-medium ${details.status === "active"
                             ? "text-green-600"
                             : details.status === "pending"
-                            ? "text-yellow-600"
-                            : "text-red-600"
-                        }`}
+                              ? "text-yellow-600"
+                              : "text-red-600"
+                          }`}
                       >
                         {details.status}
                       </span>
@@ -618,12 +614,12 @@ const OwnerSection = () => {
                       document={
                         details.document
                           ? {
-                              ...details.document,
-                              expire_date:
-                                details.document.expire_date instanceof Date
-                                  ? details.document.expire_date.toISOString()
-                                  : details.document.expire_date ?? null,
-                            }
+                            ...details.document,
+                            expire_date:
+                              details.document.expire_date instanceof Date
+                                ? details.document.expire_date.toISOString()
+                                : details.document.expire_date ?? null,
+                          }
                           : undefined
                       }
                       location={details.location}
