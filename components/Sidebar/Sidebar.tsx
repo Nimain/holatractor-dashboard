@@ -97,7 +97,6 @@ const Sidebar = () => {
     "/Store": "Store",
     "/Farmers": "Farmer",
     "/Storetractors": "Storetractors",
-    // <<< ADDED
     "/Currency": "Currency",
     "/Package": "Package",
     "/Coupon": "Coupon",
@@ -387,103 +386,123 @@ const Sidebar = () => {
     },
   ];
 
-  const bookingList = [
-    {
-      icon: (
-        <Image
-          src={BookingIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Bookings"
-        />
-      ),
-      name: getTranslation(locale, {
-        en: "Bookings",
-        es: "Reservaciones",
-        ay: "Manq’asa",
-        qu: "Qhapaq ñakariy",
-        gn: "Tavisa",
-      }),
-      route: "/Bookings",
-    },
-    {
-      icon: (
-        <Image
-          src={LogIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Lease"
-        />
-      ),
-      name: getTranslation(locale, {
-        en: "Lease",
-        es: "Arrendamiento",
-        ay: "Uru purisiri",
-        qu: "Masi",
-        gn: "Ipotĩ",
-      }),
-      route: "/Lease",
-    },
-    {
-      icon: (
-        <Image
-          src={LogOutIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Share"
-        />
-      ),
-      name: getTranslation(locale, {
-        en: "Share",
-        es: "Compartir",
-        ay: "Ayniri",
-        qu: "Rimanakuy",
-        gn: "Mboja’aha",
-      }),
-      route: "#",
-    },
-    {
-      icon: (
-        <Image
-          src={SubcriptionsIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Subscriptions"
-        />
-      ),
-      name: getTranslation(locale, {
-        en: "Subscriptions",
-        es: "Suscripciones",
-        ay: "Churasa",
-        qu: "Qhatariynin",
-        gn: "Ñemity",
-      }),
-      route: "/Subscriptions",
-    },
-    {
-      icon: (
-        <Image
-          src={SubcriptionsIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Subscriptions"
-        />
-      ),
-      name: getTranslation(locale, {
-        en: "inquiry",
-        es: "",
-        ay: "",
-        qu: "",
-        gn: "",
-      }),
-      route: "/booking-inquiry",
-    },
-  ];
+ const bookingList = [
+  {
+    icon: (
+      <Image
+        src={BookingIcon || "/placeholder.svg"}
+        className="w-[20px] h-auto object-cover"
+        width={20}
+        height={20}
+        alt="Bookings"
+      />
+    ),
+    name: getTranslation(locale, {
+      en: "Bookings",
+      es: "Reservaciones",
+      ay: "Manq’asa",
+      qu: "Qhapaq ñakariy",
+      gn: "Tavisa",
+    }),
+    route: "/Bookings",
+  },
+  {
+    icon: (
+      <Image
+        src={LogIcon || "/placeholder.svg"}
+        className="w-[20px] h-auto object-cover"
+        width={20}
+        height={20}
+        alt="Lease"
+      />
+    ),
+    name: getTranslation(locale, {
+      en: "Lease",
+      es: "Arrendamiento",
+      ay: "Uru purisiri",
+      qu: "Masi",
+      gn: "Ipotĩ",
+    }),
+    route: "/Lease",
+  },
+  {
+    icon: (
+      <Image
+        src={LogOutIcon || "/placeholder.svg"}
+        className="w-[20px] h-auto object-cover"
+        width={20}
+        height={20}
+        alt="Share"
+      />
+    ),
+    name: getTranslation(locale, {
+      en: "Share",
+      es: "Compartir",
+      ay: "Ayniri",
+      qu: "Rimanakuy",
+      gn: "Mboja’aha",
+    }),
+    route: "#",
+  },
+  {
+    icon: (
+      <Image
+        src={SubcriptionsIcon || "/placeholder.svg"}
+        className="w-[20px] h-auto object-cover"
+        width={20}
+        height={20}
+        alt="Subscriptions"
+      />
+    ),
+    name: getTranslation(locale, {
+      en: "Subscriptions",
+      es: "Suscripciones",
+      ay: "Churasa",
+      qu: "Qhatariynin",
+      gn: "Ñemity",
+    }),
+    route: "/Subscriptions",
+  },
+  {
+    icon: (
+      <Image
+        src={SubcriptionsIcon || "/placeholder.svg"}
+        className="w-[20px] h-auto object-cover"
+        width={20}
+        height={20}
+        alt="Inquiry"
+      />
+    ),
+    name: getTranslation(locale, {
+      en: "Inquiry",
+      es: "Consulta",
+      ay: "Tapuy",
+      qu: "Tapuy",
+      gn: "Jeheka",
+    }),
+    route: "/booking-inquiry",
+  },
+  // IMPACT — LAST ITEM
+  {
+    icon: (
+      <Image
+        src={StatementsIcon || "/placeholder.svg"} // Replace with real Impact icon later
+        className="w-[20px] h-auto object-cover"
+        width={20}
+        height={20}
+        alt="Impact"
+      />
+    ),
+    name: getTranslation(locale, {
+      en: "Impact",
+      es: "Impacto",
+      ay: "Jach’a luraña",
+      qu: "Impacto",
+      gn: "Impacto",
+    }),
+    route: "/Impact",
+  },
+];
 
   // <<< ADDED: NEW DATA LIST FOR CREDIT SECTION
   const creditList = [

@@ -103,6 +103,8 @@ const ExpandedSidebar = () => {
     "/Package": "Package",
     "/Coupon": "Coupon",
     "/Purchase": "Purchase",
+        "/Impact": "Impact",
+
   };
 
   useEffect(() => {
@@ -501,6 +503,19 @@ const ExpandedSidebar = () => {
         gn: "",
       }),
       route: "/booking-inquiry",
+    },
+     {
+      icon: (
+        <Image
+          src={InvestorsIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Impact"
+        />
+      ),
+      name: getTranslation(locale, { en: "Impact", es: "Impacto", ay: "Amuyaña", qu: "Llaqiy", gn: "Ejecución" }),
+      route: "/Impact",
     },
   ];
 
