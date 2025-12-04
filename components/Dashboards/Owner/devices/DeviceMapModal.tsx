@@ -15,7 +15,6 @@ import {
   Truck,
   RefreshCw,
   Navigation,
-  Route,
   Zap,
   Radio,
   RadioIcon,
@@ -24,33 +23,36 @@ import {
   Globe,
 } from "lucide-react"
 import dynamic from "next/dynamic"
-import DeviceLocationService, { type DeviceLocationData, type LocationHistoryParams } from "@/utils/Axios/DeviceLocationService"
+import DeviceLocationService, {
+  type DeviceLocationData,
+  type LocationHistoryParams,
+} from "@/utils/Axios/DeviceLocationService"
 import { io, type Socket } from "socket.io-client"
 import React from "react"
+import { useLoadScript } from "@react-google-maps/api"
+import translations from "@/utils/Axios/translations"
 
-// Dynamically import Leaflet components to avoid SSR issues
-const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false })
-const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false })
-const Marker = dynamic(() => import("react-leaflet").then((mod) => mod.Marker), { ssr: false })
-const Popup = dynamic(() => import("react-leaflet").then((mod) => mod.Popup), { ssr: false })
-const Polyline = dynamic(() => import("react-leaflet").then((mod) => mod.Polyline), { ssr: false })
+const GoogleMap = dynamic(() => import("@react-google-maps/api").then((mod) => mod.GoogleMap), { ssr: false })
+const Marker = dynamic(() => import("@react-google-maps/api").then((mod) => mod.Marker), { ssr: false })
+const Polyline = dynamic(() => import("@react-google-maps/api").then((mod) => mod.Polyline), { ssr: false })
+const InfoWindow = dynamic(() => import("@react-google-maps/api").then((mod) => mod.InfoWindow), { ssr: false })
 
 interface Device {
-  id: string;
-  device_imei: string;
-  device_region: "SW" | "NE" | string; // Added device_region
+  id: string
+  device_imei: string
+  device_region: "SW" | "NE" | string
   base: {
-    status: number;
-  };
+    status: number
+  }
   tractorInStore: {
     baseTractor: {
-      name: string;
-      model: string;
-      images?: string[];
-    };
-    hourly_price: number;
-  };
-  updatedAt: string;
+      name: string
+      model: string
+      images?: string[]
+    }
+    hourly_price: number
+  }
+  updatedAt: string
 }
 
 interface DeviceMapModalProps {
@@ -79,9 +81,13 @@ interface LiveLocationData {
   created_at: string
 }
 
-type DateFilter = 'today' | 'yesterday' | 'week' | 'month' | 'custom';
+type DateFilter = "today" | "yesterday" | "week" | "month" | "custom"
 
 export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: DeviceMapModalProps) {
+  const { isLoaded } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyDjMCI0xj2Q-WTc9J7yWX-Mvh0DBM7oHbg",
+  })
+
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null)
   const [deviceLocations, setDeviceLocations] = useState<DeviceLocationData[]>([])
   const [currentLocation, setCurrentLocation] = useState<DeviceLocationData | null>(null)
@@ -95,150 +101,45 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
   const mapRef = useRef<any>(null)
   const [mapKey, setMapKey] = useState(0)
   const [mapStyle, setMapStyle] = useState<"osm" | "carto" | "transport">("transport")
-  
-  // Date filtering state
-  const [selectedFilter, setSelectedFilter] = useState<DateFilter>('today')
-  const [customStartDate, setCustomStartDate] = useState('')
-  const [customEndDate, setCustomEndDate] = useState('')
-  const [showDatePicker, setShowDatePicker] = useState(false)
+  const [selectedInfoWindow, setSelectedInfoWindow] = useState<string | null>(null)
 
-  const translations = {
-    en: {
-      title: "Device Location Tracking",
-      gettingLocation: "Getting Your Location...",
-      loadingDeviceLocation: "Loading Device Location...",
-      locationError: "Unable to get location",
-      tryAgain: "Try Again",
-      yourLocation: "Your Current Location",
-      deviceLocation: "Device Location",
-      accuracy: "Accuracy:",
-      refreshLocation: "Refresh Location",
-      loadDeviceLocation: "Load Device Location",
-      showRoute: "Show Route",
-      hideRoute: "Hide Route",
-      online: "Online",
-      offline: "Offline",
-      lastSeen: "Last seen:",
-      battery: "Battery",
-      speed: "Speed:",
-      course: "Course:",
-      altitude: "Altitude:",
-      satellites: "Satellites:",
-      hourlyRate: "Hourly Rate:",
-      startTracking: "Start Tracking",
-      viewDetails: "View Details",
-      model: "Model:",
-      imei: "IMEI:",
-      noLocationData: "No location data available",
-      locationHistory: "Location History",
-      startLiveTracking: "Start Live Tracking",
-      stopLiveTracking: "Stop Live Tracking",
-      liveTracking: "Live Tracking",
-      connected: "Connected",
-      disconnected: "Disconnected",
-      liveUpdates: "Live Updates:",
-      dateFilter: "Date Filter:",
-      today: "Today",
-      yesterday: "Yesterday",
-      week: "This Week",
-      month: "This Month",
-      custom: "Custom Range",
-      startDate: "Start Date",
-      endDate: "End Date",
-      applyFilter: "Apply Filter",
-      locationCount: "locations found",
-      filterUpdated: "Location history updated",
-      mapStyle: "Map Style:",
-      roads: "Roads",
-      streets: "Streets",
-      standard: "Standard",
-      region: "Region:",
-      coordinateSystem: "Coordinate System:",
-      southwest: "Southwest (Negative Coordinates)",
-      northeast: "Northeast (Positive Coordinates)",
-    },
-    es: {
-      title: "Seguimiento de Ubicación del Dispositivo",
-      gettingLocation: "Obteniendo Tu Ubicación...",
-      loadingDeviceLocation: "Cargando Ubicación del Dispositivo...",
-      locationError: "No se pudo obtener la ubicación",
-      tryAgain: "Intentar de Nuevo",
-      yourLocation: "Tu Ubicación Actual",
-      deviceLocation: "Ubicación del Dispositivo",
-      accuracy: "Precisión:",
-      refreshLocation: "Actualizar Ubicación",
-      loadDeviceLocation: "Cargar Ubicación del Dispositivo",
-      showRoute: "Mostrar Ruta",
-      hideRoute: "Ocultar Ruta",
-      online: "En línea",
-      offline: "Desconectado",
-      lastSeen: "Visto por última vez:",
-      battery: "Batería",
-      speed: "Velocidad:",
-      course: "Rumbo:",
-      altitude: "Altitud:",
-      satellites: "Satélites:",
-      hourlyRate: "Tarifa por Hora:",
-      startTracking: "Iniciar Seguimiento",
-      viewDetails: "Ver Detalles",
-      model: "Modelo:",
-      imei: "IMEI:",
-      noLocationData: "No hay datos de ubicación disponibles",
-      locationHistory: "Historial de Ubicación",
-      startLiveTracking: "Iniciar Seguimiento en Vivo",
-      stopLiveTracking: "Detener Seguimiento en Vivo",
-      liveTracking: "Seguimiento en Vivo",
-      connected: "Conectado",
-      disconnected: "Desconectado",
-      liveUpdates: "Actualizaciones en Vivo:",
-      dateFilter: "Filtro de Fecha:",
-      today: "Hoy",
-      yesterday: "Ayer",
-      week: "Esta Semana",
-      month: "Este Mes",
-      custom: "Rango Personalizado",
-      startDate: "Fecha de Inicio",
-      endDate: "Fecha de Fin",
-      applyFilter: "Aplicar Filtro",
-      locationCount: "ubicaciones encontradas",
-      filterUpdated: "Historial de ubicación actualizado",
-      mapStyle: "Estilo del Mapa:",
-      roads: "Carreteras",
-      streets: "Calles",
-      standard: "Estándar",
-      region: "Región:",
-      coordinateSystem: "Sistema de Coordenadas:",
-      southwest: "Suroeste (Coordenadas Negativas)",
-      northeast: "Noreste (Coordenadas Positivas)",
-    },
-  }
+  // Date filtering state
+  const [selectedFilter, setSelectedFilter] = useState<DateFilter>("today")
+  const [customStartDate, setCustomStartDate] = useState("")
+  const [customEndDate, setCustomEndDate] = useState("")
+  const [showDatePicker, setShowDatePicker] = useState(false)
 
   const t = translations[language]
 
   // Helper function to adjust live location coordinates based on device region
   const adjustLiveLocationCoordinates = (data: LiveLocationData, deviceRegion: string): LiveLocationData => {
-    let adjustedLat = data.lat;
-    let adjustedLon = data.lon;
+    let adjustedLat = data.lat
+    let adjustedLon = data.lon
 
     if (deviceRegion === "SW") {
-      adjustedLat = Math.abs(data.lat) * -1;
-      adjustedLon = Math.abs(data.lon) * -1;
+      adjustedLat = Math.abs(data.lat) * -1
+      adjustedLon = Math.abs(data.lon) * -1
     } else {
-      adjustedLat = Math.abs(data.lat);
-      adjustedLon = Math.abs(data.lon);
+      adjustedLat = Math.abs(data.lat)
+      adjustedLon = Math.abs(data.lon)
     }
 
     return {
       ...data,
       lat: adjustedLat,
-      lon: adjustedLon
-    };
-  };
+      lon: adjustedLon,
+    }
+  }
 
   // Socket.IO connection for live tracking
   useEffect(() => {
     if (open && device && isLiveTracking) {
-      console.log("[DeviceMapModal] Connecting to Socket.IO for live tracking, IMEI:", device.device_imei, "Region:", device.device_region);
+      // console.log(
+      //   "[DeviceMapModal] Connecting to Socket.IO for live tracking, IMEI:",
+      //   device.device_imei,
+      //   "Region:",
+      //   device.device_region,
+      // )
 
       const socketInstance = io("https://device.holatractor.com", {
         transports: ["websocket", "polling"],
@@ -258,7 +159,7 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
       })
 
       socketInstance.on("connect", () => {
-        console.log("[DeviceMapModal] Socket.IO connected successfully")
+        // console.log("[DeviceMapModal] Socket.IO connected successfully")
         socketInstance.emit("join-device", device.device_imei)
       })
 
@@ -271,12 +172,12 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
       })
 
       socketInstance.on("location-update", (data: LiveLocationData) => {
-        console.log("[DeviceMapModal] Received live location update:", data, "Device region:", device.device_region);
+        console.log("[DeviceMapModal] Received live location update:", data, "Device region:", device.device_region)
 
         if (data.imei === device.device_imei) {
           // Adjust coordinates based on device region
-          const adjustedData = adjustLiveLocationCoordinates(data, device.device_region);
-          
+          const adjustedData = adjustLiveLocationCoordinates(data, device.device_region)
+
           const newLocation: DeviceLocationData = {
             id: adjustedData._id.$oid,
             imei: adjustedData.imei,
@@ -290,14 +191,14 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
             created_at: adjustedData.created_at,
           }
 
-          console.log("[DeviceMapModal] Processed live location with region adjustment:", newLocation);
+          console.log("[DeviceMapModal] Processed live location with region adjustment:", newLocation)
 
           setCurrentLocation(newLocation)
           setDeviceLocations((prev) => [newLocation, ...prev.slice(0, 99)])
           setLiveLocationCount((prev) => prev + 1)
 
           if (mapRef.current && adjustedData.lat && adjustedData.lon) {
-            mapRef.current.setView([adjustedData.lat, adjustedData.lon], 15)
+            mapRef.current.panTo({ lat: adjustedData.lat, lng: adjustedData.lon })
           }
         }
       })
@@ -315,10 +216,15 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
   // Initialize map and load data when modal opens
   useEffect(() => {
     if (open && device) {
-      console.log("[DeviceMapModal] Modal opened with device IMEI:", device.device_imei, "Region:", device.device_region)
+      console.log(
+        "[DeviceMapModal] Modal opened with device IMEI:",
+        device.device_imei,
+        "Region:",
+        device.device_region,
+      )
       setMapLoaded(false) // Reset map loaded state
       setMapKey((prev) => prev + 1) // Force re-render of map
-      
+
       // Load locations first, then set map as loaded
       const initializeModal = async () => {
         getCurrentLocation()
@@ -328,7 +234,7 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
           setMapLoaded(true)
         }, 100)
       }
-      
+
       initializeModal()
     }
 
@@ -347,10 +253,11 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
     if (mapRef.current && currentLocation && currentLocation.lat && currentLocation.lon) {
       const lat = Number(currentLocation.lat)
       const lon = Number(currentLocation.lon)
-      
+
       if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0) {
         console.log("[DeviceMapModal] Auto-zooming to device location:", { lat, lon, region: device?.device_region })
-        mapRef.current.setView([lat, lon], 16) // Zoom closer to the device
+        mapRef.current.panTo({ lat, lng: lon })
+        mapRef.current.setZoom(16) // Zoom closer to the device
       }
     }
   }, [currentLocation, mapLoaded, device?.device_region])
@@ -411,32 +318,39 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
 
     setDeviceLoading(true)
     try {
-      console.log("[DeviceMapModal] Loading device location with filter:", selectedFilter, "for IMEI:", device.device_imei, "Region:", device.device_region);
+      console.log(
+        "[DeviceMapModal] Loading device location with filter:",
+        selectedFilter,
+        "for IMEI:",
+        device.device_imei,
+        "Region:",
+        device.device_region,
+      )
 
       let params: LocationHistoryParams = {}
 
       switch (selectedFilter) {
-        case 'today':
-          params = { filter: 'today' }
+        case "today":
+          params = { filter: "today" }
           break
-        case 'yesterday':
-          params = { filter: 'yesterday' }
+        case "yesterday":
+          params = { filter: "yesterday" }
           break
-        case 'week':
-          params = { filter: 'week' }
+        case "week":
+          params = { filter: "week" }
           break
-        case 'month':
-          params = { filter: 'month' }
+        case "month":
+          params = { filter: "month" }
           break
-        case 'custom':
+        case "custom":
           if (customStartDate && customEndDate) {
             params = { start_date: customStartDate, end_date: customEndDate }
           } else {
-            params = { filter: 'today' } // fallback to today
+            params = { filter: "today" } // fallback to today
           }
           break
         default:
-          params = { filter: 'today' }
+          params = { filter: "today" }
       }
 
       // Pass device region to the API service
@@ -460,14 +374,20 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
           lat_type: typeof current.lat,
           lon_type: typeof current.lon,
           lat_valid: current.lat && current.lat !== 0 && !isNaN(current.lat),
-          lon_valid: current.lon && current.lon !== 0 && !isNaN(current.lon)
+          lon_valid: current.lon && current.lon !== 0 && !isNaN(current.lon),
         })
       }
 
       // Set current location with validation
-      if (current && current.lat && current.lon && 
-          current.lat !== 0 && current.lon !== 0 && 
-          !isNaN(current.lat) && !isNaN(current.lon)) {
+      if (
+        current &&
+        current.lat &&
+        current.lon &&
+        current.lat !== 0 &&
+        current.lon !== 0 &&
+        !isNaN(current.lat) &&
+        !isNaN(current.lon)
+      ) {
         console.log("[DeviceMapModal] Setting valid current location with region adjustment:", current)
         setCurrentLocation(current)
       } else {
@@ -479,25 +399,29 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
       if (Array.isArray(history) && history.length > 0) {
         console.log("[DeviceMapModal] Processing location history with region adjustment, count:", history.length)
         console.log("[DeviceMapModal] First location sample (region-adjusted):", history[0])
-        
+
         const validLocations = history.filter((location, index) => {
-          const isValid = location.lat && location.lon && 
-                          location.lat !== 0 && location.lon !== 0 &&
-                          !isNaN(location.lat) && !isNaN(location.lon)
-          
+          const isValid =
+            location.lat &&
+            location.lon &&
+            location.lat !== 0 &&
+            location.lon !== 0 &&
+            !isNaN(location.lat) &&
+            !isNaN(location.lon)
+
           if (!isValid) {
             console.warn(`[DeviceMapModal] Invalid location at index ${index}:`, {
               lat: location.lat,
               lon: location.lon,
               region: device.device_region,
               lat_type: typeof location.lat,
-              lon_type: typeof location.lon
+              lon_type: typeof location.lon,
             })
           }
-          
+
           return isValid
         })
-        
+
         console.log("[DeviceMapModal] Valid locations after filtering and region adjustment:", validLocations.length)
         console.log("[DeviceMapModal] Sample valid locations:", validLocations.slice(0, 3))
         setDeviceLocations(validLocations)
@@ -516,7 +440,7 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
 
   const handleFilterChange = (filter: DateFilter) => {
     setSelectedFilter(filter)
-    if (filter !== 'custom') {
+    if (filter !== "custom") {
       setShowDatePicker(false)
     } else {
       setShowDatePicker(true)
@@ -564,30 +488,29 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
     }
 
     const validPoints = deviceLocations
-      .filter(location => location.lat && location.lon && location.lat !== 0 && location.lon !== 0)
-      .map(location => [Number(location.lat), Number(location.lon)] as [number, number])
+      .filter((location) => location.lat && location.lon && location.lat !== 0 && location.lon !== 0)
+      .map((location) => ({ lat: Number(location.lat), lng: Number(location.lon) }))
 
-    console.log("[DeviceMapModal] Route path points for filter:", selectedFilter, "Count:", validPoints.length, "Device region:", device?.device_region)
+    console.log(
+      "[DeviceMapModal] Route path points for filter:",
+      selectedFilter,
+      "Count:",
+      validPoints.length,
+      "Device region:",
+      device?.device_region,
+    )
     return validPoints
   }, [deviceLocations, selectedFilter, device?.device_region])
 
-  const getTileLayerConfig = () => {
+  const getMapStyleOptions = () => {
     switch (mapStyle) {
-      case "transport":
-        return {
-          url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        }
       case "carto":
-        return {
-          url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        }
+        return { mapTypeId: "terrain" }
+      case "osm":
+        return { mapTypeId: "satellite" }
+      case "transport":
       default:
-        return {
-          url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        }
+        return { mapTypeId: "roadmap" }
     }
   }
 
@@ -596,32 +519,56 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
     return null
   }
 
+  if (!isLoaded) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="flex items-center justify-center h-96">
+            <RefreshCw className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Loading Google Maps...</span>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
   const isOnline = device.base.status === 1
-  let mapCenter: [number, number] = [21.9368, 86.7441] // Default center (India)
+  let mapCenter: { lat: number; lng: number } = { lat: 21.9368, lng: 86.7441 } // Default center (India)
   let mapZoom = 15 // Default zoom
 
   // Determine map center with debugging and region awareness
   if (currentLocation && currentLocation.lat && currentLocation.lon) {
     const lat = Number(currentLocation.lat)
     const lon = Number(currentLocation.lon)
-    
-    console.log("[DeviceMapModal] Setting map center to current location (region-adjusted):", { lat, lon, region: device.device_region })
-    
+
+    console.log("[DeviceMapModal] Setting map center to current location (region-adjusted):", {
+      lat,
+      lon,
+      region: device.device_region,
+    })
+
     if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0) {
-      mapCenter = [lat, lon]
+      mapCenter = { lat, lng: lon }
       mapZoom = 16 // Zoom closer when device location is available
-      console.log("[DeviceMapModal] Map center set to:", mapCenter, "with zoom:", mapZoom, "for region:", device.device_region)
+      console.log(
+        "[DeviceMapModal] Map center set to:",
+        mapCenter,
+        "with zoom:",
+        mapZoom,
+        "for region:",
+        device.device_region,
+      )
     } else {
       console.warn("[DeviceMapModal] Invalid current location coordinates for map center:", { lat, lon })
     }
   } else if (userLocation) {
-    mapCenter = [userLocation.latitude, userLocation.longitude]
+    mapCenter = { lat: userLocation.latitude, lng: userLocation.longitude }
     mapZoom = 16 // Zoom closer for user location too
     console.log("[DeviceMapModal] Map centered on user location:", mapCenter, "with zoom:", mapZoom)
   } else {
     // Adjust default center based on device region
     if (device.device_region === "SW") {
-      mapCenter = [-21.9368, -86.7441] // Southwest coordinates (negative)
+      mapCenter = { lat: -21.9368, lng: -86.7441 } // Southwest coordinates (negative)
     }
     console.log("[DeviceMapModal] Using default map center for region", device.device_region, ":", mapCenter)
   }
@@ -629,17 +576,21 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
   console.log("[DeviceMapModal] Final render state:", {
     device_imei: device.device_imei,
     device_region: device.device_region,
-    currentLocation: currentLocation ? {
-      lat: currentLocation.lat,
-      lon: currentLocation.lon,
-      hasCoords: !!(currentLocation.lat && currentLocation.lon)
-    } : null,
+    currentLocation: currentLocation
+      ? {
+          lat: currentLocation.lat,
+          lon: currentLocation.lon,
+          hasCoords: !!(currentLocation.lat && currentLocation.lon),
+        }
+      : null,
     deviceLocationsCount: deviceLocations.length,
     mapCenter: mapCenter,
-    userLocation: userLocation ? {
-      lat: userLocation.latitude,
-      lon: userLocation.longitude
-    } : null
+    userLocation: userLocation
+      ? {
+          lat: userLocation.latitude,
+          lon: userLocation.longitude,
+        }
+      : null,
   })
 
   return (
@@ -663,9 +614,7 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
           </DialogTitle>
           <p className="text-sm text-muted-foreground">
             {device.tractorInStore.baseTractor?.name} - {device.tractorInStore.baseTractor?.model}
-            {device.device_imei && (
-              <span className="ml-2 font-mono text-xs">IMEI: {device.device_imei}</span>
-            )}
+            {device.device_imei && <span className="ml-2 font-mono text-xs">IMEI: {device.device_imei}</span>}
             {device.device_region && (
               <span className="ml-2 text-xs">
                 {t.region} {device.device_region === "SW" ? t.southwest : t.northeast}
@@ -709,7 +658,7 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
                       {device.device_region} {device.device_region === "SW" ? "(-)" : "(+)"}
                     </Badge>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <label className="text-sm font-medium">{t.mapStyle}</label>
                     <select
@@ -726,7 +675,7 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
               </div>
 
               {/* Custom Date Range */}
-              {showDatePicker && selectedFilter === 'custom' && (
+              {showDatePicker && selectedFilter === "custom" && (
                 <div className="flex items-center gap-4 p-3 bg-muted rounded-lg">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
@@ -759,7 +708,7 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
                   </Badge>
                   {selectedFilter && (
                     <Badge variant="secondary">
-                      {selectedFilter === 'custom' && customStartDate && customEndDate
+                      {selectedFilter === "custom" && customStartDate && customEndDate
                         ? `${customStartDate} to ${customEndDate}`
                         : t[selectedFilter as keyof typeof t] || selectedFilter}
                     </Badge>
@@ -801,54 +750,64 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
                     <span className="ml-2">Loading map...</span>
                   </div>
                 ) : (
-                  <MapContainer
+                  <GoogleMap
                     key={mapKey}
                     center={mapCenter}
                     zoom={mapZoom}
-                    style={{ height: "100%", width: "100%" }}
-                    ref={mapRef}
+                    mapContainerStyle={{ height: "100%", width: "100%" }}
+                    options={getMapStyleOptions()}
+                    onLoad={(map) => {
+                      mapRef.current = map
+                    }}
+                    onUnmount={() => {
+                      mapRef.current = null
+                    }}
                   >
-                    <TileLayer
-                      attribution={getTileLayerConfig().attribution}
-                      url={getTileLayerConfig().url}
-                      onError={() => {
-                        console.log("[DeviceMapModal] Primary tile layer failed, falling back")
-                      }}
-                    />
-
                     {/* User location marker */}
                     {userLocation && (
-                      <Marker position={[userLocation.latitude, userLocation.longitude]}>
-                        <Popup>
-                          <div className="text-center">
-                            <strong>{t.yourLocation}</strong>
-                            <br />
-                            <div className="text-xs">
-                              Lat: {userLocation.latitude.toFixed(6)}, Lon: {userLocation.longitude.toFixed(6)}
+                      <Marker
+                        position={{ lat: userLocation.latitude, lng: userLocation.longitude }}
+                        title={t.yourLocation}
+                        onClick={() => setSelectedInfoWindow("userLocation")}
+                      >
+                        {selectedInfoWindow === "userLocation" && (
+                          <InfoWindow onCloseClick={() => setSelectedInfoWindow(null)}>
+                            <div className="text-center text-xs">
+                              <strong>{t.yourLocation}</strong>
+                              <br />
+                              <div>
+                                Lat: {userLocation.latitude.toFixed(6)}, Lon: {userLocation.longitude.toFixed(6)}
+                              </div>
+                              {userLocation.accuracy && (
+                                <span className={getAccuracyColor(userLocation.accuracy)}>
+                                  {t.accuracy} {getAccuracyText(userLocation.accuracy)}
+                                </span>
+                              )}
                             </div>
-                            {userLocation.accuracy && (
-                              <span className={getAccuracyColor(userLocation.accuracy)}>
-                                {t.accuracy} {getAccuracyText(userLocation.accuracy)}
-                              </span>
-                            )}
-                          </div>
-                        </Popup>
+                          </InfoWindow>
+                        )}
                       </Marker>
                     )}
 
                     {/* Device current location marker */}
                     {currentLocation && currentLocation.lat && currentLocation.lon && (
-                      <Marker position={[Number(currentLocation.lat), Number(currentLocation.lon)]}>
-                        <Popup>
-                          <div className="text-center">
-                            <strong>{t.deviceLocation}</strong>
-                            <br />
-                            <div className="text-sm space-y-1">
-                              <div className="text-xs font-mono">
-                                Lat: {Number(currentLocation.lat).toFixed(6)}, Lon: {Number(currentLocation.lon).toFixed(6)}
+                      <Marker
+                        position={{ lat: Number(currentLocation.lat), lng: Number(currentLocation.lon) }}
+                        title={t.deviceLocation}
+                        onClick={() => setSelectedInfoWindow("deviceCurrent")}
+                      >
+                        {selectedInfoWindow === "deviceCurrent" && (
+                          <InfoWindow onCloseClick={() => setSelectedInfoWindow(null)}>
+                            <div className="text-center text-xs">
+                              <strong>{t.deviceLocation}</strong>
+                              <br />
+                              <div className="font-mono">
+                                Lat: {Number(currentLocation.lat).toFixed(6)}, Lon:{" "}
+                                {Number(currentLocation.lon).toFixed(6)}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {t.region} {device.device_region} {device.device_region === "SW" ? "(SW coords)" : "(NE coords)"}
+                                {t.region} {device.device_region}{" "}
+                                {device.device_region === "SW" ? "(SW coords)" : "(NE coords)"}
                               </div>
                               {currentLocation.speed && (
                                 <div>
@@ -864,47 +823,63 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
                                 {formatTime(currentLocation.timestamp || currentLocation.created_at)}
                               </div>
                             </div>
-                          </div>
-                        </Popup>
+                          </InfoWindow>
+                        )}
                       </Marker>
                     )}
 
                     {/* Route polyline */}
                     {showRoute && routePath.length > 1 && (
-                      <Polyline positions={routePath} color="blue" weight={3} opacity={0.7} smoothFactor={1} />
+                      <Polyline
+                        path={routePath}
+                        options={{
+                          strokeColor: "#0000FF",
+                          strokeWeight: 3,
+                          strokeOpacity: 0.7,
+                        }}
+                      />
                     )}
 
                     {/* Route history markers (showing first 10 points) */}
                     {showRoute &&
                       routePath.length > 0 &&
                       routePath.slice(0, 10).map((point, index) => (
-                        <Marker key={`route-point-${index}`} position={point}>
-                          <Popup>
-                            <div className="text-sm">
-                              <div>
-                                <strong>Route Point {index + 1}</strong>
+                        <Marker
+                          key={`route-point-${index}`}
+                          position={point}
+                          title={`Route Point ${index + 1}`}
+                          onClick={() => setSelectedInfoWindow(`routePoint-${index}`)}
+                        >
+                          {selectedInfoWindow === `routePoint-${index}` && (
+                            <InfoWindow onCloseClick={() => setSelectedInfoWindow(null)}>
+                              <div className="text-xs">
+                                <div>
+                                  <strong>Route Point {index + 1}</strong>
+                                </div>
+                                <div className="font-mono">
+                                  Lat: {point.lat.toFixed(6)}, Lon: {point.lng.toFixed(6)}
+                                </div>
+                                <div className="text-muted-foreground">
+                                  {t.region} {device.device_region}
+                                </div>
+                                {deviceLocations[index] && (
+                                  <>
+                                    <div>
+                                      {t.speed} {Number(deviceLocations[index].speed || 0).toFixed(1)} km/h
+                                    </div>
+                                    <div className="text-muted-foreground">
+                                      {formatTime(
+                                        deviceLocations[index].timestamp || deviceLocations[index].created_at,
+                                      )}
+                                    </div>
+                                  </>
+                                )}
                               </div>
-                              <div className="text-xs font-mono">
-                                Lat: {point[0].toFixed(6)}, Lon: {point[1].toFixed(6)}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {t.region} {device.device_region}
-                              </div>
-                              {deviceLocations[index] && (
-                                <>
-                                  <div>
-                                    {t.speed} {Number(deviceLocations[index].speed || 0).toFixed(1)} km/h
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {formatTime(deviceLocations[index].timestamp || deviceLocations[index].created_at)}
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          </Popup>
+                            </InfoWindow>
+                          )}
                         </Marker>
                       ))}
-                  </MapContainer>
+                  </GoogleMap>
                 )}
 
                 {/* Live tracking status indicator */}
@@ -1035,7 +1010,7 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
                       </Badge>
                     )}
                     <Badge variant="secondary" className="text-xs">
-                      {selectedFilter === 'custom' && customStartDate && customEndDate
+                      {selectedFilter === "custom" && customStartDate && customEndDate
                         ? `${customStartDate} to ${customEndDate}`
                         : t[selectedFilter as keyof typeof t] || selectedFilter}
                     </Badge>
@@ -1057,7 +1032,8 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
                   <p className="text-sm text-muted-foreground">{t.noLocationData}</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Try selecting a different date range or check if the device is active.
-                    {device.device_region === "SW" && " Note: This device uses SW region coordinates (negative values)."}
+                    {device.device_region === "SW" &&
+                      " Note: This device uses SW region coordinates (negative values)."}
                   </p>
                 </div>
               )}
