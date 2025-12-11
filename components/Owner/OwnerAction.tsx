@@ -334,7 +334,9 @@ const OwnerAction = ({
     <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 relative">
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
-          {icon}
+          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm">
+            {icon}
+          </div>
           <span className="text-sm font-medium text-gray-700">{title}</span>
         </div>
         <TrendingUp className="w-4 h-4 text-green-600" />
@@ -429,12 +431,12 @@ const OwnerAction = ({
                   src={
                     user?.image && user.image.trim() !== ""
                       ? user.image
-                      : "/pic.jpg"
+                      : "https://holaimagesdata.s3.us-west-2.amazonaws.com/web/vector-images/user_logo.webp"
                   }
                   alt={name}
                   width={64}
                   height={64}
-                  className="w-16 h-16 rounded-full object-cover"
+                  className="w-16 h-16 rounded-full object-cover border-2 border-gray-300"
                 />
                 <div>
                   <h2 className="text-xl font-semibold">{name}</h2>
@@ -559,7 +561,7 @@ const OwnerAction = ({
               <SheetTitle>Owner Activity - {name}</SheetTitle>
               <SheetDescription className="text-red-600">
                 {status === 1
-                  ? `${name} is an active operator`
+                  ? `${name} is an active owner`
                   : `${name} is inactive. Click "Active" to activate.`}
               </SheetDescription>
             </SheetHeader>
@@ -571,17 +573,12 @@ const OwnerAction = ({
                 <StatCard
                   icon={
                     <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
+                      className="w-5 h-5 text-orange-600"
+                      fill="currentColor"
                       viewBox="0 0 24 24"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                      />
+                      <path d="M20.5 8H19V5.5a1.5 1.5 0 0 0-1.5-1.5H14V2h-2v2H7v2h7.5a.5.5 0 0 1 .5.5V8H11c-1.1 0-2 .9-2 2v3.1A4.9 4.9 0 0 0 5 13a5 5 0 1 0 5 5h4a4 4 0 1 0 4-4h-1v-4h3.5V8zM5 20a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm13-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/>
+
                     </svg>
                   }
                   title="Total Tractor"
@@ -592,7 +589,7 @@ const OwnerAction = ({
                 <StatCard
                   icon={
                     <svg
-                      className="w-5 h-5"
+                      className="w-5 h-5 text-orange-600"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -613,7 +610,7 @@ const OwnerAction = ({
                 <StatCard
                   icon={
                     <svg
-                      className="w-5 h-5"
+                      className="w-5 h-5 text-orange-600"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -634,7 +631,7 @@ const OwnerAction = ({
                 <StatCard
                   icon={
                     <svg
-                      className="w-5 h-5"
+                      className="w-5 h-5 text-orange-600"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -655,7 +652,7 @@ const OwnerAction = ({
                 <StatCard
                   icon={
                     <svg
-                      className="w-5 h-5"
+                      className="w-5 h-5 text-orange-600"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -676,7 +673,7 @@ const OwnerAction = ({
                 <StatCard
                   icon={
                     <svg
-                      className="w-5 h-5"
+                      className="w-5 h-5 text-orange-600"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
