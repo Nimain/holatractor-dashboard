@@ -1,3 +1,4 @@
+// Updated FarmerAction with controlled open + hide trigger
 "use client";
 
 import { useState } from "react";
@@ -30,6 +31,11 @@ interface FarmerActionProps {
   status: number;
   id: string;
   onUpdate?: () => void;
+
+  // NEW CONTROLLED OPEN PROPS
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  showTrigger?: boolean;
 }
 
 const FarmerAction = ({
@@ -39,19 +45,28 @@ const FarmerAction = ({
   status,
   id,
   onUpdate,
+  open,
+  onOpenChange,
+  showTrigger = true,
 }: FarmerActionProps) => {
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
+
+  // Internal state for uncontrolled mode
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  // Controlled open value
+  const computedOpen = open !== undefined ? open : internalOpen;
+
+  const handleOpen = (val: boolean) => {
+    setInternalOpen(val);
+    onOpenChange?.(val);
+  };
+
   const [activeTab, setActiveTab] = useState("devices");
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [loading, setLoading] = useState({ delete: false, active: false, inactive: false });
 
-  const [loading, setLoading] = useState({
-    delete: false,
-    active: false,
-    inactive: false,
-  });
-
-  const [farmerActivityData] = useState({
+  const farmerActivityData = {
     activities: [
       { type: "comment", user: "Paul Sans", text: "tagged you in a comment", time: "Today 12:10 pm" },
       { type: "booking", user: "System", text: "completed a booking", time: "Today 11:30 am" },
@@ -85,14 +100,14 @@ const FarmerAction = ({
       { type: "Booked", land: "Land 1", payment: "$150", farmArea: "15 ha", bookedOn: "$15", status: "active" },
       { type: "Booked", land: "Land 1", payment: "$150", farmArea: "15 ha", bookedOn: "$15", status: "inactive" },
     ],
-  });
+  } as const;
 
   const tabs = [
     { id: "devices", label: "Devices" },
     { id: "booking", label: "Booking" },
     { id: "payment", label: "Payment" },
     { id: "forms", label: "Forms" },
-  ];
+  ] as const;
 
   const updateFarmerStatus = async (endpoint: string, type: keyof typeof loading, success: string) => {
     setLoading((prev) => ({ ...prev, [type]: true }));
@@ -118,24 +133,28 @@ const FarmerAction = ({
       </div>
       <div className="text-3xl font-bold text-gray-900 mb-1">{value}</div>
       <div className="text-xs text-gray-600">
-        {inUse !== undefined && `In use ${inUse} `}<span className="ml-2">Data as per {date}</span>
+        {inUse !== undefined && `In use ${inUse} `}
+        <span className="ml-2">Data as per {date}</span>
       </div>
     </div>
   );
 
   return (
-    <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-      <SheetTrigger asChild>
-        <button className="p-2 hover:bg-gray-100 rounded">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-          </svg>
-        </button>
-      </SheetTrigger>
+    <Sheet open={computedOpen} onOpenChange={handleOpen}>
+      {showTrigger && (
+        <SheetTrigger asChild>
+          <button className="p-2 hover:bg-gray-100 rounded" aria-label="Open farmer details">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </button>
+        </SheetTrigger>
+      )}
 
       <SheetContent side="right" className="w-full sm:max-w-[90vw] md:max-w-[80vw] lg:max-w-[85vw] xl:max-w-[1400px] p-0 overflow-hidden flex flex-col">
         <div className="flex h-full overflow-hidden">
+          {/* Left sidebar */}
           <div className="w-96 flex-shrink-0 bg-gray-50 p-6 overflow-y-auto border-r">
             <div className="bg-gray-100 rounded-lg p-6 mb-6">
               <div className="flex items-center gap-4 mb-4">
@@ -146,33 +165,22 @@ const FarmerAction = ({
                   <p className="text-sm text-gray-600">ID: {id.slice(0, 8)}...</p>
                 </div>
               </div>
+
               <div className="flex gap-2 mb-4">
-                <Button variant="outline" size="sm" className="flex-1">
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                  Call
-                </Button>
-                <Button variant="outline" size="sm" className="flex-1">
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  Mail
-                </Button>
+                <Button variant="outline" size="sm" className="flex-1">Call</Button>
+                <Button variant="outline" size="sm" className="flex-1">Mail</Button>
               </div>
+
               <p className="text-sm text-gray-600">Last Activity: {creatDate}</p>
             </div>
 
+            {/* Activities */}
             <div className="bg-white rounded-lg p-6 mb-6">
               <h3 className="text-lg font-semibold mb-4">Activities</h3>
               <div className="space-y-3">
                 {farmerActivityData.activities.map((activity, idx) => (
                   <div key={idx} className="flex gap-3 text-sm">
-                    <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center flex-shrink-0">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                      </svg>
-                    </div>
+                    <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center flex-shrink-0"></div>
                     <div>
                       <p><span className="font-medium">{activity.user}</span> {activity.text}</p>
                       <p className="text-gray-500 text-xs">{activity.time}</p>
@@ -182,16 +190,13 @@ const FarmerAction = ({
               </div>
             </div>
 
+            {/* Lease activities */}
             <div className="bg-white rounded-lg p-6">
               <h3 className="text-lg font-semibold mb-4">Lease Activities</h3>
               <div className="space-y-3">
                 {farmerActivityData.leaseActivities.map((lease, idx) => (
                   <div key={idx} className="flex gap-3 text-sm">
-                    <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center flex-shrink-0">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                      </svg>
-                    </div>
+                    <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center flex-shrink-0"></div>
                     <div>
                       <p><span className="font-medium">{lease.type}</span> {lease.item}</p>
                       <p className="text-gray-500 text-xs">{lease.time}</p>
@@ -202,6 +207,7 @@ const FarmerAction = ({
             </div>
           </div>
 
+          {/* MAIN SECTION */}
           <div className="flex-1 flex flex-col overflow-hidden">
             <SheetHeader className="p-6 border-b">
               <SheetTitle>Farmer Activity - {name}</SheetTitle>
@@ -211,13 +217,13 @@ const FarmerAction = ({
             </SheetHeader>
 
             <div className="flex-1 overflow-y-auto p-6">
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <StatCard icon={<svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} title="Active Bookings" value={farmerActivityData.stats.activeBookings.value} inUse={farmerActivityData.stats.activeBookings.inUse} date={farmerActivityData.stats.activeBookings.date} />
-                <StatCard icon={<svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} title="Complete Bookings" value={farmerActivityData.stats.completeBookings.value} date={farmerActivityData.stats.completeBookings.date} />
-                <StatCard icon={<svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} title="Total Land Area" value={farmerActivityData.stats.totalLandArea.value} date={farmerActivityData.stats.totalLandArea.date} />
-                <StatCard icon={<svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} title="Pending Bookings" value={farmerActivityData.stats.pendingBookings.value} inUse={farmerActivityData.stats.pendingBookings.inUse} date={farmerActivityData.stats.pendingBookings.date} />
-                <StatCard icon={<svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>} title="Active Forms" value={farmerActivityData.stats.activeForms.value} inUse={farmerActivityData.stats.activeForms.inUse} date={farmerActivityData.stats.activeForms.date} />
-                <StatCard icon={<svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>} title="Total Forms" value={farmerActivityData.stats.totalForms.value} date={farmerActivityData.stats.totalForms.date} />
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+                <StatCard icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} title="Active Bookings" value={farmerActivityData.stats.activeBookings.value} inUse={farmerActivityData.stats.activeBookings.inUse} date={farmerActivityData.stats.activeBookings.date} />
+                <StatCard icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} title="Complete Bookings" value={farmerActivityData.stats.completeBookings.value} date={farmerActivityData.stats.completeBookings.date} />
+                <StatCard icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} title="Total Land Area" value={farmerActivityData.stats.totalLandArea.value} date={farmerActivityData.stats.totalLandArea.date} />
+                <StatCard icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} title="Pending Bookings" value={farmerActivityData.stats.pendingBookings.value} inUse={farmerActivityData.stats.pendingBookings.inUse} date={farmerActivityData.stats.pendingBookings.date} />
+                <StatCard icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>} title="Active Forms" value={farmerActivityData.stats.activeForms.value} inUse={farmerActivityData.stats.activeForms.inUse} date={farmerActivityData.stats.activeForms.date} />
+                <StatCard icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>} title="Total Forms" value={farmerActivityData.stats.totalForms.value} date={farmerActivityData.stats.totalForms.date} />
               </div>
 
               <div className="bg-white rounded-lg">
