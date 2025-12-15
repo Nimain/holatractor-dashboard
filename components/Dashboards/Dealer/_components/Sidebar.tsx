@@ -28,6 +28,8 @@ import {
   LinkIcon,
   MessageSquare,
   Ticket,
+  Tractor,
+  MapPinned
 } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import HolaTractor from "../../../../assets/traclog.png"
@@ -38,6 +40,15 @@ const navigationItems = [
 ]
 
 const dropdownSections = [
+  {
+  icon: Tractor,
+  label: "Devices",
+  items: [
+    { icon: Tractor, label: "All Devices", href: "/dealer/devices/alldevices" },
+    { icon: MapPinned, label: "Tracking", href: "/dealer/devices/tracking" },
+  ],
+},
+
   {
     icon: Users,
     label: "Customer",

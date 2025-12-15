@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Sheet,
   SheetContent,
@@ -17,24 +15,64 @@ import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { useCookie } from "next-cookie";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { CircularProgress } from "@mui/material";
-import { CheckCircle, XCircle, Trash2, TrendingUp } from "lucide-react";
+import { Trash2, TrendingUp } from "lucide-react";
 import Image from "next/image";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 
-// Utils
-export function formatDateOnly(dateString?: string | null) {
-  if (!dateString) return "N/A";
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+// --- Interfaces for API Response ---
+interface Tractor {
+  id: string;
+  name: string;
+  brand?: string;
+  model?: string;
+  image?: string;
 }
 
-// Interfaces
+interface Booking {
+  id: string;
+  createdAt: string; // Booking date
+  total_amount: number; // Payment
+  bookingStatus: string; // "Open", "Arriving", "Started", "Completed", "Cancelled"
+  Tractor?: Tractor;
+  User?: {
+    first_name: string;
+    last_name: string;
+  };
+}
+
+interface Attachment {
+  id: string;
+  name: string;
+}
+
+interface Operator {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  image?: string;
+}
+
+interface Store {
+  id: string;
+  name: string;
+  description: string;
+  image: string;
+  opening_time: string;
+  closing_time: string;
+  owner_user_id: string;
+  createdAt: string;
+  // Relations
+  TractorInStore?: Tractor[];
+  AttachmentInStore?: Attachment[];
+  OperatorInStore?: Operator[];
+  Booking?: Booking[];
+}
+
+// --- Existing Interfaces ---
 interface UserDetails {
+  id?: string; // Added ID to user details for the API call
   first_name?: string | null;
   middle_name?: string | null;
   last_name?: string | null;
@@ -74,9 +112,9 @@ interface OwnerActionProps {
   creatDate: string;
   updateDate: string;
   status: number;
-  id: string;
+  id: string; // This is the Owner ID
   screenshots: string[];
-  user?: UserDetails;
+  user?: UserDetails; // This contains the User ID
   document?: DocumentDetails;
   location?: LocationDetails;
   onUpdate?: () => void;
@@ -102,6 +140,25 @@ const OwnerAction = ({
   const access_token = cookie.get("access_token");
   const [activeTab, setActiveTab] = useState("stores");
   const [sheetOpen, setSheetOpen] = useState(false);
+  
+  // State for fetched data
+  const [loadingData, setLoadingData] = useState(false);
+  const [storeData, setStoreData] = useState<Store[]>([]);
+  
+  // Calculated Stats State
+  const [stats, setStats] = useState({
+    totalStores: { value: 0, inUse: 0 },
+    totalTractor: { value: 0, inUse: 0 },
+    totalBookings: { value: 0, inUse: 0 },
+    totalAttachment: { value: 0, inUse: 0 },
+    totalOperators: { value: 0, inUse: 0 },
+    totalFarmers: { value: 0, inUse: 0 }, // Not provided in API yet, keeping 0
+  });
+
+  // Flattened lists for Tabs
+  const [flattenedBookings, setFlattenedBookings] = useState<Booking[]>([]);
+  const [flattenedOperators, setFlattenedOperators] = useState<any[]>([]);
+  const [flattenedDevices, setFlattenedDevices] = useState<any[]>([]);
 
   const { language: locale } = useSelector(
     (root: RootState) => root.ActiveLanguage
@@ -121,142 +178,112 @@ const OwnerAction = ({
     inactive: false,
   });
 
-  // Mock data for tabs - replace with actual API calls based on owner ID
-  const [ownerActivityData, setOwnerActivityData] = useState({
-    activities: [
-      {
-        type: "comment",
-        user: "Paul Sans",
-        text: "tagged you in a comment",
-        time: "Today 12:10 pm",
-      },
-      {
-        type: "comment",
-        user: "Paul Sans",
-        text: "tagged you in a comment",
-        time: "Today 12:10 pm",
-      },
-      {
-        type: "comment",
-        user: "Paul Sans",
-        text: "tagged you in a comment",
-        time: "Today 12:10 pm",
-      },
-    ],
-    purchases: [
-      { item: "New Holland 5053 Tractor", time: "Today 12:10 pm" },
-      { item: "New Holland 5053 Tractor", time: "Today 12:10 pm" },
-      { item: "New Holland 5053 Tractor", time: "Today 12:10 pm" },
-      { item: "New Holland 5053 Tractor", time: "Today 12:10 pm" },
-    ],
-    stats: {
-      totalTractor: { value: 20, inUse: 5, date: "20 Jul 2025" },
-      totalBookings: { value: 20, inUse: 5, date: "20 Jul 2025" },
-      totalStores: { value: 20, inUse: 5, date: "20 Jul 2025" },
-      totalAttachment: { value: 20, inUse: 5, date: "20 Jul 2025" },
-      totalOperators: { value: 20, inUse: 5, date: "20 Jul 2025" },
-      totalFarmers: { value: 20, inUse: 5, date: "20 Jul 2025" },
-    },
-    stores: [
-      {
-        name: "Paul Sans",
-        location: "Hola First Store",
-        email: "paulsans05@gmail.com",
-        hourly: "$15",
-        monthly: "$150",
-        job: "$120",
-        status: "active",
-      },
-      {
-        name: "Paul Sans",
-        location: "Hola First Store",
-        email: "paulsans05@gmail.com",
-        hourly: "$15",
-        monthly: "$150",
-        job: "$120",
-        status: "inactive",
-      },
-    ],
-    bookings: [
-      {
-        customer: "Paul Sans",
-        type: "Booked New",
-        tractor: "Holland 3032 Tractor",
-        payment: "$15",
-        date: "15 Nov 2025",
-        status: "paid",
-      },
-      {
-        customer: "Paul Sans",
-        type: "Booked New",
-        tractor: "Holland 3032 Tractor",
-        payment: "$15",
-        date: "18 Nov 2025",
-        status: "paid",
-      },
-    ],
-    payments: [
-      {
-        customer: "Paul Sans",
-        type: "Booked New",
-        tractor: "Holland 3032 Tractor",
-        payment: "$15",
-        booked: "$15",
-        status: "paid",
-      },
-      {
-        customer: "Paul Sans",
-        type: "Booked New",
-        tractor: "Holland 3032 Tractor",
-        payment: "$15",
-        booked: "$15",
-        status: "failed",
-      },
-    ],
-    operators: [
-      {
-        name: "Paul Sans",
-        location: "Hola First Store",
-        email: "paulsans05@gmail.com",
-        hourly: "$15",
-        monthly: "$150",
-        job: "$120",
-        status: "active",
-      },
-    ],
-    devices: [
-      {
-        name: "New Holland 3032",
-        type: "Tractor",
-        payment: "$15",
-        booked: "$15",
-        status: "active",
-      },
-    ],
-    subscriptions: [
-      {
-        type: "Purchased Store",
-        date: "08 Dec 2025",
-        price: "$150",
-        status: "active",
-      },
-      {
-        type: "Purchased",
-        item: "New Holland 3032 Tractor",
-        date: "08 Dec 2025",
-        price: "$105",
-        status: "active",
-      },
-    ],
-  });
+  // --- Fetch Data ---
+  const fetchOwnerStoreDetails = async () => {
+    if (!user?.id) return;
+    
+    setLoadingData(true);
+    try {
+      // Using the API endpoint provided
+      const response = await renderInstance.get(`/store/byowners?owner_user_id=${user.id}`, {
+        headers: { Authorization: `Bearer ${access_token}` },
+      });
+      
+      const stores: Store[] = response.data;
+      setStoreData(stores);
+      processStatsAndTabs(stores);
+
+    } catch (error) {
+      console.error("Error fetching store details:", error);
+      // Optional: errorMessage("Failed to load owner details");
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  // --- Process Data Logic ---
+  const processStatsAndTabs = (stores: Store[]) => {
+    // 1. Calculate Stats
+    const totalStoresCount = stores.length;
+
+    const totalTractorsCount = stores.reduce((sum, store) => {
+      return sum + (store.TractorInStore?.length || 0);
+    }, 0);
+
+    const totalAttachmentsCount = stores.reduce((sum, store) => {
+      return sum + (store.AttachmentInStore?.length || 0);
+    }, 0);
+
+    const totalBookingsCount = stores.reduce((sum, store) => {
+      return sum + (store.Booking?.length || 0);
+    }, 0);
+
+    const totalOperatorsCount = stores.reduce((sum, store) => {
+      return sum + (store.OperatorInStore?.length || 0);
+    }, 0);
+
+    // Calculate In Use (Active Bookings)
+    // Assuming status: Open, Arriving, Started, Accepted implies "In Use"
+    const activeStatus = ['Open', 'Arriving', 'Started', 'Accepted'];
+    
+    const tractorsInUseCount = stores.reduce((sum, store) => {
+        const activeBookings = store.Booking?.filter(b => 
+            activeStatus.includes(b.bookingStatus)
+        ) || [];
+        return sum + activeBookings.length;
+    }, 0);
+
+    // Update Stats State
+    setStats({
+        totalStores: { value: totalStoresCount, inUse: totalStoresCount }, // Stores are usually "active"
+        totalTractor: { value: totalTractorsCount, inUse: tractorsInUseCount },
+        totalBookings: { value: totalBookingsCount, inUse: tractorsInUseCount }, // Bookings active
+        totalAttachment: { value: totalAttachmentsCount, inUse: 0 }, // Logic for attachment usage not provided
+        totalOperators: { value: totalOperatorsCount, inUse: 0 }, // Logic for operator usage not provided
+        totalFarmers: { value: 0, inUse: 0 }, // Needs different API
+    });
+
+    // 2. Flatten Data for Tabs
+    
+    // Bookings
+    const allBookings = stores.flatMap(store => 
+        store.Booking?.map(b => ({...b, storeName: store.name})) || []
+    ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    setFlattenedBookings(allBookings);
+
+    // Operators
+    const allOperators = stores.flatMap(store => 
+        store.OperatorInStore?.map(op => ({...op, storeName: store.name})) || []
+    );
+    setFlattenedOperators(allOperators);
+
+    // Devices (Tractors)
+    const allDevices = stores.flatMap(store => 
+        store.TractorInStore?.map(t => ({...t, storeName: store.name, type: 'Tractor'})) || []
+    );
+    setFlattenedDevices(allDevices);
+  };
+
+  useEffect(() => {
+    if (sheetOpen) {
+        fetchOwnerStoreDetails();
+    }
+  }, [sheetOpen]);
+
+
+  // --- Helper Date Formatter ---
+  const formatDate = (dateString: string) => {
+    if(!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString(undefined, {
+        day: 'numeric', month: 'short', year: 'numeric'
+    });
+  };
 
   const tabs = [
     { id: "stores", label: "Stores" },
     { id: "booking", label: "Booking" },
-    { id: "payment", label: "Payment" },
     { id: "operator", label: "Operator" },
-    { id: "device", label: "Device" },
-    { id: "subscription", label: "Subscription" },
+    { id: "device", label: "Tractors" },
   ];
 
   const updateOwnerStatus = async (
@@ -277,58 +304,16 @@ const OwnerAction = ({
       onUpdate?.();
     } catch (err: any) {
       errorMessage(
-        err?.response?.data?.message ||
-          getTranslation(locale, {
-            en: "Try again",
-            es: "Inténtalo de nuevo",
-            ay: "Wasitat yant'aña",
-            qu: "Huk kutitapas ruway",
-            gn: "Eha jevy",
-          })
+        err?.response?.data?.message || "Something went wrong"
       );
     } finally {
       setLoading((prev) => ({ ...prev, [type]: false }));
     }
   };
 
-  const DeleteOwner = () =>
-    updateOwnerStatus(
-      `/owner/delete_owner/${id}`,
-      "delete",
-      getTranslation(locale, {
-        en: "Owner deleted successfully",
-        es: "Propietario eliminado exitosamente",
-        ay: "Jilata suma chhaqtayata",
-        qu: "Dueño allinta chinkachisqa",
-        gn: "Jára oñemboguete porã",
-      })
-    );
-
-  const ActiveOwner = () =>
-    updateOwnerStatus(
-      `/owner/activate_owner/${id}`,
-      "active",
-      getTranslation(locale, {
-        en: "Activated successfully",
-        es: "Activado exitosamente",
-        ay: "Suma ch'amanchata",
-        qu: "Allinta llamk'achisqa",
-        gn: "Oñemyendy porã",
-      })
-    );
-
-  const InactiveOwner = () =>
-    updateOwnerStatus(
-      `/owner/inactivate_owner/${id}`,
-      "inactive",
-      getTranslation(locale, {
-        en: "Inactivated successfully",
-        es: "Desactivado exitosamente",
-        ay: "Suma jani ch'amanchata",
-        qu: "Allinta sayachisqa",
-        gn: "Oñembogue porã",
-      })
-    );
+  const DeleteOwner = () => updateOwnerStatus(`/owner/delete_owner/${id}`, "delete", "Owner deleted");
+  const ActiveOwner = () => updateOwnerStatus(`/owner/activate_owner/${id}`, "active", "Activated successfully");
+  const InactiveOwner = () => updateOwnerStatus(`/owner/inactivate_owner/${id}`, "inactive", "Inactivated successfully");
 
   const StatCard = ({ icon, title, value, inUse, date }: any) => (
     <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 relative">
@@ -343,7 +328,8 @@ const OwnerAction = ({
       </div>
       <div className="text-3xl font-bold text-gray-900 mb-1">{value}</div>
       <div className="text-xs text-gray-600">
-        In use {inUse} <span className="ml-2">Data as per {date}</span>
+        Active/In-Use: {inUse} 
+        {/* <span className="ml-2">Data as per {date}</span> */}
       </div>
     </div>
   );
@@ -351,68 +337,26 @@ const OwnerAction = ({
   return (
     <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
       <SheetTrigger asChild>
+        {/* Trigger Row UI - Unchanged */}
         <div className="text-[18px] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer hover:bg-white transition-all duration-500">
           <p className="w-[100px]">{index + 1}</p>
           <p className="w-[140px] truncate" title={name}>
             {mailHover === index ? name : `${name.slice(0, 5)}...`}
           </p>
-          <p
-            className={`transition truncate ${
-              index === mailHover ? "w-fit" : "w-[140px]"
-            }`}
-            title={email}
-          >
+          <p className={`transition truncate ${index === mailHover ? "w-fit" : "w-[140px]"}`} title={email}>
             {mailHover === index ? email : `${email.slice(0, 5)}...`}
           </p>
-          <div
-            className={`px-[10px] text-[14px] py-[6px] ${
-              emailVerified ? "text-green-600" : "text-red-600"
-            } bg-[#dfe4e2] text-center w-[140px] rounded-full`}
-          >
-            {emailVerified
-              ? getTranslation(locale, {
-                  en: "Yes",
-                  es: "Sí",
-                  ay: "Jisa",
-                  qu: "Arí",
-                  gn: "Héẽ",
-                })
-              : getTranslation(locale, {
-                  en: "No",
-                  es: "No",
-                  ay: "Janiwa",
-                  qu: "Mana",
-                  gn: "Nahániri",
-                })}
+          <div className={`px-[10px] text-[14px] py-[6px] ${emailVerified ? "text-green-600" : "text-red-600"} bg-[#dfe4e2] text-center w-[140px] rounded-full`}>
+            {emailVerified ? "Yes" : "No"}
           </div>
-          <p
-            className={`px-[10px] text-[14px] py-[6px] ${
-              status === 1 ? "text-green-600" : "text-red-600"
-            } bg-[#dfe4e2] text-center w-[140px] rounded-full`}
-          >
-            {status === 1
-              ? getTranslation(locale, {
-                  en: "Active",
-                  es: "Activo",
-                  ay: "Ch'aman",
-                  qu: "Llamk'aq",
-                  gn: "Oiko",
-                })
-              : getTranslation(locale, {
-                  en: "Inactive",
-                  es: "Inactivo",
-                  ay: "Jani ch'aman",
-                  qu: "Mana llamk'aq",
-                  gn: "Ndoikói",
-                })}
+          <p className={`px-[10px] text-[14px] py-[6px] ${status === 1 ? "text-green-600" : "text-red-600"} bg-[#dfe4e2] text-center w-[140px] rounded-full`}>
+            {status === 1 ? "Active" : "Inactive"}
           </p>
           <p className="w-[180px] truncate" title={creatDate}>
             {mailHover === index ? creatDate : `${creatDate.slice(0, 12)}...`}
           </p>
           <p className="w-[180px] truncate" title={updateDate}>
-            {mailHover === index
-              ? updateDate
-              : `${updateDate.slice(0, 12)}...`}
+            {mailHover === index ? updateDate : `${updateDate.slice(0, 12)}...`}
           </p>
         </div>
       </SheetTrigger>
@@ -428,11 +372,7 @@ const OwnerAction = ({
             <div className="bg-gray-100 rounded-lg p-6 mb-6">
               <div className="flex items-center gap-4 mb-4">
                 <Image
-                  src={
-                    user?.image && user.image.trim() !== ""
-                      ? user.image
-                      : "https://holaimagesdata.s3.us-west-2.amazonaws.com/web/vector-images/user_logo.webp"
-                  }
+                  src={user?.image && user.image.trim() !== "" ? user.image : "https://holaimagesdata.s3.us-west-2.amazonaws.com/web/vector-images/user_logo.webp"}
                   alt={name}
                   width={64}
                   height={64}
@@ -440,261 +380,82 @@ const OwnerAction = ({
                 />
                 <div>
                   <h2 className="text-xl font-semibold">{name}</h2>
-                  <p className="text-sm text-gray-600">
-                    Created on {creatDate.split(",")[0]}
-                  </p>
+                  <p className="text-sm text-gray-600">Created on {creatDate.split(",")[0]}</p>
                   <p className="text-sm text-gray-600">ID: {id.slice(0, 8)}</p>
                 </div>
               </div>
               <div className="flex gap-2 mb-4">
-                <Button variant="outline" size="sm" className="flex-1">
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                    />
-                  </svg>
-                  Call
-                </Button>
-                <Button variant="outline" size="sm" className="flex-1">
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                    />
-                  </svg>
-                  Mail
-                </Button>
-              </div>
-              <p className="text-sm text-gray-600">
-                Last Activity: {creatDate}
-              </p>
-            </div>
-
-            {/* Activities */}
-            <div className="bg-white rounded-lg p-6 mb-6">
-              <h3 className="text-lg font-semibold mb-4">Activities</h3>
-              <div className="space-y-3">
-                {ownerActivityData.activities.map((activity, idx) => (
-                  <div key={idx} className="flex gap-3 text-sm">
-                    <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center flex-shrink-0">
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
-                        />
-                      </svg>
-                    </div>
-                    <div>
-                      <p>
-                        <span className="font-medium">{activity.user}</span>{" "}
-                        {activity.text}
-                      </p>
-                      <p className="text-gray-500 text-xs">{activity.time}</p>
-                    </div>
-                  </div>
-                ))}
+                 <Button variant="outline" size="sm" className="flex-1">Mail</Button>
               </div>
             </div>
 
-            {/* Purchase Activities */}
-            <div className="bg-white rounded-lg p-6">
-              <h3 className="text-lg font-semibold mb-4">
-                Purchase Activities
-              </h3>
+             {/* Store Summary List (Mini View) */}
+             <div className="bg-white rounded-lg p-6 mb-6">
+              <h3 className="text-lg font-semibold mb-4">Quick Stores</h3>
               <div className="space-y-3">
-                {ownerActivityData.purchases.map((purchase, idx) => (
-                  <div key={idx} className="flex gap-3 text-sm">
+                {loadingData ? <p className="text-sm text-gray-500">Loading stores...</p> : 
+                 storeData.slice(0, 5).map((store, idx) => (
+                  <div key={idx} className="flex gap-3 text-sm border-b pb-2">
                     <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center flex-shrink-0">
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-                        />
-                      </svg>
+                      <span className="font-bold text-gray-600">{idx+1}</span>
                     </div>
                     <div>
-                      <p>
-                        <span className="font-medium">Purchased</span>{" "}
-                        {purchase.item}
-                      </p>
-                      <p className="text-gray-500 text-xs">{purchase.time}</p>
+                      <p className="font-medium">{store.name}</p>
+                      <p className="text-gray-500 text-xs">Since: {formatDate(store.createdAt)}</p>
                     </div>
                   </div>
                 ))}
+                {storeData.length === 0 && !loadingData && <p className="text-sm text-gray-500">No stores found.</p>}
               </div>
             </div>
           </div>
 
           {/* Right Content - Scrollable */}
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Header */}
             <SheetHeader className="p-6 border-b">
               <SheetTitle>Owner Activity - {name}</SheetTitle>
               <SheetDescription className="text-red-600">
-                {status === 1
-                  ? `${name} is an active owner`
-                  : `${name} is inactive. Click "Active" to activate.`}
+                {status === 1 ? `${name} is an active owner` : `${name} is inactive.`}
               </SheetDescription>
             </SheetHeader>
 
-            {/* Main Content Area */}
             <div className="flex-1 overflow-y-auto p-6">
               {/* Stats Grid */}
               <div className="grid grid-cols-3 gap-4 mb-6">
                 <StatCard
-                  icon={
-                    <svg
-                      className="w-5 h-5 text-orange-600"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M20.5 8H19V5.5a1.5 1.5 0 0 0-1.5-1.5H14V2h-2v2H7v2h7.5a.5.5 0 0 1 .5.5V8H11c-1.1 0-2 .9-2 2v3.1A4.9 4.9 0 0 0 5 13a5 5 0 1 0 5 5h4a4 4 0 1 0 4-4h-1v-4h3.5V8zM5 20a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm13-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/>
-
-                    </svg>
-                  }
-                  title="Total Tractor"
-                  value={ownerActivityData.stats.totalTractor.value}
-                  inUse={ownerActivityData.stats.totalTractor.inUse}
-                  date={ownerActivityData.stats.totalTractor.date}
+                    icon={<svg className="w-5 h-5 text-orange-600" fill="currentColor" viewBox="0 0 24 24"><path d="M20.5 8H19V5.5a1.5 1.5 0 0 0-1.5-1.5H14V2h-2v2H7v2h7.5a.5.5 0 0 1 .5.5V8H11c-1.1 0-2 .9-2 2v3.1A4.9 4.9 0 0 0 5 13a5 5 0 1 0 5 5h4a4 4 0 1 0 4-4h-1v-4h3.5V8zM5 20a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm13-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg>}
+                    title="Total Tractors"
+                    value={loadingData ? "..." : stats.totalTractor.value}
+                    inUse={loadingData ? "..." : stats.totalTractor.inUse}
+                />
+                 <StatCard
+                    icon={<svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>}
+                    title="Total Bookings"
+                    value={loadingData ? "..." : stats.totalBookings.value}
+                    inUse={loadingData ? "..." : stats.totalBookings.inUse}
                 />
                 <StatCard
-                  icon={
-                    <svg
-                      className="w-5 h-5 text-orange-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
-                  }
-                  title="Total Bookings"
-                  value={ownerActivityData.stats.totalBookings.value}
-                  inUse={ownerActivityData.stats.totalBookings.inUse}
-                  date={ownerActivityData.stats.totalBookings.date}
+                    icon={<svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>}
+                    title="Total Stores"
+                    value={loadingData ? "..." : stats.totalStores.value}
+                    inUse={loadingData ? "..." : stats.totalStores.inUse}
                 />
-                <StatCard
-                  icon={
-                    <svg
-                      className="w-5 h-5 text-orange-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                      />
-                    </svg>
-                  }
-                  title="Total Stores"
-                  value={ownerActivityData.stats.totalStores.value}
-                  inUse={ownerActivityData.stats.totalStores.inUse}
-                  date={ownerActivityData.stats.totalStores.date}
+                 <StatCard
+                    icon={<svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>}
+                    title="Total Attachment"
+                    value={loadingData ? "..." : stats.totalAttachment.value}
+                    inUse={loadingData ? "..." : stats.totalAttachment.inUse}
                 />
-                <StatCard
-                  icon={
-                    <svg
-                      className="w-5 h-5 text-orange-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-                      />
-                    </svg>
-                  }
-                  title="Total Attachment"
-                  value={ownerActivityData.stats.totalAttachment.value}
-                  inUse={ownerActivityData.stats.totalAttachment.inUse}
-                  date={ownerActivityData.stats.totalAttachment.date}
-                />
-                <StatCard
-                  icon={
-                    <svg
-                      className="w-5 h-5 text-orange-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                      />
-                    </svg>
-                  }
-                  title="Total Operators"
-                  value={ownerActivityData.stats.totalOperators.value}
-                  inUse={ownerActivityData.stats.totalOperators.inUse}
-                  date={ownerActivityData.stats.totalOperators.date}
-                />
-                <StatCard
-                  icon={
-                    <svg
-                      className="w-5 h-5 text-orange-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                      />
-                    </svg>
-                  }
-                  title="Total Farmers"
-                  value={ownerActivityData.stats.totalFarmers.value}
-                  inUse={ownerActivityData.stats.totalFarmers.inUse}
-                  date={ownerActivityData.stats.totalFarmers.date}
+                 <StatCard
+                    icon={<svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>}
+                    title="Total Operators"
+                    value={loadingData ? "..." : stats.totalOperators.value}
+                    inUse={loadingData ? "..." : stats.totalOperators.inUse}
                 />
               </div>
 
               {/* Tabs */}
-              <div className="bg-white rounded-lg">
+              <div className="bg-white rounded-lg border">
                 <div className="border-b border-gray-200 px-6 flex items-center justify-between">
                   <div className="flex gap-1">
                     {tabs.map((tab) => (
@@ -711,441 +472,153 @@ const OwnerAction = ({
                       </button>
                     ))}
                   </div>
-                  <Button variant="outline" size="sm">
-                    Export
-                    <svg
-                      className="w-4 h-4 ml-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
-                      />
-                    </svg>
-                  </Button>
                 </div>
 
                 {/* Tab Content */}
                 <div className="p-6">
-                  {/* Stores Tab */}
-                  {activeTab === "stores" && (
-                    <div className="space-y-3">
-                      {ownerActivityData.stores.map((store, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                        >
-                          <div className="flex items-center gap-4">
-                            <svg
-                              className="w-8 h-8 text-gray-400"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                              />
-                            </svg>
-                            <div>
-                              <p className="font-medium">
-                                {store.name} at {store.location}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                {store.email}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                Pay per hour: {store.hourly} • Pay per month:{" "}
-                                {store.monthly} • Pay per job: {store.job}
-                              </p>
+                    {loadingData ? (
+                         <div className="flex justify-center p-8"><CircularProgress /></div>
+                    ) : (
+                        <>
+                        {/* Stores Tab */}
+                        {activeTab === "stores" && (
+                            <div className="space-y-3">
+                            {storeData.length === 0 ? <p className="text-gray-500 text-center">No stores found</p> : 
+                             storeData.map((store, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-gray-200 rounded-md overflow-hidden relative">
+                                        {store.image ? (
+                                            <Image src={store.image} alt={store.name} fill className="object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-gray-400">IMG</div>
+                                        )}
+                                    </div>
+                                    <div>
+                                    <p className="font-medium">{store.name}</p>
+                                    <p className="text-sm text-gray-600 line-clamp-1">{store.description}</p>
+                                    <p className="text-xs text-gray-500">
+                                        Created: {formatDate(store.createdAt)} • Owner: {name} • Contact: {email}
+                                    </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
+                                        Active
+                                    </span>
+                                </div>
+                                </div>
+                            ))}
                             </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span
-                              className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                store.status === "active"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-orange-100 text-orange-700"
-                              }`}
-                            >
-                              {store.status === "active"
-                                ? "Active"
-                                : "Inactive"}
-                            </span>
-                            <button className="p-2 hover:bg-gray-200 rounded">
-                              <Trash2 className="w-4 h-4 text-gray-600" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        )}
 
-                  {/* Booking Tab */}
-                  {activeTab === "booking" && (
-                    <div className="space-y-3">
-                      {ownerActivityData.bookings.map((booking, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                        >
-                          <div className="flex items-center gap-4">
-                            <svg
-                              className="w-8 h-8 text-gray-400"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                              />
-                            </svg>
-                            <div>
-                              <p className="font-medium">
-                                {booking.customer} {booking.type}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                {booking.tractor}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                Payment: {booking.payment} • Booked on{" "}
-                                {booking.date}
-                              </p>
+                        {/* Booking Tab */}
+                        {activeTab === "booking" && (
+                            <div className="space-y-3">
+                             {flattenedBookings.length === 0 ? <p className="text-gray-500 text-center">No bookings found</p> :
+                              flattenedBookings.map((booking, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                <div className="flex items-center gap-4">
+                                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                    <div>
+                                    <p className="font-medium">
+                                        {booking.User ? `${booking.User.first_name} ${booking.User.last_name}` : "Customer"} - Booking
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                        {booking.Tractor?.name || "Tractor"} ({booking.Tractor?.model || "N/A"})
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                        Payment: ${booking.total_amount || 0} • Date: {formatDate(booking.createdAt)}
+                                    </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                        booking.bookingStatus === 'Completed' || booking.bookingStatus === 'Paid' ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+                                    }`}>
+                                    {booking.bookingStatus}
+                                    </span>
+                                </div>
+                                </div>
+                            ))}
                             </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span
-                              className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                booking.status === "paid"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-orange-100 text-orange-700"
-                              }`}
-                            >
-                              {booking.status === "paid" ? "Paid" : "Failed"}
-                            </span>
-                            <button className="p-2 hover:bg-gray-200 rounded">
-                              <Trash2 className="w-4 h-4 text-gray-600" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        )}
 
-                  {/* Payment Tab */}
-                  {activeTab === "payment" && (
-                    <div className="space-y-3">
-                      {ownerActivityData.payments.map((payment, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                        >
-                          <div className="flex items-center gap-4">
-                            <svg
-                              className="w-8 h-8 text-gray-400"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                              />
-                            </svg>
-                            <div>
-                              <p className="font-medium">
-                                {payment.customer} {payment.type}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                {payment.tractor}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                Payment: {payment.payment} • Booked on:{" "}
-                                {payment.booked}
-                              </p>
+                        {/* Operator Tab */}
+                        {activeTab === "operator" && (
+                            <div className="space-y-3">
+                            {flattenedOperators.length === 0 ? <p className="text-gray-500 text-center">No operators found</p> :
+                             flattenedOperators.map((operator, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-500">
+                                        {operator.first_name?.charAt(0)}
+                                    </div>
+                                    <div>
+                                    <p className="font-medium">{operator.first_name} {operator.last_name}</p>
+                                    <p className="text-sm text-gray-600">{operator.email}</p>
+                                    <p className="text-xs text-gray-500">Store: {operator.storeName}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-700">
+                                        Linked
+                                    </span>
+                                </div>
+                                </div>
+                            ))}
                             </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span
-                              className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                payment.status === "paid"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-orange-100 text-orange-700"
-                              }`}
-                            >
-                              {payment.status === "paid" ? "Paid" : "Failed"}
-                            </span>
-                            <button className="p-2 hover:bg-gray-200 rounded">
-                              <Trash2 className="w-4 h-4 text-gray-600" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        )}
 
-                  {/* Operator Tab */}
-                  {activeTab === "operator" && (
-                    <div className="space-y-3">
-                      {ownerActivityData.operators.map((operator, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                        >
-                          <div className="flex items-center gap-4">
-                            <svg
-                              className="w-8 h-8 text-gray-400"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                              />
-                            </svg>
-                            <div>
-                              <p className="font-medium">
-                                {operator.name} at {operator.location}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                {operator.email}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                Pay per hour: {operator.hourly} • Pay per
-                                month: {operator.monthly} • Pay per job:{" "}
-                                {operator.job}
-                              </p>
+                        {/* Device / Tractor Tab */}
+                        {activeTab === "device" && (
+                            <div className="space-y-3">
+                            {flattenedDevices.length === 0 ? <p className="text-gray-500 text-center">No tractors found</p> :
+                             flattenedDevices.map((device, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                <div className="flex items-center gap-4">
+                                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                                    </svg>
+                                    <div>
+                                    <p className="font-medium">{device.name}</p>
+                                    <p className="text-sm text-gray-600">Model: {device.model || "N/A"}</p>
+                                    <p className="text-xs text-gray-500">
+                                        Store: {device.storeName}
+                                    </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
+                                        Active
+                                    </span>
+                                </div>
+                                </div>
+                            ))}
                             </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span
-                              className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                operator.status === "active"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-orange-100 text-orange-700"
-                              }`}
-                            >
-                              {operator.status === "active"
-                                ? "Active"
-                                : "Inactive"}
-                            </span>
-                            <button className="p-2 hover:bg-gray-200 rounded">
-                              <Trash2 className="w-4 h-4 text-gray-600" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Device Tab */}
-                  {activeTab === "device" && (
-                    <div className="space-y-3">
-                      {ownerActivityData.devices.map((device, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                        >
-                          <div className="flex items-center gap-4">
-                            <svg
-                              className="w-8 h-8 text-gray-400"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
-                              />
-                            </svg>
-                            <div>
-                              <p className="font-medium">{device.name}</p>
-                              <p className="text-sm text-gray-600">
-                                {device.type}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                Payment: {device.payment} • Booked on:{" "}
-                                {device.booked}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span
-                              className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                device.status === "active"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-orange-100 text-orange-700"
-                              }`}
-                            >
-                              {device.status === "active"
-                                ? "Active"
-                                : "Inactive"}
-                            </span>
-                            <button className="p-2 hover:bg-gray-200 rounded">
-                              <Trash2 className="w-4 h-4 text-gray-600" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Subscription Tab */}
-                  {activeTab === "subscription" && (
-                    <div className="space-y-3">
-                      {ownerActivityData.subscriptions.map(
-                        (subscription, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                          >
-                            <div className="flex items-center gap-4">
-                              {subscription.type === "Purchased Store" ? (
-                                <svg
-                                  className="w-8 h-8 text-gray-400"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                                  />
-                                </svg>
-                              ) : (
-                                <svg
-                                  className="w-8 h-8 text-gray-400"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                                  />
-                                </svg>
-                              )}
-                              <div>
-                                <p className="font-medium">
-                                  {subscription.type}
-                                </p>
-                                {subscription.item && (
-                                  <p className="text-sm text-gray-600">
-                                    {subscription.item}
-                                  </p>
-                                )}
-                                <p className="text-sm text-gray-600">
-                                  on {subscription.date}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  Price: {subscription.price}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <span
-                                className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                  subscription.status === "active"
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-orange-100 text-orange-700"
-                                }`}
-                              >
-                                {subscription.status === "active"
-                                  ? "Active"
-                                  : "Inactive"}
-                              </span>
-                              <button className="p-2 hover:bg-gray-200 rounded">
-                                <Trash2 className="w-4 h-4 text-gray-600" />
-                              </button>
-                            </div>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  )}
+                        )}
+                        </>
+                    )}
                 </div>
               </div>
             </div>
 
             {/* Footer Actions */}
             <SheetFooter className="flex justify-between items-center p-6 border-t mt-auto">
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={DeleteOwner}
-                disabled={loading.delete}
-              >
-                {loading.delete ? (
-                  <CircularProgress size={16} />
-                ) : (
-                  getTranslation(locale, {
-                    en: "Delete",
-                    es: "Eliminar",
-                    ay: "Chhaqtayaña",
-                    qu: "Chinkachiy",
-                    gn: "Mboguete",
-                  })
-                )}
+              <Button type="button" variant="destructive" onClick={DeleteOwner} disabled={loading.delete}>
+                {loading.delete ? <CircularProgress size={16} /> : "Delete"}
               </Button>
 
               <div className="flex gap-3">
                 {status === 1 ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={InactiveOwner}
-                    disabled={loading.inactive}
-                  >
-                    {loading.inactive ? (
-                      <CircularProgress size={16} />
-                    ) : (
-                      getTranslation(locale, {
-                        en: "Inactive",
-                        es: "Inactivo",
-                        ay: "Jani ch'aman",
-                        qu: "Mana llamk'aq",
-                        gn: "Ndoikói",
-                      })
-                    )}
+                  <Button type="button" variant="outline" onClick={InactiveOwner} disabled={loading.inactive}>
+                    {loading.inactive ? <CircularProgress size={16} /> : "Inactive"}
                   </Button>
                 ) : (
-                  <Button
-                    type="button"
-                    className="bg-green-800 hover:bg-green-700"
-                    onClick={ActiveOwner}
-                    disabled={loading.active}
-                  >
-                    {loading.active ? (
-                      <CircularProgress size={16} />
-                    ) : (
-                      getTranslation(locale, {
-                        en: "Active",
-                        es: "Activo",
-                        ay: "Ch'aman",
-                        qu: "Llamk'aq",
-                        gn: "Oiko",
-                      })
-                    )}
+                  <Button type="button" className="bg-green-800 hover:bg-green-700" onClick={ActiveOwner} disabled={loading.active}>
+                    {loading.active ? <CircularProgress size={16} /> : "Active"}
                   </Button>
                 )}
               </div>
