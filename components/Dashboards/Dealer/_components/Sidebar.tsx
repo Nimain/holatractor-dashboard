@@ -64,7 +64,7 @@ const dropdownSections = [
     items: [
       { icon: DollarSign, label: "Sales", href: "/dealer/leads/sells" },
       { icon: FileText, label: "Lease", href: "/dealer/leads/lease" },
-      { icon: Target, label: "Lead Scoring", href: "/dealer/sells" },
+      { icon: Target, label: "Lead Scoring", href: "/dealer/leads/leadscoring" },
       { icon: BarChart, label: "Conversion Rates", href:"/dealer/leads/conversion" },
     ],
   },
