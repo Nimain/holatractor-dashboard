@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { X } from "lucide-react";
 import { useCookie } from "next-cookie";
 import { Avatar, CircularProgress } from "@mui/material";
 import { useRouter } from "next/navigation";
@@ -102,216 +103,182 @@ const ProfileComponent = () => {
       </DialogTrigger>
 
       <DialogContent
-        className="bg-white max-h-[90vh] w-fit overflow-auto"
+        className="bg-white max-h-[90vh] w-full max-w-2xl overflow-hidden p-0"
         style={{ scrollbarWidth: "none" }}
       >
-        <DialogHeader>
-          <p className="text-2xl font-bold">Your Profile</p>
-        </DialogHeader>
+        {/* Header with background image */}
+        <div className="relative h-40 bg-gradient-to-r from-orange-400 to-orange-300">
+  <div 
+    className="absolute inset-0 bg-cover bg-center"
+    style={{
+      backgroundImage:
+        "url('https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&q=80')",
+      opacity: 0.9,
+    }}
+  />
+
+  {/* ✅ CLOSE BUTTON */}
+  <DialogClose asChild>
+    <button
+      className="absolute right-4 top-4 z-50 rounded-full bg-white/90 p-2 
+                 hover:bg-white transition"
+      aria-label="Close"
+    >
+      <X className="h-5 w-5 text-gray-800" />
+    </button>
+  </DialogClose>
+
+  <DialogHeader className="relative z-10 p-6">
+    <p className="text-2xl font-bold text-white">Your Profile</p>
+  </DialogHeader>
+
+  {/* Profile Image */}
+  <div className="absolute left-8 -bottom-16 z-30">
+    {user ? (
+      <Image
+        src={user.image ?? userImage}
+        alt={user.name}
+        width={120}
+        height={120}
+        className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
+      />
+    ) : (
+      <div
+        {...getRootProps()}
+        className="dropzone text-center border-dashed border-2 border-gray-300 p-6 rounded-full bg-white"
+      >
+        <input {...getInputProps()} />
+        {selectedImage ? (
+          <Image
+            src={selectedImage}
+            alt="Person icon"
+            width={120}
+            height={120}
+            className="w-32 h-32 object-cover rounded-full cursor-pointer border-4 border-white shadow-lg"
+          />
+        ) : (
+          <p className="text-gray-600 text-sm">Upload</p>
+        )}
+      </div>
+    )}
+  </div>
+</div>
+
 
         <div
-          className={`bg-white transition-all w-fit duration-500 h-fit max-h-[90vh] p-[30px] rounded-xl text-black text-[18px] flex flex-col gap-[10px] overflow-auto`}
+          className="bg-white transition-all duration-500 px-8 pb-8 pt-20 relative z-20 text-black flex flex-col gap-6"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="w-full flex flex-col gap-[20px] relative">
+          <div className="w-full flex flex-col gap-6">
 
-            <div className="flex items-center justify-center gap-[10px]">
-
+            {/* User Information - Centered with Labels */}
+            <div className="flex flex-col gap-3">
               {user ? (
-                <Image
-                  src={user.image ?? userImage}
-                  alt={user.name}
-                  width={80}
-                  height={80}
-                  className="w-20 aspect-square rounded-full object-cover"
-                />
+                <>
+                  <div className="flex items-center gap-2">
+                    <p className="text-base text-gray-600 font-medium">Name:</p>
+                    <h2 className="text-xl font-bold text-gray-900">{user.name}</h2>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <p className="text-base text-gray-600 font-medium">Email:</p>
+                    <p className="text-base text-gray-700">{user.email}</p>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <p className="text-base text-gray-600 font-medium">Mobile Number:</p>
+                    <p className="text-base text-gray-700">{`${user.country_code}${user.phone}`}</p>
+                  </div>
+                </>
               ) : (
-                <div
-                  {...getRootProps()}
-                  className="dropzone text-center border-dashed border-2 border-gray-300 p-6 rounded-md"
-                >
-                  <input {...getInputProps()} />
-                  {selectedImage ? (
-                    <Image
-                      src={selectedImage}
-                      alt="Person icon"
-                      width={80}
-                      height={80}
-                      className="w-[80px] h-[80px] object-cover rounded-full cursor-pointer"
-                    />
-                  ) : (
-                    <p className="text-gray-600">
-                      Drag 'n' drop an image here, or click to select one
-                    </p>
-                  )}
-                </div>
+                <>
+                  <div className="flex items-center gap-3 w-full max-w-md">
+                    <label htmlFor="create_profile_name" className="text-base font-medium text-gray-600 whitespace-nowrap">
+                      Name:
+                    </label>
+                    <div className="px-4 py-2 rounded-md border border-gray-300 flex-1">
+                      <input
+                        type="text"
+                        name="create_profile_name"
+                        id="create_profile_name"
+                        className="outline-none border-none w-full"
+                        placeholder="Enter your name"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 w-full max-w-md">
+                    <label htmlFor="create_profile_email" className="text-base font-medium text-gray-600 whitespace-nowrap">
+                      Email:
+                    </label>
+                    <div className="px-4 py-2 rounded-md border border-gray-300 flex-1">
+                      <input
+                        type="email"
+                        name="create_profile_email"
+                        id="create_profile_email"
+                        className="outline-none border-none w-full"
+                        placeholder="Enter your email"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 w-full max-w-md">
+                    <label htmlFor="create_profile_phone_number" className="text-base font-medium text-gray-600 whitespace-nowrap">
+                      Mobile Number:
+                    </label>
+                    <div className="px-4 py-2 rounded-md border border-gray-300 flex-1">
+                      <input
+                        type="text"
+                        name="create_profile_phone_number"
+                        id="create_profile_phone_number"
+                        className="outline-none border-none w-full"
+                        placeholder="Enter your mobile number"
+                      />
+                    </div>
+                  </div>
+                </>
               )}
             </div>
 
-            <div className="flex flex-col gap-[10px]">
-              {user ? (
-                <div className="flex gap-3">
-                  <label htmlFor="create_profile_name" className="w-fit">
-                    Name:
-                  </label>
-                  <input
-                    type="text"
-                    name="create_profile_name"
-                    id="create_profile_name"
-                    className="outline-none border-none w-full font-bold"
-                    value={user.name}
-                    readOnly={true}
-                  />
-                </div>
-              ) : (
-                <div className="flex flex-col gap-[4px]">
-                  <label htmlFor="create_profile_name" className="w-[150px]">
-                    Name:
-                  </label>
-                  <div className="px-[10px] py-[6px] rounded-md border border-black">
-                    <input
-                      type="text"
-                      name="create_profile_name"
-                      id="create_profile_name"
-                      className="outline-none border-none w-full"
-                    />
-                  </div>
-                </div>
-              )}
+            {/* Action Buttons */}
+            <div className="w-full flex items-center gap-4 mt-2">
+              <button
+                name="edit_profile_button"
+                className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white text-base font-semibold rounded-md flex-1 transition-colors"
+                onClick={() => {
+                  setDialogOpen(false)
+                }}
+              >
+                Edit Profile
+              </button>
 
-              {user ? (
-                <div className="flex gap-3">
-                  <label htmlFor="create_profile_email" className="w-fit">
-                    Email:
-                  </label>
-                  <input
-                    type="email"
-                    name="create_profile_email"
-                    id="create_profile_email"
-                    className="outline-none border-none w-full font-bold"
-                    value={user.email}
-                  />
-                  <p
-                    className={`${
-                      user.email_varified ? "text-green-400" : "text-red-400"
-                    } cursor-pointer`}
-                    onClick={() => {
-                      !user.email_varified && handleEmailVerification();
-                    }}
-                  >
-                    {user.email_varified ? "verified" : "unverified"}
-                  </p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-[4px]">
-                  <label htmlFor="create_profile_email" className="w-[150px]">
-                    Email:
-                  </label>
-                  <div className="px-[10px] py-[6px] rounded-md border border-black">
-                    <input
-                      type="email"
-                      name="create_profile_email"
-                      id="create_profile_email"
-                      className="outline-none border-none w-full"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {user ? (
-                <div className="flex gap-3">
-                  <label
-                    htmlFor="create_profile_phone_number"
-                    className="w-fit whitespace-nowrap"
-                  >
-                    Phone number:
-                  </label>
-                  <input
-                    type="text"
-                    name="create_profile_phone_number"
-                    id="create_profile_phone_number"
-                    className="outline-none w-full font-bold"
-                    value={`${user.country_code} ${user.phone}`}
-                    readOnly={true}
-                  />
-                  <p
-                    className={`${
-                      user.phone_verified ? "text-green-400" : "text-red-400"
-                    } cursor-pointer`}
-                  >
-                    unverified
-                  </p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-[4px]">
-                  <label
-                    htmlFor="create_profile_phone_number"
-                    className="w-[150px]"
-                  >
-                    Phone number:
-                  </label>
-                  <div className="px-[10px] py-[6px] rounded-md border border-black">
-                    <input
-                      type="text"
-                      name="create_profile_phone_number"
-                      id="create_profile_phone_number"
-                      className="outline-none border-none w-full"
-                    />
-                  </div>
-                </div>
-              )}
+              <button
+                name="log_out_button"
+                className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white text-base font-semibold rounded-md flex-1 transition-colors"
+                onClick={() => {
+                  handleLogInLogOut();
+                }}
+              >
+                {user ? "Log Out" : "Log In"}
+              </button>
             </div>
-          </div>
 
-          <div className="w-full flex items-center justify-center gap-[20px]">
-            <button
-              name="log_out_button"
-              className="px-[16px] py-[8px] bg-black text-white text-[18px] rounded flex items-center justify-center gap-[10px] w-fit"
-              onClick={() => {
-                setDialogOpen(false)
-              }}
-            >
-              Update
-            </button>
+            {/* Referral Code and Social Media */}
+            <div className="w-full flex flex-col gap-4 mt-4 pt-4 border-t border-gray-200">
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-sm text-gray-500">Your Referral Code</p>
+                <p className="text-xl font-bold text-gray-900">0xxxxxx</p>
+              </div>
 
-            <button
-              name="log_out_button"
-              className="px-[16px] py-[8px] bg-black text-white text-[18px] rounded flex items-center justify-center gap-[10px] w-fit"
-              onClick={() => {
-                handleLogInLogOut();
-              }}
-            >
-              {user ? "Log out" : "Log in"}
-            </button>
-          </div>
-
-          <div className="w-full flex items-center justify-between gap-[20px]">
-            <p>
-              Your referel code is: <span className="font-[600]">0xxxxxx</span>
-            </p>
-
-            <div className="flex items-center gap-[20px] text-black">
-              <WhatsAppIcon />
-              <InstagramIcon />
-              <TwitterIcon />
-              <FacebookIcon />
+              <div className="flex items-center justify-center gap-6 text-gray-600">
+                <WhatsAppIcon className="cursor-pointer hover:text-green-500 transition-colors" fontSize="large" />
+                <InstagramIcon className="cursor-pointer hover:text-pink-500 transition-colors" fontSize="large" />
+                <TwitterIcon className="cursor-pointer hover:text-blue-400 transition-colors" fontSize="large" />
+                <FacebookIcon className="cursor-pointer hover:text-blue-600 transition-colors" fontSize="large" />
+              </div>
             </div>
           </div>
         </div>
-
-        <DialogFooter>
-          <DialogClose asChild>
-            <button
-              name="add_task_cancel_button"
-              className="bg-red-200 text-red-600 font-semibold px-5 py-2 rounded-md"
-              onClick={() => {
-                setDialogOpen(false);
-              }}
-            >
-              Close
-            </button>
-          </DialogClose>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
