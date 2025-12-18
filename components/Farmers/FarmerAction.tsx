@@ -123,7 +123,8 @@ const FarmerAction = ({
   };
 
   const StatCard = ({ icon, title, value, inUse, date }: any) => (
-    <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4">
+    <div className="bg-gradient-to-br from-zinc-100 via-zinc-50 to-zinc-200
+ rounded-lg p-4">
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
           <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm">{icon}</div>
