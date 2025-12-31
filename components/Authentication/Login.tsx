@@ -130,6 +130,18 @@ const LogInPage = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // ✅ FRONTEND VALIDATION
+  if (!email.trim()) {
+    errorMessage("Email is required");
+    return;
+  }
+
+  if (!passwrd.trim()) {
+    errorMessage("Password is required");
+    return;
+  }
+
     setLoading(true);
 
     const encryptedPassword = CryptoJS.AES.encrypt(

@@ -15,7 +15,7 @@ import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { useCookie } from "next-cookie";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { CircularProgress } from "@mui/material";
-import { Trash2, TrendingUp, Phone, Mail, Download, MessageSquare, Menu, X } from "lucide-react";
+import { Trash2, TrendingUp, Phone, Mail, Download, MessageSquare, Menu, X, CheckCircle, XCircle, Clock } from "lucide-react";
 import Image from "next/image";
 
 // --- Interfaces for API Response ---
@@ -39,19 +39,15 @@ interface Booking {
   bookingStatus: string;
   user_id: string;
   store_id: string;
-
-  // ✅ ADDED (from API)
   user?: {
     first_name?: string;
     last_name?: string;
   };
-
   tractor?: {
     name?: string;
     model?: string;
   };
 }
-
 
 interface BaseAttachment {
   id: string;
@@ -95,6 +91,31 @@ interface Store {
   AttachmentInStore?: AttachmentInStore[];
   OperatorInStore?: OperatorInStore[];
   Booking?: Booking[];
+}
+
+// --- New Interfaces for Subscription & Payment ---
+interface Subscription {
+  id: string;
+  owner_id: string;
+  plan_name?: string;
+  status: string;
+  start_date?: string;
+  end_date?: string;
+  amount?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface Payment {
+  id: string;
+  amount: number;
+  status: string;
+  payment_method?: string;
+  transaction_id?: string;
+  createdAt: string;
+  booking_id?: string;
+  user_id?: string;
+  description?: string;
 }
 
 // --- Props Interfaces ---
@@ -168,6 +189,12 @@ const OwnerAction = ({
   const [loadingData, setLoadingData] = useState(false);
   const [storeData, setStoreData] = useState<Store[]>([]);
 
+  // NEW: State for subscription and payments
+  const [subscriptionData, setSubscriptionData] = useState<Subscription | null>(null);
+  const [paymentsData, setPaymentsData] = useState<Payment[]>([]);
+  const [loadingSubscription, setLoadingSubscription] = useState(false);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+
   // Calculated Stats State
   const [stats, setStats] = useState({
     totalStores: { value: 0, inUse: 0 },
@@ -193,7 +220,7 @@ const OwnerAction = ({
     inactive: false,
   });
 
-  // --- Fetch Data ---
+  // --- Fetch Store Data ---
   const fetchOwnerStoreDetails = async () => {
     if (!user?.id) {
       errorMessage("User ID is missing");
@@ -208,7 +235,7 @@ const OwnerAction = ({
       });
 
       const stores: Store[] = response.data;
-      
+
       if (!Array.isArray(stores)) {
         errorMessage("Invalid data format received");
         return;
@@ -220,6 +247,53 @@ const OwnerAction = ({
       errorMessage(error?.response?.data?.message || "Failed to load owner details");
     } finally {
       setLoadingData(false);
+    }
+  };
+
+  // NEW: Fetch Subscription Data
+  const fetchSubscriptionData = async () => {
+    if (!user?.id) {
+      errorMessage("User ID is missing");
+      return;
+    }
+
+    setLoadingSubscription(true);
+    try {
+      const apiUrl = `/subscription/owner_verify/${user.id}`;
+      const response = await renderInstance.get(apiUrl, {
+        headers: { Authorization: `Bearer ${access_token}` },
+      });
+
+      setSubscriptionData(response.data);
+    } catch (error: any) {
+      console.error("Subscription fetch error:", error);
+      setSubscriptionData(null);
+    } finally {
+      setLoadingSubscription(false);
+    }
+  };
+
+  // NEW: Fetch Payments Data
+  const fetchPaymentsData = async () => {
+    if (!user?.id) {
+      errorMessage("User ID is missing");
+      return;
+    }
+
+    setLoadingPayments(true);
+    try {
+      const apiUrl = `/admin/owners/${user.id}/payments`;
+      const response = await renderInstance.get(apiUrl, {
+        headers: { Authorization: `Bearer ${access_token}` },
+      });
+
+      const payments = Array.isArray(response.data) ? response.data : [];
+      setPaymentsData(payments);
+    } catch (error: any) {
+      console.error("Payments fetch error:", error);
+      setPaymentsData([]);
+    } finally {
+      setLoadingPayments(false);
     }
   };
 
@@ -253,24 +327,18 @@ const OwnerAction = ({
     });
 
     const allBookings = stores
-  .flatMap(
-    (store) =>
-      store.Booking?.map((b) => ({
-        ...b,
-        storeName: store.name,
-
-        // ✅ dynamic customer name from API
-        customerName: b.user
-          ? `${b.user.first_name ?? ""} ${b.user.last_name ?? ""}`.trim() || "N/A"
-          : "N/A",
-
-        // ✅ dynamic tractor name from API
-        tractorName: b.tractor?.name || "N/A",
-      })) || []
-  )
-  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-setFlattenedBookings(allBookings);
+      .flatMap(
+        (store) =>
+          store.Booking?.map((b) => ({
+            ...b,
+            storeName: store.name,
+            customerName: b.user
+              ? `${b.user.first_name ?? ""} ${b.user.last_name ?? ""}`.trim() || "N/A"
+              : "N/A",
+            tractorName: b.tractor?.name || "N/A",
+          })) || []
+      )
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     setFlattenedBookings(allBookings);
 
@@ -305,8 +373,19 @@ setFlattenedBookings(allBookings);
   useEffect(() => {
     if (sheetOpen) {
       fetchOwnerStoreDetails();
+      fetchSubscriptionData();
+      fetchPaymentsData();
     }
   }, [sheetOpen]);
+
+  useEffect(() => {
+    if (sheetOpen && activeTab === "subscription" && !subscriptionData) {
+      fetchSubscriptionData();
+    }
+    if (sheetOpen && activeTab === "payment" && paymentsData.length === 0) {
+      fetchPaymentsData();
+    }
+  }, [activeTab, sheetOpen]);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
@@ -314,6 +393,17 @@ setFlattenedBookings(allBookings);
       day: "numeric",
       month: "short",
       year: "numeric",
+    });
+  };
+
+  const formatDateTime = (dateString: string) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleString(undefined, {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -389,9 +479,8 @@ setFlattenedBookings(allBookings);
                 <p className="text-xs text-gray-600 truncate max-w-[150px]">{email}</p>
               </div>
             </div>
-            <div className={`px-2 py-1 text-xs ${
-              status === 1 ? "text-green-600" : "text-red-600"
-            } bg-[#dfe4e2] rounded-full`}>
+            <div className={`px-2 py-1 text-xs ${status === 1 ? "text-green-600" : "text-red-600"
+              } bg-[#dfe4e2] rounded-full`}>
               {status === 1 ? "Active" : "Inactive"}
             </div>
           </div>
@@ -404,13 +493,11 @@ setFlattenedBookings(allBookings);
             <p className={`transition truncate ${index === mailHover ? "w-fit" : "w-[140px]"}`} title={email}>
               {mailHover === index ? email : `${email.slice(0, 5)}...`}
             </p>
-            <div className={`px-[10px] text-[14px] py-[6px] ${
-                emailVerified ? "text-green-600" : "text-red-600"
+            <div className={`px-[10px] text-[14px] py-[6px] ${emailVerified ? "text-green-600" : "text-red-600"
               } bg-[#dfe4e2] text-center w-[140px] rounded-full`}>
               {emailVerified ? "Yes" : "No"}
             </div>
-            <p className={`px-[10px] text-[14px] py-[6px] ${
-                status === 1 ? "text-green-600" : "text-red-600"
+            <p className={`px-[10px] text-[14px] py-[6px] ${status === 1 ? "text-green-600" : "text-red-600"
               } bg-[#dfe4e2] text-center w-[140px] rounded-full`}>
               {status === 1 ? "Active" : "Inactive"}
             </p>
@@ -426,7 +513,6 @@ setFlattenedBookings(allBookings);
 
       <SheetContent side="right" className="w-full sm:max-w-[95vw] p-0 overflow-hidden flex flex-col bg-gray-50">
         <div className="flex h-full overflow-hidden relative">
-          {/* Mobile Sidebar Toggle */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-lg"
@@ -434,7 +520,6 @@ setFlattenedBookings(allBookings);
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
 
-          {/* Sidebar */}
           <div className={`
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
             lg:translate-x-0
@@ -513,7 +598,6 @@ setFlattenedBookings(allBookings);
             </div>
           </div>
 
-          {/* Overlay for mobile */}
           {sidebarOpen && (
             <div
               className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
@@ -521,7 +605,6 @@ setFlattenedBookings(allBookings);
             />
           )}
 
-          {/* Main Content */}
           <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
             <SheetHeader className="p-4 sm:p-6 bg-white border-b">
               <SheetTitle className="text-lg sm:text-xl truncate">{name}</SheetTitle>
@@ -532,9 +615,11 @@ setFlattenedBookings(allBookings);
 
             <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
+
+
                 <StatCard
                   icon={
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" fill="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 sm:w-5 text-orange-600" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M20.5 8H19V5.5a1.5 1.5 0 0 0-1.5-1.5H14V2h-2v2H7v2h7.5a.5.5 0 0 1 .5.5V8H11c-1.1 0-2 .9-2 2v3.1A4.9 4.9 0 0 0 5 13a5 5 0 1 0 5 5h4a4 4 0 1 0 4-4h-1v-4h3.5V8zM5 20a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm13-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0z" />
                     </svg>
                   }
@@ -576,6 +661,9 @@ setFlattenedBookings(allBookings);
                   inUse={loadingData ? "..." : stats.totalAttachment.inUse}
                   dataDate="20 Jul 2025"
                 />
+
+
+
                 <StatCard
                   icon={
                     <svg className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -607,11 +695,10 @@ setFlattenedBookings(allBookings);
                       <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`px-3 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                          activeTab === tab.id
+                        className={`px-3 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.id
                             ? "border-black text-black"
                             : "border-transparent text-gray-600 hover:text-gray-900"
-                        }`}
+                          }`}
                       >
                         {tab.label}
                       </button>
@@ -624,187 +711,304 @@ setFlattenedBookings(allBookings);
                 </div>
 
                 <div className="p-3 sm:p-6">
-                  {loadingData ? (
-                    <div className="flex justify-center p-8">
-                      <CircularProgress />
+                  {activeTab === "stores" && (
+                    <div className="space-y-3">
+                      {loadingData ? (
+                        <div className="flex justify-center p-8">
+                          <CircularProgress />
+                        </div>
+                      ) : storeData.length === 0 ? (
+                        <p className="text-gray-500 text-center text-sm">No stores found</p>
+                      ) : (
+                        storeData.map((store, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-3"
+                          >
+                            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 rounded-md overflow-hidden relative flex-shrink-0">
+                                {store.image ? (
+                                  <Image
+                                    src={store.image}
+                                    alt={store.name}
+                                    fill
+                                    className="object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                                    IMG
+                                  </div>
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-medium text-sm sm:text-base truncate">{store.name}</p>
+                                <p className="text-xs sm:text-sm text-gray-600 truncate">{store.description}</p>
+                                <p className="text-xs text-gray-500">Created: {formatDate(store.createdAt)}</p>
+                              </div>
+                            </div>
+                            <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 cursor-pointer hover:text-red-500 flex-shrink-0" />
+                          </div>
+                        ))
+                      )}
                     </div>
-                  ) : (
-                    <>
-                      {activeTab === "stores" && (
-                        <div className="space-y-3">
-                          {storeData.length === 0 ? (
-                            <p className="text-gray-500 text-center text-sm">No stores found</p>
-                          ) : (
-                            storeData.map((store, idx) => (
-                              <div
-                                key={idx}
-                                className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-3"
-                              >
-                                <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 rounded-md overflow-hidden relative flex-shrink-0">
-                                    {store.image ? (
-                                      <Image
-                                        src={store.image}
-                                        alt={store.name}
-                                        fill
-                                        className="object-cover"
-                                      />
-                                    ) : (
-                                      <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                                        IMG
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="font-medium text-sm sm:text-base truncate">{store.name}</p>
-                                    <p className="text-xs sm:text-sm text-gray-600 truncate">{store.description}</p>
-                                    <p className="text-xs text-gray-500">Created: {formatDate(store.createdAt)}</p>
-                                  </div>
-                                </div>
-                                <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 cursor-pointer hover:text-red-500 flex-shrink-0" />
+                  )}
+
+                  {activeTab === "booking" && (
+                    <div className="space-y-3">
+                      {loadingData ? (
+                        <div className="flex justify-center p-8">
+                          <CircularProgress />
+                        </div>
+                      ) : flattenedBookings.length === 0 ? (
+                        <p className="text-gray-500 text-center text-sm">No bookings found</p>
+                      ) : (
+                        flattenedBookings.map((booking, idx) => (
+                          <div
+                            key={idx}
+                            className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-3"
+                          >
+                            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 w-full sm:w-auto">
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 rounded-md flex items-center justify-center flex-shrink-0">
+                                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M20.5 8H19V5.5a1.5 1.5 0 0 0-1.5-1.5H14V2h-2v2H7v2h7.5a.5.5 0 0 1 .5.5V8H11c-1.1 0-2 .9-2 2v3.1A4.9 4.9 0 0 0 5 13a5 5 0 1 0 5 5h4a4 4 0 1 0 4-4h-1v-4h3.5V8zM5 20a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm13-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0z" />
+                                </svg>
                               </div>
-                            ))
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-sm sm:text-base truncate">{booking.tractorName}</p>
+                                <p className="text-xs sm:text-sm text-gray-600 truncate">Customer: {booking.customerName}</p>
+                                <p className="text-xs text-gray-500 truncate">Store: {booking.storeName}</p>
+                                <p className="text-xs text-gray-500">
+                                  Booked: {formatDate(booking.createdAt)} • ${booking.total_cost}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                              <span className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap ${['Open', 'Arriving', 'Started', 'Accepted', 'Arrived'].includes(booking.bookingStatus)
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-gray-100 text-gray-700"
+                                }`}>
+                                {booking.bookingStatus}
+                              </span>
+                              <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 cursor-pointer hover:text-red-500 flex-shrink-0" />
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {activeTab === "payment" && (
+                    <div className="space-y-3">
+                      {loadingPayments ? (
+                        <div className="flex justify-center p-8">
+                          <CircularProgress />
+                        </div>
+                      ) : paymentsData.length === 0 ? (
+                        <p className="text-gray-500 text-center text-sm">No payment records available</p>
+                      ) : (
+                        paymentsData.map((payment, idx) => (
+                          <div
+                            key={idx}
+                            className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-3"
+                          >
+                            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 w-full sm:w-auto">
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-md flex items-center justify-center flex-shrink-0">
+                                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-sm sm:text-base">${payment.amount}</p>
+                                <p className="text-xs sm:text-sm text-gray-600 truncate">
+                                  {payment.payment_method || "N/A"} {payment.transaction_id ? `• ${payment.transaction_id}` : ""}
+                                </p>
+                                {payment.description && (
+                                  <p className="text-xs text-gray-500 truncate">{payment.description}</p>
+                                )}
+                                <p className="text-xs text-gray-500">{formatDateTime(payment.createdAt)}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                              <span className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap ${payment.status === "completed" || payment.status === "success"
+                                  ? "bg-green-100 text-green-700"
+                                  : payment.status === "pending"
+                                    ? "bg-yellow-100 text-yellow-700"
+                                    : "bg-red-100 text-red-700"
+                                }`}>
+                                {payment.status}
+                              </span>
+                              <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 cursor-pointer hover:text-red-500 flex-shrink-0" />
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {activeTab === "operator" && (
+                    <div className="space-y-3">
+                      {loadingData ? (
+                        <div className="flex justify-center p-8">
+                          <CircularProgress />
+                        </div>
+                      ) : flattenedOperators.length === 0 ? (
+                        <p className="text-gray-500 text-center text-sm">No operators found</p>
+                      ) : (
+                        flattenedOperators.map((operator, idx) => (
+                          <div
+                            key={idx}
+                            className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-3"
+                          >
+                            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 w-full sm:w-auto">
+                              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-500 flex-shrink-0">
+                                O
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-sm sm:text-base truncate">{operator.name}</p>
+                                <p className="text-xs sm:text-sm text-gray-600">Cost/Job: ${operator.cost_per_job}</p>
+                                <p className="text-xs text-gray-500 truncate">Store: {operator.storeName}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                              <span
+                                className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap ${operator.status === "Active"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-gray-100 text-gray-700"
+                                  }`}
+                              >
+                                {operator.status}
+                              </span>
+                              <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 cursor-pointer hover:text-red-500 flex-shrink-0" />
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {activeTab === "device" && (
+                    <div className="space-y-3">
+                      {loadingData ? (
+                        <div className="flex justify-center p-8">
+                          <CircularProgress />
+                        </div>
+                      ) : flattenedDevices.length === 0 ? (
+                        <p className="text-gray-500 text-center text-sm">No devices found</p>
+                      ) : (
+                        flattenedDevices.map((device, idx) => (
+                          <div
+                            key={idx}
+                            className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-3"
+                          >
+                            <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 w-full sm:w-auto">
+                              {device.image ? (
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 relative rounded-md overflow-hidden flex-shrink-0">
+                                  <Image
+                                    src={device.image}
+                                    alt={device.name}
+                                    fill
+                                    className="object-cover"
+                                  />
+                                </div>
+                              ) : (
+                                <svg className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M20.5 8H19V5.5a1.5 1.5 0 0 0-1.5-1.5H14V2h-2v2H7v2h7.5a.5.5 0 0 1 .5.5V8H11c-1.1 0-2 .9-2 2v3.1A4.9 4.9 0 0 0 5 13a5 5 0 1 0 5 5h4a4 4 0 1 0 4-4h-1v-4h3.5V8zM5 20a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm13-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0z" />
+                                </svg>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-sm sm:text-base truncate">{device.name}</p>
+                                <p className="text-xs sm:text-sm text-gray-600 truncate">Model: {device.model}</p>
+                                <p className="text-xs text-gray-500 truncate">Store: {device.storeName}</p>
+                                <p className="text-xs text-gray-500">${device.hourly_price}/hr</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                              <span className="px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-green-100 text-green-700 whitespace-nowrap">
+                                Listed
+                              </span>
+                              <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 cursor-pointer hover:text-red-500 flex-shrink-0" />
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {activeTab === "subscription" && (
+                    <div className="space-y-3">
+                      {loadingSubscription ? (
+                        <div className="flex justify-center p-8">
+                          <CircularProgress />
+                        </div>
+                      ) : !subscriptionData ? (
+                        <div className="text-center p-8 bg-gray-50 rounded-lg">
+                          <XCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                          <p className="text-gray-500 text-sm">No active subscription found</p>
+                        </div>
+                      ) : (
+                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6">
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+                                <CheckCircle className="w-6 h-6 text-white" />
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-semibold text-gray-900">
+                                  {subscriptionData.plan_name || "Subscription Plan"}
+                                </h3>
+                                <p className="text-sm text-gray-600">
+                                  ID: {subscriptionData.id.slice(0, 12)}...
+                                </p>
+                              </div>
+                            </div>
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${subscriptionData.status === "active"
+                                ? "bg-green-100 text-green-700"
+                                : subscriptionData.status === "pending"
+                                  ? "bg-yellow-100 text-yellow-700"
+                                  : "bg-red-100 text-red-700"
+                              }`}>
+                              {subscriptionData.status}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                            {subscriptionData.amount && (
+                              <div className="bg-white rounded-lg p-4">
+                                <p className="text-xs text-gray-600 mb-1">Amount</p>
+                                <p className="text-xl font-bold text-gray-900">${subscriptionData.amount}</p>
+                              </div>
+                            )}
+
+                            {subscriptionData.start_date && (
+                              <div className="bg-white rounded-lg p-4">
+                                <p className="text-xs text-gray-600 mb-1">Start Date</p>
+                                <p className="text-sm font-medium text-gray-900">{formatDate(subscriptionData.start_date)}</p>
+                              </div>
+                            )}
+
+                            {subscriptionData.end_date && (
+                              <div className="bg-white rounded-lg p-4">
+                                <p className="text-xs text-gray-600 mb-1">End Date</p>
+                                <p className="text-sm font-medium text-gray-900">{formatDate(subscriptionData.end_date)}</p>
+                              </div>
+                            )}
+
+                            {subscriptionData.createdAt && (
+                              <div className="bg-white rounded-lg p-4">
+                                <p className="text-xs text-gray-600 mb-1">Created</p>
+                                <p className="text-sm font-medium text-gray-900">{formatDate(subscriptionData.createdAt)}</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {subscriptionData.updatedAt && (
+                            <p className="text-xs text-gray-600">
+                              Last updated: {formatDateTime(subscriptionData.updatedAt)}
+                            </p>
                           )}
                         </div>
                       )}
-
-                      {activeTab === "booking" && (
-                        <div className="space-y-3">
-                          {flattenedBookings.length === 0 ? (
-                            <p className="text-gray-500 text-center text-sm">No bookings found</p>
-                          ) : (
-                            flattenedBookings.map((booking, idx) => (
-                              <div
-                                key={idx}
-                                className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-3"
-                              >
-                                <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 w-full sm:w-auto">
-                                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 rounded-md flex items-center justify-center flex-shrink-0">
-                                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" fill="currentColor" viewBox="0 0 24 24">
-                                      <path d="M20.5 8H19V5.5a1.5 1.5 0 0 0-1.5-1.5H14V2h-2v2H7v2h7.5a.5.5 0 0 1 .5.5V8H11c-1.1 0-2 .9-2 2v3.1A4.9 4.9 0 0 0 5 13a5 5 0 1 0 5 5h4a4 4 0 1 0 4-4h-1v-4h3.5V8zM5 20a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm13-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0z" />
-                                    </svg>
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <p className="font-medium text-sm sm:text-base truncate">{booking.tractorName}</p>
-                                    <p className="text-xs sm:text-sm text-gray-600 truncate">Customer: {booking.customerName}</p>
-                                    <p className="text-xs text-gray-500 truncate">
-                                      Store: {booking.storeName}
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                      Booked: {formatDate(booking.createdAt)} • ${booking.total_cost}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                                  <span className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap ${
-                                    ['Open', 'Arriving', 'Started', 'Accepted', 'Arrived'].includes(booking.bookingStatus)
-                                      ? "bg-green-100 text-green-700"
-                                      : "bg-gray-100 text-gray-700"
-                                  }`}>
-                                    {booking.bookingStatus}
-                                  </span>
-                                  <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 cursor-pointer hover:text-red-500 flex-shrink-0" />
-                                </div>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      )}
-
-                      {activeTab === "payment" && (
-                        <div className="space-y-3">
-                          <p className="text-gray-500 text-center text-sm">No payment records available</p>
-                        </div>
-                      )}
-
-                      {activeTab === "operator" && (
-                        <div className="space-y-3">
-                          {flattenedOperators.length === 0 ? (
-                            <p className="text-gray-500 text-center text-sm">No operators found</p>
-                          ) : (
-                            flattenedOperators.map((operator, idx) => (
-                              <div
-                                key={idx}
-                                className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-3"
-                              >
-                                <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 w-full sm:w-auto">
-                                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-500 flex-shrink-0">
-                                    O
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <p className="font-medium text-sm sm:text-base truncate">{operator.name}</p>
-                                    <p className="text-xs sm:text-sm text-gray-600">Cost/Job: ${operator.cost_per_job}</p>
-                                    <p className="text-xs text-gray-500 truncate">Store: {operator.storeName}</p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                                  <span
-                                    className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap ${
-                                      operator.status === "Active"
-                                        ? "bg-blue-100 text-blue-700"
-                                        : "bg-gray-100 text-gray-700"
-                                    }`}
-                                  >
-                                    {operator.status}
-                                  </span>
-                                  <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 cursor-pointer hover:text-red-500 flex-shrink-0" />
-                                </div>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      )}
-
-                      {activeTab === "device" && (
-                        <div className="space-y-3">
-                          {flattenedDevices.length === 0 ? (
-                            <p className="text-gray-500 text-center text-sm">No devices found</p>
-                          ) : (
-                            flattenedDevices.map((device, idx) => (
-                              <div
-                                key={idx}
-                                className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors gap-3"
-                              >
-                                <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 w-full sm:w-auto">
-                                  {device.image ? (
-                                    <div className="w-10 h-10 sm:w-12 sm:h-12 relative rounded-md overflow-hidden flex-shrink-0">
-                                      <Image
-                                        src={device.image}
-                                        alt={device.name}
-                                        fill
-                                        className="object-cover"
-                                      />
-                                    </div>
-                                  ) : (
-                                    <svg className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                                      <path d="M20.5 8H19V5.5a1.5 1.5 0 0 0-1.5-1.5H14V2h-2v2H7v2h7.5a.5.5 0 0 1 .5.5V8H11c-1.1 0-2 .9-2 2v3.1A4.9 4.9 0 0 0 5 13a5 5 0 1 0 5 5h4a4 4 0 1 0 4-4h-1v-4h3.5V8zM5 20a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm13-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0z" />
-                                    </svg>
-                                  )}
-                                  <div className="min-w-0 flex-1">
-                                    <p className="font-medium text-sm sm:text-base truncate">{device.name}</p>
-                                    <p className="text-xs sm:text-sm text-gray-600 truncate">Model: {device.model}</p>
-                                    <p className="text-xs text-gray-500 truncate">Store: {device.storeName}</p>
-                                    <p className="text-xs text-gray-500">${device.hourly_price}/hr</p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                                  <span className="px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium bg-green-100 text-green-700 whitespace-nowrap">
-                                    Listed
-                                  </span>
-                                  <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 cursor-pointer hover:text-red-500 flex-shrink-0" />
-                                </div>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      )}
-
-                      {activeTab === "subscription" && (
-                        <div className="space-y-3">
-                          <p className="text-gray-500 text-center text-sm">No subscription information available</p>
-                        </div>
-                      )}
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
