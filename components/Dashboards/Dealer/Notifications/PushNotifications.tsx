@@ -38,51 +38,65 @@ export default function PushNotifications() {
   }
 
   return (
-    <div className="bg-gray-100 min-h-screen px-3 py-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="bg-gray-100 min-h-screen">
+      {/* FULL WIDTH CONTAINER */}
+      <div className="w-full px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-20 py-4 sm:py-6">
+
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 gap-3 sm:gap-4">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-600">Push Notifications</h1>
-          <button className="bg-orange-500 hover:bg-orange-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold flex items-center gap-2 transition-colors w-full sm:w-auto justify-center text-sm sm:text-base">
-            <Plus size={18} className="sm:w-5 sm:h-5" />
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-red-600">
+            Push Notifications
+          </h1>
+
+          <button className="bg-orange-500 hover:bg-orange-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-semibold flex items-center gap-2 transition-colors w-full sm:w-auto justify-center">
+            <Plus size={18} />
             Add Push Notification
           </button>
         </div>
 
         {/* Mobile Card View */}
-        <div className="lg:hidden space-y-3 sm:space-y-4">
+        <div className="lg:hidden space-y-4">
           {notificationData.map((notification, index) => (
             <div
               key={index}
-              className="bg-white rounded-lg shadow-lg overflow-hidden"
-              style={{ background: `linear-gradient(135deg, #A10A0C 0%, #3B0404 100%)` }}
+              className="rounded-lg shadow-lg overflow-hidden"
+              style={{
+                background: "linear-gradient(135deg, #A10A0C 0%, #3B0404 100%)",
+              }}
             >
               <div className="p-4 space-y-3">
-                {/* ID and Status Row */}
                 <div className="flex justify-between items-center">
-                  <span className="text-white font-bold text-lg">{notification.id}</span>
+                  <span className="text-white font-bold text-lg">
+                    {notification.id}
+                  </span>
                   <span
-                    className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(notification.status)}`}
+                    className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(
+                      notification.status
+                    )}`}
                   >
                     {notification.status}
                   </span>
                 </div>
 
-                {/* Title */}
                 <div>
                   <p className="text-gray-300 text-xs mb-1">Title Name</p>
-                  <p className="text-white font-semibold text-base">{notification.titleName}</p>
+                  <p className="text-white font-semibold">
+                    {notification.titleName}
+                  </p>
                 </div>
 
-                {/* Date Range */}
                 <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/20">
                   <div>
-                    <p className="text-gray-300 text-xs mb-1">Active From</p>
-                    <p className="text-white text-sm">{notification.activeFrom}</p>
+                    <p className="text-gray-300 text-xs">Active From</p>
+                    <p className="text-white text-sm">
+                      {notification.activeFrom}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-gray-300 text-xs mb-1">Active To</p>
-                    <p className="text-white text-sm">{notification.activeTo}</p>
+                    <p className="text-gray-300 text-xs">Active To</p>
+                    <p className="text-white text-sm">
+                      {notification.activeTo}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -93,9 +107,9 @@ export default function PushNotifications() {
         {/* Desktop Table View */}
         <div className="hidden lg:block bg-white rounded-lg shadow-lg overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr className="text-red-600 text-sm lg:text-base">
+            <table className="min-w-full">
+              <thead className="bg-gray-50 text-red-600">
+                <tr>
                   <th className="px-6 py-3 text-left font-semibold">ID</th>
                   <th className="px-6 py-3 text-left font-semibold">Title Name</th>
                   <th className="px-6 py-3 text-left font-semibold">Active From</th>
@@ -103,16 +117,34 @@ export default function PushNotifications() {
                   <th className="px-6 py-3 text-left font-semibold">Status</th>
                 </tr>
               </thead>
-              <tbody style={{ background: `linear-gradient(135deg, #A10A0C 0%, #3B0404 100%)` }}>
+
+              <tbody
+                style={{
+                  background: "linear-gradient(135deg, #A10A0C 0%, #3B0404 100%)",
+                }}
+              >
                 {notificationData.map((notification, index) => (
-                  <tr key={index} className="border-b border-red-900/30 text-sm lg:text-base">
-                    <td className="px-6 py-4 text-white font-semibold">{notification.id}</td>
-                    <td className="px-6 py-4 text-white">{notification.titleName}</td>
-                    <td className="px-6 py-4 text-white">{notification.activeFrom}</td>
-                    <td className="px-6 py-4 text-white">{notification.activeTo}</td>
+                  <tr
+                    key={index}
+                    className="border-b border-red-900/30 text-sm lg:text-base"
+                  >
+                    <td className="px-6 py-4 text-white font-semibold">
+                      {notification.id}
+                    </td>
+                    <td className="px-6 py-4 text-white">
+                      {notification.titleName}
+                    </td>
+                    <td className="px-6 py-4 text-white">
+                      {notification.activeFrom}
+                    </td>
+                    <td className="px-6 py-4 text-white">
+                      {notification.activeTo}
+                    </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeColor(notification.status)}`}
+                        className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeColor(
+                          notification.status
+                        )}`}
                       >
                         {notification.status}
                       </span>
@@ -123,6 +155,7 @@ export default function PushNotifications() {
             </table>
           </div>
         </div>
+
       </div>
     </div>
   )
