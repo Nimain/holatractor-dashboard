@@ -326,6 +326,7 @@ const OwnerAction = ({
       totalFarmers: { value: 0, inUse: 0 },
     });
 
+    // IMPROVED BOOKING PROCESSING
     const allBookings = stores
       .flatMap(
         (store) =>
@@ -333,22 +334,47 @@ const OwnerAction = ({
             ...b,
             storeName: store.name,
             customerName: b.user
-              ? `${b.user.first_name ?? ""} ${b.user.last_name ?? ""}`.trim() || "N/A"
-              : "N/A",
-            tractorName: b.tractor?.name || "N/A",
+              ? `${b.user.first_name ?? ""} ${b.user.last_name ?? ""}`.trim() || "Guest User"
+              : "Guest User",
+            tractorName: b.tractor?.name || "Tractor Not Assigned",
+            tractorModel: b.tractor?.model || "N/A",
           })) || []
       )
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     setFlattenedBookings(allBookings);
 
+    // IMPROVED OPERATOR PROCESSING
     const allOperators = stores.flatMap(
       (store) =>
-        store.OperatorInStore?.map((op) => ({
-          ...op,
-          storeName: store.name,
-          name: `Operator ${op.id.slice(0, 5)}`,
-        })) || []
+        store.OperatorInStore?.map((op) => {
+          // Better name extraction with multiple fallbacks
+          let operatorName = "Unknown Operator";
+
+          if (op.operator) {
+            const firstName = op.operator.first_name || "";
+            const lastName = op.operator.last_name || "";
+            const fullName = `${firstName} ${lastName}`.trim();
+
+            if (fullName) {
+              operatorName = fullName;
+            } else if (op.operator.email) {
+              operatorName = op.operator.email.split('@')[0];
+            } else {
+              operatorName = `Operator-${op.id.slice(0, 8)}`;
+            }
+          } else {
+            operatorName = `Operator-${op.id.slice(0, 8)}`;
+          }
+
+          return {
+            ...op,
+            storeName: store.name,
+            name: operatorName,
+            email: op.operator?.email || 'No Email',
+            phone: op.operator?.phone || 'No Phone',
+          };
+        }) || []
     );
     setFlattenedOperators(allOperators);
 
@@ -696,8 +722,8 @@ const OwnerAction = ({
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
                         className={`px-3 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.id
-                            ? "border-black text-black"
-                            : "border-transparent text-gray-600 hover:text-gray-900"
+                          ? "border-black text-black"
+                          : "border-transparent text-gray-600 hover:text-gray-900"
                           }`}
                       >
                         {tab.label}
@@ -784,8 +810,8 @@ const OwnerAction = ({
                             </div>
                             <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
                               <span className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap ${['Open', 'Arriving', 'Started', 'Accepted', 'Arrived'].includes(booking.bookingStatus)
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-gray-100 text-gray-700"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-gray-100 text-gray-700"
                                 }`}>
                                 {booking.bookingStatus}
                               </span>
@@ -830,10 +856,10 @@ const OwnerAction = ({
                             </div>
                             <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
                               <span className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap ${payment.status === "completed" || payment.status === "success"
-                                  ? "bg-green-100 text-green-700"
-                                  : payment.status === "pending"
-                                    ? "bg-yellow-100 text-yellow-700"
-                                    : "bg-red-100 text-red-700"
+                                ? "bg-green-100 text-green-700"
+                                : payment.status === "pending"
+                                  ? "bg-yellow-100 text-yellow-700"
+                                  : "bg-red-100 text-red-700"
                                 }`}>
                                 {payment.status}
                               </span>
@@ -872,8 +898,8 @@ const OwnerAction = ({
                             <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
                               <span
                                 className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap ${operator.status === "Active"
-                                    ? "bg-blue-100 text-blue-700"
-                                    : "bg-gray-100 text-gray-700"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-gray-100 text-gray-700"
                                   }`}
                               >
                                 {operator.status}
@@ -962,10 +988,10 @@ const OwnerAction = ({
                               </div>
                             </div>
                             <span className={`px-3 py-1 rounded-full text-sm font-medium ${subscriptionData.status === "active"
-                                ? "bg-green-100 text-green-700"
-                                : subscriptionData.status === "pending"
-                                  ? "bg-yellow-100 text-yellow-700"
-                                  : "bg-red-100 text-red-700"
+                              ? "bg-green-100 text-green-700"
+                              : subscriptionData.status === "pending"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-red-100 text-red-700"
                               }`}>
                               {subscriptionData.status}
                             </span>
