@@ -13,43 +13,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FeatureGroup, MapContainer, TileLayer, useMap, Marker, Popup } from "react-leaflet"
 import { EditControl } from "react-leaflet-draw"
 import { Button } from "@/components/ui/button"
-import { MapPin, Upload, Clock, Image, FileText, Info, Trash2, AlertCircle } from "lucide-react"
+import { MapPin, Upload, Clock, ImageIcon, FileText, Info, Trash2, AlertCircle } from "lucide-react"
 import { Backdrop, CircularProgress } from "@mui/material"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-// Import Leaflet CSS - CRITICAL!
+// Import Leaflet CSS
 import "leaflet/dist/leaflet.css"
 import "leaflet-draw/dist/leaflet.draw.css"
 import L from "leaflet"
 
-// Fix Leaflet default icon issue - CRITICAL!
-import icon from "leaflet/dist/images/marker-icon.png"
-import iconShadow from "leaflet/dist/images/marker-shadow.png"
+// Fix Leaflet default icon issue - Use CDN URLs instead
+delete (L.Icon.Default.prototype as any)._getIconUrl
 
-let DefaultIcon = L.icon({
-  iconUrl: icon,
-  shadowUrl: iconShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41]
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 })
 
-L.Marker.prototype.options.icon = DefaultIcon
-
-/* ================= FIX COMPONENT ================= */
+/* Fix Map Size Component */
 const FixLeafletMapSize = ({ open }: { open: boolean }) => {
   const map = useMap()
-
   useEffect(() => {
     if (open) {
-      setTimeout(() => {
-        map.invalidateSize()
-      }, 100)
+      setTimeout(() => map.invalidateSize(), 100)
     }
   }, [open, map])
-
   return null
 }
-/* ================================================= */
 
 interface Location {
   latitude: number | null
@@ -109,16 +100,13 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
     setFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const removeMainImage = () => {
-    setMainImage(null)
-  }
+  const removeMainImage = () => setMainImage(null)
 
   const _created = (e: any) => {
-    const locDet: Location = {
+    setTempLocation({
       latitude: e.layer._latlng.lat,
       longitude: e.layer._latlng.lng,
-    }
-    setTempLocation(locDet)
+    })
   }
 
   const confirmLocation = () => {
@@ -160,14 +148,15 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
     const bannerImages: string[] = []
 
     try {
+      // Upload logo
       if (mainImage) {
         setCreatingMessage("Uploading logo image...")
         const buffer = Buffer.from(await mainImage.arrayBuffer())
         logoUrl = await uploadFileToS3(buffer, mainImage.name)
       }
 
+      // Upload banners
       if (files.length > 0) {
-        setCreatingMessage(`Uploading banner images (0/${files.length})...`)
         for (let i = 0; i < files.length; i++) {
           setCreatingMessage(`Uploading banner images (${i + 1}/${files.length})...`)
           const buffer = Buffer.from(await files[i].arrayBuffer())
@@ -178,49 +167,72 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
 
       setCreatingMessage("Creating store...")
 
+      // Prepare store data
       const storeData = {
         store_lat: `${location.latitude}`,
         store_lan: `${location.longitude}`,
         owner_id: user.userId,
         name: name.trim(),
         description: description.trim(),
-        country: country.trim() || undefined,
         banner: bannerImages.length > 0 ? bannerImages : [""],
         logo: logoUrl || "",
         opening_time: new Date(`1970-01-01T${openingTime}:00.000Z`),
         closing_time: new Date(`1970-01-01T${closingTime}:00.000Z`),
-        closing_days: closingDays,
+        closing_days: closingDays.length > 0 ? closingDays : [],
       }
 
-      const res = await renderInstance.post("/dealer/store", storeData, {
+      console.log("=== Store Data Being Sent ===")
+      console.log(JSON.stringify(storeData, null, 2))
+      console.log("=== Access Token ===")
+      console.log(access_token ? "Token exists" : "Token missing")
+
+      // Make API call
+      const response = await renderInstance.post("/dealer/store", storeData, {
         headers: {
           Authorization: `Bearer ${access_token}`,
+          "Content-Type": "application/json",
         },
       })
 
-      if (res.status === 201) {
+      console.log("=== API Response ===")
+      console.log(response)
+
+      if (response.status === 201) {
         successMessage("Store created successfully")
         resetForm()
         onClose()
-        onStoreCreated?.(res.data)
+        onStoreCreated?.(response.data)
       }
     } catch (err: any) {
+      console.error("=== Error Creating Store ===")
+      console.error("Full error:", err)
+      console.error("Error response:", err.response)
+      console.error("Error data:", err.response?.data)
+
       if (err.response?.status === 409) {
-        const message = err.response.data.message
-        if (message === "Log in user not found") {
-          errorMessage("Log in user not found")
-        } else if (message === "Wrong owner id") {
-          errorMessage("Wrong owner id")
-        } else if (message === "No active subscriptions") {
-          errorMessage("No active subscriptions")
-        } else if (message === "Maximum store count reached") {
-          errorMessage("Maximum store count reached")
-        } else {
-          errorMessage(message || "Failed to create store")
+        const message = err.response.data?.message
+        switch (message) {
+          case "Log in user not found":
+            errorMessage("Log in user not found")
+            break
+          case "Wrong owner id":
+            errorMessage("Wrong owner id")
+            break
+          case "No active subscriptions":
+            errorMessage("No active subscriptions")
+            break
+          case "Maximum store count reached":
+            errorMessage("Maximum store count reached")
+            break
+          default:
+            errorMessage(message || "Failed to create store")
         }
+      } else if (err.response?.status === 401) {
+        errorMessage("Authentication failed. Please login again.")
+      } else if (err.response?.status === 400) {
+        errorMessage(err.response.data?.message || "Invalid data provided")
       } else {
         errorMessage("Failed to create store. Please try again.")
-        console.error("Store creation error:", err)
       }
     } finally {
       setCreating(false)
@@ -254,8 +266,7 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
         },
         (error: GeolocationPositionError) => {
           setError(error.message)
-          // Set default location (e.g., center of a country or city)
-          const defaultLoc = { latitude: 20.5937, longitude: 78.9629 } // India center
+          const defaultLoc = { latitude: 20.5937, longitude: 78.9629 }
           setLocation(defaultLoc)
           setTempLocation(defaultLoc)
         },
@@ -303,7 +314,7 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Geolocation Error Alert */}
+          {/* Error Alert */}
           {error && (
             <div className="bg-yellow-900/50 border border-yellow-600 rounded-lg p-4 flex items-start gap-3">
               <AlertCircle className="h-5 w-5 text-yellow-300 flex-shrink-0 mt-0.5" />
@@ -398,7 +409,10 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
                 </div>
                 <div className="space-y-2">
                   <Label className="text-gray-700">Closing Day</Label>
-                  <Select value={closingDays[0] || "none"} onValueChange={(value) => setClosingDays(value === "none" ? [] : [value])}>
+                  <Select 
+                    value={closingDays[0] || "none"} 
+                    onValueChange={(value) => setClosingDays(value === "none" ? [] : [value])}
+                  >
                     <SelectTrigger className="bg-white border-red-300 text-gray-900 focus:border-red-500">
                       <SelectValue placeholder="Select closing day" />
                     </SelectTrigger>
@@ -420,7 +434,7 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
           <Card className="bg-white border-gray-200">
             <CardHeader className="pb-4">
               <CardTitle className="text-red-600 flex items-center gap-2">
-                <Image className="w-5 h-5 text-red-500" />
+                <ImageIcon className="w-5 h-5 text-red-500" />
                 Store Media
               </CardTitle>
             </CardHeader>
@@ -502,7 +516,7 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
                             </div>
                           ))}
                         </div>
-                        {files.length > 4 && <p className="text-gray-600 text-sm">+{files.length - 4} more images</p>}
+                        {files.length > 4 && <p className="text-gray-600 text-sm">+{files.length - 4} more</p>}
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -537,97 +551,15 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
                     readOnly
                     className="bg-white border-red-300 text-gray-900"
                   />
-                  <Dialog open={locationOpen} onOpenChange={setLocationOpen}>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setLocationOpen(true)}
-                      className="bg-white text-red-600 border-white hover:bg-red-50 flex-shrink-0"
-                    >
-                      <MapPin className="w-4 h-4 mr-2" />
-                      Pick Location
-                    </Button>
-                    <DialogContent className="max-w-4xl max-h-[90vh]">
-                      <DialogHeader>
-                        <DialogTitle>Select Store Location</DialogTitle>
-                      </DialogHeader>
-
-                      <div className="space-y-4">
-                        {/* Instruction Alert */}
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
-                          <Info className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                          <p className="text-sm text-blue-800">
-                            Click on the marker icon in the toolbar, then click on the map to place your store location.
-                          </p>
-                        </div>
-
-                        {tempLocation.latitude && tempLocation.longitude && (
-                          <div className="text-sm text-gray-600 font-medium">
-                            Selected: Lat {tempLocation.latitude.toFixed(6)}, Lng {tempLocation.longitude.toFixed(6)}
-                          </div>
-                        )}
-
-                        <div style={{ height: "60vh", width: "100%" }} className="rounded-lg overflow-hidden border">
-                          {location.latitude && location.longitude && (
-                            <MapContainer
-                              center={[location.latitude, location.longitude]}
-                              zoom={13}
-                              style={{ height: "100%", width: "100%" }}
-                              scrollWheelZoom={true}
-                            >
-                              <FixLeafletMapSize open={locationOpen} />
-                              <TileLayer 
-                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                              />
-                              
-                              {/* Show current selected location */}
-                              {tempLocation.latitude && tempLocation.longitude && (
-                                <Marker position={[tempLocation.latitude, tempLocation.longitude]}>
-                                  <Popup>Selected Store Location</Popup>
-                                </Marker>
-                              )}
-                              
-                              <FeatureGroup>
-                                <EditControl
-                                  onCreated={_created}
-                                  draw={{
-                                    rectangle: false,
-                                    polygon: false,
-                                    circle: false,
-                                    circlemarker: false,
-                                    polyline: false,
-                                    marker: true,
-                                  }}
-                                  edit={{
-                                    edit: false,
-                                    remove: false,
-                                  }}
-                                />
-                              </FeatureGroup>
-                            </MapContainer>
-                          )}
-                        </div>
-
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={cancelLocationPicker}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            type="button"
-                            onClick={confirmLocation}
-                            disabled={!tempLocation.latitude || !tempLocation.longitude}
-                          >
-                            Confirm Location
-                          </Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setLocationOpen(true)}
+                    className="bg-white text-red-600 border-white hover:bg-red-50 flex-shrink-0"
+                  >
+                    <MapPin className="w-4 h-4 mr-2" />
+                    Pick
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -648,8 +580,7 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
                   <div className="text-red-900">
                     <p className="font-semibold">Important Information</p>
                     <p className="text-sm mt-1">
-                      Please ensure all store information is accurate and up-to-date. This information will be displayed
-                      to customers. Fields marked with * are required.
+                      Please ensure all store information is accurate and up-to-date. Fields marked with * are required.
                     </p>
                   </div>
                 </div>
@@ -664,7 +595,6 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
                     <p>• Logo: Maximum size 800×800px</p>
                     <p>• Banner: Maximum size 1920×1080px</p>
                     <p>• Accepted Formats: SVG, PNG, JPG</p>
-                    <p>• File size limit: 5MB per image</p>
                   </CardContent>
                 </Card>
 
@@ -675,8 +605,7 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
                   <CardContent className="space-y-1 text-gray-600 text-xs">
                     <p>• Use 24-hour format</p>
                     <p>• Select one closing day per week</p>
-                    <p>• Hours will be displayed in local time</p>
-                    <p>• Ensure times are accurate</p>
+                    <p>• Hours displayed in local time</p>
                   </CardContent>
                 </Card>
               </div>
@@ -704,6 +633,88 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
           </div>
         </div>
       </DialogContent>
+
+      {/* Location Picker Modal */}
+      <Dialog open={locationOpen} onOpenChange={setLocationOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Select Store Location</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+              <Info className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-blue-800">
+                Click the marker icon in the toolbar, then click on the map to place your store location.
+              </p>
+            </div>
+
+            {tempLocation.latitude && tempLocation.longitude && (
+              <div className="text-sm text-gray-600 font-medium">
+                Selected: Lat {tempLocation.latitude.toFixed(6)}, Lng {tempLocation.longitude.toFixed(6)}
+              </div>
+            )}
+
+            <div style={{ height: "60vh", width: "100%" }} className="rounded-lg overflow-hidden border">
+              {location.latitude && location.longitude && (
+                <MapContainer
+                  center={[location.latitude, location.longitude]}
+                  zoom={13}
+                  style={{ height: "100%", width: "100%" }}
+                  scrollWheelZoom={true}
+                >
+                  <FixLeafletMapSize open={locationOpen} />
+                  <TileLayer 
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution='&copy; OpenStreetMap'
+                  />
+                  
+                  {tempLocation.latitude && tempLocation.longitude && (
+                    <Marker position={[tempLocation.latitude, tempLocation.longitude]}>
+                      <Popup>Selected Store Location</Popup>
+                    </Marker>
+                  )}
+                  
+                  <FeatureGroup>
+                    <EditControl
+                      onCreated={_created}
+                      draw={{
+                        rectangle: false,
+                        polygon: false,
+                        circle: false,
+                        circlemarker: false,
+                        polyline: false,
+                        marker: true,
+                      }}
+                      edit={{
+                        edit: false,
+                        remove: false,
+                      }}
+                    />
+                  </FeatureGroup>
+                </MapContainer>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={cancelLocationPicker}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={confirmLocation}
+                disabled={!tempLocation.latitude || !tempLocation.longitude}
+              >
+                Confirm Location
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   )
 }
