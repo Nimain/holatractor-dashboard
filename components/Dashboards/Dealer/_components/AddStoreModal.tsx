@@ -10,12 +10,46 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { FeatureGroup, MapContainer, TileLayer } from "react-leaflet"
+import { FeatureGroup, MapContainer, TileLayer, useMap, Marker, Popup } from "react-leaflet"
 import { EditControl } from "react-leaflet-draw"
 import { Button } from "@/components/ui/button"
-import { MapPin, Upload, Clock, ImageIcon, FileText, Info, Trash2 } from "lucide-react"
+import { MapPin, Upload, Clock, Image, FileText, Info, Trash2, AlertCircle } from "lucide-react"
 import { Backdrop, CircularProgress } from "@mui/material"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+
+// Import Leaflet CSS - CRITICAL!
+import "leaflet/dist/leaflet.css"
+import "leaflet-draw/dist/leaflet.draw.css"
+import L from "leaflet"
+
+// Fix Leaflet default icon issue - CRITICAL!
+import icon from "leaflet/dist/images/marker-icon.png"
+import iconShadow from "leaflet/dist/images/marker-shadow.png"
+
+let DefaultIcon = L.icon({
+  iconUrl: icon,
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+})
+
+L.Marker.prototype.options.icon = DefaultIcon
+
+/* ================= FIX COMPONENT ================= */
+const FixLeafletMapSize = ({ open }: { open: boolean }) => {
+  const map = useMap()
+
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => {
+        map.invalidateSize()
+      }, 100)
+    }
+  }, [open, map])
+
+  return null
+}
+/* ================================================= */
 
 interface Location {
   latitude: number | null
@@ -43,6 +77,7 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
   const [mainImage, setMainImage] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [location, setLocation] = useState<Location>({ latitude: null, longitude: null })
+  const [tempLocation, setTempLocation] = useState<Location>({ latitude: null, longitude: null })
   const [name, setName] = useState("")
   const [country, setCountry] = useState("")
   const [description, setDescription] = useState("")
@@ -83,16 +118,27 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
       latitude: e.layer._latlng.lat,
       longitude: e.layer._latlng.lng,
     }
-    setLocation(locDet)
+    setTempLocation(locDet)
+  }
+
+  const confirmLocation = () => {
+    setLocation(tempLocation)
+    setLocationOpen(false)
+    successMessage("Location selected successfully")
+  }
+
+  const cancelLocationPicker = () => {
+    setTempLocation({ latitude: location.latitude, longitude: location.longitude })
     setLocationOpen(false)
   }
 
   async function handleAddStore() {
-    if (!name) {
+    // Validation
+    if (!name.trim()) {
       errorMessage("Store name can't be empty")
       return
     }
-    if (!description) {
+    if (!description.trim()) {
       errorMessage("Store description can't be empty")
       return
     }
@@ -100,120 +146,131 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
       errorMessage("Please select store location")
       return
     }
+    if (!openingTime) {
+      errorMessage("Please select opening time")
+      return
+    }
+    if (!closingTime) {
+      errorMessage("Please select closing time")
+      return
+    }
 
     setCreating(true)
     let logoUrl = ""
     const bannerImages: string[] = []
 
-    if (mainImage) {
-      setCreatingMessage("Uploading logo image")
-      const buffer = Buffer.from(await mainImage.arrayBuffer())
-      logoUrl = await uploadFileToS3(buffer, mainImage.name)
-      setCreatingMessage("")
-    }
-
-    if (files.length > 0) {
-      setCreatingMessage("Uploading banner images")
-      for (const image of files) {
-        const buffer = Buffer.from(await image.arrayBuffer())
-        const imageLink = await uploadFileToS3(buffer, image.name)
-        bannerImages.push(imageLink)
+    try {
+      if (mainImage) {
+        setCreatingMessage("Uploading logo image...")
+        const buffer = Buffer.from(await mainImage.arrayBuffer())
+        logoUrl = await uploadFileToS3(buffer, mainImage.name)
       }
-      setCreatingMessage("")
-    }
 
-    const storeData = {
-      store_lat: `${location.latitude}`,
-      store_lan: `${location.longitude}`,
-      owner_id: user.userId,
-      name,
-      description,
-      banner: bannerImages.length > 0 ? bannerImages : [""],
-      logo: logoUrl,
-      opening_time: new Date(`1970-01-01T${openingTime}:00.000Z`),
-      closing_time: new Date(`1970-01-01T${closingTime}:00.000Z`),
-      closing_days: closingDays,
-    }
+      if (files.length > 0) {
+        setCreatingMessage(`Uploading banner images (0/${files.length})...`)
+        for (let i = 0; i < files.length; i++) {
+          setCreatingMessage(`Uploading banner images (${i + 1}/${files.length})...`)
+          const buffer = Buffer.from(await files[i].arrayBuffer())
+          const imageLink = await uploadFileToS3(buffer, files[i].name)
+          bannerImages.push(imageLink)
+        }
+      }
 
-    console.log("Submitting store data:", storeData)
+      setCreatingMessage("Creating store...")
 
-    renderInstance
-      .post("/dealer/store", storeData, {
+      const storeData = {
+        store_lat: `${location.latitude}`,
+        store_lan: `${location.longitude}`,
+        owner_id: user.userId,
+        name: name.trim(),
+        description: description.trim(),
+        country: country.trim() || undefined,
+        banner: bannerImages.length > 0 ? bannerImages : [""],
+        logo: logoUrl || "",
+        opening_time: new Date(`1970-01-01T${openingTime}:00.000Z`),
+        closing_time: new Date(`1970-01-01T${closingTime}:00.000Z`),
+        closing_days: closingDays,
+      }
+
+      const res = await renderInstance.post("/dealer/store", storeData, {
         headers: {
           Authorization: `Bearer ${access_token}`,
         },
       })
-      .then((res) => {
-        if (res.status === 201) {
-          successMessage("Store created successfully")
-          // Reset state variables
-          setName("")
-          setCountry("")
-          setDescription("")
-          setOpeningTime("")
-          setClosingTime("")
-          setClosingDays([])
-          setFiles([])
-          setMainImage(null)
-          onClose()
-          if (onStoreCreated) {
-            onStoreCreated(res.data)
-          }
-        }
-      })
-      .catch((err) => {
-        if (err.response && err.response.status === 409) {
-          if (err.response.data.message === "Log in user not found") {
-            errorMessage("Log in user not found")
-          } else if (err.response.data.message === "Wrong owner id") {
-            errorMessage("Wrong owner id")
-          } else if (err.response.data.message === "No active subscriptions") {
-            errorMessage("No active subscriptions")
-          } else if (err.response.data.message === "Maximum store count reached") {
-            errorMessage("Maximum store count reached")
-          } else {
-            errorMessage(err.response.data.message || "Failed to create store")
-          }
+
+      if (res.status === 201) {
+        successMessage("Store created successfully")
+        resetForm()
+        onClose()
+        onStoreCreated?.(res.data)
+      }
+    } catch (err: any) {
+      if (err.response?.status === 409) {
+        const message = err.response.data.message
+        if (message === "Log in user not found") {
+          errorMessage("Log in user not found")
+        } else if (message === "Wrong owner id") {
+          errorMessage("Wrong owner id")
+        } else if (message === "No active subscriptions") {
+          errorMessage("No active subscriptions")
+        } else if (message === "Maximum store count reached") {
+          errorMessage("Maximum store count reached")
         } else {
-          errorMessage("Some error occurred")
+          errorMessage(message || "Failed to create store")
         }
-      })
-      .finally(() => {
-        setCreating(false)
-        setCreatingMessage("")
-      })
+      } else {
+        errorMessage("Failed to create store. Please try again.")
+        console.error("Store creation error:", err)
+      }
+    } finally {
+      setCreating(false)
+      setCreatingMessage("")
+    }
+  }
+
+  const resetForm = () => {
+    setName("")
+    setCountry("")
+    setDescription("")
+    setOpeningTime("")
+    setClosingTime("")
+    setClosingDays([])
+    setFiles([])
+    setMainImage(null)
+    setCreatingMessage("")
+    setError(null)
   }
 
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position: GeolocationPosition) => {
-          setLocation({
+          const loc = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
-          })
+          }
+          setLocation(loc)
+          setTempLocation(loc)
         },
         (error: GeolocationPositionError) => {
           setError(error.message)
+          // Set default location (e.g., center of a country or city)
+          const defaultLoc = { latitude: 20.5937, longitude: 78.9629 } // India center
+          setLocation(defaultLoc)
+          setTempLocation(defaultLoc)
         },
       )
     } else {
       setError("Geolocation is not supported by this browser.")
+      const defaultLoc = { latitude: 20.5937, longitude: 78.9629 }
+      setLocation(defaultLoc)
+      setTempLocation(defaultLoc)
     }
   }, [])
 
-  // Reset form when modal closes
   useEffect(() => {
     if (!isOpen) {
-      setName("")
-      setCountry("")
-      setDescription("")
-      setOpeningTime("")
-      setClosingTime("")
-      setClosingDays([])
-      setFiles([])
-      setMainImage(null)
-      setCreatingMessage("")
+      resetForm()
     }
   }, [isOpen])
 
@@ -246,11 +303,23 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Geolocation Error Alert */}
+          {error && (
+            <div className="bg-yellow-900/50 border border-yellow-600 rounded-lg p-4 flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-yellow-300 flex-shrink-0 mt-0.5" />
+              <div className="text-yellow-100 text-sm">
+                <p className="font-semibold">Location Access Issue</p>
+                <p className="mt-1">{error}</p>
+                <p className="mt-1">Please manually select your store location on the map.</p>
+              </div>
+            </div>
+          )}
+
           {/* Basic Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name" className="text-white font-medium">
-                Store Name
+                Store Name *
               </Label>
               <Input
                 id="name"
@@ -276,7 +345,7 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
 
           <div className="space-y-2">
             <Label htmlFor="description" className="text-white font-medium">
-              Description
+              Description *
             </Label>
             <Textarea
               id="description"
@@ -299,7 +368,7 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="openingTime" className="text-gray-700">
-                    Opening Time
+                    Opening Time *
                   </Label>
                   <div className="relative">
                     <Input
@@ -309,12 +378,12 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
                       onChange={(e) => setOpeningTime(e.target.value)}
                       className="bg-white border-red-300 text-gray-900 focus:border-red-500"
                     />
-                    <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-red-400" />
+                    <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-red-400 pointer-events-none" />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="closingTime" className="text-gray-700">
-                    Closing Time
+                    Closing Time *
                   </Label>
                   <div className="relative">
                     <Input
@@ -324,16 +393,17 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
                       onChange={(e) => setClosingTime(e.target.value)}
                       className="bg-white border-red-300 text-gray-900 focus:border-red-500"
                     />
-                    <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-red-400" />
+                    <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-red-400 pointer-events-none" />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-gray-700">Closing Day</Label>
-                  <Select value={closingDays[0] || ""} onValueChange={(value) => setClosingDays([value])}>
+                  <Select value={closingDays[0] || "none"} onValueChange={(value) => setClosingDays(value === "none" ? [] : [value])}>
                     <SelectTrigger className="bg-white border-red-300 text-gray-900 focus:border-red-500">
                       <SelectValue placeholder="Select closing day" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">No closing day</SelectItem>
                       {DAYS_OF_WEEK.map((day) => (
                         <SelectItem key={day} value={day}>
                           {day}
@@ -350,7 +420,7 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
           <Card className="bg-white border-gray-200">
             <CardHeader className="pb-4">
               <CardTitle className="text-red-600 flex items-center gap-2">
-                <ImageIcon className="w-5 h-5 text-red-500" />
+                <Image className="w-5 h-5 text-red-500" />
                 Store Media
               </CardTitle>
             </CardHeader>
@@ -365,11 +435,11 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
                     {mainImage ? (
                       <div className="space-y-2">
                         <img
-                          src={URL.createObjectURL(mainImage) || "/placeholder.svg"}
+                          src={URL.createObjectURL(mainImage)}
                           alt="Store logo"
                           className="w-20 h-20 object-cover rounded mx-auto"
                         />
-                        <p className="text-gray-600 text-sm">{mainImage.name}</p>
+                        <p className="text-gray-600 text-sm truncate">{mainImage.name}</p>
                         <Button
                           type="button"
                           variant="ghost"
@@ -378,7 +448,7 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
                             e.stopPropagation()
                             removeMainImage()
                           }}
-                          className="text-white/80 hover:text-white"
+                          className="text-red-600 hover:text-red-700"
                         >
                           <Trash2 className="w-4 h-4 mr-1" />
                           Remove
@@ -413,7 +483,7 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
                           {files.slice(0, 4).map((file, index) => (
                             <div key={index} className="relative">
                               <img
-                                src={URL.createObjectURL(file) || "/placeholder.svg"}
+                                src={URL.createObjectURL(file)}
                                 alt={`Banner ${index + 1}`}
                                 className="w-full h-16 object-cover rounded"
                               />
@@ -421,7 +491,7 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full"
+                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full p-0"
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   removeFile(index)
@@ -432,7 +502,7 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
                             </div>
                           ))}
                         </div>
-                        {files.length > 4 && <p className="text-white/80 text-sm">+{files.length - 4} more images</p>}
+                        {files.length > 4 && <p className="text-gray-600 text-sm">+{files.length - 4} more images</p>}
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -455,13 +525,13 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
 
               {/* Location Picker */}
               <div className="space-y-2">
-                <Label className="text-gray-700">Store Location</Label>
+                <Label className="text-gray-700">Store Location *</Label>
                 <div className="flex gap-2">
                   <Input
                     placeholder="Select store location"
                     value={
                       location.latitude && location.longitude
-                        ? `lat: ${location.latitude.toFixed(6)}, lng: ${location.longitude.toFixed(6)}`
+                        ? `Lat: ${location.latitude.toFixed(6)}, Lng: ${location.longitude.toFixed(6)}`
                         : "Location not selected"
                     }
                     readOnly
@@ -472,47 +542,90 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
                       type="button"
                       variant="outline"
                       onClick={() => setLocationOpen(true)}
-                      className="bg-white text-red-600 border-white hover:bg-red-50"
+                      className="bg-white text-red-600 border-white hover:bg-red-50 flex-shrink-0"
                     >
                       <MapPin className="w-4 h-4 mr-2" />
                       Pick Location
                     </Button>
-                    <DialogContent className="max-w-4xl max-h-[80vh]">
+                    <DialogContent className="max-w-4xl max-h-[90vh]">
                       <DialogHeader>
                         <DialogTitle>Select Store Location</DialogTitle>
                       </DialogHeader>
-                      {error ? (
-                        <p>Error: {error}</p>
-                      ) : location.latitude && location.longitude ? (
-                        <div style={{ height: "60vh", width: "100%" }}>
-                          <MapContainer
-                            center={[location.latitude, location.longitude]}
-                            zoom={13}
-                            scrollWheelZoom={false}
-                            style={{ width: "100%", height: "100%", zIndex: 1 }}
-                          >
-                            <TileLayer
-                              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                            />
-                            <FeatureGroup>
-                              <EditControl
-                                position="topright"
-                                onCreated={_created}
-                                draw={{
-                                  rectangle: false,
-                                  circle: false,
-                                  circlemarker: false,
-                                  polyline: false,
-                                  polygon: false,
-                                }}
-                              />
-                            </FeatureGroup>
-                          </MapContainer>
+
+                      <div className="space-y-4">
+                        {/* Instruction Alert */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+                          <Info className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                          <p className="text-sm text-blue-800">
+                            Click on the marker icon in the toolbar, then click on the map to place your store location.
+                          </p>
                         </div>
-                      ) : (
-                        <p>Latitude and longitude not available</p>
-                      )}
+
+                        {tempLocation.latitude && tempLocation.longitude && (
+                          <div className="text-sm text-gray-600 font-medium">
+                            Selected: Lat {tempLocation.latitude.toFixed(6)}, Lng {tempLocation.longitude.toFixed(6)}
+                          </div>
+                        )}
+
+                        <div style={{ height: "60vh", width: "100%" }} className="rounded-lg overflow-hidden border">
+                          {location.latitude && location.longitude && (
+                            <MapContainer
+                              center={[location.latitude, location.longitude]}
+                              zoom={13}
+                              style={{ height: "100%", width: "100%" }}
+                              scrollWheelZoom={true}
+                            >
+                              <FixLeafletMapSize open={locationOpen} />
+                              <TileLayer 
+                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                              />
+                              
+                              {/* Show current selected location */}
+                              {tempLocation.latitude && tempLocation.longitude && (
+                                <Marker position={[tempLocation.latitude, tempLocation.longitude]}>
+                                  <Popup>Selected Store Location</Popup>
+                                </Marker>
+                              )}
+                              
+                              <FeatureGroup>
+                                <EditControl
+                                  onCreated={_created}
+                                  draw={{
+                                    rectangle: false,
+                                    polygon: false,
+                                    circle: false,
+                                    circlemarker: false,
+                                    polyline: false,
+                                    marker: true,
+                                  }}
+                                  edit={{
+                                    edit: false,
+                                    remove: false,
+                                  }}
+                                />
+                              </FeatureGroup>
+                            </MapContainer>
+                          )}
+                        </div>
+
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={cancelLocationPicker}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={confirmLocation}
+                            disabled={!tempLocation.latitude || !tempLocation.longitude}
+                          >
+                            Confirm Location
+                          </Button>
+                        </div>
+                      </div>
                     </DialogContent>
                   </Dialog>
                 </div>
@@ -529,14 +642,14 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-red-500 border border-red-400 rounded-lg p-4 text-white">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <div className="flex items-start gap-2">
-                  <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <div>
+                  <Info className="h-4 w-4 mt-0.5 flex-shrink-0 text-red-600" />
+                  <div className="text-red-900">
                     <p className="font-semibold">Important Information</p>
                     <p className="text-sm mt-1">
-                      Please Ensure all store information is accurate and up-to-date. This information will be displayed
-                      to customers
+                      Please ensure all store information is accurate and up-to-date. This information will be displayed
+                      to customers. Fields marked with * are required.
                     </p>
                   </div>
                 </div>
@@ -549,8 +662,9 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
                   </CardHeader>
                   <CardContent className="space-y-1 text-gray-600 text-xs">
                     <p>• Logo: Maximum size 800×800px</p>
-                    <p>• Banner: Maximum size 1920×1920px</p>
+                    <p>• Banner: Maximum size 1920×1080px</p>
                     <p>• Accepted Formats: SVG, PNG, JPG</p>
+                    <p>• File size limit: 5MB per image</p>
                   </CardContent>
                 </Card>
 
@@ -562,6 +676,7 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
                     <p>• Use 24-hour format</p>
                     <p>• Select one closing day per week</p>
                     <p>• Hours will be displayed in local time</p>
+                    <p>• Ensure times are accurate</p>
                   </CardContent>
                 </Card>
               </div>
@@ -574,6 +689,7 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
               type="button"
               variant="outline"
               onClick={onClose}
+              disabled={creating}
               className="bg-transparent border-white text-white hover:bg-white/10"
             >
               Cancel
