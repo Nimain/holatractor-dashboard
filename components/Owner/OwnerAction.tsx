@@ -42,10 +42,17 @@ interface Booking {
   user?: {
     first_name?: string;
     last_name?: string;
+    email?: string;
   };
   tractor?: {
     name?: string;
     model?: string;
+  };
+  TractorInStore?: {
+    baseTractor?: {
+      name?: string;
+      model?: string;
+    };
   };
 }
 
@@ -63,6 +70,20 @@ interface AttachmentInStore {
 
 interface OperatorDetails {
   id: string;
+  user_id?: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  middle_name?: string;
+  user?: {
+    id?: string;
+    first_name?: string;
+    last_name?: string;
+    middle_name?: string;
+    email?: string;
+    phone?: string;
+  };
 }
 
 interface OperatorInStore {
@@ -93,17 +114,35 @@ interface Store {
   Booking?: Booking[];
 }
 
-// --- New Interfaces for Subscription & Payment ---
+// --- Interfaces for Subscription & Payment ---
+interface SubscriptionPlan {
+  id: string;
+  name: string;
+  type: string;
+  actual_cost: number;
+  discount_cost: number;
+  features: string[];
+  focused_features: string[];
+  total_days: number;
+  total_stores: number;
+  total_devices: number | null;
+  total_operators: number;
+  total_tractors: number;
+  total_attachments: number;
+  for_owner: boolean;
+  for_dealer: boolean;
+}
+
 interface Subscription {
   id: string;
-  owner_id: string;
-  plan_name?: string;
-  status: string;
-  start_date?: string;
-  end_date?: string;
-  amount?: number;
-  createdAt?: string;
-  updatedAt?: string;
+  user_id: string;
+  subscription_id: string;
+  end_date: string;
+  base_id: string;
+  status: boolean;
+  createdAt: string;
+  updatedAt: string;
+  subscription?: SubscriptionPlan;
 }
 
 interface Payment {
@@ -111,12 +150,16 @@ interface Payment {
   amount: number;
   status: string;
   payment_method?: string;
-  transaction_id?: string;
+  transaction_method?: string;
+  transaction_reference?: string;
+  payment_type?: string;
+  sender_name?: string;
   createdAt: string;
   booking_id?: string;
   user_id?: string;
   description?: string;
 }
+
 
 // --- Props Interfaces ---
 interface UserDetails {
@@ -189,10 +232,11 @@ const OwnerAction = ({
   const [loadingData, setLoadingData] = useState(false);
   const [storeData, setStoreData] = useState<Store[]>([]);
 
-  // NEW: State for subscription and payments
+  // State for subscription and payments
   const [subscriptionData, setSubscriptionData] = useState<Subscription | null>(null);
   const [paymentsData, setPaymentsData] = useState<Payment[]>([]);
   const [loadingSubscription, setLoadingSubscription] = useState(false);
+  const [verifyingSubscription, setVerifyingSubscription] = useState(false);
   const [loadingPayments, setLoadingPayments] = useState(false);
 
   // Calculated Stats State
@@ -241,6 +285,15 @@ const OwnerAction = ({
         return;
       }
 
+      // DEBUG: Log the operator structure
+      console.log("=== FULL STORE DATA ===");
+      console.log(JSON.stringify(stores, null, 2));
+
+      if (stores[0]?.OperatorInStore?.[0]) {
+        console.log("=== FIRST OPERATOR DETAILS ===");
+        console.log(JSON.stringify(stores[0].OperatorInStore[0], null, 2));
+      }
+
       setStoreData(stores);
       processStatsAndTabs(stores);
     } catch (error: any) {
@@ -250,7 +303,7 @@ const OwnerAction = ({
     }
   };
 
-  // NEW: Fetch Subscription Data
+  // Fetch Subscription Data
   const fetchSubscriptionData = async () => {
     if (!user?.id) {
       errorMessage("User ID is missing");
@@ -273,7 +326,34 @@ const OwnerAction = ({
     }
   };
 
-  // NEW: Fetch Payments Data
+  // NEW: Verify Owner Subscription
+  const verifyOwnerSubscription = async () => {
+    if (!user?.id) {
+      errorMessage("Owner ID is missing");
+      return;
+    }
+
+    setVerifyingSubscription(true);
+    try {
+      const apiUrl = `/subscription/owner_verify/${user.id}`;
+      await renderInstance.get(apiUrl, {
+        headers: { Authorization: `Bearer ${access_token}` },
+      });
+
+      successMessage("Subscription verified successfully");
+
+      // Refresh subscription data after verification
+      await fetchSubscriptionData();
+    } catch (error: any) {
+      errorMessage(
+        error?.response?.data?.message || "Failed to verify subscription"
+      );
+    } finally {
+      setVerifyingSubscription(false);
+    }
+  };
+
+  // Fetch Payments Data
   const fetchPaymentsData = async () => {
     if (!user?.id) {
       errorMessage("User ID is missing");
@@ -287,7 +367,12 @@ const OwnerAction = ({
         headers: { Authorization: `Bearer ${access_token}` },
       });
 
-      const payments = Array.isArray(response.data) ? response.data : [];
+      console.log("PAYMENT API RESPONSE:", response.data);
+
+      const payments = Array.isArray(response.data?.payments)
+        ? response.data.payments
+        : [];
+
       setPaymentsData(payments);
     } catch (error: any) {
       console.error("Payments fetch error:", error);
@@ -296,6 +381,7 @@ const OwnerAction = ({
       setLoadingPayments(false);
     }
   };
+
 
   // --- Process Data Logic ---
   const processStatsAndTabs = (stores: Store[]) => {
@@ -326,7 +412,6 @@ const OwnerAction = ({
       totalFarmers: { value: 0, inUse: 0 },
     });
 
-    // IMPROVED BOOKING PROCESSING
     const allBookings = stores
       .flatMap(
         (store) =>
@@ -344,35 +429,33 @@ const OwnerAction = ({
 
     setFlattenedBookings(allBookings);
 
-    // IMPROVED OPERATOR PROCESSING
     const allOperators = stores.flatMap(
       (store) =>
         store.OperatorInStore?.map((op) => {
-          // Better name extraction with multiple fallbacks
           let operatorName = "Unknown Operator";
 
-          if (op.operator) {
-            const firstName = op.operator.first_name || "";
-            const lastName = op.operator.last_name || "";
+          if (op.operator?.user) {
+            const firstName = op.operator.user.first_name || "";
+            const lastName = op.operator.user.last_name || "";
             const fullName = `${firstName} ${lastName}`.trim();
 
             if (fullName) {
               operatorName = fullName;
-            } else if (op.operator.email) {
-              operatorName = op.operator.email.split('@')[0];
+            } else if (op.operator.user.email) {
+              operatorName = op.operator.user.email.split("@")[0];
             } else {
               operatorName = `Operator-${op.id.slice(0, 8)}`;
             }
-          } else {
-            operatorName = `Operator-${op.id.slice(0, 8)}`;
           }
+
 
           return {
             ...op,
             storeName: store.name,
             name: operatorName,
-            email: op.operator?.email || 'No Email',
-            phone: op.operator?.phone || 'No Phone',
+            email: op.operator?.user?.email || "No Email",
+            phone: op.operator?.user?.phone || "No Phone",
+
           };
         }) || []
     );
@@ -641,8 +724,6 @@ const OwnerAction = ({
 
             <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
-
-
                 <StatCard
                   icon={
                     <svg className="w-4 h-4 sm:w-5 text-orange-600" fill="currentColor" viewBox="0 0 24 24">
@@ -687,9 +768,6 @@ const OwnerAction = ({
                   inUse={loadingData ? "..." : stats.totalAttachment.inUse}
                   dataDate="20 Jul 2025"
                 />
-
-
-
                 <StatCard
                   icon={
                     <svg className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -800,8 +878,8 @@ const OwnerAction = ({
                                 </svg>
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="font-medium text-sm sm:text-base truncate">{booking.tractorName}</p>
-                                <p className="text-xs sm:text-sm text-gray-600 truncate">Customer: {booking.customerName}</p>
+                                {/* <p className="font-medium text-sm sm:text-base truncate">{booking.tractorName}</p> */}
+                                <p className="font-medium text-sm sm:text-base truncate">Customer: {booking.customerName}</p>
                                 <p className="text-xs text-gray-500 truncate">Store: {booking.storeName}</p>
                                 <p className="text-xs text-gray-500">
                                   Booked: {formatDate(booking.createdAt)} • ${booking.total_cost}
@@ -845,24 +923,37 @@ const OwnerAction = ({
                               </div>
                               <div className="min-w-0 flex-1">
                                 <p className="font-medium text-sm sm:text-base">${payment.amount}</p>
-                                <p className="text-xs sm:text-sm text-gray-600 truncate">
-                                  {payment.payment_method || "N/A"} {payment.transaction_id ? `• ${payment.transaction_id}` : ""}
-                                </p>
-                                {payment.description && (
-                                  <p className="text-xs text-gray-500 truncate">{payment.description}</p>
-                                )}
-                                <p className="text-xs text-gray-500">{formatDateTime(payment.createdAt)}</p>
+                                <div className="mt-1 space-y-0.5 text-xs sm:text-sm text-gray-600">
+                                  <div className="flex gap-1">
+                                    <span className="font-medium text-gray-700">Sender:</span>
+                                    <span className="truncate">{payment.sender_name || "N/A"}</span>
+                                  </div>
+
+                                  <div className="flex gap-1">
+                                    <span className="font-medium text-gray-700">Method:</span>
+                                    <span className="truncate">{payment.transaction_method || "N/A"}</span>
+                                  </div>
+
+                                  <div className="flex gap-1">
+                                    <span className="font-medium text-gray-700">Booking ID:</span>
+                                    <span className="truncate">{payment.booking_id || "N/A"}</span>
+                                  </div>
+                                </div>
+
                               </div>
                             </div>
                             <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                              <span className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap ${payment.status === "completed" || payment.status === "success"
-                                ? "bg-green-100 text-green-700"
-                                : payment.status === "pending"
-                                  ? "bg-yellow-100 text-yellow-700"
-                                  : "bg-red-100 text-red-700"
-                                }`}>
+                              <span
+                                className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${payment.status?.toLowerCase() === "completed"
+                                  ? "bg-green-100 text-green-700"
+                                  : payment.status?.toLowerCase() === "pending"
+                                    ? "bg-yellow-100 text-yellow-700"
+                                    : "bg-red-100 text-red-700"
+                                  }`}
+                              >
                                 {payment.status}
                               </span>
+
                               <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 cursor-pointer hover:text-red-500 flex-shrink-0" />
                             </div>
                           </div>
@@ -980,58 +1071,128 @@ const OwnerAction = ({
                               </div>
                               <div>
                                 <h3 className="text-lg font-semibold text-gray-900">
-                                  {subscriptionData.plan_name || "Subscription Plan"}
+                                  {subscriptionData.subscription?.name || "Subscription Plan"}
                                 </h3>
                                 <p className="text-sm text-gray-600">
                                   ID: {subscriptionData.id.slice(0, 12)}...
                                 </p>
                               </div>
                             </div>
-                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${subscriptionData.status === "active"
-                              ? "bg-green-100 text-green-700"
-                              : subscriptionData.status === "pending"
-                                ? "bg-yellow-100 text-yellow-700"
+
+                            <span
+                              className={`px-3 py-1 rounded-full text-sm font-medium ${subscriptionData.status
+                                ? "bg-green-100 text-green-700"
                                 : "bg-red-100 text-red-700"
-                              }`}>
-                              {subscriptionData.status}
+                                }`}
+                            >
+                              {subscriptionData.status ? "Active" : "Inactive"}
                             </span>
                           </div>
 
+                          {/* Subscription Details */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                            {subscriptionData.amount && (
+                            {subscriptionData.subscription?.discount_cost && (
                               <div className="bg-white rounded-lg p-4">
                                 <p className="text-xs text-gray-600 mb-1">Amount</p>
-                                <p className="text-xl font-bold text-gray-900">${subscriptionData.amount}</p>
+                                <p className="text-xl font-bold text-gray-900">
+                                  ${subscriptionData.subscription.discount_cost}
+                                </p>
+                                {subscriptionData.subscription.actual_cost !== subscriptionData.subscription.discount_cost && (
+                                  <p className="text-xs text-gray-500 line-through">
+                                    ${subscriptionData.subscription.actual_cost}
+                                  </p>
+                                )}
                               </div>
                             )}
 
-                            {subscriptionData.start_date && (
-                              <div className="bg-white rounded-lg p-4">
-                                <p className="text-xs text-gray-600 mb-1">Start Date</p>
-                                <p className="text-sm font-medium text-gray-900">{formatDate(subscriptionData.start_date)}</p>
-                              </div>
-                            )}
+                            <div className="bg-white rounded-lg p-4">
+                              <p className="text-xs text-gray-600 mb-1">Duration</p>
+                              <p className="text-sm font-medium text-gray-900">
+                                {subscriptionData.subscription?.total_days || 0} Days
+                              </p>
+                            </div>
+
+                            <div className="bg-white rounded-lg p-4">
+                              <p className="text-xs text-gray-600 mb-1">Start Date</p>
+                              <p className="text-sm font-medium text-gray-900">
+                                {formatDate(subscriptionData.createdAt)}
+                              </p>
+                            </div>
 
                             {subscriptionData.end_date && (
                               <div className="bg-white rounded-lg p-4">
                                 <p className="text-xs text-gray-600 mb-1">End Date</p>
-                                <p className="text-sm font-medium text-gray-900">{formatDate(subscriptionData.end_date)}</p>
-                              </div>
-                            )}
-
-                            {subscriptionData.createdAt && (
-                              <div className="bg-white rounded-lg p-4">
-                                <p className="text-xs text-gray-600 mb-1">Created</p>
-                                <p className="text-sm font-medium text-gray-900">{formatDate(subscriptionData.createdAt)}</p>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {formatDate(subscriptionData.end_date)}
+                                </p>
                               </div>
                             )}
                           </div>
 
-                          {subscriptionData.updatedAt && (
-                            <p className="text-xs text-gray-600">
-                              Last updated: {formatDateTime(subscriptionData.updatedAt)}
-                            </p>
+                          {/* Plan Limits */}
+                          {subscriptionData.subscription && (
+                            <div className="bg-white rounded-lg p-4 mb-4">
+                              <p className="text-sm font-semibold text-gray-900 mb-3">Plan Limits</p>
+                              <div className="grid grid-cols-2 gap-3 text-xs">
+                                <div>
+                                  <p className="text-gray-600">Stores</p>
+                                  <p className="font-medium">{subscriptionData.subscription.total_stores}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-600">Tractors</p>
+                                  <p className="font-medium">{subscriptionData.subscription.total_tractors}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-600">Operators</p>
+                                  <p className="font-medium">{subscriptionData.subscription.total_operators}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-600">Attachments</p>
+                                  <p className="font-medium">{subscriptionData.subscription.total_attachments}</p>
+                                </div>
+                              </div>
+                            </div>
                           )}
+
+                          {/* Features */}
+                          {subscriptionData.subscription?.features && subscriptionData.subscription.features.length > 0 && (
+                            <div className="bg-white rounded-lg p-4 mb-4">
+                              <p className="text-sm font-semibold text-gray-900 mb-2">Features</p>
+                              <ul className="space-y-1 text-xs text-gray-600">
+                                {subscriptionData.subscription.features.map((feature, idx) => (
+                                  <li key={idx} className="flex items-start gap-2">
+                                    <CheckCircle className="w-3 h-3 text-green-600 mt-0.5 flex-shrink-0" />
+                                    <span>{feature}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* VERIFY SUBSCRIPTION BUTTON */}
+                          <div className="flex gap-3">
+                            <Button
+                              onClick={verifyOwnerSubscription}
+                              disabled={verifyingSubscription}
+                              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              {verifyingSubscription ? (
+                                <>
+                                  <CircularProgress size={16} className="text-white mr-2" />
+                                  Verifying...
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="w-4 h-4 mr-2" />
+                                  Verify Subscription
+                                </>
+                              )}
+                            </Button>
+                          </div>
+
+                          <p className="text-xs text-gray-600 mt-3">
+                            Last updated: {formatDateTime(subscriptionData.updatedAt)}
+                          </p>
                         </div>
                       )}
                     </div>
