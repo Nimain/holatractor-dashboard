@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowUpRight, MoreHorizontal, Filter, Plus } from "lucide-react";
+import { ArrowUpRight, MoreHorizontal, Filter, Plus, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,17 +45,25 @@ interface LeadBySale {
   label?: string;
 }
 
+interface NewUserForm {
+  first_name: string;
+  last_name: string;
+  email: string;
+  mobile: string;
+  gender: string;
+  lineage: string;
+  status: string;
+}
+
 // API Configuration
 const API_BASE_URL = "https://holatractor-backend-render.onrender.com";
 
 // Function to get token from localStorage or cookies
 const getAuthToken = () => {
-  // Try to get token from localStorage
   let token = localStorage.getItem('access_token') || 
               localStorage.getItem('token') || 
               localStorage.getItem('authToken');
   
-  // If not found, try to get from cookies
   if (!token) {
     const cookies = document.cookie.split(';');
     for (let cookie of cookies) {
@@ -83,12 +91,24 @@ const timeData = [
 export default function Dashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [totalLease, setTotalLease] = useState<TotalLease | null>(null);
   const [leadsBySales, setLeadsBySales] = useState<LeadBySale[]>([]);
   const [weekRange, setWeekRange] = useState<string>("This week");
   const [customers, setCustomers] = useState<Customer[]>([]);
+  
+  const [newUser, setNewUser] = useState<NewUserForm>({
+    first_name: "",
+    last_name: "",
+    email: "",
+    mobile: "",
+    gender: "",
+    lineage: "",
+    status: "Active"
+  });
 
   useEffect(() => {
     fetchDashboardData();
@@ -114,7 +134,6 @@ export default function Dashboard() {
       
       console.log("Fetching dashboard data...");
       
-      // Fetch all data in parallel
       const [statsRes, leaseRes, leadsRes, customersRes] = await Promise.all([
         fetch(`${API_BASE_URL}/dealer/customers/dashboard-stats`, { headers }),
         fetch(`${API_BASE_URL}/dealer/customers/total-lease`, { headers }),
@@ -129,7 +148,6 @@ export default function Dashboard() {
         customers: customersRes.status
       });
 
-      // Check for authentication errors
       if (statsRes.status === 401 || leaseRes.status === 401 || 
           leadsRes.status === 401 || customersRes.status === 401) {
         setError("Authentication failed. Please log in again.");
@@ -144,39 +162,30 @@ export default function Dashboard() {
 
       console.log("API Responses:", { stats, lease, leads, customersData });
 
-      // Parse customers list FIRST (we need this for accurate count)
       const customersList = customersData?.customers || customersData?.data || customersData?.customersData?.customers || [];
       console.log("Parsed customersList length:", customersList.length);
 
-      // Extract the correct data from responses
       let totalCustomers = 0;
       let customersDataAsOf = "Data per " + new Date().toLocaleDateString();
       
-      // PRIORITY 1: Use actual customers array length (most reliable)
       if (customersList.length > 0) {
         totalCustomers = customersList.length;
         customersDataAsOf = "Data per " + new Date().toLocaleDateString();
-      } 
-      // PRIORITY 2: Check stats API response
-      else if (stats?.stats?.totalCustomers !== undefined && stats.stats.totalCustomers > 0) {
+      } else if (stats?.stats?.totalCustomers !== undefined && stats.stats.totalCustomers > 0) {
         totalCustomers = stats.stats.totalCustomers;
         customersDataAsOf = stats.stats.dataAsOf || customersDataAsOf;
       } else if (stats?.totalCustomers !== undefined && stats.totalCustomers > 0) {
         totalCustomers = stats.totalCustomers;
         customersDataAsOf = stats.dataAsOf || customersDataAsOf;
-      }
-      // PRIORITY 3: Check pagination info if available
-      else if (customersData?.pagination?.total) {
+      } else if (customersData?.pagination?.total) {
         totalCustomers = customersData.pagination.total;
       }
       
       console.log("Final totalCustomers:", totalCustomers);
       
-      // For total lease - prioritize actual data
       let totalLeaseCount = 0;
       let leaseDataAsOf = new Date().toLocaleDateString();
       
-      // PRIORITY 1: Check if API returns actual lease data with non-zero value
       if (lease?.lease?.totalLease !== undefined && lease.lease.totalLease !== 0) {
         totalLeaseCount = lease.lease.totalLease;
         leaseDataAsOf = lease.lease.dataAsOf || leaseDataAsOf;
@@ -186,10 +195,7 @@ export default function Dashboard() {
       } else if (lease?.leaseData?.totalLease !== undefined && lease.leaseData.totalLease !== 0) {
         totalLeaseCount = lease.leaseData.totalLease;
         leaseDataAsOf = lease.leaseData.dataAsOf || leaseDataAsOf;
-      }
-      // PRIORITY 2: If lease API returns 0 or doesn't exist, calculate from customers
-      else if (customersList.length > 0) {
-        // Count customers who have active leases
+      } else if (customersList.length > 0) {
         totalLeaseCount = customersList.filter((customer: any) => 
           customer.status === "Active" || customer.lease || customer.hasLease
         ).length;
@@ -197,7 +203,6 @@ export default function Dashboard() {
       
       console.log("Final totalLease:", totalLeaseCount);
       
-      // For leads
       let leadsSalesData: LeadBySale[] = [];
       let weekRanges = null;
       
@@ -227,7 +232,6 @@ export default function Dashboard() {
       setLeadsBySales(Array.isArray(leadsSalesData) ? leadsSalesData : []);
       setCustomers(Array.isArray(customersList) ? customersList : []);
       
-      // Set week range label
       if (weekRanges?.start && weekRanges?.end) {
         const startDate = new Date(weekRanges.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         const endDate = new Date(weekRanges.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -241,13 +245,127 @@ export default function Dashboard() {
     }
   };
 
-  // Transform leads data for chart
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setNewUser(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const validateForm = () => {
+    if (!newUser.first_name.trim()) {
+      setError("First name is required");
+      return false;
+    }
+    if (!newUser.last_name.trim()) {
+      setError("Last name is required");
+      return false;
+    }
+    if (!newUser.email.trim()) {
+      setError("Email is required");
+      return false;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newUser.email)) {
+      setError("Please enter a valid email address");
+      return false;
+    }
+    if (!newUser.mobile.trim()) {
+      setError("Mobile number is required");
+      return false;
+    }
+    if (!/^\d{10}$/.test(newUser.mobile.replace(/\D/g, ''))) {
+      setError("Please enter a valid 10-digit mobile number");
+      return false;
+    }
+    return true;
+  };
+
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setError(null);
+      
+      const token = getAuthToken();
+      
+      if (!token) {
+        setError("No authentication token found. Please log in.");
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/dealer/customers/all`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newUser)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to add user');
+      }
+
+      console.log("User added successfully:", data);
+      
+      setSuccessMessage("User added successfully!");
+      
+      // Reset form
+      setNewUser({
+        first_name: "",
+        last_name: "",
+        email: "",
+        mobile: "",
+        gender: "",
+        lineage: "",
+        status: "Active"
+      });
+
+      // Refresh dashboard data
+      await fetchDashboardData();
+
+      // Close modal after 1.5 seconds
+      setTimeout(() => {
+        setIsModalOpen(false);
+        setSuccessMessage(null);
+      }, 1500);
+
+    } catch (err: any) {
+      console.error("Error adding user:", err);
+      setError(err.message || "Failed to add user. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setError(null);
+    setSuccessMessage(null);
+    setNewUser({
+      first_name: "",
+      last_name: "",
+      email: "",
+      mobile: "",
+      gender: "",
+      lineage: "",
+      status: "Active"
+    });
+  };
+
   const salesChartData = Array.isArray(leadsBySales) ? leadsBySales.map(item => ({
     name: item.day,
     value: item.count
   })) : [];
 
-  // Find max value for highlighting
   const maxLeadDay = Array.isArray(leadsBySales) && leadsBySales.length > 0
     ? leadsBySales.reduce((max, item) => 
         item.count > (max?.count || 0) ? item : max, 
@@ -266,7 +384,7 @@ export default function Dashboard() {
     );
   }
 
-  if (error) {
+  if (error && !isModalOpen) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-gray-50/50">
         <div className="text-center max-w-md p-6">
@@ -611,6 +729,175 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Add User Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] text-white p-6 rounded-t-3xl flex items-center justify-between">
+              <h2 className="text-2xl font-bold">Add New User</h2>
+              <button
+                onClick={handleCloseModal}
+                className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                aria-label="Close modal"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddUser} className="p-6 space-y-4">
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                  {error}
+                </div>
+              )}
+
+              {successMessage && (
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+                  {successMessage}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    First Name <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="first_name"
+                    value={newUser.first_name}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
+                    placeholder="Enter first name"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Last Name <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="last_name"
+                    value={newUser.last_name}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
+                    placeholder="Enter last name"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email <span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={newUser.email}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
+                  placeholder="email@example.com"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Mobile Number <span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="tel"
+                  name="mobile"
+                  value={newUser.mobile}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
+                  placeholder="1234567890"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Gender
+                  </label>
+                  <select
+                    name="gender"
+                    value={newUser.gender}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all bg-white"
+                  >
+                    <option value="">Select gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Age/Lineage
+                  </label>
+                  <input
+                    type="text"
+                    name="lineage"
+                    value={newUser.lineage}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
+                    placeholder="Enter age"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Status
+                </label>
+                <select
+                  name="status"
+                  value={newUser.status}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all bg-white"
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                  <option value="Pending">Pending</option>
+                </select>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  onClick={handleCloseModal}
+                  variant="outline"
+                  className="flex-1 py-2.5 rounded-lg border-gray-300 hover:bg-gray-50"
+                  disabled={submitting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-gradient-to-r from-[#A10A0C] to-[#3B0404] hover:from-[#8B0000] hover:to-[#2B0000] text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Adding...
+                    </span>
+                  ) : (
+                    "Add User"
+                  )}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

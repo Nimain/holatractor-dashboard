@@ -492,7 +492,7 @@ export default function EnhancedOwnerTable() {
         setOwners(customersData);
 
         if (customersData.length > 0) {
-          successMessage(`Loaded ${customersData.length} customers`);
+          // successMessage(`Loaded ${customersData.length} customers`);
         } else {
           console.log("No customers found in the response");
         }

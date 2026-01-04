@@ -85,7 +85,7 @@ const dropdownSections = [
     items: [
       { icon: Inbox, label: "All Notifications", href: "/dealer/notifications/allnotification" },
       { icon: Settings, label: "Settings", href: "/dealer/notifications/settings" },
-      { icon: AlertTriangle, label: "Alerts", href: "/demo" },
+      { icon: AlertTriangle, label: "Alerts", href: "/dealer/notifications/alert" },
     ],
   },
   {

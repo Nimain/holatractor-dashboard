@@ -113,7 +113,7 @@ export default function SalesPage() {
 
         console.log("Processed leads data:", leadsData)
         setLeads(leadsData)
-        successMessage(`Loaded ${leadsData.length} tractor leads`)
+        // successMessage(`Loaded ${leadsData.length} tractor leads`)
       })
       .catch((err) => {
         console.error("Error fetching leads:", err)

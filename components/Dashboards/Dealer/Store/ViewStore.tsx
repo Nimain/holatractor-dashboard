@@ -9,7 +9,6 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { renderInstance } from "@/utils/Axios/RenderInstance"
 import { useCookie } from "next-cookie"
-// Removed date-fns import - using native Date methods
 
 interface StoreLocation {
   id: string
@@ -49,37 +48,44 @@ interface StoreData {
 }
 
 export default function ResponsiveDealerDashboard() {
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [stores, setStores] = useState<StoreData[]>([])
-  const [loading, setLoading] = useState(true)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const router = useRouter()
-  const { cookie } = useCookie()
-  const user = cookie.get("user")
-  const access_token = cookie.get("access_token")
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [stores, setStores] = useState<StoreData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const router = useRouter();
+  const { cookie } = useCookie();
+  const user = cookie.get("user");
+  const access_token = cookie.get("access_token");
+
+  const fetchStores = async () => {
+    if (!user?.userId || !access_token) return;
+    try {
+      setLoading(true);
+      const response = await renderInstance.get(`/dealer/all-stores/${user.userId}`, {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
+      });
+      if (response.status === 200) {
+        setStores(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching stores:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchStores = async () => {
-      if (!user?.userId || !access_token) return
-      try {
-        setLoading(true)
-        const response = await renderInstance.get(`/dealer/all-stores/${user.userId}`, {
-          headers: {
-            Authorization: `Bearer ${access_token}`,
-          },
-        })
-        if (response.status === 200) {
-          setStores(response.data)
-        }
-      } catch (error) {
-        console.error("Error fetching stores:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
+    fetchStores();
+  }, [user?.userId, access_token, refreshTrigger]);
 
-    fetchStores()
-  }, [user?.userId, access_token])
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    // Trigger a refresh when modal closes (after store creation)
+    setRefreshTrigger(prev => prev + 1);
+  };
 
   const formatTime = (timeString: string) => {
     try {
@@ -135,7 +141,7 @@ export default function ResponsiveDealerDashboard() {
         </div>
       </div>
 
-      <AddStoreModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <AddStoreModal isOpen={isModalOpen} onClose={handleModalClose} />
 
       {/* Main Content Grid */}
       <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 p-3 sm:p-4 md:p-6">
@@ -210,7 +216,7 @@ export default function ResponsiveDealerDashboard() {
                   >
                     <div className="relative">
                       <Image
-                        src={store.banner[0] || store.logo || "/placeholder.svg?height=200&width=400"}
+                        src={store.banner?.[0] || store.logo || "/placeholder.svg?height=200&width=400"}
                         alt={store.name}
                         width={400}
                         height={200}
@@ -234,7 +240,7 @@ export default function ResponsiveDealerDashboard() {
                             {formatTime(store.opening_time)} - {formatTime(store.closing_time)}
                           </span>
                         </div>
-                        {store.closing_days.length > 0 && store.closing_days[0] && (
+                        {store.closing_days?.length > 0 && store.closing_days[0] && (
                           <div className="flex items-start gap-2">
                             <span className="text-xs text-white font-medium min-w-[40px] sm:min-w-[45px] mt-0.5">Closed:</span>
                             <div className="flex flex-wrap gap-1">
