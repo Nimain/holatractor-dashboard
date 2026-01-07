@@ -47,23 +47,25 @@ interface LeadBySale {
 
 interface NewUserForm {
   first_name: string;
+  middle_name?: string;
   last_name: string;
   email: string;
   mobile: string;
-  gender: string;
-  lineage: string;
-  status: string;
+  gender: "Male" | "Female" | "Other" | "";
+  image: string;
+  city: string;
 }
+
 
 // API Configuration
 const API_BASE_URL = "https://holatractor-backend-render.onrender.com";
 
 // Function to get token from localStorage or cookies
 const getAuthToken = () => {
-  let token = localStorage.getItem('access_token') || 
-              localStorage.getItem('token') || 
-              localStorage.getItem('authToken');
-  
+  let token = localStorage.getItem('access_token') ||
+    localStorage.getItem('token') ||
+    localStorage.getItem('authToken');
+
   if (!token) {
     const cookies = document.cookie.split(';');
     for (let cookie of cookies) {
@@ -73,7 +75,7 @@ const getAuthToken = () => {
       }
     }
   }
-  
+
   return token;
 };
 
@@ -99,15 +101,16 @@ export default function Dashboard() {
   const [leadsBySales, setLeadsBySales] = useState<LeadBySale[]>([]);
   const [weekRange, setWeekRange] = useState<string>("This week");
   const [customers, setCustomers] = useState<Customer[]>([]);
-  
+
   const [newUser, setNewUser] = useState<NewUserForm>({
     first_name: "",
+    middle_name: "",
     last_name: "",
     email: "",
     mobile: "",
     gender: "",
-    lineage: "",
-    status: "Active"
+    image: "",
+    city: ""
   });
 
   useEffect(() => {
@@ -118,9 +121,9 @@ export default function Dashboard() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const token = getAuthToken();
-      
+
       if (!token) {
         setError("No authentication token found. Please log in.");
         setLoading(false);
@@ -131,9 +134,9 @@ export default function Dashboard() {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
-      
+
       console.log("Fetching dashboard data...");
-      
+
       const [statsRes, leaseRes, leadsRes, customersRes] = await Promise.all([
         fetch(`${API_BASE_URL}/dealer/customers/dashboard-stats`, { headers }),
         fetch(`${API_BASE_URL}/dealer/customers/total-lease`, { headers }),
@@ -148,8 +151,8 @@ export default function Dashboard() {
         customers: customersRes.status
       });
 
-      if (statsRes.status === 401 || leaseRes.status === 401 || 
-          leadsRes.status === 401 || customersRes.status === 401) {
+      if (statsRes.status === 401 || leaseRes.status === 401 ||
+        leadsRes.status === 401 || customersRes.status === 401) {
         setError("Authentication failed. Please log in again.");
         setLoading(false);
         return;
@@ -167,7 +170,7 @@ export default function Dashboard() {
 
       let totalCustomers = 0;
       let customersDataAsOf = "Data per " + new Date().toLocaleDateString();
-      
+
       if (customersList.length > 0) {
         totalCustomers = customersList.length;
         customersDataAsOf = "Data per " + new Date().toLocaleDateString();
@@ -180,12 +183,12 @@ export default function Dashboard() {
       } else if (customersData?.pagination?.total) {
         totalCustomers = customersData.pagination.total;
       }
-      
+
       console.log("Final totalCustomers:", totalCustomers);
-      
+
       let totalLeaseCount = 0;
       let leaseDataAsOf = new Date().toLocaleDateString();
-      
+
       if (lease?.lease?.totalLease !== undefined && lease.lease.totalLease !== 0) {
         totalLeaseCount = lease.lease.totalLease;
         leaseDataAsOf = lease.lease.dataAsOf || leaseDataAsOf;
@@ -196,16 +199,16 @@ export default function Dashboard() {
         totalLeaseCount = lease.leaseData.totalLease;
         leaseDataAsOf = lease.leaseData.dataAsOf || leaseDataAsOf;
       } else if (customersList.length > 0) {
-        totalLeaseCount = customersList.filter((customer: any) => 
+        totalLeaseCount = customersList.filter((customer: any) =>
           customer.status === "Active" || customer.lease || customer.hasLease
         ).length;
       }
-      
+
       console.log("Final totalLease:", totalLeaseCount);
-      
+
       let leadsSalesData: LeadBySale[] = [];
       let weekRanges = null;
-      
+
       if (leads?.leads?.leadsBySales) {
         leadsSalesData = leads.leads.leadsBySales;
         weekRanges = leads.leads.weekRanges;
@@ -216,22 +219,22 @@ export default function Dashboard() {
         leadsSalesData = leads.leadsData.leadsBySales;
         weekRanges = leads.leadsData.weekRanges;
       }
-      
+
       console.log("Final leadsBySales count:", leadsSalesData.length);
 
       setDashboardStats({
         totalCustomers: totalCustomers,
         dataAsOf: customersDataAsOf
       });
-      
+
       setTotalLease({
         totalLease: totalLeaseCount,
         dataAsOf: leaseDataAsOf
       });
-      
+
       setLeadsBySales(Array.isArray(leadsSalesData) ? leadsSalesData : []);
       setCustomers(Array.isArray(customersList) ? customersList : []);
-      
+
       if (weekRanges?.start && weekRanges?.end) {
         const startDate = new Date(weekRanges.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         const endDate = new Date(weekRanges.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -278,12 +281,27 @@ export default function Dashboard() {
       setError("Please enter a valid 10-digit mobile number");
       return false;
     }
+    if (!newUser.gender) {
+      setError("Gender is required");
+      return false;
+    }
+
+    if (!newUser.image.trim()) {
+      setError("Image is required");
+      return false;
+    }
+
+    if (!newUser.city.trim()) {
+      setError("City is required");
+      return false;
+    }
+
     return true;
   };
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -291,15 +309,15 @@ export default function Dashboard() {
     try {
       setSubmitting(true);
       setError(null);
-      
+
       const token = getAuthToken();
-      
+
       if (!token) {
         setError("No authentication token found. Please log in.");
         return;
       }
 
-      const response = await fetch(`${API_BASE_URL}/dealer/customers/all`, {
+      const response = await fetch(`${API_BASE_URL}/dealer/customers`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -315,18 +333,19 @@ export default function Dashboard() {
       }
 
       console.log("User added successfully:", data);
-      
+
       setSuccessMessage("User added successfully!");
-      
+
       // Reset form
       setNewUser({
         first_name: "",
+        middle_name: "",
         last_name: "",
-        email: "",
         mobile: "",
-        gender: "",
-        lineage: "",
-        status: "Active"
+        email: "",
+        image: "",
+        city: "",
+        gender: ""
       });
 
       // Refresh dashboard data
@@ -352,12 +371,13 @@ export default function Dashboard() {
     setSuccessMessage(null);
     setNewUser({
       first_name: "",
+      middle_name: "",
       last_name: "",
       email: "",
       mobile: "",
       gender: "",
-      lineage: "",
-      status: "Active"
+      image: "",
+      city: ""
     });
   };
 
@@ -367,10 +387,10 @@ export default function Dashboard() {
   })) : [];
 
   const maxLeadDay = Array.isArray(leadsBySales) && leadsBySales.length > 0
-    ? leadsBySales.reduce((max, item) => 
-        item.count > (max?.count || 0) ? item : max, 
-        leadsBySales[0]
-      )
+    ? leadsBySales.reduce((max, item) =>
+      item.count > (max?.count || 0) ? item : max,
+      leadsBySales[0]
+    )
     : null;
 
   if (loading) {
@@ -393,7 +413,7 @@ export default function Dashboard() {
           </div>
           <h2 className="text-xl font-semibold text-gray-800 mb-2">Authentication Error</h2>
           <p className="text-gray-600 mb-4">{error}</p>
-          <Button 
+          <Button
             onClick={fetchDashboardData}
             className="bg-red-600 hover:bg-red-700 text-white"
           >
@@ -609,9 +629,8 @@ export default function Dashboard() {
                   {customers.map((customer, index) => (
                     <tr
                       key={customer._id || index}
-                      className={`border-b border-white/10 hover:bg-white/5 transition-colors ${
-                        index === customers.length - 1 ? "border-b-0" : ""
-                      }`}
+                      className={`border-b border-white/10 hover:bg-white/5 transition-colors ${index === customers.length - 1 ? "border-b-0" : ""
+                        }`}
                     >
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-4">
@@ -638,9 +657,8 @@ export default function Dashboard() {
                         <span className="text-white/90 font-medium">{customer.lineage || "N/A"}</span>
                       </td>
                       <td className="px-4 py-6">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          customer.status === "Active" ? "bg-green-500/20 text-green-200" : "bg-gray-500/20 text-gray-200"
-                        }`}>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${customer.status === "Active" ? "bg-green-500/20 text-green-200" : "bg-gray-500/20 text-gray-200"
+                          }`}>
                           {customer.status || "Active"}
                         </span>
                       </td>
@@ -714,9 +732,8 @@ export default function Dashboard() {
                         </div>
                         <div>
                           <p className="text-white/60 text-xs">Status</p>
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-                            customer.status === "Active" ? "bg-green-500/20 text-green-200" : "bg-gray-500/20 text-gray-200"
-                          }`}>
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${customer.status === "Active" ? "bg-green-500/20 text-green-200" : "bg-gray-500/20 text-gray-200"
+                            }`}>
                             {customer.status || "Active"}
                           </span>
                         </div>
@@ -771,6 +788,21 @@ export default function Dashboard() {
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
                     placeholder="Enter first name"
                     required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Middle Name <span className="text-red-600"></span>
+                  </label>
+                  <input
+                    type="text"
+                    name="middle_name"
+                    value={newUser.middle_name}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
+                    placeholder="Enter middle name"
+
                   />
                 </div>
 
@@ -840,34 +872,71 @@ export default function Dashboard() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Age/Lineage
+                    Image
                   </label>
                   <input
                     type="text"
-                    name="lineage"
-                    value={newUser.lineage}
+                    name="image"
+                    value={newUser.image}
                     onChange={handleInputChange}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all"
-                    placeholder="Enter age"
+                    placeholder="Enter image URL"
                   />
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Status
+                  City <span className="text-red-600">*</span>
                 </label>
-                <select
-                  name="status"
-                  value={newUser.status}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none transition-all bg-white"
-                >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                  <option value="Pending">Pending</option>
-                </select>
+
+                <div className="relative">
+                  <select
+                    name="city"
+                    value={newUser.city}
+                    onChange={handleInputChange}
+                    className="
+        w-full
+        appearance-none
+        rounded-lg
+        border
+        border-gray-300
+        bg-white
+        px-4
+        py-2.5
+        pr-10
+        text-gray-900
+        focus:border-red-500
+        focus:ring-2
+        focus:ring-red-500
+        outline-none
+        transition-all
+      "
+                    required
+                  >
+                    <option value="">Select City</option>
+                    <option value="Jharpokharia">Jharpokharia</option>
+                    <option value="Hazaribagh">Hazaribagh</option>
+                  </select>
+
+                  {/* Custom dropdown arrow */}
+                  <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
+                    <svg
+                      className="h-4 w-4"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                </div>
               </div>
+
 
               <div className="flex gap-3 pt-4">
                 <Button
