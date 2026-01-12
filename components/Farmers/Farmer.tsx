@@ -2,11 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import KeyboardArrowLeftIcon from "@mui/icons-material/KeyboardArrowLeft";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import FirstPageIcon from "@mui/icons-material/FirstPage";
 import LastPageIcon from "@mui/icons-material/LastPage";
 import SearchIcon from "@mui/icons-material/Search";
+import { RefreshCw } from "lucide-react";
+import Image from "next/image";
+
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { Label } from "../ui/label";
@@ -14,9 +18,7 @@ import { Dialog, DialogClose, DialogContent, DialogFooter } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import NullImage from "@/assets/AnimateIcons/Agent.svg";
-import Image from "next/image";
-import { RefreshCw } from "lucide-react";
-import FarmerAction from "./FarmerAction"; // ⬅️ add this
+import FarmerAction from "./FarmerAction";
 
 interface Farmer {
   id: string;
@@ -56,6 +58,7 @@ interface PaginationState {
 }
 
 const FarmerSection = () => {
+  // State management
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [allFarmers, setAllFarmers] = useState<Farmer[]>([]);
@@ -63,14 +66,20 @@ const FarmerSection = () => {
   const [displayedFarmers, setDisplayedFarmers] = useState<Farmer[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // row-click sheet state
+  // Hover states - for smooth animations
+  const [activeHover, setActiveHover] = useState("");
+  const [rowHover, setRowHover] = useState(-1);
+
+  // Dialog states
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedFarmer, setSelectedFarmer] = useState<Farmer | null>(null);
-
-  // create farmer dialog
   const [open, setOpen] = useState(false);
   const [newFarmerName, setNewFarmerName] = useState("");
+  const [pdfYearDialogOpen, setPdfYearDialogOpen] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
 
+  // Pagination state
   const [pagination, setPagination] = useState<PaginationState>({
     currentPage: 1,
     itemsPerPage: 10,
@@ -78,17 +87,22 @@ const FarmerSection = () => {
     totalPages: 1,
   });
 
+  // Sort state
   const [sortConfig, setSortConfig] = useState<{
     key: keyof Farmer | "name" | "gender" | "emailVerified" | "Status";
     direction: "asc" | "desc";
   } | null>(null);
 
-  const [pdfYearDialogOpen, setPdfYearDialogOpen] = useState(false);
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
-  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  // Grid columns configuration
+  const gridCols = useMemo(() => "60px 1.2fr 2fr 1fr 1.2fr 1.2fr 1.5fr 1.5fr", []);
 
+  // Helper functions
   const formatDate = (date: string | Date): string => {
-    const options: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric" };
+    const options: Intl.DateTimeFormatOptions = {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    };
     const dateObj = typeof date === "string" ? new Date(date) : date;
     return dateObj.toLocaleDateString(undefined, options);
   };
@@ -98,71 +112,111 @@ const FarmerSection = () => {
       .replace(/\s+/g, " ")
       .trim();
 
+  const calculateAvailableYears = () => {
+    const currentYear = new Date().getFullYear();
+    const years: number[] = [];
+    for (let year = 2022; year <= currentYear; year++) {
+      years.push(year);
+    }
+    return years;
+  };
+
+  // Pagination effect
   useEffect(() => {
     const totalItems = filteredFarmers.length;
     const totalPages = Math.ceil(totalItems / pagination.itemsPerPage) || 1;
+    
     setPagination((prev) => ({
       ...prev,
       totalItems,
       totalPages,
       currentPage: prev.currentPage > totalPages ? 1 : prev.currentPage,
     }));
+
     const startIndex = (pagination.currentPage - 1) * pagination.itemsPerPage;
     const endIndex = startIndex + pagination.itemsPerPage;
     setDisplayedFarmers(filteredFarmers.slice(startIndex, endIndex));
   }, [filteredFarmers, pagination.currentPage, pagination.itemsPerPage]);
 
+  // Search filter effect
   useEffect(() => {
     if (!searchTerm.trim()) {
       setFilteredFarmers([...allFarmers]);
       return;
     }
+
     const lowercasedSearch = searchTerm.toLowerCase();
     const filtered = allFarmers.filter((farmer) => {
       const name = fullName(farmer).toLowerCase();
       const id = farmer.id.toLowerCase();
       const gender = (farmer.user.gender ?? "").toLowerCase();
-      return name.includes(lowercasedSearch) || id.includes(lowercasedSearch) || gender.includes(lowercasedSearch);
+      return (
+        name.includes(lowercasedSearch) ||
+        id.includes(lowercasedSearch) ||
+        gender.includes(lowercasedSearch)
+      );
     });
+
     setFilteredFarmers(filtered);
     setPagination((prev) => ({ ...prev, currentPage: 1 }));
   }, [searchTerm, allFarmers]);
 
+  // Sort effect
   useEffect(() => {
     if (!sortConfig) return;
+
     const sortedFarmers = [...filteredFarmers].sort((a, b) => {
       let aValue: any, bValue: any;
-      if (sortConfig.key === "name") {
-        aValue = fullName(a).toLowerCase();
-        bValue = fullName(b).toLowerCase();
-      } else if (sortConfig.key === "gender") {
-        aValue = (a.user.gender ?? "").toLowerCase();
-        bValue = (b.user.gender ?? "").toLowerCase();
-      } else if (sortConfig.key === "emailVerified") {
-        aValue = a.user.emailVerified ? 1 : 0;
-        bValue = b.user.emailVerified ? 1 : 0;
-      } else if (sortConfig.key === "Status") {
-        aValue = a.Status;
-        bValue = b.Status;
-      } else if (sortConfig.key === "id") {
-        aValue = a.id.toLowerCase();
-        bValue = b.id.toLowerCase();
-      } else if (sortConfig.key === "createdAt") {
-        aValue = new Date(a.createdAt).getTime();
-        bValue = new Date(b.createdAt).getTime();
-      } else {
-        // @ts-expect-error dynamic access
-        aValue = a[sortConfig.key];
-        // @ts-expect-error dynamic access
-        bValue = b[sortConfig.key];
+
+      switch (sortConfig.key) {
+        case "name":
+          aValue = fullName(a).toLowerCase();
+          bValue = fullName(b).toLowerCase();
+          break;
+        case "gender":
+          aValue = (a.user.gender ?? "").toLowerCase();
+          bValue = (b.user.gender ?? "").toLowerCase();
+          break;
+        case "emailVerified":
+          aValue = a.user.emailVerified ? 1 : 0;
+          bValue = b.user.emailVerified ? 1 : 0;
+          break;
+        case "Status":
+          aValue = a.Status;
+          bValue = b.Status;
+          break;
+        case "id":
+          aValue = a.id.toLowerCase();
+          bValue = b.id.toLowerCase();
+          break;
+        case "createdAt":
+          aValue = new Date(a.createdAt).getTime();
+          bValue = new Date(b.createdAt).getTime();
+          break;
+        default:
+          aValue = a[sortConfig.key as keyof Farmer];
+          bValue = b[sortConfig.key as keyof Farmer];
       }
+
       if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
       if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
     });
+
     setFilteredFarmers(sortedFarmers);
   }, [sortConfig]);
 
+  // Initialize years
+  useEffect(() => {
+    setAvailableYears(calculateAvailableYears());
+  }, []);
+
+  // Fetch farmers on mount
+  useEffect(() => {
+    fetchAllFarmers();
+  }, []);
+
+  // API functions
   const fetchAllFarmers = async () => {
     setLoading(true);
     setRefreshing(true);
@@ -179,32 +233,20 @@ const FarmerSection = () => {
     }
   };
 
-  useEffect(() => {
-    fetchAllFarmers();
-  }, []);
-
+  // Handler functions
   const handlePageChange = (page: number) => {
     setPagination((prev) => ({ ...prev, currentPage: page }));
   };
 
-  const handleSort = (key: keyof Farmer | "name" | "gender" | "emailVerified" | "Status") => {
+  const handleSort = (
+    key: keyof Farmer | "name" | "gender" | "emailVerified" | "Status"
+  ) => {
     let direction: "asc" | "desc" = "asc";
     if (sortConfig && sortConfig.key === key) {
       direction = sortConfig.direction === "asc" ? "desc" : "asc";
     }
     setSortConfig({ key, direction });
   };
-
-  const calculateAvailableYears = () => {
-    const currentYear = new Date().getFullYear();
-    const years: number[] = [];
-    for (let year = 2022; year <= currentYear; year++) years.push(year);
-    return years;
-  };
-
-  useEffect(() => {
-    setAvailableYears(calculateAvailableYears());
-  }, []);
 
   const handleDownloadPDF = async () => {
     try {
@@ -216,7 +258,9 @@ const FarmerSection = () => {
       });
 
       if (filteredByYear.length === 0) {
-        errorMessage(`No farmers joined in ${selectedYear}. Please select a different year.`);
+        errorMessage(
+          `No farmers joined in ${selectedYear}. Please select a different year.`
+        );
         return;
       }
 
@@ -225,22 +269,39 @@ const FarmerSection = () => {
       const autoTableModule = await import("jspdf-autotable");
       const autoTable = (autoTableModule as any).default;
 
-      if (!jsPDF || !autoTable) throw new Error("Failed to load PDF generation libraries");
+      if (!jsPDF || !autoTable) {
+        throw new Error("Failed to load PDF generation libraries");
+      }
 
       const doc = new jsPDF();
       doc.setFontSize(18);
       doc.text(`Farmers Report ${selectedYear} - Holatractor`, 14, 22);
       doc.setFontSize(11);
       doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
-      doc.text(`Total Farmers in ${selectedYear}: ${filteredByYear.length}`, 14, 36);
+      doc.text(
+        `Total Farmers in ${selectedYear}: ${filteredByYear.length}`,
+        14,
+        36
+      );
 
-      const tableColumn = ["S.No", "ID", "Name", "Gender", "Mobile", "Verified", "Status", "Joined Date"];
+      const tableColumn = [
+        "S.No",
+        "ID",
+        "Name",
+        "Gender",
+        "Mobile",
+        "Verified",
+        "Status",
+        "Joined Date",
+      ];
+
       const tableRows = filteredByYear.map((farmer, index) => {
         const name = fullName(farmer);
         const mobile =
           farmer.user.mobile && farmer.user.country_code
             ? `${farmer.user.country_code} ${farmer.user.mobile}`
             : "No number";
+
         return [
           index + 1,
           farmer.id.substring(0, 8),
@@ -261,7 +322,9 @@ const FarmerSection = () => {
         headStyles: { fillColor: [66, 66, 66] },
         didDrawPage: (data: any) => {
           const pageSize = doc.internal.pageSize as any;
-          const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
+          const pageHeight = pageSize.height
+            ? pageSize.height
+            : pageSize.getHeight();
           doc.setFontSize(8);
           doc.text(
             `Generated by Holatractor Admin - Page ${data.pageNumber}`,
@@ -280,7 +343,9 @@ const FarmerSection = () => {
   };
 
   const getSortIcon = (key: string) => {
-    if (!sortConfig || (sortConfig.key as string) !== key) return <ArrowUpwardIcon fontSize="small" />;
+    if (!sortConfig || (sortConfig.key as string) !== key) {
+      return <ArrowUpwardIcon fontSize="small" />;
+    }
     return sortConfig.direction === "asc" ? (
       <ArrowUpwardIcon fontSize="small" />
     ) : (
@@ -288,12 +353,9 @@ const FarmerSection = () => {
     );
   };
 
-  // no Action column
-  const gridCols = useMemo(() => "60px 1.2fr 2fr 1fr 1.2fr 1.2fr 1.5fr 1.5fr", []);
-
   return (
     <div className="mt-6 md:mt-10 px-4 md:px-6 lg:px-8 text-base md:text-lg leading-relaxed">
-      {/* Header */}
+      {/* Header Section */}
       <div className="mb-5 md:mb-8 w-full flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
@@ -333,11 +395,14 @@ const FarmerSection = () => {
             onClick={fetchAllFarmers}
             disabled={refreshing}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
         </div>
 
+        {/* Search Bar */}
         <div className="relative w-full">
           <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
             <SearchIcon className="w-5 h-5 text-gray-500" />
@@ -351,13 +416,15 @@ const FarmerSection = () => {
           />
         </div>
 
-        {/* Create farmer dialog */}
+        {/* Create Farmer Dialog */}
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent
             className="bg-white h-fit w-[90vw] max-w-[400px] overflow-auto"
             style={{ scrollbarWidth: "none" }}
           >
-            <Label className="mb-2 text-base md:text-lg font-medium">Name</Label>
+            <Label className="mb-2 text-base md:text-lg font-medium">
+              Name
+            </Label>
             <Input
               value={newFarmerName}
               onChange={(e) => setNewFarmerName(e.target.value)}
@@ -391,11 +458,13 @@ const FarmerSection = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Report year dialog */}
+        {/* PDF Year Selection Dialog */}
         <Dialog open={pdfYearDialogOpen} onOpenChange={setPdfYearDialogOpen}>
           <DialogContent className="bg-white h-fit w-[90vw] max-w-[400px] overflow-auto">
             <div className="mb-4">
-              <h2 className="text-lg md:text-xl lg:text-2xl font-semibold mb-2">Select Year</h2>
+              <h2 className="text-lg md:text-xl lg:text-2xl font-semibold mb-2">
+                Select Year
+              </h2>
               <p className="text-gray-600">
                 Choose which year's data to include in the PDF report.
               </p>
@@ -406,7 +475,11 @@ const FarmerSection = () => {
                 <Button
                   key={year}
                   variant={selectedYear === year ? "default" : "outline"}
-                  className={selectedYear === year ? "bg-green-600 hover:bg-green-700" : ""}
+                  className={
+                    selectedYear === year
+                      ? "bg-green-600 hover:bg-green-700"
+                      : ""
+                  }
                   onClick={() => setSelectedYear(year)}
                 >
                   {year}
@@ -434,38 +507,150 @@ const FarmerSection = () => {
         </Dialog>
       </div>
 
-      {/* Desktop Table (row click opens FarmerAction) */}
+      {/* Desktop Table View */}
       <div className="hidden lg:block">
         <div className="w-full overflow-x-auto">
+          {/* Table Header */}
           <div
-            className="grid text-base lg:text-lg xl:text-xl font-semibold bg-[#ededed] p-4 xl:p-5 rounded min-w-max"
+            className="grid text-base lg:text-lg xl:text-xl font-semibold bg-[#ededed] p-4 xl:p-5 rounded min-w-max overflow-x-auto"
             style={{ gridTemplateColumns: gridCols }}
           >
-            <div>S.No</div>
-            <div className="cursor-pointer" onClick={() => handleSort("id")}>
-              {getSortIcon("id")} Id
+            {/* S.No Column */}
+            <div className="flex items-center justify-between group">
+              S.No
+              <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                  <ArrowUpwardIcon fontSize="small" />
+                </div>
+                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                  <MoreVertIcon fontSize="small" />
+                </div>
+              </div>
             </div>
-            <div className="cursor-pointer" onClick={() => handleSort("name")}>
-              Name {getSortIcon("name")}
+
+            {/* Id Column */}
+            <div
+              className="relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group cursor-pointer"
+              onClick={() => handleSort("id")}
+            >
+              Id
+              <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                  {getSortIcon("id")}
+                </div>
+                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                  <MoreVertIcon fontSize="small" />
+                </div>
+              </div>
             </div>
-            <div className="cursor-pointer" onClick={() => handleSort("gender")}>
-              Gender {getSortIcon("gender")}
+
+            {/* Name Column */}
+            <div
+              className="relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group cursor-pointer"
+              onClick={() => handleSort("name")}
+            >
+              Name
+              <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                  {getSortIcon("name")}
+                </div>
+                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                  <MoreVertIcon fontSize="small" />
+                </div>
+              </div>
             </div>
-            <div className="cursor-pointer" onClick={() => handleSort("emailVerified")}>
-              Verified {getSortIcon("emailVerified")}
+
+            {/* Gender Column */}
+            <div
+              className="relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group cursor-pointer"
+              onClick={() => handleSort("gender")}
+            >
+              Gender
+              <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                  {getSortIcon("gender")}
+                </div>
+                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                  <MoreVertIcon fontSize="small" />
+                </div>
+              </div>
             </div>
-            <div className="cursor-pointer" onClick={() => handleSort("Status")}>
-              Status {getSortIcon("Status")}
+
+            {/* Verified Column */}
+            <div
+              className="relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group cursor-pointer"
+              onClick={() => handleSort("emailVerified")}
+              onMouseEnter={() => setActiveHover("Verified")}
+              onMouseLeave={() => setActiveHover("")}
+            >
+              {activeHover === "Verified" ? "Veri..." : "Verified"}
+              <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                  {getSortIcon("emailVerified")}
+                </div>
+                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                  <MoreVertIcon fontSize="small" />
+                </div>
+              </div>
             </div>
-            <div>Mobile</div>
-            <div className="cursor-pointer" onClick={() => handleSort("createdAt")}>
-              Joined At
+
+            {/* Status Column */}
+            <div
+              className="relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group cursor-pointer"
+              onClick={() => handleSort("Status")}
+            >
+              Status
+              <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                  {getSortIcon("Status")}
+                </div>
+                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                  <MoreVertIcon fontSize="small" />
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile Column */}
+            <div className="relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
+              Mobile
+              <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                  <ArrowUpwardIcon fontSize="small" />
+                </div>
+                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                  <MoreVertIcon fontSize="small" />
+                </div>
+              </div>
+            </div>
+
+            {/* Joined At Column */}
+            <div
+              className="relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group cursor-pointer"
+              onClick={() => handleSort("createdAt")}
+              onMouseEnter={() => setActiveHover("Joined At")}
+              onMouseLeave={() => setActiveHover("")}
+            >
+              {activeHover === "Joined At" ? "Join..." : "Joined At"}
+              <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                  {getSortIcon("createdAt")}
+                </div>
+                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                  <MoreVertIcon fontSize="small" />
+                </div>
+              </div>
             </div>
           </div>
 
+          {/* Table Rows */}
           <div className="flex flex-col mt-3 w-full gap-2">
             {displayedFarmers.map((details, index) => {
               const name = fullName(details);
+              // Truncate to 2 words max for consistent layout
+              const displayName = name.split(" ").length > 2 
+                ? name.split(" ").slice(0, 2).join(" ") + "..." 
+                : name;
+              
               return (
                 <div
                   key={details.id}
@@ -475,6 +660,8 @@ const FarmerSection = () => {
                     setSelectedFarmer(details);
                     setDetailsOpen(true);
                   }}
+                  onMouseEnter={() => setRowHover(index)}
+                  onMouseLeave={() => setRowHover(-1)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
@@ -486,15 +673,23 @@ const FarmerSection = () => {
                   style={{ gridTemplateColumns: gridCols }}
                 >
                   <div className="truncate">
-                    {(pagination.currentPage - 1) * pagination.itemsPerPage + index + 1}
+                    {(pagination.currentPage - 1) * pagination.itemsPerPage +
+                      index +
+                      1}
                   </div>
-                  <div className="truncate">{details.id.substring(0, 8)}...</div>
-                  <div className="truncate">{name}</div>
-                  <div className="truncate capitalize">{details.user.gender ?? "Not specified"}</div>
+                  <div className="truncate">
+                    {details.id.substring(0, 8)}...
+                  </div>
+                  <div className="truncate">{displayName}</div>
+                  <div className="truncate capitalize">
+                    {details.user.gender ?? "Not specified"}
+                  </div>
                   <div className="truncate">
                     <span
                       className={
-                        details.user.emailVerified ? "text-green-600 font-medium" : "text-red-600 font-medium"
+                        details.user.emailVerified
+                          ? "text-green-600 font-medium"
+                          : "text-red-600 font-medium"
                       }
                     >
                       {details.user.emailVerified ? "Verified" : "Not Verified"}
@@ -502,7 +697,11 @@ const FarmerSection = () => {
                   </div>
                   <div className="truncate">
                     <span
-                      className={details.Status === 1 ? "text-green-600 font-medium" : "text-red-600 font-medium"}
+                      className={
+                        details.Status === 1
+                          ? "text-green-600 font-medium"
+                          : "text-red-600 font-medium"
+                      }
                     >
                       {details.Status === 1 ? "Active" : "Inactive"}
                     </span>
@@ -520,7 +719,7 @@ const FarmerSection = () => {
         </div>
       </div>
 
-      {/* Mobile & Tablet Cards (tap card opens FarmerAction) */}
+      {/* Mobile & Tablet Card View */}
       <div className="lg:hidden">
         {loading && displayedFarmers.length === 0 ? (
           <div className="w-full py-20 flex flex-col items-center justify-center bg-white rounded">
@@ -530,7 +729,7 @@ const FarmerSection = () => {
         ) : displayedFarmers.length === 0 ? (
           <div className="w-full min-h-[50vh] flex flex-col items-center justify-center">
             <Image
-              src={NullImage || "/placeholder.svg"}
+              src={NullImage}
               alt="No farmers found"
               className="w-[200px] sm:w-[300px] h-auto object-cover"
               width={300}
@@ -539,7 +738,11 @@ const FarmerSection = () => {
             />
             <p className="text-gray-600 mt-4">No farmers found</p>
             {searchTerm && (
-              <Button variant="outline" className="mt-4" onClick={() => setSearchTerm("")}>
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={() => setSearchTerm("")}
+              >
                 Clear search
               </Button>
             )}
@@ -548,10 +751,15 @@ const FarmerSection = () => {
           <div className="space-y-4">
             {displayedFarmers.map((details) => {
               const name = fullName(details);
+              // Truncate to 2 words max for consistent layout
+              const displayName = name.split(" ").length > 2 
+                ? name.split(" ").slice(0, 2).join(" ") + "..." 
+                : name;
+              
               return (
                 <div
                   key={details.id}
-                  className="bg-white p-4 rounded-lg shadow-md border border-gray-100"
+                  className="bg-white p-4 rounded-lg shadow-md border border-gray-100 hover:shadow-lg transition-shadow cursor-pointer"
                   role="button"
                   tabIndex={0}
                   onClick={() => {
@@ -568,12 +776,16 @@ const FarmerSection = () => {
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-semibold text-lg">{name}</h3>
-                      <p className="text-xs text-gray-500">ID: {details.id.substring(0, 8)}...</p>
+                      <h3 className="font-semibold text-lg">{displayName}</h3>
+                      <p className="text-xs text-gray-500">
+                        ID: {details.id.substring(0, 8)}...
+                      </p>
                     </div>
                     <div
                       className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        details.Status === 1 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                        details.Status === 1
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
                       }`}
                     >
                       {details.Status === 1 ? "Active" : "Inactive"}
@@ -583,13 +795,17 @@ const FarmerSection = () => {
                   <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                     <div>
                       <p className="text-gray-600 font-medium">Gender</p>
-                      <p className="capitalize">{details.user.gender ?? "N/A"}</p>
+                      <p className="capitalize">
+                        {details.user.gender ?? "N/A"}
+                      </p>
                     </div>
                     <div>
                       <p className="text-gray-600 font-medium">Verified</p>
                       <p
                         className={
-                          details.user.emailVerified ? "text-green-600 font-medium" : "text-red-600 font-medium"
+                          details.user.emailVerified
+                            ? "text-green-600 font-medium"
+                            : "text-red-600 font-medium"
                         }
                       >
                         {details.user.emailVerified ? "Yes" : "No"}
@@ -598,7 +814,9 @@ const FarmerSection = () => {
                     <div className="col-span-2">
                       <p className="text-gray-600 font-medium">Mobile</p>
                       <p className="text-blue-600">
-                        {details.user.mobile ? `${details.user.country_code} ${details.user.mobile}` : "N/A"}
+                        {details.user.mobile
+                          ? `${details.user.country_code} ${details.user.mobile}`
+                          : "N/A"}
                       </p>
                     </div>
                     <div className="col-span-2">
@@ -658,8 +876,8 @@ const FarmerSection = () => {
         </div>
       )}
 
-      {/* Row-click sheet via FarmerAction (controlled) */}
-      {selectedFarmer ? (
+      {/* Farmer Details Sheet */}
+      {selectedFarmer && (
         <FarmerAction
           index={(pagination.currentPage - 1) * pagination.itemsPerPage}
           name={fullName(selectedFarmer)}
@@ -671,7 +889,7 @@ const FarmerSection = () => {
           onOpenChange={setDetailsOpen}
           showTrigger={false}
         />
-      ) : null}
+      )}
     </div>
   );
 };

@@ -12,7 +12,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
-import { useCookie } from "next-cookie";
+// import { useCookie } from "next-cookie";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { CircularProgress } from "@mui/material";
 import { Trash2, TrendingUp, Phone, Mail, Download, AlertCircle } from "lucide-react";
@@ -26,7 +26,7 @@ interface FarmerActionProps {
   gender?: string | null;
   mobile?: string | null;
   country_code?: string | null;
-  creatDate: string;
+  createDate: string;
   status: number;
   id: string;
   onUpdate?: () => void;
@@ -73,7 +73,7 @@ interface Booking {
 const FarmerAction = ({
   index,
   name,
-  creatDate,
+  createDate,
   status,
   id,
   onUpdate,
@@ -81,8 +81,10 @@ const FarmerAction = ({
   onOpenChange,
   showTrigger = true,
 }: FarmerActionProps) => {
-  const { cookie } = useCookie();
-  const access_token = cookie.get("access_token");
+
+  const access_token =
+    typeof window !== "undefined" ? localStorage.getItem("farmer_token") : null;
+
 
   const [internalOpen, setInternalOpen] = useState(false);
   const computedOpen = open !== undefined ? open : internalOpen;
@@ -130,7 +132,7 @@ const FarmerAction = ({
     setFarmerBookings([]);
 
     try {
-      const headers = { 
+      const headers = {
         Authorization: `Bearer ${access_token}`,
         'Content-Type': 'application/json'
       };
@@ -156,8 +158,12 @@ const FarmerAction = ({
       // Handle bookings response
       let bookings: Booking[] = [];
       if (bookingsResponse.status === 'fulfilled') {
-        bookings = bookingsResponse.value.data.bookings || [];
+        bookings = (bookingsResponse.value.data.bookings || []).map((b: any) => ({
+          ...b,
+          bookingStatus: (b.booking_status || "").toLowerCase(),   // map backend → frontend
+        }));
         setFarmerBookings(bookings);
+
         console.log('Bookings loaded successfully:', bookings.length, 'bookings');
       } else {
         console.error('Bookings fetch failed:', bookingsResponse.reason?.response?.data || bookingsResponse.reason);
@@ -165,14 +171,14 @@ const FarmerAction = ({
 
       // If both failed, show error
       if (summaryResponse.status === 'rejected' && bookingsResponse.status === 'rejected') {
-        const errorMsg = summaryResponse.reason?.response?.data?.message || 
-                        summaryResponse.reason?.message ||
-                        "Farmer not found or you don't have permission to view this farmer's details";
-        
-        const errorDetails = summaryResponse.reason?.response?.status 
+        const errorMsg = summaryResponse.reason?.response?.data?.message ||
+          summaryResponse.reason?.message ||
+          "Farmer not found or you don't have permission to view this farmer's details";
+
+        const errorDetails = summaryResponse.reason?.response?.status
           ? ` (Status: ${summaryResponse.reason.response.status})`
           : '';
-        
+
         setDataError(errorMsg + errorDetails);
         errorMessage(errorMsg);
       } else if (summaryResponse.status === 'rejected' && bookingsResponse.status === 'fulfilled') {
@@ -186,9 +192,9 @@ const FarmerAction = ({
 
     } catch (error: any) {
       console.error('Unexpected error:', error);
-      const message = error?.response?.data?.message || 
-                     error?.message || 
-                     "An unexpected error occurred while loading farmer details";
+      const message = error?.response?.data?.message ||
+        error?.message ||
+        "An unexpected error occurred while loading farmer details";
       setDataError(message);
       errorMessage(message);
     } finally {
@@ -199,18 +205,29 @@ const FarmerAction = ({
   const processFarmerStats = (summary: FarmerSummary | null, bookings: Booking[]) => {
     const stats = summary?.stats || {};
 
-    const activeStatuses = ["Open", "Arriving", "Started", "Accepted", "Arrived"];
-    const activeBookingsCount = bookings.filter((b) => activeStatuses.includes(b.bookingStatus)).length;
-    const completedCount = bookings.filter((b) => b.bookingStatus === "Completed").length;
-    const pendingCount = bookings.filter(
-      (b) => b.bookingStatus === "Pending" || b.bookingStatus === "Requested"
+    const activeStatuses = ["open", "arriving", "started", "accepted", "arrived"];
+    const activeBookingsCount = bookings.filter((b) =>
+      activeStatuses.includes(b.bookingStatus)
     ).length;
+
+    const completedCount = bookings.filter(
+      (b) => b.bookingStatus === "completed"
+    ).length;
+
+    const pendingCount = bookings.filter(
+      (b) => b.bookingStatus === "pending" || b.bookingStatus === "requested"
+    ).length;
+
 
     const currentDate = new Date().toLocaleDateString("en-US", {
       day: "numeric",
       month: "short",
       year: "numeric",
     });
+    const statsAny = stats as Partial<{
+      active_farms: number;
+      total_farms: number;
+    }>;
 
     setFarmerStats({
       activeBookings: {
@@ -231,16 +248,18 @@ const FarmerAction = ({
         inUse: pendingCount,
         date: currentDate,
       },
+
       activeForms: {
-        value: stats.activeFarms || 0,
-        inUse: stats.activeFarms || 0,
+        value: stats.activeFarms ?? statsAny.active_farms ?? 0,
+        inUse: stats.activeFarms ?? statsAny.active_farms ?? 0,
         date: currentDate,
       },
       totalForms: {
-        value: stats.totalFarms || 0,
+        value: stats.totalFarms ?? statsAny.total_farms ?? 0,
         date: currentDate,
       },
     });
+
   };
 
   useEffect(() => {
@@ -278,13 +297,13 @@ const FarmerAction = ({
     setLoading((prev) => ({ ...prev, [type]: true }));
     try {
       await renderInstance.patch(
-        endpoint, 
-        {}, 
-        { 
-          headers: { 
+        endpoint,
+        {},
+        {
+          headers: {
             Authorization: `Bearer ${access_token}`,
             'Content-Type': 'application/json'
-          } 
+          }
         }
       );
       successMessage(success);
@@ -318,12 +337,13 @@ const FarmerAction = ({
   );
 
   const devicesData = farmerBookings
-    .filter((b) => b.tractor_name && b.tractor_name !== "N/A")
+    .filter((b) => b.tractor_name || (b as any).tractorName)
     .map((b) => ({
-      type: b.bookingStatus === "Completed" ? "Rented" : "Booked",
-      model: b.tractor_name || "Unknown Tractor",
+      type: b.bookingStatus === "completed" ? "Rented" : "Booked",
+      model: b.tractor_name || (b as any).tractorName || "Unknown Tractor",
       time: formatDate(b.created_at),
     }));
+
 
   const paymentsData = farmerBookings.map((b) => ({
     type: "Booking",
@@ -372,7 +392,7 @@ const FarmerAction = ({
                 />
                 <div>
                   <h2 className="text-xl font-semibold">{name}</h2>
-                  <p className="text-sm text-gray-600">Created on {creatDate}</p>
+                  <p className="text-sm text-gray-600">Created on {createDate}</p>
                   <p className="text-sm text-gray-600">ID: {id.slice(0, 8)}...</p>
                 </div>
               </div>
@@ -389,7 +409,12 @@ const FarmerAction = ({
               </div>
 
               <p className="text-sm text-gray-600">
-                Last Activity: {farmerSummary?.profile?.last_activity || creatDate}
+                Last Activity: {
+                  farmerSummary?.profile?.last_activity ||
+                  (farmerSummary?.profile as any)?.lastActivity ||
+                  createDate
+                }
+
               </p>
             </div>
 
@@ -435,71 +460,6 @@ const FarmerAction = ({
             </SheetHeader>
 
             <div className="flex-1 overflow-y-auto p-6">
-              {/* Error Display */}
-              {dataError && (
-                <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg mb-4 flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="font-medium">Error Loading Farmer Details</p>
-                    <p className="text-sm mt-1">{dataError}</p>
-                    {(dataError.includes("Farmer not found") || dataError.includes("404")) && (
-                      <div className="mt-3 text-xs bg-white p-3 rounded border border-red-300">
-                        <p className="font-semibold mb-2 text-red-800">⚠️ HTTP 404 - Farmer Not Found</p>
-                        <p className="mb-2 text-gray-700">This farmer record doesn't exist in the database:</p>
-                        <code className="block bg-gray-100 p-2 rounded text-gray-800 mb-3 break-all">
-                          Farmer ID: {id}
-                        </code>
-                        <p className="font-medium mb-1 text-gray-800">Possible reasons:</p>
-                        <ul className="list-disc list-inside space-y-1 text-gray-700 ml-2">
-                          <li>This farmer was deleted from the database</li>
-                          <li>The farmer ID is incorrect or outdated</li>
-                          <li>Database was reset/cleared (common in development)</li>
-                          <li>Wrong endpoint - may need farmer's own auth token, not admin token</li>
-                        </ul>
-                        <div className="mt-3 p-2 bg-yellow-50 border border-yellow-300 rounded">
-                          <p className="text-yellow-800 font-medium text-xs">💡 Backend Note:</p>
-                          <p className="text-yellow-700 text-xs mt-1">
-                            The API comment says "need farmer auth" - this endpoint might require the farmer's own 
-                            authentication token, not an admin token. Consider creating a separate admin endpoint 
-                            or using the farmer's token if available.
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex gap-2 mt-3">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={fetchFarmerDetails}
-                        disabled={loadingData}
-                      >
-                        {loadingData ? <CircularProgress size={14} /> : "Retry"}
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => {
-                          console.group('🔍 Farmer Detail Debug Info');
-                          console.log('Farmer ID:', id);
-                          console.log('Farmer Name:', name);
-                          console.log('Created Date:', creatDate);
-                          console.log('Status:', status === 1 ? 'Active' : 'Inactive');
-                          console.log('Token exists:', !!access_token);
-                          console.log('Token preview:', access_token?.substring(0, 40) + '...');
-                          console.log('API Endpoints:');
-                          console.log('  - Summary:', `/admin/farmers/${id}/summary`);
-                          console.log('  - Bookings:', `/admin/farmers/${id}/bookings`);
-                          console.log('Full error:', dataError);
-                          console.groupEnd();
-                          alert('✅ Debug info logged to console (Press F12 to view)');
-                        }}
-                      >
-                        Show Debug Info
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Stats Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
@@ -606,11 +566,10 @@ const FarmerAction = ({
                       <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                          activeTab === tab.id
-                            ? "border-black text-black"
-                            : "border-transparent text-gray-600 hover:text-gray-900"
-                        }`}
+                        className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
+                          ? "border-black text-black"
+                          : "border-transparent text-gray-600 hover:text-gray-900"
+                          }`}
                       >
                         {tab.label}
                       </button>
@@ -690,11 +649,10 @@ const FarmerAction = ({
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <span
-                                    className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                      ["Open", "Arriving", "Started", "Accepted", "Arrived"].includes(booking.bookingStatus)
+                                    className={`px-3 py-1 rounded-full text-sm font-medium ${["open", "arriving", "started", "accepted", "arrived"].includes(booking.bookingStatus)
                                         ? "bg-green-100 text-green-700"
                                         : "bg-gray-100 text-gray-700"
-                                    }`}
+                                      }`}
                                   >
                                     {booking.bookingStatus}
                                   </span>
@@ -738,11 +696,10 @@ const FarmerAction = ({
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <span
-                                    className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                      payment.status === "paid"
-                                        ? "bg-green-100 text-green-700"
-                                        : "bg-orange-100 text-orange-700"
-                                    }`}
+                                    className={`px-3 py-1 rounded-full text-sm font-medium ${payment.status === "paid"
+                                      ? "bg-green-100 text-green-700"
+                                      : "bg-orange-100 text-orange-700"
+                                      }`}
                                   >
                                     {payment.status === "paid" ? "Paid" : "Failed"}
                                   </span>

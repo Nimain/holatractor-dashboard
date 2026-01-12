@@ -112,7 +112,7 @@ const LeaseSection = () => {
             setActiveHover("");
           }}
         >
-          <p>{activeHover === "Duration" ? "End..." : "End date"}</p>
+          <p>{activeHover === "Duration" ? "End..." : "EndDate"}</p>
           <div className="flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100">
             <div className="rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
               <ArrowUpwardIcon />

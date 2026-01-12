@@ -1,9 +1,14 @@
 "use client"
 import { createContext, ReactNode, useContext, useState } from "react";
-import Lottie from "lottie-react"
+import dynamic from "next/dynamic";
+import { Backdrop } from "@mui/material";
 
 import TractorAnimation from "@/assets/lottie_animations/tractor.json"
-import { Backdrop } from "@mui/material";
+
+// Dynamically import Lottie with no SSR
+const Lottie = dynamic(() => import("lottie-react"), {
+    ssr: false,
+});
 
 // Create a context
 const LoadingContext = createContext({
@@ -24,7 +29,6 @@ export const LoadingProvider = ({ children }: { children: ReactNode }) => {
             >
                 <div className="w-64 h-64">
                     <Lottie
-                        //   lottieRef={lottieRef}
                         animationData={TractorAnimation}
                         loop={true}
                         autoplay={true}
