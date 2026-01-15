@@ -12,11 +12,28 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
-// import { useCookie } from "next-cookie";
+import { useCookie } from "next-cookie";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { CircularProgress } from "@mui/material";
-import { Trash2, TrendingUp, Phone, Mail, Download, AlertCircle } from "lucide-react";
+import {
+  Trash2,
+  TrendingUp,
+  Phone,
+  Mail,
+  Download,
+  AlertCircle,
+  Menu,
+  X,
+  MessageSquare,
+} from "lucide-react";
 import Image from "next/image";
+
+// *** ADMIN API PATHS ***
+const SUMMARY_PATH = (id: string) => `/admin/farmers/${id}/summary`;
+const BOOKING_PATH = (id: string) => `/admin/farmers/${id}/bookings`;
+const DELETE_PATH = (id: string) => `/admin/farmer/delete/${id}`;
+const ACTIVATE_PATH = (id: string) => `/admin/farmer/activate/${id}`;
+const INACTIVATE_PATH = (id: string) => `/admin/farmer/inactivate/${id}`;
 
 interface FarmerActionProps {
   index: number;
@@ -81,25 +98,20 @@ const FarmerAction = ({
   onOpenChange,
   showTrigger = true,
 }: FarmerActionProps) => {
-
-  const access_token =
-    typeof window !== "undefined" ? localStorage.getItem("farmer_token") : null;
-
+  // *** USE COOKIE FOR ADMIN AUTH ***
+  const { cookie } = useCookie();
+  const access_token = cookie.get("access_token");
 
   const [internalOpen, setInternalOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const computedOpen = open !== undefined ? open : internalOpen;
 
-  const handleOpen = (val: boolean) => {
-    setInternalOpen(val);
-    onOpenChange?.(val);
-    // Reset error when opening
-    if (val) {
-      setDataError(null);
-    }
-  };
-
   const [activeTab, setActiveTab] = useState("devices");
-  const [loading, setLoading] = useState({ delete: false, active: false, inactive: false });
+  const [loading, setLoading] = useState({
+    delete: false,
+    active: false,
+    inactive: false,
+  });
 
   const [loadingData, setLoadingData] = useState(false);
   const [farmerSummary, setFarmerSummary] = useState<FarmerSummary | null>(null);
@@ -115,6 +127,12 @@ const FarmerAction = ({
     totalForms: { value: 0, date: "" },
   });
 
+  const handleOpen = (val: boolean) => {
+    setInternalOpen(val);
+    onOpenChange?.(val);
+    if (val) setDataError(null);
+  };
+
   const fetchFarmerDetails = async () => {
     if (!id) {
       setDataError("Farmer ID is missing");
@@ -122,7 +140,8 @@ const FarmerAction = ({
     }
 
     if (!access_token) {
-      setDataError("Authentication token is missing. Please log in again.");
+      setDataError("Authentication required. Please log in as admin.");
+      console.error("❌ Cannot fetch - no admin token available");
       return;
     }
 
@@ -134,75 +153,104 @@ const FarmerAction = ({
     try {
       const headers = {
         Authorization: `Bearer ${access_token}`,
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       };
 
-      console.log('Fetching farmer details for ID:', id);
-      console.log('Using token:', access_token?.substring(0, 20) + '...');
+      console.log("=== FETCHING FARMER DETAILS (ADMIN) ===");
+      console.log("Farmer ID:", id);
+      console.log("Base URL:", renderInstance.defaults.baseURL);
 
-      const [summaryResponse, bookingsResponse] = await Promise.allSettled([
-        renderInstance.get(`/admin/farmers/${id}/summary`, { headers }),
-        renderInstance.get(`/admin/farmers/${id}/bookings`, { headers }),
-      ]);
-
-      // Handle summary response
+      // ---- SUMMARY ----
       let summary: FarmerSummary | null = null;
-      if (summaryResponse.status === 'fulfilled') {
-        summary = summaryResponse.value.data;
+      let summaryError: any = null;
+      try {
+        const summaryRes = await renderInstance.get(SUMMARY_PATH(id), { headers });
+        const responseData = summaryRes.data;
+        
+        console.log("📦 RAW SUMMARY RESPONSE:", JSON.stringify(responseData, null, 2));
+        
+        // Handle response structure: { profile: [...], stats: {...} }
+        const profileData = Array.isArray(responseData.profile) && responseData.profile.length > 0 
+          ? responseData.profile[0] 
+          : (responseData.profile || {});
+        
+        summary = {
+          profile: profileData,
+          stats: responseData.stats || {}
+        };
+        
         setFarmerSummary(summary);
-        console.log('Summary loaded successfully:', summary);
-      } else {
-        console.error('Summary fetch failed:', summaryResponse.reason?.response?.data || summaryResponse.reason);
+        console.log("✓ SUMMARY SUCCESS", summary);
+      } catch (err: any) {
+        summaryError = err;
+        console.log("✗ SUMMARY FAILED", err?.response?.status || err.message);
+        console.log("Error details:", err?.response?.data);
       }
 
-      // Handle bookings response
+      // ---- BOOKINGS ----
       let bookings: Booking[] = [];
-      if (bookingsResponse.status === 'fulfilled') {
-        bookings = (bookingsResponse.value.data.bookings || []).map((b: any) => ({
-          ...b,
-          bookingStatus: (b.booking_status || "").toLowerCase(),   // map backend → frontend
+      let bookingsError: any = null;
+      try {
+        const bookingRes = await renderInstance.get(BOOKING_PATH(id), { headers });
+        const responseData = bookingRes.data;
+        
+        console.log("📦 RAW BOOKINGS RESPONSE:", JSON.stringify(responseData, null, 2));
+        
+        // Handle response structure: { bookings: [...] }
+        const rawBookings = responseData.bookings || responseData || [];
+        bookings = rawBookings.map((b: any) => ({
+          id: b.id,
+          start_date: b.start_date,
+          end_date: b.end_date,
+          booking_hours: b.booking_hours,
+          total_cost: b.total_cost,
+          bookingStatus: (b.booking_status || b.bookingStatus || "").toLowerCase(),
+          confirm: b.confirm,
+          owner_confirm: b.owner_confirm,
+          tractor_name: b.tractor_name || "N/A",
+          store_name: b.store_name,
+          payment_status: b.payment_status || "Unpaid",
+          created_at: b.created_at,
         }));
+        
         setFarmerBookings(bookings);
-
-        console.log('Bookings loaded successfully:', bookings.length, 'bookings');
-      } else {
-        console.error('Bookings fetch failed:', bookingsResponse.reason?.response?.data || bookingsResponse.reason);
+        console.log("✓ BOOKINGS SUCCESS - Count:", bookings.length);
+      } catch (err: any) {
+        bookingsError = err;
+        console.log("✗ BOOKINGS FAILED", err?.response?.status || err.message);
+        console.log("Error details:", err?.response?.data);
       }
 
-      // If both failed, show error
-      if (summaryResponse.status === 'rejected' && bookingsResponse.status === 'rejected') {
-        const errorMsg = summaryResponse.reason?.response?.data?.message ||
-          summaryResponse.reason?.message ||
-          "Farmer not found or you don't have permission to view this farmer's details";
+      console.log("=== FETCH RESULTS ===");
+      console.log("Summary loaded:", !!summary, summary);
+      console.log("Bookings loaded:", bookings.length);
 
-        const errorDetails = summaryResponse.reason?.response?.status
-          ? ` (Status: ${summaryResponse.reason.response.status})`
-          : '';
-
-        setDataError(errorMsg + errorDetails);
-        errorMessage(errorMsg);
-      } else if (summaryResponse.status === 'rejected' && bookingsResponse.status === 'fulfilled') {
-        // Only bookings loaded, show warning but process data
-        setDataError("Could not load farmer summary, showing bookings data only");
-        processFarmerStats(summary, bookings);
+      // Don't show error if at least one endpoint succeeded
+      if (!summary && bookings.length === 0 && (summaryError || bookingsError)) {
+        const errorMsg = "Could not load farmer data. Check console for details.";
+        console.error("❌ BOTH ENDPOINTS FAILED");
+        setDataError(errorMsg);
       } else {
-        // Process stats if at least one succeeded
+        // Clear any previous errors
+        setDataError(null);
         processFarmerStats(summary, bookings);
       }
-
     } catch (error: any) {
-      console.error('Unexpected error:', error);
-      const message = error?.response?.data?.message ||
+      console.error("❌ UNEXPECTED ERROR (ADMIN FETCH):", error);
+      const message =
+        error?.response?.data?.message ||
         error?.message ||
-        "An unexpected error occurred while loading farmer details";
+        "An unexpected error occurred";
       setDataError(message);
       errorMessage(message);
     } finally {
       setLoadingData(false);
+      console.log("=== FETCH COMPLETE (ADMIN) ===");
     }
   };
 
   const processFarmerStats = (summary: FarmerSummary | null, bookings: Booking[]) => {
+    console.log("Processing farmer stats...");
     const stats = summary?.stats || {};
 
     const activeStatuses = ["open", "arriving", "started", "accepted", "arrived"];
@@ -210,26 +258,21 @@ const FarmerAction = ({
       activeStatuses.includes(b.bookingStatus)
     ).length;
 
-    const completedCount = bookings.filter(
-      (b) => b.bookingStatus === "completed"
-    ).length;
+    const completedCount = bookings.filter((b) => b.bookingStatus === "completed").length;
 
     const pendingCount = bookings.filter(
       (b) => b.bookingStatus === "pending" || b.bookingStatus === "requested"
     ).length;
-
 
     const currentDate = new Date().toLocaleDateString("en-US", {
       day: "numeric",
       month: "short",
       year: "numeric",
     });
-    const statsAny = stats as Partial<{
-      active_farms: number;
-      total_farms: number;
-    }>;
 
-    setFarmerStats({
+    const statsAny = stats as any;
+
+    const processedStats = {
       activeBookings: {
         value: stats.activeBookings ?? activeBookingsCount,
         inUse: activeBookingsCount,
@@ -248,7 +291,6 @@ const FarmerAction = ({
         inUse: pendingCount,
         date: currentDate,
       },
-
       activeForms: {
         value: stats.activeFarms ?? statsAny.active_farms ?? 0,
         inUse: stats.activeFarms ?? statsAny.active_farms ?? 0,
@@ -258,15 +300,17 @@ const FarmerAction = ({
         value: stats.totalFarms ?? statsAny.total_farms ?? 0,
         date: currentDate,
       },
-    });
+    };
 
+    console.log("Processed stats:", processedStats);
+    setFarmerStats(processedStats);
   };
 
   useEffect(() => {
-    if (computedOpen) {
+    if (computedOpen && access_token) {
       fetchFarmerDetails();
     }
-  }, [computedOpen, id]);
+  }, [computedOpen, id, access_token]);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
@@ -288,40 +332,60 @@ const FarmerAction = ({
     { id: "forms", label: "Forms" },
   ] as const;
 
-  const updateFarmerStatus = async (endpoint: string, type: keyof typeof loading, success: string) => {
+  const updateFarmerStatus = async (
+    endpoint: string,
+    type: keyof typeof loading,
+    success: string
+  ) => {
     if (!access_token) {
-      errorMessage("Authentication required");
+      errorMessage("Authentication required - please log in as admin");
+      console.error("❌ Cannot update status - no admin token");
       return;
     }
 
+    console.log("=== UPDATE FARMER STATUS (ADMIN) ===");
+    console.log("Endpoint:", endpoint);
+    console.log("Type:", type);
+    console.log("Farmer ID:", id);
+
     setLoading((prev) => ({ ...prev, [type]: true }));
+
     try {
-      await renderInstance.patch(
-        endpoint,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${access_token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      const headers = {
+        Authorization: `Bearer ${access_token}`,
+        "Content-Type": "application/json",
+      };
+
+      const response = await renderInstance.patch(endpoint, {}, { headers });
+      console.log("✓ SUCCESS:", response.data);
       successMessage(success);
       onUpdate?.();
       handleOpen(false);
     } catch (err: any) {
-      const message = err?.response?.data?.message || err?.message || "Operation failed. Please try again.";
+      console.error("❌ UPDATE FAILED:", err?.response || err);
+      const message =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        "Operation failed. Please try again.";
       errorMessage(message);
     } finally {
       setLoading((prev) => ({ ...prev, [type]: false }));
+      console.log("=== UPDATE COMPLETE (ADMIN) ===");
     }
   };
+
+  const DeleteFarmer = () => updateFarmerStatus(DELETE_PATH(id), "delete", "Farmer deleted successfully");
+  const ActiveFarmer = () => updateFarmerStatus(ACTIVATE_PATH(id), "active", "Farmer activated successfully");
+  const InactiveFarmer = () => updateFarmerStatus(INACTIVATE_PATH(id), "inactive", "Farmer inactivated successfully");
 
   const StatCard = ({ icon, title, value, inUse, date }: any) => (
     <div className="bg-gradient-to-br from-zinc-100 via-zinc-50 to-zinc-200 rounded-lg p-4">
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm">{icon}</div>
+          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm">
+            {icon}
+          </div>
         </div>
         <TrendingUp className="w-4 h-4 text-green-600" />
       </div>
@@ -342,8 +406,8 @@ const FarmerAction = ({
       type: b.bookingStatus === "completed" ? "Rented" : "Booked",
       model: b.tractor_name || (b as any).tractorName || "Unknown Tractor",
       time: formatDate(b.created_at),
+      booking: b,
     }));
-
 
   const paymentsData = farmerBookings.map((b) => ({
     type: "Booking",
@@ -360,12 +424,7 @@ const FarmerAction = ({
           <button className="p-2 hover:bg-gray-100 rounded" aria-label="Open farmer details">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
             </svg>
           </button>
         </SheetTrigger>
@@ -376,10 +435,28 @@ const FarmerAction = ({
         className="w-full sm:max-w-[90vw] md:max-w-[80vw] lg:max-w-[85vw] xl:max-w-[1400px] p-0 overflow-hidden flex flex-col"
       >
         <div className="flex h-full overflow-hidden">
-          {/* Left Sidebar */}
-          <div className="w-96 flex-shrink-0 bg-gray-50 p-6 overflow-y-auto border-r">
-            <div className="bg-gray-100 rounded-lg p-6 mb-6">
-              <div className="flex items-center gap-4 mb-4">
+          {/* Mobile Menu Toggle */}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-lg"
+          >
+            {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+
+          {/* Sidebar */}
+          <div
+            className={`
+            ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+            lg:translate-x-0
+            fixed lg:relative
+            w-80 h-full
+            flex-shrink-0 bg-gray-50 p-4 sm:p-6 overflow-y-auto border-r
+            transition-transform duration-300 ease-in-out
+            z-40
+          `}
+          >
+            <div className="bg-gray-100 rounded-lg p-4 sm:p-6 mb-6">
+              <div className="flex items-center gap-3 sm:gap-4 mb-4">
                 <Image
                   src={
                     farmerSummary?.profile?.image ||
@@ -388,12 +465,12 @@ const FarmerAction = ({
                   alt={name}
                   width={64}
                   height={64}
-                  className="w-16 h-16 rounded-full object-cover border-2 border-gray-300"
+                  className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover border-2 border-gray-300"
                 />
-                <div>
-                  <h2 className="text-xl font-semibold">{name}</h2>
-                  <p className="text-sm text-gray-600">Created on {createDate}</p>
-                  <p className="text-sm text-gray-600">ID: {id.slice(0, 8)}...</p>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg sm:text-xl font-semibold truncate">{name}</h2>
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">Created on {createDate}</p>
+                  <p className="text-xs text-gray-500 truncate">ID: {id.slice(0, 8)}...</p>
                 </div>
               </div>
 
@@ -409,16 +486,13 @@ const FarmerAction = ({
               </div>
 
               <p className="text-sm text-gray-600">
-                Last Activity: {
-                  farmerSummary?.profile?.last_activity ||
+                Last Activity:{" "}
+                {farmerSummary?.profile?.last_activity ||
                   (farmerSummary?.profile as any)?.lastActivity ||
-                  createDate
-                }
-
+                  createDate}
               </p>
             </div>
 
-            {/* Recent Activities */}
             <div className="bg-white rounded-lg p-6 mb-6">
               <h3 className="text-lg font-semibold mb-4">Recent Activities</h3>
               <div className="space-y-3">
@@ -429,17 +503,13 @@ const FarmerAction = ({
                     <div key={idx} className="flex gap-3 text-sm pb-3 border-b last:border-b-0">
                       <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center flex-shrink-0">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                       </div>
                       <div>
                         <p>
-                          <span className="font-medium">{booking.bookingStatus}</span> {booking.tractor_name || "Tractor"}
+                          <span className="font-medium">{booking.bookingStatus}</span>{" "}
+                          {booking.tractor_name || "Tractor"}
                         </p>
                         <p className="text-gray-500 text-xs">{formatDate(booking.created_at)}</p>
                       </div>
@@ -450,28 +520,41 @@ const FarmerAction = ({
             </div>
           </div>
 
+          {/* Overlay for mobile */}
+          {sidebarOpen && (
+            <div
+              className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+
           {/* Main Content */}
           <div className="flex-1 flex flex-col overflow-hidden">
             <SheetHeader className="p-6 border-b">
               <SheetTitle>Farmer Activity - {name}</SheetTitle>
               <SheetDescription className={status === 1 ? "text-green-600" : "text-red-600"}>
-                {status === 1 ? `${name} is an active farmer` : `${name} is inactive. Click "Active" to activate.`}
+                {status === 1
+                  ? `${name} is an active farmer`
+                  : `${name} is inactive. Click "Active" to activate.`}
               </SheetDescription>
             </SheetHeader>
 
             <div className="flex-1 overflow-y-auto p-6">
+              {dataError && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-red-800">Error Loading Data</p>
+                    <p className="text-sm text-red-600 mt-1">{dataError}</p>
+                  </div>
+                </div>
+              )}
 
-              {/* Stats Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
                 <StatCard
                   icon={
                     <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   }
                   title="Active Bookings"
@@ -482,12 +565,7 @@ const FarmerAction = ({
                 <StatCard
                   icon={
                     <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   }
                   title="Complete Bookings"
@@ -497,12 +575,7 @@ const FarmerAction = ({
                 <StatCard
                   icon={
                     <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   }
                   title="Total Land Area"
@@ -512,12 +585,7 @@ const FarmerAction = ({
                 <StatCard
                   icon={
                     <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   }
                   title="Pending Bookings"
@@ -528,12 +596,7 @@ const FarmerAction = ({
                 <StatCard
                   icon={
                     <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   }
                   title="Active Forms"
@@ -544,12 +607,7 @@ const FarmerAction = ({
                 <StatCard
                   icon={
                     <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   }
                   title="Total Forms"
@@ -558,7 +616,6 @@ const FarmerAction = ({
                 />
               </div>
 
-              {/* Tabs Section */}
               <div className="bg-white rounded-lg">
                 <div className="border-b border-gray-200 px-6 flex items-center justify-between">
                   <div className="flex gap-1">
@@ -566,10 +623,11 @@ const FarmerAction = ({
                       <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
-                          ? "border-black text-black"
-                          : "border-transparent text-gray-600 hover:text-gray-900"
-                          }`}
+                        className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                          activeTab === tab.id
+                            ? "border-black text-black"
+                            : "border-transparent text-gray-600 hover:text-gray-900"
+                        }`}
                       >
                         {tab.label}
                       </button>
@@ -599,62 +657,31 @@ const FarmerAction = ({
                                 className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                               >
                                 <div className="flex items-center gap-4">
-                                  <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M20.5 8H19V5.5a1.5 1.5 0 0 0-1.5-1.5H14V2h-2v2H7v2h7.5a.5.5 0 0 1 .5.5V8H11c-1.1 0-2 .9-2 2v3.1A4.9 4.9 0 0 0 5 13a5 5 0 1 0 5 5h4a4 4 0 1 0 4-4h-1v-4h3.5V8zM5 20a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm13-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0z" />
-                                  </svg>
-                                  <div>
-                                    <p className="font-medium">
-                                      {device.type} {device.model}
-                                    </p>
-                                    <p className="text-xs text-gray-500">{device.time}</p>
-                                  </div>
-                                </div>
-                                <button className="p-2 hover:bg-gray-200 rounded">
-                                  <Trash2 className="w-4 h-4 text-gray-600" />
-                                </button>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      )}
-
-                      {activeTab === "booking" && (
-                        <div className="space-y-3">
-                          {farmerBookings.length === 0 ? (
-                            <p className="text-gray-500 text-center text-sm py-8">No bookings found</p>
-                          ) : (
-                            farmerBookings.map((booking, idx) => (
-                              <div
-                                key={idx}
-                                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                              >
-                                <div className="flex items-center gap-4">
                                   <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                    />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                   </svg>
                                   <div>
                                     <p className="font-medium">
-                                      {booking.bookingStatus} {booking.tractor_name || "N/A"}
+                                      {device.booking?.bookingStatus} {device.booking?.tractor_name || "N/A"}
                                     </p>
                                     <p className="text-sm text-gray-600">
-                                      Payment: ${booking.total_cost} • Duration: {booking.booking_hours} • Booked on:{" "}
-                                      {formatDate(booking.created_at)}
+                                      Payment: ${device.booking?.total_cost} • Duration:{" "}
+                                      {device.booking?.booking_hours} • Booked on:{" "}
+                                      {formatDate(device.booking?.created_at || "")}
                                     </p>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <span
-                                    className={`px-3 py-1 rounded-full text-sm font-medium ${["open", "arriving", "started", "accepted", "arrived"].includes(booking.bookingStatus)
+                                    className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                      ["open", "arriving", "started", "accepted", "arrived"].includes(
+                                        device.booking?.bookingStatus || ""
+                                      )
                                         ? "bg-green-100 text-green-700"
                                         : "bg-gray-100 text-gray-700"
-                                      }`}
+                                    }`}
                                   >
-                                    {booking.bookingStatus}
+                                    {device.booking?.bookingStatus}
                                   </span>
                                   <button className="p-2 hover:bg-gray-200 rounded">
                                     <Trash2 className="w-4 h-4 text-gray-600" />
@@ -678,17 +705,10 @@ const FarmerAction = ({
                               >
                                 <div className="flex items-center gap-4">
                                   <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                                    />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h6m4 0h2m-7 4h6a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                                   </svg>
                                   <div>
-                                    <p className="font-medium">
-                                      {payment.type} {payment.model}
-                                    </p>
+                                    <p className="font-medium">{payment.type} {payment.model}</p>
                                     <p className="text-sm text-gray-600">
                                       Payment: {payment.payment} • Booked on: {payment.bookedOn}
                                     </p>
@@ -696,10 +716,11 @@ const FarmerAction = ({
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <span
-                                    className={`px-3 py-1 rounded-full text-sm font-medium ${payment.status === "paid"
-                                      ? "bg-green-100 text-green-700"
-                                      : "bg-orange-100 text-orange-700"
-                                      }`}
+                                    className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                      payment.status === "paid"
+                                        ? "bg-green-100 text-green-700"
+                                        : "bg-orange-100 text-orange-700"
+                                    }`}
                                   >
                                     {payment.status === "paid" ? "Paid" : "Failed"}
                                   </span>
@@ -718,6 +739,47 @@ const FarmerAction = ({
                           <p className="text-gray-500 text-center text-sm py-8">No forms data available</p>
                         </div>
                       )}
+
+                      {activeTab === "booking" && (
+                        <div className="space-y-3">
+                          {farmerBookings.length === 0 ? (
+                            <p className="text-gray-500 text-center text-sm py-8">No bookings found</p>
+                          ) : (
+                            farmerBookings.map((booking, idx) => (
+                              <div
+                                key={idx}
+                                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                              >
+                                <div className="flex items-center gap-4">
+                                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                  <div>
+                                    <p className="font-medium">{booking.tractor_name || "Tractor"}</p>
+                                    <p className="text-sm text-gray-600">
+                                      ${booking.total_cost} • {booking.booking_hours} • {formatDate(booking.created_at)}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <span
+                                    className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                      ["open", "arriving", "started", "accepted", "arrived"].includes(booking.bookingStatus)
+                                        ? "bg-green-100 text-green-700"
+                                        : "bg-gray-100 text-gray-700"
+                                    }`}
+                                  >
+                                    {booking.bookingStatus}
+                                  </span>
+                                  <button className="p-2 hover:bg-gray-200 rounded">
+                                    <Trash2 className="w-4 h-4 text-gray-600" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -728,7 +790,7 @@ const FarmerAction = ({
               <Button
                 type="button"
                 variant="destructive"
-                onClick={() => updateFarmerStatus(`/farmer/delete/${id}`, "delete", "Farmer deleted successfully")}
+                onClick={DeleteFarmer}
                 disabled={loading.delete}
               >
                 {loading.delete ? <CircularProgress size={16} /> : "Delete"}
@@ -738,7 +800,7 @@ const FarmerAction = ({
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => updateFarmerStatus(`/farmer/inactivate/${id}`, "inactive", "Inactivated successfully")}
+                    onClick={InactiveFarmer}
                     disabled={loading.inactive}
                   >
                     {loading.inactive ? <CircularProgress size={16} /> : "Inactive"}
@@ -747,7 +809,7 @@ const FarmerAction = ({
                   <Button
                     type="button"
                     className="bg-green-800 hover:bg-green-700"
-                    onClick={() => updateFarmerStatus(`/farmer/activate/${id}`, "active", "Activated successfully")}
+                    onClick={ActiveFarmer}
                     disabled={loading.active}
                   >
                     {loading.active ? <CircularProgress size={16} /> : "Active"}
