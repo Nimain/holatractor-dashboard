@@ -881,9 +881,9 @@ const FarmerSection = () => {
         <FarmerAction
           index={(pagination.currentPage - 1) * pagination.itemsPerPage}
           name={fullName(selectedFarmer)}
-          creatDate={formatDate(selectedFarmer.createdAt)}
+          createDate={formatDate(selectedFarmer.createdAt)}
           status={selectedFarmer.Status}
-          id={selectedFarmer.id}
+           id={selectedFarmer.user_id}
           onUpdate={fetchAllFarmers}
           open={detailsOpen}
           onOpenChange={setDetailsOpen}

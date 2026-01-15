@@ -52,39 +52,54 @@ interface FarmerActionProps {
   showTrigger?: boolean;
 }
 
+interface FarmerProfile {
+  id?: string;
+  name?: string;
+  email?: string;
+  mobile?: string | null;
+  country_code?: string | null;
+  image?: string | null;
+  created_at?: string;
+  last_activity?: string;
+}
+
+interface FarmerStats {
+  activeBookings?: number;
+  completedBookings?: number;
+  pendingBookings?: number;
+  totalLandArea?: number;
+  activeFarms?: number;
+  totalFarms?: number;
+}
+
 interface FarmerSummary {
-  profile?: {
-    id?: string;
-    first_name?: string;
-    last_name?: string;
-    email?: string;
-    mobile?: string;
-    country_code?: string;
-    image?: string;
-    last_activity?: string;
-  };
-  stats?: {
-    activeBookings?: number;
-    completeBookings?: number;
-    pendingBookings?: number;
-    totalLandArea?: number;
-    activeFarms?: number;
-    totalFarms?: number;
-  };
+  profile?: FarmerProfile;
+  stats?: FarmerStats;
 }
 
 interface Booking {
   id: string;
   start_date: string;
-  end_date: string;
+  end_date: string | null;
   booking_hours: string;
   total_cost: number;
-  bookingStatus: string;
+  booking_status: string;
   confirm: boolean;
   owner_confirm: boolean;
   tractor_name?: string;
+  store_name?: string;
   payment_status: string;
   created_at: string;
+}
+
+interface BookingsResponse {
+  bookings: Booking[];
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 const FarmerAction = ({
@@ -98,7 +113,6 @@ const FarmerAction = ({
   onOpenChange,
   showTrigger = true,
 }: FarmerActionProps) => {
-  // *** USE COOKIE FOR ADMIN AUTH ***
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
 
@@ -123,8 +137,8 @@ const FarmerAction = ({
     completeBookings: { value: 0, date: "" },
     totalLandArea: { value: "0 ha", date: "" },
     pendingBookings: { value: 0, inUse: 0, date: "" },
-    activeForms: { value: 0, inUse: 0, date: "" },
-    totalForms: { value: 0, date: "" },
+    activeFarms: { value: 0, inUse: 0, date: "" },
+    totalFarms: { value: 0, date: "" },
   });
 
   const handleOpen = (val: boolean) => {
@@ -166,19 +180,16 @@ const FarmerAction = ({
       try {
         const summaryRes = await renderInstance.get(SUMMARY_PATH(id), { headers });
         const responseData = summaryRes.data;
-        
+
         console.log("📦 RAW SUMMARY RESPONSE:", JSON.stringify(responseData, null, 2));
-        
-        // Handle response structure: { profile: [...], stats: {...} }
-        const profileData = Array.isArray(responseData.profile) && responseData.profile.length > 0 
-          ? responseData.profile[0] 
-          : (responseData.profile || {});
-        
+
+        // Handle the correct response structure: { profile: {...}, stats: {...} }
+        // NOT an array - it's a direct object
         summary = {
-          profile: profileData,
+          profile: responseData.profile || {},
           stats: responseData.stats || {}
         };
-        
+
         setFarmerSummary(summary);
         console.log("✓ SUMMARY SUCCESS", summary);
       } catch (err: any) {
@@ -192,27 +203,27 @@ const FarmerAction = ({
       let bookingsError: any = null;
       try {
         const bookingRes = await renderInstance.get(BOOKING_PATH(id), { headers });
-        const responseData = bookingRes.data;
-        
+        const responseData: BookingsResponse = bookingRes.data;
+
         console.log("📦 RAW BOOKINGS RESPONSE:", JSON.stringify(responseData, null, 2));
-        
-        // Handle response structure: { bookings: [...] }
-        const rawBookings = responseData.bookings || responseData || [];
+
+        // Handle response structure: { bookings: [...], pagination: {...} }
+        const rawBookings = responseData.bookings || [];
         bookings = rawBookings.map((b: any) => ({
           id: b.id,
           start_date: b.start_date,
           end_date: b.end_date,
           booking_hours: b.booking_hours,
           total_cost: b.total_cost,
-          bookingStatus: (b.booking_status || b.bookingStatus || "").toLowerCase(),
+          booking_status: (b.booking_status || "").toLowerCase(),
           confirm: b.confirm,
           owner_confirm: b.owner_confirm,
           tractor_name: b.tractor_name || "N/A",
-          store_name: b.store_name,
+          store_name: b.store_name || "N/A",
           payment_status: b.payment_status || "Unpaid",
           created_at: b.created_at,
         }));
-        
+
         setFarmerBookings(bookings);
         console.log("✓ BOOKINGS SUCCESS - Count:", bookings.length);
       } catch (err: any) {
@@ -231,7 +242,6 @@ const FarmerAction = ({
         console.error("❌ BOTH ENDPOINTS FAILED");
         setDataError(errorMsg);
       } else {
-        // Clear any previous errors
         setDataError(null);
         processFarmerStats(summary, bookings);
       }
@@ -255,13 +265,13 @@ const FarmerAction = ({
 
     const activeStatuses = ["open", "arriving", "started", "accepted", "arrived"];
     const activeBookingsCount = bookings.filter((b) =>
-      activeStatuses.includes(b.bookingStatus)
+      activeStatuses.includes(b.booking_status)
     ).length;
 
-    const completedCount = bookings.filter((b) => b.bookingStatus === "completed").length;
+    const completedCount = bookings.filter((b) => b.booking_status === "completed").length;
 
     const pendingCount = bookings.filter(
-      (b) => b.bookingStatus === "pending" || b.bookingStatus === "requested"
+      (b) => b.booking_status === "pending" || b.booking_status === "requested"
     ).length;
 
     const currentDate = new Date().toLocaleDateString("en-US", {
@@ -270,8 +280,6 @@ const FarmerAction = ({
       year: "numeric",
     });
 
-    const statsAny = stats as any;
-
     const processedStats = {
       activeBookings: {
         value: stats.activeBookings ?? activeBookingsCount,
@@ -279,7 +287,7 @@ const FarmerAction = ({
         date: currentDate,
       },
       completeBookings: {
-        value: stats.completeBookings ?? completedCount,
+        value: stats.completedBookings ?? completedCount,
         date: currentDate,
       },
       totalLandArea: {
@@ -291,13 +299,13 @@ const FarmerAction = ({
         inUse: pendingCount,
         date: currentDate,
       },
-      activeForms: {
-        value: stats.activeFarms ?? statsAny.active_farms ?? 0,
-        inUse: stats.activeFarms ?? statsAny.active_farms ?? 0,
+      activeFarms: {
+        value: stats.activeFarms ?? 0,
+        inUse: stats.activeFarms ?? 0,
         date: currentDate,
       },
-      totalForms: {
-        value: stats.totalFarms ?? statsAny.total_farms ?? 0,
+      totalFarms: {
+        value: stats.totalFarms ?? 0,
         date: currentDate,
       },
     };
@@ -401,16 +409,16 @@ const FarmerAction = ({
   );
 
   const devicesData = farmerBookings
-    .filter((b) => b.tractor_name || (b as any).tractorName)
+    .filter((b) => b.tractor_name && b.tractor_name !== "N/A")
     .map((b) => ({
-      type: b.bookingStatus === "completed" ? "Rented" : "Booked",
-      model: b.tractor_name || (b as any).tractorName || "Unknown Tractor",
+      type: b.booking_status === "completed" ? "Rented" : "Booked",
+      model: b.tractor_name || "Unknown Tractor",
       time: formatDate(b.created_at),
       booking: b,
     }));
 
   const paymentsData = farmerBookings.map((b) => ({
-    type: "Booking",
+    // type: "Booking",
     model: b.tractor_name || "N/A",
     payment: `$${b.total_cost}`,
     bookedOn: formatDate(b.created_at),
@@ -435,7 +443,6 @@ const FarmerAction = ({
         className="w-full sm:max-w-[90vw] md:max-w-[80vw] lg:max-w-[85vw] xl:max-w-[1400px] p-0 overflow-hidden flex flex-col"
       >
         <div className="flex h-full overflow-hidden">
-          {/* Mobile Menu Toggle */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-lg"
@@ -443,7 +450,6 @@ const FarmerAction = ({
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
 
-          {/* Sidebar */}
           <div
             className={`
             ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
@@ -468,7 +474,9 @@ const FarmerAction = ({
                   className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover border-2 border-gray-300"
                 />
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-lg sm:text-xl font-semibold truncate">{name}</h2>
+                  <h2 className="text-lg sm:text-xl font-semibold truncate">
+                    {farmerSummary?.profile?.name || name}
+                  </h2>
                   <p className="text-xs sm:text-sm text-gray-600 truncate">Created on {createDate}</p>
                   <p className="text-xs text-gray-500 truncate">ID: {id.slice(0, 8)}...</p>
                 </div>
@@ -486,10 +494,7 @@ const FarmerAction = ({
               </div>
 
               <p className="text-sm text-gray-600">
-                Last Activity:{" "}
-                {farmerSummary?.profile?.last_activity ||
-                  (farmerSummary?.profile as any)?.lastActivity ||
-                  createDate}
+                Last Activity: {farmerSummary?.profile?.last_activity ? formatDate(farmerSummary.profile.last_activity) : createDate}
               </p>
             </div>
 
@@ -508,8 +513,8 @@ const FarmerAction = ({
                       </div>
                       <div>
                         <p>
-                          <span className="font-medium">{booking.bookingStatus}</span>{" "}
-                          {booking.tractor_name || "Tractor"}
+                          <span className="font-medium capitalize">{booking.booking_status}</span>{" "}
+                          {booking.tractor_name}
                         </p>
                         <p className="text-gray-500 text-xs">{formatDate(booking.created_at)}</p>
                       </div>
@@ -520,7 +525,6 @@ const FarmerAction = ({
             </div>
           </div>
 
-          {/* Overlay for mobile */}
           {sidebarOpen && (
             <div
               className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
@@ -528,10 +532,9 @@ const FarmerAction = ({
             />
           )}
 
-          {/* Main Content */}
           <div className="flex-1 flex flex-col overflow-hidden">
             <SheetHeader className="p-6 border-b">
-              <SheetTitle>Farmer Activity - {name}</SheetTitle>
+              <SheetTitle>Farmer Activity - {farmerSummary?.profile?.name || name}</SheetTitle>
               <SheetDescription className={status === 1 ? "text-green-600" : "text-red-600"}>
                 {status === 1
                   ? `${name} is an active farmer`
@@ -599,10 +602,10 @@ const FarmerAction = ({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   }
-                  title="Active Forms"
-                  value={loadingData ? "..." : farmerStats.activeForms.value}
-                  inUse={loadingData ? "..." : farmerStats.activeForms.inUse}
-                  date={farmerStats.activeForms.date}
+                  title="Active Farms"
+                  value={loadingData ? "..." : farmerStats.activeFarms.value}
+                  inUse={loadingData ? "..." : farmerStats.activeFarms.inUse}
+                  date={farmerStats.activeFarms.date}
                 />
                 <StatCard
                   icon={
@@ -610,9 +613,9 @@ const FarmerAction = ({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   }
-                  title="Total Forms"
-                  value={loadingData ? "..." : farmerStats.totalForms.value}
-                  date={farmerStats.totalForms.date}
+                  title="Total Farms"
+                  value={loadingData ? "..." : farmerStats.totalFarms.value}
+                  date={farmerStats.totalFarms.date}
                 />
               </div>
 
@@ -623,11 +626,10 @@ const FarmerAction = ({
                       <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                          activeTab === tab.id
+                        className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
                             ? "border-black text-black"
                             : "border-transparent text-gray-600 hover:text-gray-900"
-                        }`}
+                          }`}
                       >
                         {tab.label}
                       </button>
@@ -662,26 +664,26 @@ const FarmerAction = ({
                                   </svg>
                                   <div>
                                     <p className="font-medium">
-                                      {device.booking?.bookingStatus} {device.booking?.tractor_name || "N/A"}
+                                      {device.booking?.tractor_name || "N/A"}
                                     </p>
                                     <p className="text-sm text-gray-600">
                                       Payment: ${device.booking?.total_cost} • Duration:{" "}
-                                      {device.booking?.booking_hours} • Booked on:{" "}
+                                      {device.booking?.booking_hours} • Store:{" "}
+                                      {device.booking?.store_name || "N/A"} • Booked on:{" "}
                                       {formatDate(device.booking?.created_at || "")}
                                     </p>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <span
-                                    className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                      ["open", "arriving", "started", "accepted", "arrived"].includes(
-                                        device.booking?.bookingStatus || ""
-                                      )
+                                    className={`px-3 py-1 rounded-full text-sm font-medium ${["open", "arriving", "started", "accepted", "arrived"].includes(
+                                      device.booking?.booking_status || ""
+                                    )
                                         ? "bg-green-100 text-green-700"
                                         : "bg-gray-100 text-gray-700"
-                                    }`}
+                                      }`}
                                   >
-                                    {device.booking?.bookingStatus}
+                                    {device.booking?.booking_status}
                                   </span>
                                   <button className="p-2 hover:bg-gray-200 rounded">
                                     <Trash2 className="w-4 h-4 text-gray-600" />
@@ -708,7 +710,7 @@ const FarmerAction = ({
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h6m4 0h2m-7 4h6a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                                   </svg>
                                   <div>
-                                    <p className="font-medium">{payment.type} {payment.model}</p>
+                                    <p className="font-medium">{payment.model}</p>
                                     <p className="text-sm text-gray-600">
                                       Payment: {payment.payment} • Booked on: {payment.bookedOn}
                                     </p>
@@ -716,11 +718,10 @@ const FarmerAction = ({
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <span
-                                    className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                      payment.status === "paid"
+                                    className={`px-3 py-1 rounded-full text-sm font-medium ${payment.status === "paid"
                                         ? "bg-green-100 text-green-700"
                                         : "bg-orange-100 text-orange-700"
-                                    }`}
+                                      }`}
                                   >
                                     {payment.status === "paid" ? "Paid" : "Failed"}
                                   </span>
@@ -757,19 +758,18 @@ const FarmerAction = ({
                                   <div>
                                     <p className="font-medium">{booking.tractor_name || "Tractor"}</p>
                                     <p className="text-sm text-gray-600">
-                                      ${booking.total_cost} • {booking.booking_hours} • {formatDate(booking.created_at)}
+                                      ${booking.total_cost} • {booking.booking_hours} • Store: {booking.store_name} • {formatDate(booking.created_at)}
                                     </p>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <span
-                                    className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                      ["open", "arriving", "started", "accepted", "arrived"].includes(booking.bookingStatus)
+                                    className={`px-3 py-1 rounded-full text-sm font-medium ${["open", "arriving", "started", "accepted", "arrived"].includes(booking.booking_status)
                                         ? "bg-green-100 text-green-700"
                                         : "bg-gray-100 text-gray-700"
-                                    }`}
+                                      }`}
                                   >
-                                    {booking.bookingStatus}
+                                    {booking.booking_status}
                                   </span>
                                   <button className="p-2 hover:bg-gray-200 rounded">
                                     <Trash2 className="w-4 h-4 text-gray-600" />
