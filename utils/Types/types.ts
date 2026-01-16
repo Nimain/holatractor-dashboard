@@ -73,6 +73,20 @@ export interface Role {
   Dealer: Dealer[];
 }
 
+export interface FarmCategory {
+  id: string;
+  name: string;
+  slug: string;
+  icon: string | null;
+  description: string | null;
+  base_id: string;
+  createdAt: string;
+  updatedAt: string;
+  _count: {
+    farmItems: number;
+  };
+}
+
 export interface UserProfile {
   id: string;
   user_id: string;

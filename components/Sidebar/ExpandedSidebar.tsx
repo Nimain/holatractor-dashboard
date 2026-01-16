@@ -81,6 +81,7 @@ const ExpandedSidebar = () => {
     "/Agents": "Agents",
     "/Bookings": "Bookings",
     "/Roles": "Roles",
+    "/FarmCategories": "FarmCategories",
     "/Permissions": "Permission",
     "/Users": "Users",
     "/Inventory": "Tractors",
@@ -103,7 +104,7 @@ const ExpandedSidebar = () => {
     "/Package": "Package",
     "/Coupon": "Coupon",
     "/Purchase": "Purchase",
-        "/Impact": "Impact",
+    "/Impact": "Impact",
 
   };
 
@@ -232,7 +233,7 @@ const ExpandedSidebar = () => {
       }),
       route: "/Attachments",
     },
-     {
+    {
       icon: (
         <Image
           src={LoanssIcon || "/placeholder.svg"}
@@ -504,7 +505,7 @@ const ExpandedSidebar = () => {
       }),
       route: "/booking-inquiry",
     },
-     {
+    {
       icon: (
         <Image
           src={InvestorsIcon || "/placeholder.svg"}
@@ -621,6 +622,26 @@ const ExpandedSidebar = () => {
     {
       icon: (
         <Image
+          src={RolesIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Farm Categories"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Farm Categories",
+        es: "Categorías de granja",
+        ay: "Yapu kasta",
+        qu: "Chakra rikch'aykuna",
+        gn: "Kokue mohendakuéra",
+
+      }),
+      route: "/FarmCategories",
+    },
+    {
+      icon: (
+        <Image
           src={PermissionsIcon || "/placeholder.svg"}
           className="w-[20px] h-auto object-cover"
           width={20}
@@ -704,7 +725,7 @@ const ExpandedSidebar = () => {
           className="w-[20px] h-auto object-cover"
           width={20}
           height={20}
-          alt="Roles"
+          alt="Owner"
         />
       ),
       name: getTranslation(locale, {
@@ -858,9 +879,8 @@ const ExpandedSidebar = () => {
 
   return (
     <motion.div
-      className={`w-[200px] p-5 flex flex-col gap-[20px] box-content bg-[#ededed] h-screen transition-all duration-500 absolute ${
-        sidebarShow ? "translate-x-0" : "-translate-x-full"
-      } top-0 z-10 overflow-auto`}
+      className={`w-[200px] p-5 flex flex-col gap-[20px] box-content bg-[#ededed] h-screen transition-all duration-500 absolute ${sidebarShow ? "translate-x-0" : "-translate-x-full"
+        } top-0 z-10 overflow-auto`}
       ref={sectionRef}
       style={{
         scrollbarWidth: "none",
@@ -878,19 +898,17 @@ const ExpandedSidebar = () => {
           <Link
             href={`${listItem.route}`}
             key={index}
-            className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
-              LeftSideSctiveItem === listItem.name
+            className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${LeftSideSctiveItem === listItem.name
                 ? "bg-[#d5ebd6]"
                 : "hover:bg-gray-200"
-            } drop-shadow-md rounded transition-all duration-500 relative`}
+              } drop-shadow-md rounded transition-all duration-500 relative`}
           >
             {listItem.icon}
             <span
-              className={`${
-                LeftSideSctiveItem === listItem.name
+              className={`${LeftSideSctiveItem === listItem.name
                   ? "text-black"
                   : "text-gray-600"
-              }`}
+                }`}
             >
               {listItem.name}
             </span>
@@ -921,19 +939,17 @@ const ExpandedSidebar = () => {
               <Link
                 href={`${listItem.route}`}
                 key={index}
-                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
-                  LeftSideSctiveItem === listItem.name
+                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${LeftSideSctiveItem === listItem.name
                     ? "bg-[#d5ebd6]"
                     : "hover:bg-gray-200"
-                } drop-shadow-md rounded transition-all duration-500 relative`}
+                  } drop-shadow-md rounded transition-all duration-500 relative`}
               >
                 {listItem.icon}
                 <span
-                  className={`${
-                    LeftSideSctiveItem === listItem.name
+                  className={`${LeftSideSctiveItem === listItem.name
                       ? "text-black"
                       : "text-gray-600"
-                  }`}
+                    }`}
                 >
                   {listItem.name}
                 </span>
@@ -965,19 +981,17 @@ const ExpandedSidebar = () => {
               <Link
                 href={`${listItem.route}`}
                 key={index}
-                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
-                  LeftSideSctiveItem === listItem.name
+                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${LeftSideSctiveItem === listItem.name
                     ? "bg-[#d5ebd6]"
                     : "hover:bg-gray-200"
-                } drop-shadow-md rounded transition-all duration-500 relative`}
+                  } drop-shadow-md rounded transition-all duration-500 relative`}
               >
                 {listItem.icon}
                 <span
-                  className={`${
-                    LeftSideSctiveItem === listItem.name
+                  className={`${LeftSideSctiveItem === listItem.name
                       ? "text-black"
                       : "text-gray-600"
-                  }`}
+                    }`}
                 >
                   {listItem.name}
                 </span>
@@ -1009,19 +1023,17 @@ const ExpandedSidebar = () => {
               <Link
                 href={`${listItem.route}`}
                 key={index}
-                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
-                  LeftSideSctiveItem === listItem.name
+                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${LeftSideSctiveItem === listItem.name
                     ? "bg-[#d5ebd6]"
                     : "hover:bg-gray-200"
-                } drop-shadow-md rounded transition-all duration-500 relative`}
+                  } drop-shadow-md rounded transition-all duration-500 relative`}
               >
                 {listItem.icon}
                 <span
-                  className={`${
-                    LeftSideSctiveItem === listItem.name
+                  className={`${LeftSideSctiveItem === listItem.name
                       ? "text-black"
                       : "text-gray-600"
-                  }`}
+                    }`}
                 >
                   {listItem.name}
                 </span>
@@ -1053,19 +1065,17 @@ const ExpandedSidebar = () => {
               <Link
                 href={`${listItem.route}`}
                 key={index}
-                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
-                  LeftSideSctiveItem === listItem.name
+                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${LeftSideSctiveItem === listItem.name
                     ? "bg-[#d5ebd6]"
                     : "hover:bg-gray-200"
-                } drop-shadow-md rounded transition-all duration-500 relative`}
+                  } drop-shadow-md rounded transition-all duration-500 relative`}
               >
                 {listItem.icon}
                 <span
-                  className={`${
-                    LeftSideSctiveItem === listItem.name
+                  className={`${LeftSideSctiveItem === listItem.name
                       ? "text-black"
                       : "text-gray-600"
-                  }`}
+                    }`}
                 >
                   {listItem.name}
                 </span>
@@ -1097,19 +1107,17 @@ const ExpandedSidebar = () => {
               <Link
                 href={`${listItem.route}`}
                 key={index}
-                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
-                  LeftSideSctiveItem === listItem.name
+                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${LeftSideSctiveItem === listItem.name
                     ? "bg-[#d5ebd6]"
                     : "hover:bg-gray-200"
-                } drop-shadow-md rounded transition-all duration-500 relative`}
+                  } drop-shadow-md rounded transition-all duration-500 relative`}
               >
                 {listItem.icon}
                 <span
-                  className={`${
-                    LeftSideSctiveItem === listItem.name
+                  className={`${LeftSideSctiveItem === listItem.name
                       ? "text-black"
                       : "text-gray-600"
-                  }`}
+                    }`}
                 >
                   {listItem.name}
                 </span>
@@ -1141,19 +1149,17 @@ const ExpandedSidebar = () => {
               <Link
                 href={`${listItem.route}`}
                 key={index}
-                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${
-                  LeftSideSctiveItem === listItem.name
+                className={`text-[20px] font-[500] flex gap-[10px] px-[10px] py-[6px] items-center cursor-pointer ${LeftSideSctiveItem === listItem.name
                     ? "bg-[#d5ebd6]"
                     : "hover:bg-gray-200"
-                } drop-shadow-md rounded transition-all duration-500 relative`}
+                  } drop-shadow-md rounded transition-all duration-500 relative`}
               >
                 {listItem.icon}
                 <span
-                  className={`${
-                    LeftSideSctiveItem === listItem.name
+                  className={`${LeftSideSctiveItem === listItem.name
                       ? "text-black"
                       : "text-gray-600"
-                  }`}
+                    }`}
                 >
                   {listItem.name}
                 </span>

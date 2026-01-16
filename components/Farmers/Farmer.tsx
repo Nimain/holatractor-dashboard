@@ -93,8 +93,27 @@ const FarmerSection = () => {
     direction: "asc" | "desc";
   } | null>(null);
 
-  // Grid columns configuration
-  const gridCols = useMemo(() => "60px 1.2fr 2fr 1fr 1.2fr 1.2fr 1.5fr 1.5fr", []);
+  // Responsive grid columns configuration
+  const gridCols = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      const width = window.innerWidth;
+      if (width >= 1536) return "60px 1.2fr 2fr 1fr 1.2fr 1.2fr 1.5fr 1.5fr"; // 2xl: 1536px+
+      if (width >= 1280) return "50px 1fr 1.8fr 0.9fr 1fr 1fr 1.3fr 1.3fr"; // xl: 1280px+
+      return "50px 0.9fr 1.5fr 0.8fr 0.9fr 0.9fr 1.2fr 1.2fr"; // lg: 1024px+
+    }
+    return "60px 1.2fr 2fr 1fr 1.2fr 1.2fr 1.5fr 1.5fr";
+  }, []);
+
+  // Update grid on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      // Force re-render on resize
+      setRowHover(-1);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Helper functions
   const formatDate = (date: string | Date): string => {
@@ -111,6 +130,10 @@ const FarmerSection = () => {
     `${f.user.first_name} ${f.user.middle_name ?? ""} ${f.user.last_name ?? ""}`
       .replace(/\s+/g, " ")
       .trim();
+
+  const truncateName = (name: string, maxLength: number = 25) => {
+    return name.length > maxLength ? name.substring(0, maxLength) + "..." : name;
+  };
 
   const calculateAvailableYears = () => {
     const currentYear = new Date().getFullYear();
@@ -150,10 +173,12 @@ const FarmerSection = () => {
       const name = fullName(farmer).toLowerCase();
       const id = farmer.id.toLowerCase();
       const gender = (farmer.user.gender ?? "").toLowerCase();
+      const email = (farmer.user.email ?? "").toLowerCase();
       return (
         name.includes(lowercasedSearch) ||
         id.includes(lowercasedSearch) ||
-        gender.includes(lowercasedSearch)
+        gender.includes(lowercasedSearch) ||
+        email.includes(lowercasedSearch)
       );
     });
 
@@ -410,7 +435,7 @@ const FarmerSection = () => {
           <Input
             type="text"
             className="w-full pl-10 bg-white"
-            placeholder="Search farmers..."
+            placeholder="Search farmers by name, ID, gender, or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -465,7 +490,7 @@ const FarmerSection = () => {
               <h2 className="text-lg md:text-xl lg:text-2xl font-semibold mb-2">
                 Select Year
               </h2>
-              <p className="text-gray-600">
+              <p className="text-gray-600 text-sm md:text-base">
                 Choose which year's data to include in the PDF report.
               </p>
             </div>
@@ -510,211 +535,210 @@ const FarmerSection = () => {
       {/* Desktop Table View */}
       <div className="hidden lg:block">
         <div className="w-full overflow-x-auto">
-          {/* Table Header */}
-          <div
-            className="grid text-base lg:text-lg xl:text-xl font-semibold bg-[#ededed] p-4 xl:p-5 rounded min-w-max overflow-x-auto"
-            style={{ gridTemplateColumns: gridCols }}
-          >
-            {/* S.No Column */}
-            <div className="flex items-center justify-between group">
-              S.No
-              <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
-                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                  <ArrowUpwardIcon fontSize="small" />
-                </div>
-                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                  <MoreVertIcon fontSize="small" />
-                </div>
-              </div>
-            </div>
-
-            {/* Id Column */}
+          <div className="min-w-[1000px]">
+            {/* Table Header */}
             <div
-              className="relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group cursor-pointer"
-              onClick={() => handleSort("id")}
+              className="grid text-sm lg:text-base xl:text-lg font-semibold bg-[#ededed] p-3 lg:p-4 xl:p-5 rounded"
+              style={{ gridTemplateColumns: gridCols }}
             >
-              Id
-              <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
-                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                  {getSortIcon("id")}
+              {/* S.No Column */}
+              <div className="flex items-center justify-between group">
+                S.No
+                <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+                  <div className="rounded-full w-6 h-6 lg:w-7 lg:h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                    <ArrowUpwardIcon fontSize="small" />
+                  </div>
+                  <div className="rounded-full w-6 h-6 lg:w-7 lg:h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                    <MoreVertIcon fontSize="small" />
+                  </div>
                 </div>
-                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                  <MoreVertIcon fontSize="small" />
+              </div>
+
+              {/* Id Column */}
+              <div
+                className="relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group cursor-pointer"
+                onClick={() => handleSort("id")}
+              >
+                Id
+                <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+                  <div className="rounded-full w-6 h-6 lg:w-7 lg:h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                    {getSortIcon("id")}
+                  </div>
+                  <div className="rounded-full w-6 h-6 lg:w-7 lg:h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                    <MoreVertIcon fontSize="small" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Name Column */}
+              <div
+                className="relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group cursor-pointer"
+                onClick={() => handleSort("name")}
+              >
+                Name
+                <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+                  <div className="rounded-full w-6 h-6 lg:w-7 lg:h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                    {getSortIcon("name")}
+                  </div>
+                  <div className="rounded-full w-6 h-6 lg:w-7 lg:h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                    <MoreVertIcon fontSize="small" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Gender Column */}
+              <div
+                className="relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group cursor-pointer"
+                onClick={() => handleSort("gender")}
+              >
+                Gender
+                <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+                  <div className="rounded-full w-6 h-6 lg:w-7 lg:h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                    {getSortIcon("gender")}
+                  </div>
+                  <div className="rounded-full w-6 h-6 lg:w-7 lg:h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                    <MoreVertIcon fontSize="small" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Verified Column */}
+              <div
+                className="relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group cursor-pointer"
+                onClick={() => handleSort("emailVerified")}
+                onMouseEnter={() => setActiveHover("Verified")}
+                onMouseLeave={() => setActiveHover("")}
+              >
+                <span className="truncate">{activeHover === "Verified" ? "Verified" : "Verified"}</span>
+                <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+                  <div className="rounded-full w-6 h-6 lg:w-7 lg:h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                    {getSortIcon("emailVerified")}
+                  </div>
+                  <div className="rounded-full w-6 h-6 lg:w-7 lg:h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                    <MoreVertIcon fontSize="small" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Column */}
+              <div
+                className="relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group cursor-pointer"
+                onClick={() => handleSort("Status")}
+              >
+                Status
+                <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+                  <div className="rounded-full w-6 h-6 lg:w-7 lg:h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                    {getSortIcon("Status")}
+                  </div>
+                  <div className="rounded-full w-6 h-6 lg:w-7 lg:h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                    <MoreVertIcon fontSize="small" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Mobile Column */}
+              <div className="relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
+                Mobile
+                <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+                  <div className="rounded-full w-6 h-6 lg:w-7 lg:h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                    <ArrowUpwardIcon fontSize="small" />
+                  </div>
+                  <div className="rounded-full w-6 h-6 lg:w-7 lg:h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                    <MoreVertIcon fontSize="small" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Joined At Column */}
+              <div
+                className="relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group cursor-pointer"
+                onClick={() => handleSort("createdAt")}
+                onMouseEnter={() => setActiveHover("Joined At")}
+                onMouseLeave={() => setActiveHover("")}
+              >
+                <span className="truncate">{activeHover === "Joined At" ? "Joined At" : "Joined"}</span>
+                <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
+                  <div className="rounded-full w-6 h-6 lg:w-7 lg:h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                    {getSortIcon("createdAt")}
+                  </div>
+                  <div className="rounded-full w-6 h-6 lg:w-7 lg:h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
+                    <MoreVertIcon fontSize="small" />
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Name Column */}
-            <div
-              className="relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group cursor-pointer"
-              onClick={() => handleSort("name")}
-            >
-              Name
-              <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
-                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                  {getSortIcon("name")}
-                </div>
-                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                  <MoreVertIcon fontSize="small" />
-                </div>
-              </div>
-            </div>
-
-            {/* Gender Column */}
-            <div
-              className="relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group cursor-pointer"
-              onClick={() => handleSort("gender")}
-            >
-              Gender
-              <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
-                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                  {getSortIcon("gender")}
-                </div>
-                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                  <MoreVertIcon fontSize="small" />
-                </div>
-              </div>
-            </div>
-
-            {/* Verified Column */}
-            <div
-              className="relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group cursor-pointer"
-              onClick={() => handleSort("emailVerified")}
-              onMouseEnter={() => setActiveHover("Verified")}
-              onMouseLeave={() => setActiveHover("")}
-            >
-              {activeHover === "Verified" ? "Veri..." : "Verified"}
-              <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
-                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                  {getSortIcon("emailVerified")}
-                </div>
-                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                  <MoreVertIcon fontSize="small" />
-                </div>
-              </div>
-            </div>
-
-            {/* Status Column */}
-            <div
-              className="relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group cursor-pointer"
-              onClick={() => handleSort("Status")}
-            >
-              Status
-              <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
-                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                  {getSortIcon("Status")}
-                </div>
-                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                  <MoreVertIcon fontSize="small" />
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile Column */}
-            <div className="relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
-              Mobile
-              <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
-                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                  <ArrowUpwardIcon fontSize="small" />
-                </div>
-                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                  <MoreVertIcon fontSize="small" />
-                </div>
-              </div>
-            </div>
-
-            {/* Joined At Column */}
-            <div
-              className="relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group cursor-pointer"
-              onClick={() => handleSort("createdAt")}
-              onMouseEnter={() => setActiveHover("Joined At")}
-              onMouseLeave={() => setActiveHover("")}
-            >
-              {activeHover === "Joined At" ? "Join..." : "Joined At"}
-              <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
-                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                  {getSortIcon("createdAt")}
-                </div>
-                <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                  <MoreVertIcon fontSize="small" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Table Rows */}
-          <div className="flex flex-col mt-3 w-full gap-2">
-            {displayedFarmers.map((details, index) => {
-              const name = fullName(details);
-              // Truncate to 2 words max for consistent layout
-              const displayName = name.split(" ").length > 2 
-                ? name.split(" ").slice(0, 2).join(" ") + "..." 
-                : name;
-              
-              return (
-                <div
-                  key={details.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => {
-                    setSelectedFarmer(details);
-                    setDetailsOpen(true);
-                  }}
-                  onMouseEnter={() => setRowHover(index)}
-                  onMouseLeave={() => setRowHover(-1)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
+            {/* Table Rows */}
+            <div className="flex flex-col mt-3 w-full gap-2">
+              {displayedFarmers.map((details, index) => {
+                const name = fullName(details);
+                const displayName = truncateName(name, 30);
+                
+                return (
+                  <div
+                    key={details.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
                       setSelectedFarmer(details);
                       setDetailsOpen(true);
-                    }
-                  }}
-                  className="grid items-center bg-white hover:bg-gray-50 transition-all duration-300 p-4 xl:p-5 rounded text-base md:text-lg min-w-max cursor-pointer"
-                  style={{ gridTemplateColumns: gridCols }}
-                >
-                  <div className="truncate">
-                    {(pagination.currentPage - 1) * pagination.itemsPerPage +
-                      index +
-                      1}
-                  </div>
-                  <div className="truncate">
-                    {details.id.substring(0, 8)}...
-                  </div>
-                  <div className="truncate">{displayName}</div>
-                  <div className="truncate capitalize">
-                    {details.user.gender ?? "Not specified"}
-                  </div>
-                  <div className="truncate">
-                    <span
-                      className={
-                        details.user.emailVerified
-                          ? "text-green-600 font-medium"
-                          : "text-red-600 font-medium"
+                    }}
+                    onMouseEnter={() => setRowHover(index)}
+                    onMouseLeave={() => setRowHover(-1)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelectedFarmer(details);
+                        setDetailsOpen(true);
                       }
-                    >
-                      {details.user.emailVerified ? "Verified" : "Not Verified"}
-                    </span>
+                    }}
+                    className="grid items-center bg-white hover:bg-gray-50 transition-all duration-300 p-3 lg:p-4 xl:p-5 rounded text-sm lg:text-base cursor-pointer"
+                    style={{ gridTemplateColumns: gridCols }}
+                  >
+                    <div className="truncate">
+                      {(pagination.currentPage - 1) * pagination.itemsPerPage +
+                        index +
+                        1}
+                    </div>
+                    <div className="truncate" title={details.id}>
+                      {details.id.substring(0, 8)}...
+                    </div>
+                    <div className="truncate" title={name}>{displayName}</div>
+                    <div className="truncate capitalize">
+                      {details.user.gender ?? "Not specified"}
+                    </div>
+                    <div className="truncate">
+                      <span
+                        className={
+                          details.user.emailVerified
+                            ? "text-green-600 font-medium"
+                            : "text-red-600 font-medium"
+                        }
+                      >
+                        {details.user.emailVerified ? "Yes" : "No"}
+                      </span>
+                    </div>
+                    <div className="truncate">
+                      <span
+                        className={
+                          details.Status === 1
+                            ? "text-green-600 font-medium"
+                            : "text-red-600 font-medium"
+                        }
+                      >
+                        {details.Status === 1 ? "Active" : "Inactive"}
+                      </span>
+                    </div>
+                    <div className="truncate text-blue-600">
+                      {details.user.mobile && details.user.country_code
+                        ? `${details.user.country_code} ${details.user.mobile}`
+                        : "No number"}
+                    </div>
+                    <div className="truncate">{formatDate(details.createdAt)}</div>
                   </div>
-                  <div className="truncate">
-                    <span
-                      className={
-                        details.Status === 1
-                          ? "text-green-600 font-medium"
-                          : "text-red-600 font-medium"
-                      }
-                    >
-                      {details.Status === 1 ? "Active" : "Inactive"}
-                    </span>
-                  </div>
-                  <div className="truncate text-blue-600">
-                    {details.user.mobile && details.user.country_code
-                      ? `${details.user.country_code} ${details.user.mobile}`
-                      : "No number"}
-                  </div>
-                  <div className="truncate">{formatDate(details.createdAt)}</div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -736,7 +760,7 @@ const FarmerSection = () => {
               height={300}
               unoptimized
             />
-            <p className="text-gray-600 mt-4">No farmers found</p>
+            <p className="text-gray-600 mt-4 text-center">No farmers found</p>
             {searchTerm && (
               <Button
                 variant="outline"
@@ -751,10 +775,7 @@ const FarmerSection = () => {
           <div className="space-y-4">
             {displayedFarmers.map((details) => {
               const name = fullName(details);
-              // Truncate to 2 words max for consistent layout
-              const displayName = name.split(" ").length > 2 
-                ? name.split(" ").slice(0, 2).join(" ") + "..." 
-                : name;
+              const displayName = truncateName(name, 30);
               
               return (
                 <div
@@ -774,15 +795,17 @@ const FarmerSection = () => {
                     }
                   }}
                 >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-semibold text-lg">{displayName}</h3>
-                      <p className="text-xs text-gray-500">
-                        ID: {details.id.substring(0, 8)}...
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-base sm:text-lg truncate" title={name}>
+                        {displayName}
+                      </h3>
+                      <p className="text-xs text-gray-500 truncate">
+                        ID: {details.id.substring(0, 12)}...
                       </p>
                     </div>
                     <div
-                      className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                      className={`px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap ml-2 ${
                         details.Status === 1
                           ? "bg-green-100 text-green-800"
                           : "bg-red-100 text-red-800"
@@ -792,15 +815,15 @@ const FarmerSection = () => {
                     </div>
                   </div>
                   <div className="border-t my-3" />
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                     <div>
-                      <p className="text-gray-600 font-medium">Gender</p>
+                      <p className="text-gray-600 font-medium mb-1">Gender</p>
                       <p className="capitalize">
                         {details.user.gender ?? "N/A"}
                       </p>
                     </div>
                     <div>
-                      <p className="text-gray-600 font-medium">Verified</p>
+                      <p className="text-gray-600 font-medium mb-1">Verified</p>
                       <p
                         className={
                           details.user.emailVerified
@@ -812,15 +835,15 @@ const FarmerSection = () => {
                       </p>
                     </div>
                     <div className="col-span-2">
-                      <p className="text-gray-600 font-medium">Mobile</p>
-                      <p className="text-blue-600">
-                        {details.user.mobile
+                      <p className="text-gray-600 font-medium mb-1">Mobile</p>
+                      <p className="text-blue-600 truncate">
+                        {details.user.mobile && details.user.country_code
                           ? `${details.user.country_code} ${details.user.mobile}`
                           : "N/A"}
                       </p>
                     </div>
                     <div className="col-span-2">
-                      <p className="text-gray-600 font-medium">Joined Date</p>
+                      <p className="text-gray-600 font-medium mb-1">Joined Date</p>
                       <p>{formatDate(details.createdAt)}</p>
                     </div>
                   </div>
@@ -833,13 +856,13 @@ const FarmerSection = () => {
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (
-        <div className="flex justify-center items-center mt-8 space-x-2">
+        <div className="flex justify-center items-center mt-8 gap-2 flex-wrap">
           <Button
             variant="outline"
             size="icon"
             onClick={() => handlePageChange(1)}
             disabled={pagination.currentPage === 1}
-            className="h-8 w-8"
+            className="h-8 w-8 sm:h-9 sm:w-9"
           >
             <FirstPageIcon fontSize="small" />
           </Button>
@@ -848,11 +871,11 @@ const FarmerSection = () => {
             size="icon"
             onClick={() => handlePageChange(pagination.currentPage - 1)}
             disabled={pagination.currentPage === 1}
-            className="h-8 w-8"
+            className="h-8 w-8 sm:h-9 sm:w-9"
           >
             <KeyboardArrowLeftIcon fontSize="small" />
           </Button>
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-gray-600 px-2">
             Page {pagination.currentPage} of {pagination.totalPages}
           </span>
           <Button
@@ -860,7 +883,7 @@ const FarmerSection = () => {
             size="icon"
             onClick={() => handlePageChange(pagination.currentPage + 1)}
             disabled={pagination.currentPage === pagination.totalPages}
-            className="h-8 w-8"
+            className="h-8 w-8 sm:h-9 sm:w-9"
           >
             <KeyboardArrowRightIcon fontSize="small" />
           </Button>
@@ -869,7 +892,7 @@ const FarmerSection = () => {
             size="icon"
             onClick={() => handlePageChange(pagination.totalPages)}
             disabled={pagination.currentPage === pagination.totalPages}
-            className="h-8 w-8"
+            className="h-8 w-8 sm:h-9 sm:w-9"
           >
             <LastPageIcon fontSize="small" />
           </Button>
@@ -883,7 +906,7 @@ const FarmerSection = () => {
           name={fullName(selectedFarmer)}
           createDate={formatDate(selectedFarmer.createdAt)}
           status={selectedFarmer.Status}
-           id={selectedFarmer.user_id}
+          id={selectedFarmer.user_id}
           onUpdate={fetchAllFarmers}
           open={detailsOpen}
           onOpenChange={setDetailsOpen}

@@ -78,6 +78,7 @@ const Sidebar = () => {
     "/Agents": "Agents",
     "/Bookings": "Bookings",
     "/Roles": "Roles",
+    "/FarmCategories":"FarmCategories",
     "/Permissions": "Permission",
     "/Users": "Users",
     "/Inventory": "Tractors",
@@ -386,123 +387,123 @@ const Sidebar = () => {
     },
   ];
 
- const bookingList = [
-  {
-    icon: (
-      <Image
-        src={BookingIcon || "/placeholder.svg"}
-        className="w-[20px] h-auto object-cover"
-        width={20}
-        height={20}
-        alt="Bookings"
-      />
-    ),
-    name: getTranslation(locale, {
-      en: "Bookings",
-      es: "Reservaciones",
-      ay: "Manq’asa",
-      qu: "Qhapaq ñakariy",
-      gn: "Tavisa",
-    }),
-    route: "/Bookings",
-  },
-  {
-    icon: (
-      <Image
-        src={LogIcon || "/placeholder.svg"}
-        className="w-[20px] h-auto object-cover"
-        width={20}
-        height={20}
-        alt="Lease"
-      />
-    ),
-    name: getTranslation(locale, {
-      en: "Lease",
-      es: "Arrendamiento",
-      ay: "Uru purisiri",
-      qu: "Masi",
-      gn: "Ipotĩ",
-    }),
-    route: "/Lease",
-  },
-  {
-    icon: (
-      <Image
-        src={LogOutIcon || "/placeholder.svg"}
-        className="w-[20px] h-auto object-cover"
-        width={20}
-        height={20}
-        alt="Share"
-      />
-    ),
-    name: getTranslation(locale, {
-      en: "Share",
-      es: "Compartir",
-      ay: "Ayniri",
-      qu: "Rimanakuy",
-      gn: "Mboja’aha",
-    }),
-    route: "#",
-  },
-  {
-    icon: (
-      <Image
-        src={SubcriptionsIcon || "/placeholder.svg"}
-        className="w-[20px] h-auto object-cover"
-        width={20}
-        height={20}
-        alt="Subscriptions"
-      />
-    ),
-    name: getTranslation(locale, {
-      en: "Subscriptions",
-      es: "Suscripciones",
-      ay: "Churasa",
-      qu: "Qhatariynin",
-      gn: "Ñemity",
-    }),
-    route: "/Subscriptions",
-  },
-  {
-    icon: (
-      <Image
-        src={SubcriptionsIcon || "/placeholder.svg"}
-        className="w-[20px] h-auto object-cover"
-        width={20}
-        height={20}
-        alt="Inquiry"
-      />
-    ),
-    name: getTranslation(locale, {
-      en: "Inquiry",
-      es: "Consulta",
-      ay: "Tapuy",
-      qu: "Tapuy",
-      gn: "Jeheka",
-    }),
-    route: "/booking-inquiry",
-  },
-  // IMPACT — LAST ITEM
-  {
-    icon: (
-      <Image
-        src={StatementsIcon || "/placeholder.svg"} // Replace with real Impact icon later
-        className="w-[20px] h-auto object-cover"
-        width={20}
-        height={20}
-        alt="Impact"
-      />
-    ),
-    name: getTranslation(locale, {
-      en: "Impact",
-      es: "Impacto",
-      ay: "Jach’a luraña",
-      qu: "Impacto",
-      gn: "Impacto",
-    }),
-    route: "/Impact",
-  },
-];
+  const bookingList = [
+    {
+      icon: (
+        <Image
+          src={BookingIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Bookings"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Bookings",
+        es: "Reservaciones",
+        ay: "Manq’asa",
+        qu: "Qhapaq ñakariy",
+        gn: "Tavisa",
+      }),
+      route: "/Bookings",
+    },
+    {
+      icon: (
+        <Image
+          src={LogIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Lease"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Lease",
+        es: "Arrendamiento",
+        ay: "Uru purisiri",
+        qu: "Masi",
+        gn: "Ipotĩ",
+      }),
+      route: "/Lease",
+    },
+    {
+      icon: (
+        <Image
+          src={LogOutIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Share"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Share",
+        es: "Compartir",
+        ay: "Ayniri",
+        qu: "Rimanakuy",
+        gn: "Mboja’aha",
+      }),
+      route: "#",
+    },
+    {
+      icon: (
+        <Image
+          src={SubcriptionsIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Subscriptions"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Subscriptions",
+        es: "Suscripciones",
+        ay: "Churasa",
+        qu: "Qhatariynin",
+        gn: "Ñemity",
+      }),
+      route: "/Subscriptions",
+    },
+    {
+      icon: (
+        <Image
+          src={SubcriptionsIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Inquiry"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Inquiry",
+        es: "Consulta",
+        ay: "Tapuy",
+        qu: "Tapuy",
+        gn: "Jeheka",
+      }),
+      route: "/booking-inquiry",
+    },
+    // IMPACT — LAST ITEM
+    {
+      icon: (
+        <Image
+          src={StatementsIcon || "/placeholder.svg"} // Replace with real Impact icon later
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Impact"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Impact",
+        es: "Impacto",
+        ay: "Jach’a luraña",
+        qu: "Impacto",
+        gn: "Impacto",
+      }),
+      route: "/Impact",
+    },
+  ];
 
   // <<< ADDED: NEW DATA LIST FOR CREDIT SECTION
   const creditList = [
@@ -603,6 +604,26 @@ const Sidebar = () => {
         gn: "Ñangarekóva",
       }),
       route: "/Roles",
+    },
+    {
+      icon: (
+        <Image
+          src={RolesIcon || "/placeholder.svg"}
+          className="w-[20px] h-auto object-cover"
+          width={20}
+          height={20}
+          alt="Farm Categories"
+        />
+      ),
+      name: getTranslation(locale, {
+        en: "Farm Categories",
+        es: "Categorías de granja",
+        ay: "Yapu kasta",
+        qu: "Chakra rikch'aykuna",
+        gn: "Kokue mohendakuéra",
+
+      }),
+      route: "/FarmCategories",
     },
     {
       icon: (
@@ -852,9 +873,8 @@ const Sidebar = () => {
       }}
     >
       <div
-        className={`w-full transition-all duration-500 box-content bg-[#ededed] ${
-          sidebarShow ? "hidden" : "flex flex-col gap-[20px]"
-        }`}
+        className={`w-full transition-all duration-500 box-content bg-[#ededed] ${sidebarShow ? "hidden" : "flex flex-col gap-[20px]"
+          }`}
       >
         <Image
           alt="Logo"
@@ -872,11 +892,10 @@ const Sidebar = () => {
               <Link
                 href={`${listItem.route}`}
                 key={index}
-                className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
-                  LeftSideSctiveItem === listItem.name
+                className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${LeftSideSctiveItem === listItem.name
                     ? "bg-[#d5ebd6]"
                     : "hover:bg-gray-200"
-                } drop-shadow-md rounded transition-all duration-500 relative`}
+                  } drop-shadow-md rounded transition-all duration-500 relative`}
                 onClick={() => {
                   setActiveLeftSideTag(listItem.name);
                 }}
@@ -913,11 +932,10 @@ const Sidebar = () => {
                 <Link
                   href={`${listItem.route}`}
                   key={index}
-                  className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
-                    LeftSideSctiveItem === listItem.name
+                  className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${LeftSideSctiveItem === listItem.name
                       ? "bg-[#d5ebd6]"
                       : "hover:bg-gray-200"
-                  } drop-shadow-md rounded transition-all duration-500 relative`}
+                    } drop-shadow-md rounded transition-all duration-500 relative`}
                   onClick={() => {
                     setActiveLeftSideTag(listItem.name);
                   }}
@@ -955,11 +973,10 @@ const Sidebar = () => {
                 <Link
                   href={`${listItem.route}`}
                   key={index}
-                  className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
-                    LeftSideSctiveItem === listItem.name
+                  className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${LeftSideSctiveItem === listItem.name
                       ? "bg-[#d5ebd6]"
                       : "hover:bg-gray-200"
-                  } drop-shadow-md rounded transition-all duration-500 relative`}
+                    } drop-shadow-md rounded transition-all duration-500 relative`}
                   onClick={() => {
                     setActiveLeftSideTag(listItem.name);
                   }}
@@ -999,11 +1016,10 @@ const Sidebar = () => {
                 <Link
                   href={`${listItem.route}`}
                   key={index}
-                  className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
-                    LeftSideSctiveItem === listItem.name
+                  className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${LeftSideSctiveItem === listItem.name
                       ? "bg-[#d5ebd6]"
                       : "hover:bg-gray-200"
-                  } drop-shadow-md rounded transition-all duration-500 relative`}
+                    } drop-shadow-md rounded transition-all duration-500 relative`}
                   onClick={() => {
                     setActiveLeftSideTag(listItem.name);
                   }}
@@ -1042,11 +1058,10 @@ const Sidebar = () => {
                 <Link
                   href={`${listItem.route}`}
                   key={index}
-                  className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
-                    LeftSideSctiveItem === listItem.name
+                  className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${LeftSideSctiveItem === listItem.name
                       ? "bg-[#d5ebd6]"
                       : "hover:bg-gray-200"
-                  } drop-shadow-md rounded transition-all duration-500 relative`}
+                    } drop-shadow-md rounded transition-all duration-500 relative`}
                   onClick={() => {
                     setActiveLeftSideTag(listItem.name);
                   }}
@@ -1079,11 +1094,10 @@ const Sidebar = () => {
                 <Link
                   href={`${listItem.route}`}
                   key={index}
-                  className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
-                    LeftSideSctiveItem === listItem.name
+                  className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${LeftSideSctiveItem === listItem.name
                       ? "bg-[#d5ebd6]"
                       : "hover:bg-gray-200"
-                  } drop-shadow-md rounded transition-all duration-500 relative`}
+                    } drop-shadow-md rounded transition-all duration-500 relative`}
                   onClick={() => {
                     setActiveLeftSideTag(listItem.name);
                   }}
@@ -1114,11 +1128,10 @@ const Sidebar = () => {
               <Link
                 href={`${listItem.route}`}
                 key={index}
-                className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${
-                  LeftSideSctiveItem === listItem.name
+                className={`flex gap-[10px] w-fit mx-auto aspect-square rounded-full items-center justify-center ${LeftSideSctiveItem === listItem.name
                     ? "bg-[#d5ebd6]"
                     : "hover:bg-gray-200"
-                } drop-shadow-md rounded transition-all duration-500 relative`}
+                  } drop-shadow-md rounded transition-all duration-500 relative`}
                 onClick={() => {
                   setActiveLeftSideTag(listItem.name);
                 }}

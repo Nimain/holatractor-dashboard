@@ -34,11 +34,11 @@ interface Farm {
   boundary: {
     area: number;
     coordinates:
-      | Array<{
-          lat: string | number;
-          lng: string | number;
-        }>
-      | Array<Array<number>>;
+    | Array<{
+      lat: string | number;
+      lng: string | number;
+    }>
+    | Array<Array<number>>;
   };
   createdAt: string;
   updatedAt: string;
@@ -133,20 +133,26 @@ const FarmSection = () => {
     return dateObj.toLocaleDateString(undefined, options);
   };
 
-  const formatArea = (area: number): string => {
-    if (area >= 1000000) {
-      return `${(area / 1000000).toFixed(2)}M m²`;
-    } else if (area >= 1000) {
-      return `${(area / 1000).toFixed(2)}K m²`;
+  const formatArea = (area?: number | null): string => {
+    if (area === null || area === undefined || isNaN(Number(area))) {
+      return "N/A";
+    }
+
+    const safeArea = Number(area);
+
+    if (safeArea >= 1_000_000) {
+      return `${(safeArea / 1_000_000).toFixed(2)}M m²`;
+    } else if (safeArea >= 1_000) {
+      return `${(safeArea / 1_000).toFixed(2)}K m²`;
     } else {
-      return `${area.toFixed(2)} m²`;
+      return `${safeArea.toFixed(2)} m²`;
     }
   };
 
+
   const getOwnerFullName = (owner: Farm["Owner"]): string => {
-    return `${owner.first_name} ${
-      owner.middle_name ? owner.middle_name + " " : ""
-    }${owner.last_name}`.trim();
+    return `${owner.first_name} ${owner.middle_name ? owner.middle_name + " " : ""
+      }${owner.last_name}`.trim();
   };
 
   // Action handlers
@@ -179,11 +185,11 @@ const FarmSection = () => {
         prevFarms.map((farm) =>
           farm.id === selectedFarm.id
             ? {
-                ...farm,
-                name: editFarmName,
-                description: editFarmDescription,
-                updatedAt: new Date().toISOString(),
-              }
+              ...farm,
+              name: editFarmName,
+              description: editFarmDescription,
+              updatedAt: new Date().toISOString(),
+            }
             : farm
         )
       );
@@ -503,11 +509,10 @@ const FarmSection = () => {
                   key={farm.id}
                   onMouseEnter={() => setFarmHover(index)}
                   onMouseLeave={() => setFarmHover(-1)}
-                  className={`text-sm lg:text-base flex items-center justify-between gap-2 xl:gap-4 p-4 xl:p-5 rounded cursor-pointer transition-all duration-500 ${
-                    farmHover === index
+                  className={`text-sm lg:text-base flex items-center justify-between gap-2 xl:gap-4 p-4 xl:p-5 rounded cursor-pointer transition-all duration-500 ${farmHover === index
                       ? "bg-white shadow-lg"
                       : "bg-[#f5f5f5] hover:bg-[#f0f0f0]"
-                  }`}
+                    }`}
                 >
                   <div className="min-w-[80px] font-medium">{index + 1}</div>
                   <div className="min-w-[120px] font-medium truncate">
@@ -515,7 +520,7 @@ const FarmSection = () => {
                   </div>
                   <div className="min-w-[120px] truncate">{ownerName}</div>
                   <div className="min-w-[100px]">
-                    {formatArea(farm.boundary.area)}
+                    {formatArea(farm?.boundary?.area)}
                   </div>
                   <div className="min-w-[140px] whitespace-nowrap">
                     {formatDate(farm.createdAt)}
@@ -641,7 +646,7 @@ const FarmSection = () => {
                         })}
                       </span>
                       <span className="text-gray-900">
-                        {formatArea(farm.boundary.area)}
+                        {formatArea(farm?.boundary?.area)}
                       </span>
                     </div>
 
