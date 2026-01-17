@@ -340,7 +340,7 @@ const AgentSection = () => {
                     {/* Status Badge */}
                     <div className="flex-shrink-0">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                        details.status === 'active' 
+                        details.status === 1 
                           ? 'bg-green-100 text-green-700' 
                           : 'bg-gray-100 text-gray-700'
                       }`}>
@@ -501,7 +501,7 @@ const AgentSection = () => {
                 <div className="flex-1 bg-gray-50 rounded-lg p-4">
                   <p className="text-xs text-gray-500 mb-1">Status</p>
                   <span className={`inline-block px-3 py-1 text-sm font-medium rounded-full ${
-                    selectedAgent.status === 'active' 
+                    selectedAgent.status === 1 
                       ? 'bg-green-100 text-green-700' 
                       : 'bg-gray-100 text-gray-700'
                   }`}>
