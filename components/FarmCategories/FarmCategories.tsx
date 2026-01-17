@@ -18,7 +18,9 @@ const FarmCategoriesSection = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<FarmCategory | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   
   // Form states
   const [formData, setFormData] = useState({
@@ -164,18 +166,23 @@ const FarmCategoriesSection = () => {
   };
 
   // ✅ FIXED: Delete category with AUTH
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this category? This will fail if any farm items are using this category.")) {
-      return;
-    }
+  const handleDeleteClick = (id: string) => {
+    setCategoryToDelete(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!categoryToDelete) return;
     
     try {
       await renderInstance.delete(
-        `/farm/categories/${id}`,
+        `/farm/categories/${categoryToDelete}`,
         getAuthHeaders()
       );
       
       successMessage("Category deleted successfully");
+      setIsDeleteDialogOpen(false);
+      setCategoryToDelete(null);
       fetchCategories();
     } catch (error: any) {
       console.error("Delete error:", error);
@@ -391,7 +398,7 @@ const FarmCategoriesSection = () => {
                     <Edit2 size={18} className="text-yellow-600" />
                   </button>
                   <button
-                    onClick={() => handleAuthCheck(() => handleDelete(category.id))}
+                    onClick={() => handleAuthCheck(() => handleDeleteClick(category.id))}
                     disabled={!isAuthenticated}
                     className={`p-2 rounded-lg transition-colors ${
                       isAuthenticated 
@@ -504,7 +511,7 @@ const FarmCategoriesSection = () => {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleAuthCheck(() => handleDelete(category.id));
+                    handleAuthCheck(() => handleDeleteClick(category.id));
                   }}
                   disabled={!isAuthenticated}
                   className={`px-3 py-2 rounded-lg font-medium transition-colors ${
@@ -876,6 +883,74 @@ const FarmCategoriesSection = () => {
                   })}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {isDeleteDialogOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-2xl transform transition-all animate-scaleIn">
+            {/* Warning Icon */}
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 size={32} className="text-red-600" />
+              </div>
+            </div>
+
+            {/* Title */}
+            <h2 className="text-xl font-bold text-center mb-2 text-gray-900">
+              {getTranslation(locale, {
+                en: "Delete Category?",
+                es: "¿Eliminar Categoría?",
+                ay: "¿T'aqa chhaqtayaña?",
+                qu: "¿Categoría qichuy?",
+                gn: "¿Embogue categoría?"
+              })}
+            </h2>
+
+            {/* Description */}
+            <p className="text-center text-gray-600 mb-6">
+              {getTranslation(locale, {
+                en: "Are you sure you want to delete this category? This action cannot be undone and will fail if any farm items are using this category.",
+                es: "¿Estás seguro de que quieres eliminar esta categoría? Esta acción no se puede deshacer y fallará si hay artículos de granja usando esta categoría.",
+                ay: "¿Chiqpachapunichu aka t'aqa chhaqtayaña munatta? Aka luräwix janiw kutt'ayañjamäkiti ukat pantjañapawa siwa yapuchiri yänakax aka t'aqampixa.",
+                qu: "¿Chiqaptachu kay categoría qichuyta munanki? Kay ruwayqa manam kutichiy atikchu chaymanta pantanqa sichus wakin chakra imakuna kay categoríata apaykachkan.",
+                gn: "¿Reime porãpa remboguese ko categoría? Ko tembiapo ndaikatúi ojejapo jey ha ojepantáta oĩramo mba'e ñemitỹ oiporu ko categoría."
+              })}
+            </p>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setIsDeleteDialogOpen(false);
+                  setCategoryToDelete(null);
+                }}
+                className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+              >
+                {getTranslation(locale, {
+                  en: "Cancel",
+                  es: "Cancelar",
+                  ay: "Janiw munañäkiti",
+                  qu: "Ama nisqa",
+                  gn: "Ani"
+                })}
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                <Trash2 size={18} />
+                {getTranslation(locale, {
+                  en: "Delete",
+                  es: "Eliminar",
+                  ay: "Chhaqtayaña",
+                  qu: "Qichuy",
+                  gn: "Mbogue"
+                })}
+              </button>
             </div>
           </div>
         </div>
