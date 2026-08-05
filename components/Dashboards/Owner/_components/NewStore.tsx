@@ -257,7 +257,9 @@ const NewStore = () => {
             errorMessage("Maximum store count reached");
           }
         } else {
-          errorMessage("Some error occurred");
+          const apiMsg = err?.response?.data?.message || err?.message || "Some error occurred";
+          const displayMsg = Array.isArray(apiMsg) ? apiMsg.join(", ") : apiMsg;
+          errorMessage(displayMsg);
         }
       })
       .finally(() => {

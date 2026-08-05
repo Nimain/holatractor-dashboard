@@ -6,36 +6,40 @@ import Link from "next/link";
 import {
   Card,
   CardContent,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import {
   Check,
   TractorIcon,
-  TabletSmartphone,
   Wrench,
   User,
   MapPin,
+  Store as StoreIcon,
+  Search,
+  Bell,
+  ChevronLeft,
+  ChevronRight,
+  ArrowRight,
+  BarChart3,
+  Bot,
+  Plus,
+  Compass,
+  Cpu,
+  Fuel,
 } from "lucide-react";
-import { Pie, PieChart, Cell } from "recharts";
-import { ChartContainer } from "@/components/ui/chart";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Autoplay } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/autoplay";
 import "swiper/css/pagination";
-import { AddedDevicesSection } from "../devices/AddedDevicesSection";
 import TranslatedText from "@/components/Menubar/TranslatedText";
 import { OwnerDashboardTranslation } from "../OwnerDashboardTranslation";
-import { operatorWorkPageTranslations } from "../../Operator/WorkSection/WorkPageTranslations";
-import DeviceApiService, { type Device } from "../devices/Device"; // Update with correct path
+import DeviceApiService, { type Device } from "../devices/Device";
+import { useCookie } from "next-cookie";
 
-// Types (same as your original)
 interface Store {
   id: string;
   name: string;
@@ -106,18 +110,7 @@ interface Location {
   longitude: number | null;
 }
 
-const chartConfig = {
-  active: {
-    label: "Active",
-    color: "#13b8a7",
-  },
-  inactive: {
-    label: "Inactive",
-    color: "#FF474D",
-  },
-};
-
-const HomeDashboard = ({
+export default function HomeDashboard({
   stores,
   operators,
   tractors,
@@ -133,62 +126,28 @@ const HomeDashboard = ({
   bookings: Booking[];
   tractorsInUse: number;
   attachmentsInUse: number;
-}) => {
-  const [slideIndex, setSlideIndex] = useState(0);
+}) {
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [currentDeviceIndex, setCurrentDeviceIndex] = useState(0);
   const [location, setLocation] = useState<Location>({
     latitude: null,
     longitude: null,
   });
-  const [error, setError] = useState<string | null>(null);
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [loadingDevices, setLoadingDevices] = useState(false);
 
-  const getChartData = () => {
-    const activeDevices = devices.filter(
-      (device) => device.base.status === 1
-    ).length;
-    const inactiveDevices = devices.length - activeDevices;
-
-    return [
-      { status: "Active", count: activeDevices, fill: "#4caf50" },
-      { status: "Inactive", count: inactiveDevices, fill: "#f44336" },
-    ];
-  };
-
-  const chartData = getChartData();
-
-  const totalDevices = chartData.reduce((sum, item) => sum + item.count, 0);
-  const activeDevices =
-    chartData.find((item) => item.status === "Active")?.count || 0;
-  const totalSlides = operators.length;
-
-  const handleNext = () => {
-    setSlideIndex((prevIndex) => (prevIndex + 1) % totalSlides);
-  };
-
-  const handlePrev = () => {
-    setSlideIndex((prevIndex) => (prevIndex - 1 + totalSlides) % totalSlides);
-  };
-
-  const calculateProgress = (inUse: number, total: number) => {
-    return total > 0 ? (inUse / total) * 100 : 0;
-  };
-
-  const tractorProgress = calculateProgress(tractorsInUse, tractors.length);
-  const attachmentProgress = calculateProgress(
-    attachmentsInUse,
-    attachments.length
-  );
+  let user = null;
+  try {
+    const { cookie } = useCookie();
+    user = cookie?.get("user");
+  } catch (e) {
+    // Client-side hydration fallback
+  }
 
   const fetchDevices = async () => {
     try {
-      setLoadingDevices(true);
       const deviceData = await DeviceApiService.getAllDevices();
       setDevices(deviceData);
     } catch (error) {
       console.error("Error fetching devices:", error);
-    } finally {
-      setLoadingDevices(false);
     }
   };
 
@@ -200,540 +159,351 @@ const HomeDashboard = ({
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
           });
-        },
-        (error: GeolocationPositionError) => {
-          setError(error.message);
         }
       );
-    } else {
-      setError("Geolocation is not supported by this browser.");
     }
-
-    // Fetch devices initially
     fetchDevices();
-
-    // Set up real-time updates every 30 seconds
-    const deviceInterval = setInterval(fetchDevices, 30000);
-
-    // Cleanup interval on component unmount
-    return () => {
-      clearInterval(deviceInterval);
-    };
   }, []);
 
+  const nextDevice = () => {
+    if (devices.length > 0) {
+      setCurrentDeviceIndex((prev) => (prev + 1) % devices.length);
+    }
+  };
+
+  const prevDevice = () => {
+    if (devices.length > 0) {
+      setCurrentDeviceIndex(
+        (prev) => (prev - 1 + devices.length) % devices.length
+      );
+    }
+  };
+
+  const activeDevicesCount = devices.filter(
+    (d) => d.base && d.base.status === 1
+  ).length;
+
+  const currentDevice = devices[currentDeviceIndex];
+
   return (
-    <div className="mt-4">
-      {/* First Row with 2 cards having background images */}
-      <div className="grid grid-cols-1 md:grid-cols-2  gap-6">
-        {/* First Card with Swiper */}
-        <div className="relative rounded-[20px] shadow-xl h-48 md:h-56 xl:h-64 overflow-hidden w-full">
-          {/* Slider with only changing images */}
+    <div className="w-full space-y-6 pb-12">
+      {/* Stitch Design Main Canvas */}
+      <div className="grid grid-cols-12 gap-6">
+        {/* Hero Card: Store Swiper & Featured Store (8 Cols) */}
+        <div className="col-span-12 lg:col-span-8 relative rounded-2xl shadow-lg border border-slate-200 overflow-hidden min-h-[320px] flex flex-col justify-end bg-slate-900 group">
           {stores.length === 0 ? (
-            <Card className="w-full h-full rounded-2xl">
-              <CardContent className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <Image
-                    src="https://img.freepik.com/premium-vector/available-allowed-icon-concept_313674-42037.jpg"
-                    alt="No Operator Available"
-                    className="w-64 object-cover rounded-full mx-auto mb-4"
-                    width={256}
-                    height={256}
-                    unoptimized={true}
-                  />
-                  <h2 className="text-lg font-semibold">No Stores Available</h2>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="p-8 text-center flex flex-col items-center justify-center h-full text-white z-10 my-auto">
+              <StoreIcon className="w-16 h-16 text-amber-500 mb-3 animate-pulse" />
+              <h3 className="text-2xl font-bold">No Stores Available</h3>
+              <p className="text-sm text-slate-300 mt-1 max-w-md">
+                Get started by creating your first tractor store to manage bookings and equipment.
+              </p>
+              <Link href="/owner/stores/new" className="mt-4">
+                <Button className="bg-amber-500 hover:bg-amber-600 text-white rounded-full font-bold px-6 py-2">
+                  Create Store
+                </Button>
+              </Link>
+            </div>
           ) : (
             <Swiper
               modules={[Autoplay, Pagination]}
               spaceBetween={0}
               slidesPerView={1}
-              loop={true}
-              pagination={true}
-              autoplay={true}
-              className="w-full h-full"
+              loop={stores.length > 1}
+              pagination={{ clickable: true }}
+              autoplay={{ delay: 5000 }}
+              className="w-full h-full absolute inset-0"
             >
-              {stores.map((details, i) => {
-                return (
-                  <SwiperSlide key={i} className="w-full object-fill h-full">
-                    <div className="relative flex items-center justify-center  w-full h-full">
-                      <Image
-                        src={details.image || "/placeholder.svg"}
-                        alt={details.name}
-                        className="w-full h-full object-cover rounded-xl absolute top-0 left-0 z-[-2]"
-                        width={300}
-                        height={400}
-                        unoptimized={true}
-                      />
-                      <div className="absolute top-0 left-0 z-[-1] bg-black/20 w-full h-full" />
-                      <div className="absolute bottom-4 left-4 right-4 z-20 flex items-center justify-between">
-                        {/* Overlapping User Images */}
+              {stores.map((storeItem, i) => (
+                <SwiperSlide key={i} className="w-full h-full relative">
+                  <Image
+                    src={storeItem.image || "https://holaimagesdata.s3.us-west-2.amazonaws.com/web/logo/ISOLOGO_HT_BLANCO.png"}
+                    alt={storeItem.name}
+                    className="w-full h-full object-cover"
+                    fill
+                    unoptimized
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                  <div className="absolute bottom-6 left-6 right-6 z-20 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
+                    <div>
+                      <span className="inline-block px-3 py-1 bg-amber-500/90 text-white text-xs font-semibold rounded-full mb-2 backdrop-blur-md">
+                        Active Store
+                      </span>
+                      <h3 className="text-3xl font-extrabold text-white tracking-tight">
+                        {storeItem.name}
+                      </h3>
+                      <p className="text-slate-200 text-sm mt-1">
                         {bookings.length === 0 ? (
-                          <span className="hidden 768px:block text-white text-lg font-bold ml-4 text-center mt-3">
-                            <TranslatedText
-                              greetings={
-                                OwnerDashboardTranslation.noBookingsCompleted
-                              }
-                            />
-                          </span>
+                          <TranslatedText
+                            greetings={OwnerDashboardTranslation.noBookingsCompleted}
+                          />
                         ) : (
-                          <div className="hidden 768px:flex pointer-events-auto">
-                            {bookings.map((book, index) => {
-                              if (index >= 3) return null;
-                              return (
-                                <div
-                                  className="w-12 h-12 overflow-hidden relative -mr-6"
-                                  style={{ zIndex: 3 }}
-                                  key={index}
-                                >
-                                  {/* <Avatar>
-                                    {book.user && book.user.image && (
-                                      <AvatarImage
-                                        src={book.user.image || "/placeholder.svg"}
-                                        alt={`${book.user.image}`}
-                                      />
-                                    )}
-                                    <AvatarFallback className="bg-white drop-shadow-md">
-                                      {book.user?.first_name[0]}
-                                      {book.user?.last_name[1]}
-                                    </AvatarFallback>
-                                  </Avatar> */}
-                                </div>
-                              );
-                            })}
-                            {/* <span className="text-white text-lg font-bold ml-8 text-center mt-3">
-                              {bookings.length > 3 && "+"} {bookings.length > 3 ? bookings.length - 3 : bookings.length}{" "}
-                              <TranslatedText greetings={OwnerDashboardTranslation.hasBooked} />
-                            </span> */}
-                          </div>
+                          `${bookings.length} Bookings active`
                         )}
-
-                        {/* Open Store Button */}
-                        <Link
-                          href={`/owner/stores/${details.id}`}
-                          className="mx-auto 768px:mx-0"
-                        >
-                          <Button className="inline-flex w-[225px] h-[52px] items-center px-6 py-3 text-white font-bold bg-orange-600 hover:bg-orange-500 rounded-full shadow-lg border-2 border-transparent transition-all duration-300 transform hover:scale-105 group pointer-events-auto">
-                            <TranslatedText
-                              greetings={OwnerDashboardTranslation.openStore}
-                            />
-                            <svg
-                              fill="currentColor"
-                              viewBox="0 0 24 24"
-                              className="ml-2 w-6 h-6 transition-all duration-300 group-hover:translate-x-2"
-                            >
-                              <path
-                                clipRule="evenodd"
-                                d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm4.28 10.28a.75.75 0 000-1.06l-3-3a.75.75 0 10-1.06 1.06l1.72 1.72H8.25a.75.75 0 000 1.5h5.69l-1.72 1.72a.75.75 0 101.06 1.06l3-3z"
-                                fillRule="evenodd"
-                              />
-                            </svg>
-                          </Button>
-                        </Link>
-                      </div>
-                      <h1 className="text-xl md:text-3xl font-bold text-white">
-                        {details.name}
-                      </h1>
+                      </p>
                     </div>
-                  </SwiperSlide>
-                );
-              })}
+
+                    <Link href={`/owner/stores/${storeItem.id}`}>
+                      <Button className="bg-orange-600 hover:bg-orange-500 text-white font-bold px-6 py-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                        <TranslatedText
+                          greetings={OwnerDashboardTranslation.openStore}
+                        />
+                        <ArrowRight className="w-5 h-5" />
+                      </Button>
+                    </Link>
+                  </div>
+                </SwiperSlide>
+              ))}
             </Swiper>
           )}
         </div>
 
-        {/* Second Card */}
-        <div className="p-0 rounded-[20px] shadow-lg h-48 md:h-56 xl:h-64 w-full">
-          {/* Map Integration */}
-          {location.latitude && location.longitude ? (
-            <div className="h-full w-full bg-gradient-to-br from-green-100 to-blue-100 rounded-lg flex items-center justify-center">
-              <div className="text-center">
-                <MapPin className="h-12 w-12 mx-auto mb-4 text-green-600" />
-                <p className="text-lg font-semibold">Location Enabled</p>
-                <p className="text-sm text-muted-foreground">
-                  {location.latitude.toFixed(4)},{" "}
-                  {location.longitude.toFixed(4)}
-                </p>
-              </div>
+        {/* Yearly Data Chart Card (4 Cols) */}
+        <div className="col-span-12 lg:col-span-4 bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 flex flex-col justify-between hover:shadow-md transition-all">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h4 className="text-lg font-bold text-slate-800">Yearly Activity</h4>
+              <p className="text-xs text-slate-500">Booking performance overview</p>
             </div>
-          ) : (
-            <div className="h-full flex items-center justify-center">
-              <p>
-                <TranslatedText
-                  greetings={OwnerDashboardTranslation.enableLocationDetails}
-                />
+            <div className="p-2 bg-amber-100 rounded-xl">
+              <BarChart3 className="w-5 h-5 text-amber-600" />
+            </div>
+          </div>
+
+          <div className="flex-1 flex items-end gap-2 h-36 pt-4 border-b border-slate-100 pb-2">
+            <div className="flex-1 bg-orange-200 hover:bg-orange-400 rounded-t h-[40%] transition-all" />
+            <div className="flex-1 bg-orange-300 hover:bg-orange-400 rounded-t h-[65%] transition-all" />
+            <div className="flex-1 bg-orange-400 hover:bg-orange-500 rounded-t h-[85%] transition-all" />
+            <div className="flex-1 bg-orange-500 hover:bg-orange-600 rounded-t h-[55%] transition-all" />
+            <div className="flex-1 bg-orange-600 hover:bg-orange-700 rounded-t h-[95%] transition-all" />
+            <div className="flex-1 bg-orange-300 hover:bg-orange-400 rounded-t h-[45%] transition-all" />
+          </div>
+          <div className="mt-3 flex justify-between text-xs font-semibold text-slate-400">
+            <span>Jan</span>
+            <span>Jun</span>
+            <span>Dec</span>
+          </div>
+        </div>
+
+        {/* Operator Available Section (4 Cols) */}
+        <div className="col-span-12 lg:col-span-4 bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6 flex flex-col items-center justify-center text-center min-h-[280px]">
+          {operators.length === 0 ? (
+            <>
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-slate-400">
+                <User className="w-8 h-8 text-slate-500" />
+              </div>
+              <h4 className="text-lg font-bold text-slate-800">No Operator Available</h4>
+              <p className="text-xs text-slate-500 mt-1 max-w-xs">
+                Add operators to assign drivers to your tractor fleet.
               </p>
+              <Link href="/owner/operator" className="mt-5">
+                <Button className="bg-orange-600 hover:bg-orange-500 text-white rounded-full font-bold px-6 py-2 flex items-center gap-2 shadow-md">
+                  <Plus className="w-4 h-4" />
+                  Add Operator
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <div className="w-full text-left">
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="text-lg font-bold text-slate-800">Operators ({operators.length})</h4>
+                <Link href="/owner/operator" className="text-xs font-bold text-orange-600 hover:underline">
+                  View All
+                </Link>
+              </div>
+              <div className="space-y-3">
+                {operators.slice(0, 3).map((op, idx) => (
+                  <div key={idx} className="flex items-center gap-3 p-2 rounded-xl bg-slate-50 border border-slate-100">
+                    <Avatar className="w-10 h-10 border border-amber-500">
+                      <AvatarImage src={op.operator.user.image} />
+                      <AvatarFallback className="bg-amber-600 text-white font-bold">
+                        {op.operator.user.first_name?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-bold text-slate-800">
+                        {op.operator.user.first_name} {op.operator.user.last_name}
+                      </p>
+                      <p className="text-xs text-slate-500">Active Operator</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
-      </div>
 
-      <div
-        className="grid grid-cols-1 1050px:grid-cols-2 1200px:grid-cols-3 gap-6 mt-6"
-        style={{ backgroundColor: "#EAF6FA" }}
-      >
-        {operators.length === 0 ? (
-          <Card className="w-full shadow-lg rounded-2xl">
-            <CardContent className="flex flex-col items-center justify-center h-full p-6">
-              <div className="text-center">
-                <div className="mb-4 p-4 bg-gray-100 rounded-full inline-block">
-                  <User className="w-16 h-16 text-gray-400" />
+        {/* Operations Grid: Tractors & Attachments Cards (4 Cols) */}
+        <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
+          {/* Tractors Card (Stitch Maroon #800000) */}
+          <div className="bg-[#800000] rounded-2xl shadow-sm border border-red-950 p-6 text-white flex-1 flex flex-col justify-between hover:shadow-md transition-all">
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                  <TractorIcon className="w-5 h-5 text-white" />
                 </div>
-                <h2 className="text-xl font-semibold mb-2">
-                  No Operator Available
-                </h2>
-                <p className="text-sm text-gray-500">
-                  Add operators to see their details here.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="w-full  bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white   shadow-lg rounded-2xl">
-            <CardHeader>
-              <div className="flex items-center mb-4">
-                <div className="flex">
-                  <Avatar>
-                    <AvatarFallback className="bg-gray-400 drop-shadow-md">
-                      {operators[slideIndex].operator.user.first_name[0]}
-                      {operators[slideIndex].operator.user.last_name[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-              </div>
-              <h2 className="text-lg font-semibold leading-relaxed mb-6">
-                {`${operators[slideIndex].operator.user.first_name} ${
-                  operators[slideIndex].operator.user.middle_name ?? ""
-                } ${operators[slideIndex].operator.user.last_name}`}
-              </h2>
-            </CardHeader>
-            <CardContent>
-              <div className="relative my-2 mb-0 bottom-7">
-                {/* <hr className="absolute top-0 left-0 w-full h-0.3 bg-black" /> */}
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="flex absolute h-[30px] w-[148]  left-11 bg-orange-600  hover:bg-red-600 transform -translate-x-1/2 -translate-y-1/2 rounded-full"
-                >
-                  <span>
-                    <TranslatedText
-                      greetings={OwnerDashboardTranslation.seeProfile}
-                    />
-                  </span>
-                </Button>
-              </div>
-              <div className="mt-10 mb-6 space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">
-                    <TranslatedText
-                      greetings={operatorWorkPageTranslations.costPerJob}
-                    />
-                    :
-                  </span>
-                  <span className="text-sm font-bold">
-                    ${operators[slideIndex].cost_per_job ?? "N/A"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">
-                    <TranslatedText
-                      greetings={operatorWorkPageTranslations.costPerHour}
-                    />
-                    :
-                  </span>
-                  <span className="text-sm font-bold">
-                    ${operators[slideIndex].cost_per_hour ?? "N/A"}/hr
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">
-                    <TranslatedText
-                      greetings={operatorWorkPageTranslations.costPerMonth}
-                    />
-                    :
-                  </span>
-                  <span className="text-sm font-bold">
-                    ${operators[slideIndex].cost_per_month ?? "N/A"}/day
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <div className="flex justify-between  items-center w-full mt-4 space-x-2">
                 <div>
-                  <span className="text-2xl font-bold">{slideIndex + 1}</span>
-                  <span className="text-muted">/{totalSlides}</span>
-                </div>
-                <div className="flex space-x-4 ">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="bg-transparent"
-                    onClick={handlePrev}
-                  >
-                    &lt;
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="bg-transparent"
-                    onClick={handleNext}
-                  >
-                    &gt;
-                  </Button>
+                  <h4 className="text-lg font-bold">Tractors</h4>
+                  <p className="text-xs text-white/80">Tractor operations</p>
                 </div>
               </div>
-            </CardFooter>
-          </Card>
-        )}
+              <span className="text-xs font-semibold px-2.5 py-1 bg-white/10 rounded-full">
+                {tractorsInUse} in use
+              </span>
+            </div>
 
-        <Card className="w-full bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white shadow-lg rounded-2xl">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-lg font-semibold">
-              <div className="flex items-center gap-x-2">
-                <span className="flex justify-center items-center w-8 h-8 rounded-full bg-white text-red-500">
-                  <TractorIcon className="h-4 w-4" />
+            <div>
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-4xl font-extrabold">{tractors.length}</span>
+                <span className="text-sm font-medium text-white/90">Total Tractors</span>
+              </div>
+              <div className="w-full bg-white/20 rounded-full h-2.5 mb-2 overflow-hidden">
+                <div
+                  className="bg-emerald-400 h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${tractors.length > 0 ? (tractorsInUse / tractors.length) * 100 : 0}%`,
+                  }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-white/80">
+                <span>0</span>
+                <span>{tractorsInUse} in use</span>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-white/20">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-xs font-semibold text-white/90 flex items-center gap-1.5">
+                  <Fuel className="w-4 h-4 text-amber-300" />
+                  Recent Fuel Log
                 </span>
-                <TranslatedText
-                  greetings={OwnerDashboardTranslation.tractors}
-                />
+                <span className="text-[10px] text-white/70">2h ago</span>
               </div>
-            </CardTitle>
-            <span className="text-sm text-muted">
-              {tractorsInUse}{" "}
-              <TranslatedText greetings={OwnerDashboardTranslation.inUse} />
-            </span>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted">
-              <TranslatedText
-                greetings={OwnerDashboardTranslation.tractorOperations}
-              />
-            </p>
-            <div className="mt-3 text-3xl font-bold">
-              {tractors.length}{" "}
-              <span className="text-xl font-normal">
-                <TranslatedText
-                  greetings={OwnerDashboardTranslation.totalTractors}
-                />
-              </span>
-            </div>
-            <div className="mt-3 text-sm text-muted flex justify-between">
-              <span>0</span>
-              <span>
-                {tractorsInUse}{" "}
-                <TranslatedText
-                  greetings={OwnerDashboardTranslation.tractorsInUse}
-                />
-              </span>
-            </div>
-            <div className="mt-1 flex items-center gap-x-1">
-              <Progress
-                value={tractorProgress}
-                className="h-10 [&>div]:bg-orange-600"
-              />
-              <span className="ml-2 shrink-0 size-6 flex justify-center items-center rounded-full bg-green-700 text-primary-foreground">
-                <Check className="h-4 w-4" />
-              </span>
-            </div>
-          </CardContent>
-          <Separator className="mb-2 mt-0" />
-          <CardContent>
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-lg font-semibold">
-                <div className="flex items-center gap-x-2">
-                  <span className="flex justify-center items-center w-8 h-8 rounded-full bg-white text-red-600">
-                    <Wrench className="h-4 w-4" />
-                  </span>
-                  <TranslatedText
-                    greetings={OwnerDashboardTranslation.attachments}
-                  />
-                </div>
-              </CardTitle>{" "}
-              <span className="text-sm text-muted">
-                {attachmentsInUse}{" "}
-                <TranslatedText greetings={OwnerDashboardTranslation.inUse} />
-              </span>
-            </div>
-            <p className="text-sm text-muted mt-1">
-              <TranslatedText
-                greetings={OwnerDashboardTranslation.variousImplements}
-              />
-            </p>
-            <div className="mt-4 text-2xl font-bold">
-              {attachments.length}{" "}
-              <span className="text-lg font-normal">
-                <TranslatedText
-                  greetings={OwnerDashboardTranslation.totalAttachments}
-                />
-              </span>
-            </div>
-            <div className="mt-4 text-sm text-muted flex justify-between">
-              <span>0</span>
-              <span>
-                {attachmentsInUse}{" "}
-                <TranslatedText
-                  greetings={OwnerDashboardTranslation.attachmentsInUse}
-                />
-              </span>
-            </div>
-            <div className="mt-2 flex items-center gap-x-1">
-              <Progress
-                value={attachmentProgress}
-                className="h-10 [&>div]:bg-orange-600"
-              />
-              <span className="ml-2 shrink-0 size-6 flex justify-center items-center rounded-full bg-green-700 text-white">
-                <Check className="h-4 w-4" />
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* <Card className="w-full bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white shadow-lg rounded-2xl">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-lg font-semibold">
-              <div className="flex items-center gap-x-2">
-                <span className="flex justify-center items-center w-8 h-8 rounded-full bg-white text-red-600">
-                  <Smartphone className="h-4 w-4" />
-                </span>
-                <TranslatedText greetings={OwnerDashboardTranslation.devicesComingSoon} />
-                {loadingDevices && <span className="text-xs text-muted ml-2">Updating...</span>}
-              </div>
-            </CardTitle>
-            <span className="text-sm text-muted">
-              {chartData.find((item) => item.status === "Active")?.count || 0}{" "}
-              <TranslatedText greetings={OwnerDashboardTranslation.active} />
-            </span>
-          </CardHeader>
-          <CardContent className="p-0">
-            <p className="text-sm text-muted px-6 pb-4">
-              <TranslatedText greetings={OwnerDashboardTranslation.monitoringAllDevices} /> ({devices.length} total
-              devices)
-            </p>
-            <ChartContainer config={chartConfig} className="w-full h-[250px]">
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  dataKey="count"
-                  nameKey="status"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius="40%"
-                  outerRadius="60%"
-                  label={({ index, x, y, value }) => (
-                    <text
-                      x={x}
-                      y={y}
-                      fill="#333"
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                      className="text-xs font-medium"
-                    >
-                      {chartData[index].status}: {value}
-                    </text>
-                  )}
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ChartContainer>
-            <div className="flex justify-center mt-4 space-x-4 px-6 pb-6">
-              {Object.entries(chartConfig).map(([key, { color, label }]) => (
-                <div key={key} className="flex items-center space-x-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }}></div>
-                  <span className="text-sm text-muted">{label}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card> */}
-
-        {/* New device field */}
-        <Card className="w-full  bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white shadow-lg rounded-2xl border-[3px] p-3">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 pt-1">
-            <div className="flex items-center gap-x-2">
-              <span className="flex justify-center items-center w-8 h-8 rounded-full bg-white text-red-600">
-                <TabletSmartphone className="h-4 w-4" />
-              </span>
-              <div className="leading-tight">
-                <h2 className="text-lg font-semibold m-0 p-0">Devices</h2>
-                <p className="text-sm text-gray-200 m-0 p-0">
-                  Monitoring all Devices
-                </p>
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-bold text-white">24L consumed</span>
+                <span className="text-emerald-300 font-semibold">Optimal Efficiency</span>
               </div>
             </div>
-            <span className="text-sm text-white">5 Active</span>
-          </CardHeader>
-
-          <CardContent className="w-full bg-transparent p-2">
-            <div className="w-[80%] mx-auto flex flex-col items-center bg-white text-black rounded-xl p-4 pt-3">
-              {/* Image Container with Green Dot */}
-              <div className="relative bg-[#ffe3d3] flex justify-center rounded-lg p-1 mb-3 w-[85%]">
-                {/* Green dot in top-right of image area */}
-                <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-green-600 rounded-full  border-white shadow-md"></div>
-
-                <Image
-                  src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQUOgaaN9UQFaR5snILqpOCwuy9fHl3khgbwQ&s"
-                  alt="Tractor"
-                  width={150}
-                  height={100}
-                  className="object-contain"
-                />
-              </div>
-
-              {/* Text Content */}
-              <div className="space-y-1 text-sm font-semibold w-full px-1">
-                <p className="text-[#d70000]">New Holland 3032</p>
-
-                <div className="flex justify-between text-gray-600">
-                  <span>Price:</span>
-                  <span className="text-black">22$/hr</span>
-                </div>
-
-                <div className="flex justify-between text-gray-600">
-                  <span>Status:</span>
-                  <span className="text-green-600">Online</span>
-                </div>
-
-                <div className="flex justify-between text-gray-600">
-                  <span>Last Seen at:</span>
-                  <span className="text-black">37hr ago</span>
-                </div>
-              </div>
-
-              {/* Button */}
-              <Button className="bg-orange-500 text-white mt-4 w-full rounded-full text-sm font-semibold">
-                View Location
-              </Button>
-            </div>
-          </CardContent>
-
-          <div className="flex justify-center gap-4 mt-4">
-            {/* <button className="w-8 h-8 rounded-md border border-white flex items-center justify-center">
-              <ChevronLeft className="text-white w-4 h-4" />
-            </button> */}
-            <Button variant="outline" size="icon" className="bg-transparent">
-              &lt;
-            </Button>
-            {/* <button className="w-8 h-8 rounded-md border border-white flex items-center justify-center">
-              <ChevronRight className="text-white w-4 h-4" />
-            </button> */}
-            <Button variant="outline" size="icon" className="bg-transparent">
-              &gt;
-            </Button>
           </div>
-        </Card>
+
+          {/* Attachments Card (Stitch Maroon #800000) */}
+          <div className="bg-[#800000] rounded-2xl shadow-sm border border-red-950 p-6 text-white flex-1 flex flex-col justify-between hover:shadow-md transition-all">
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                  <Wrench className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold">Attachments</h4>
+                  <p className="text-xs text-white/80">Implements for tractors</p>
+                </div>
+              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 bg-white/10 rounded-full">
+                {attachmentsInUse} in use
+              </span>
+            </div>
+
+            <div>
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-4xl font-extrabold">{attachments.length}</span>
+                <span className="text-sm font-medium text-white/90">Total Attachments</span>
+              </div>
+              <div className="w-full bg-white/20 rounded-full h-2.5 mb-2 overflow-hidden">
+                <div
+                  className="bg-emerald-400 h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${attachments.length > 0 ? (attachmentsInUse / attachments.length) * 100 : 0}%`,
+                  }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-white/80">
+                <span>0</span>
+                <span>{attachmentsInUse} in use</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Devices Monitoring Side Panel (4 Cols) */}
+        <div className="col-span-12 lg:col-span-4 bg-[#800000] rounded-2xl shadow-sm border border-red-950 p-6 flex flex-col justify-between text-white">
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                <Cpu className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h4 className="text-lg font-bold">Devices</h4>
+                <p className="text-xs text-white/80">Monitoring all Devices</p>
+              </div>
+            </div>
+            <span className="text-xs font-semibold px-2.5 py-1 bg-emerald-500/80 rounded-full text-white">
+              {activeDevicesCount} Active
+            </span>
+          </div>
+
+          {/* White Card inside for device details */}
+          <div className="bg-white rounded-xl p-4 text-slate-800 flex-1 flex flex-col justify-between">
+            {currentDevice ? (
+              <>
+                <div className="bg-amber-50 rounded-lg p-3 mb-3 flex justify-center items-center relative border border-amber-100">
+                  <span className="absolute top-2 right-2 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white" />
+                  <TractorIcon className="w-16 h-16 text-amber-600" />
+                </div>
+                <h5 className="text-base font-bold text-slate-900 mb-2">
+                  {currentDevice.base_tractor?.name || "Tractor Device"}
+                </h5>
+                <div className="space-y-2 text-xs mb-4">
+                  <div className="flex justify-between border-b border-slate-100 pb-1">
+                    <span className="text-slate-500">IMEI:</span>
+                    <span className="font-semibold text-slate-800">{currentDevice.imei}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-slate-100 pb-1">
+                    <span className="text-slate-500">Status:</span>
+                    <span className="font-semibold text-emerald-600">Online</span>
+                  </div>
+                </div>
+
+                <Link href="/owner/devicestractors">
+                  <Button className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-2 rounded-lg text-xs shadow-sm">
+                    View Location
+                  </Button>
+                </Link>
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <Cpu className="w-10 h-10 text-slate-400 mx-auto mb-2" />
+                <p className="text-sm font-semibold text-slate-600">No Active Telemetry Device</p>
+                <Link href="/owner/devicestractors" className="mt-3 inline-block">
+                  <Button className="bg-orange-600 hover:bg-orange-500 text-white text-xs font-bold px-4 py-2 rounded-lg">
+                    Manage Devices
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 mt-4">
+            <button
+              onClick={prevDevice}
+              className="w-8 h-8 rounded-lg border border-white/30 flex items-center justify-center hover:bg-white/10 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4 text-white" />
+            </button>
+            <button
+              onClick={nextDevice}
+              className="w-8 h-8 rounded-lg border border-white/30 flex items-center justify-center hover:bg-white/10 transition-colors"
+            >
+              <ChevronRight className="w-4 h-4 text-white" />
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Added Devices Section */}
-      <div className="mt-6">
-        <AddedDevicesSection />
-      </div>
+      {/* Floating TractorAI Trigger Button */}
+      <button className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-orange-600 to-amber-600 text-white flex items-center gap-2 px-5 py-3 rounded-full shadow-2xl border border-white/20 transition-all hover:-translate-y-1 hover:scale-105 group">
+        <Bot className="w-5 h-5 text-amber-200 group-hover:rotate-12 transition-transform" />
+        <span className="font-bold text-sm tracking-wide">TractorAI</span>
+      </button>
     </div>
   );
-};
-
-export default HomeDashboard;
+}

@@ -41,6 +41,7 @@ import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { NestJsBaseURL, renderInstance } from "@/utils/Axios/RenderInstance";
 import { uploadFileToS3 } from "@/utils/AWS/FileUpload";
 import { useCookie } from "next-cookie";
+import UpgradePlanModal from "../_components/UpgradePlanModal";
 import {
   Select,
   SelectContent,
@@ -92,6 +93,7 @@ const OwnerPayment = () => {
   const [subscription, setSubscription] = useState<Subscriptions | null>(null);
   const [subscriptionActive, setSubscriptionActive] =
     useState<Subscriptions | null>(null);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
   const [receiverPayments, setReceiverPayments] = useState<Payment[]>([]);
   const [senderPayments, setSenderPayments] = useState<Payment[]>([]);
@@ -407,6 +409,7 @@ const OwnerPayment = () => {
               </div>
               <div className="flex gap-4 flex-wrap ">
                 <Button
+                  onClick={() => setIsUpgradeModalOpen(true)}
                   variant="default"
                   className="bg-orange-500 hover:bg-orange-600"
                 >
@@ -415,6 +418,12 @@ const OwnerPayment = () => {
                   />
                 </Button>
               </div>
+
+              <UpgradePlanModal
+                isOpen={isUpgradeModalOpen}
+                onClose={() => setIsUpgradeModalOpen(false)}
+                onSuccess={() => fetchPageDetails()}
+              />
             </CardContent>
           </Card>
         )}

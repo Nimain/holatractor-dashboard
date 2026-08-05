@@ -68,8 +68,8 @@ const NewInventory = () => {
     setValue(newValue as number[]);
   };
 
-  function convertYearToDate(year: string): Date {
-    return new Date(`${year}-01-01T00:00:00.000Z`);
+  function convertYearToDate(year: string): string {
+    return new Date(`${year}-01-01T00:00:00.000Z`).toISOString();
   }
 
   const handleAddInventory = async () => {
@@ -113,49 +113,54 @@ const NewInventory = () => {
       return
     }
 
-    let tractorImages: string[] = [];
-
-    if (selectedImage.length > 0) {
-      setImageLoading(true);
-
-      const uploadPromises = selectedImage.map(async (image) => {
-        const arrayBuffer = await image.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer); // Ensure you have the correct type for buffer
-        return uploadFileToS3(buffer, image.name);
-      });
-
-      tractorImages = await Promise.all(uploadPromises);
-      setImageLoading(false);
-    }
-
-    const inventory = {
-      city: city,
-      tractor_name: tractorName,
-      tractor_description: tractorDesc,
-      tractor_images: tractorImages,
-      tractor_type: tractorType,
-      tractor_model: tractorModel,
-      tractor_year: convertYearToDate(dobDate), // Using the Date directly
-      min_price: `${value[0]}`,
-      max_price: `${value[1]}`,
-      fixed_price: `${fixedPrice}`
-    };
-
     setLoading(true);
 
     try {
+      let tractorImages: string[] = [];
+
+      if (selectedImage.length > 0) {
+        setImageLoading(true);
+        const uploadPromises = selectedImage.map(async (image) => {
+          const arrayBuffer = await image.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          return uploadFileToS3(buffer, image.name);
+        });
+
+        tractorImages = await Promise.all(uploadPromises);
+        setImageLoading(false);
+      }
+
+      const inventory: Record<string, any> = {
+        city: city,
+        tractor_name: tractorName,
+        tractor_description: tractorDesc,
+        tractor_images: tractorImages,
+        tractor_type: tractorType,
+        tractor_model: tractorModel,
+        min_price: `${value[0]}`,
+        max_price: `${value[1]}`,
+        fixed_price: `${fixedPrice}`,
+      };
+
+      if (dobDate) {
+        inventory.tractor_year = convertYearToDate(dobDate);
+      }
+
       const res = await renderInstance.post("/inventory", inventory, {
         headers: { Authorization: `Bearer ${access_token}` },
       });
 
-      if (res.status === 201) {
+      if (res.status === 201 || res.status === 200) {
         successMessage("Inventory created successfully");
-        router.push("/Inventory")
+        router.push("/Inventory");
       }
-    } catch (err) {
-      errorMessage("Some error occurred");
-      console.error(err);
+    } catch (err: any) {
+      console.error("Error creating inventory:", err);
+      const apiMsg = err?.response?.data?.message || err?.message || "Some error occurred";
+      const displayMsg = Array.isArray(apiMsg) ? apiMsg.join(", ") : apiMsg;
+      errorMessage(displayMsg);
     } finally {
+      setImageLoading(false);
       setLoading(false);
     }
   };

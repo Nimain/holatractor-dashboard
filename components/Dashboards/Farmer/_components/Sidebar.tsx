@@ -33,14 +33,26 @@ const Sidebar = () => {
   const user: user = cookie.get("user")
 
   function handleLogOut() {
-    cookie.remove("access_token")
-    cookie.remove("user")
-    cookie.remove("isFarmer")
-    cookie.remove("isAgent")
-    cookie.remove("isOperator")
-    cookie.remove("isOwner")
-    cookie.remove("isODealer")
-    router.push("/login")
+    const cookiesToRemove = [
+      "access_token",
+      "user",
+      "isFarmer",
+      "isOperator",
+      "isAgent",
+      "isOwner",
+      "isDealer",
+      "isODealer",
+    ];
+
+    cookiesToRemove.forEach((name) => {
+      cookie.remove(name, { path: "/" });
+      cookie.remove(name);
+      if (typeof document !== "undefined") {
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+      }
+    });
+
+    router.push("/login");
   }
 
   useEffect(() => {

@@ -52,20 +52,30 @@ const TopBar = () => {
 
   const handleLogout = () => {
     try {
-      // Clear all authentication cookies
-      cookie.remove("access_token", { path: "/" })
-      cookie.remove("user", { path: "/" })
-      cookie.remove("isFarmer", { path: "/" })
-      cookie.remove("isOperator", { path: "/" })
-      cookie.remove("isOwner", { path: "/" })
-      cookie.remove("isDealer", { path: "/" })
-      cookie.remove("isAgent", { path: "/" })
+      const cookiesToRemove = [
+        "access_token",
+        "user",
+        "isFarmer",
+        "isOperator",
+        "isAgent",
+        "isOwner",
+        "isDealer",
+        "isODealer",
+      ];
 
-      successMessage("Logged out successfully")
-      router.push("/login")
+      cookiesToRemove.forEach((name) => {
+        cookie.remove(name, { path: "/" });
+        cookie.remove(name);
+        if (typeof document !== "undefined") {
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+        }
+      });
+
+      successMessage("Logged out successfully");
+      router.push("/login");
     } catch (error) {
-      console.error("Logout error:", error)
-      router.push("/login")
+      console.error("Logout error:", error);
+      router.push("/login");
     }
   }
 

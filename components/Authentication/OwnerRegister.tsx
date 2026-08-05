@@ -311,11 +311,11 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
             location_country,
             attachment: attachmentLink,
             document_number,
-            expiry_date,
+            expire_date: expiry_date,
             payment_id: "test",
             paymentScreenshots: paymentProofLink,
-            lat: location.latitude,
-            lng: location.longitude
+            lat: `${location.latitude}`,
+            lng: `${location.longitude}`
         };
 
         inPage ?

@@ -64,7 +64,7 @@ export function AddDeviceModal({
       tractors: "tractors",
       viewLocation: "View location",
       model: "Model:",
-      imeiLabel: "IMEI Number (15 digits)",
+      imeiLabel: "IMEI Number (up to 20 digits)",
       imeiPlaceholder: "0867010070133765",
       imeiExample: "Example: 0867010070133765",
       selectedTractor: "Selected Tractor:",
@@ -73,7 +73,7 @@ export function AddDeviceModal({
       next: "Next",
       addDevice: "Add Device",
       loading: "Loading stores...",
-      invalidImei: "IMEI number must be 15 digits",
+      invalidImei: "IMEI number must be up to 20 digits",
       deviceExists: "This IMEI number is already registered",
       deviceAdded: "Device added successfully",
       errorAdding: "Failed to add device",
@@ -88,7 +88,7 @@ export function AddDeviceModal({
       tractors: "tractores",
       viewLocation: "Ver ubicación",
       model: "Modelo:",
-      imeiLabel: "Número IMEI (15 dígitos)",
+      imeiLabel: "Número IMEI (hasta 20 dígitos)",
       imeiPlaceholder: "0867010070133765",
       imeiExample: "Ejemplo: 0867010070133765",
       selectedTractor: "Tractor Seleccionado:",
@@ -97,7 +97,7 @@ export function AddDeviceModal({
       next: "Siguiente",
       addDevice: "Agregar Dispositivo",
       loading: "Cargando tiendas...",
-      invalidImei: "El número IMEI debe tener 15 dígitos",
+      invalidImei: "El número IMEI debe tener hasta 20 dígitos",
       deviceExists: "Este número IMEI ya está registrado",
       deviceAdded: "Dispositivo agregado exitosamente",
       errorAdding: "Error al agregar el dispositivo",
@@ -149,7 +149,7 @@ export function AddDeviceModal({
       return;
     }
 
-    const imeiRegex = /^\d{15}$/;
+    const imeiRegex = /^\d{1,20}$/;
     if (!imeiRegex.test(imeiNumber.trim())) {
       errorMessage(t.invalidImei);
       return;
@@ -501,7 +501,7 @@ export function AddDeviceModal({
               <div>
                 <Label htmlFor="imei">
                   IMEI Number{" "}
-                  <span className="text-sm text-gray-300">(8–20 digits)</span>
+                  <span className="text-sm text-gray-300">(up to 20 digits)</span>
                 </Label>
                 <div className="flex flex-col  gap-3 mt-1">
                   <Input
@@ -510,7 +510,7 @@ export function AddDeviceModal({
                     placeholder="Enter the IMEI Number"
                     value={imeiNumber}
                     onChange={(e) => setImeiNumber(e.target.value)}
-                    maxLength={29}
+                    maxLength={20}
                     className="flex-grow bg-white placeholder:text-red-500 rounded-xl "
                   />
                   <span className="text-xs text-gray-300 whitespace-nowrap">

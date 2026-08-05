@@ -196,71 +196,62 @@ const NewAttachment = () => {
       return
     }
 
-    let tractorImages;
-
-    if (selectedImage.length > 0) {
-      setImageUploading(true);
-
-      const uploadPromises = selectedImage.map(async (image) => {
-        const buffer = Buffer.from(await image.arrayBuffer());
-        return uploadFileToS3(buffer, image.name);
-      });
-
-      const fileUrls = await Promise.all(uploadPromises);
-      tractorImages = fileUrls;
-
-      setImageUploading(false);
-    }
-
-    const attachment = {
-      name: en_name,
-      description: en_description,
-      tractorId: tractorType,
-      images: tractorImages,
-      fixed_price: `${fixedPrice}`
-    };
     setCreatingATtachment(true);
-    renderInstance
-      .post("/attachment", attachment, {
+
+    try {
+      let tractorImages: string[] = [];
+
+      if (selectedImage.length > 0) {
+        setImageUploading(true);
+        const uploadPromises = selectedImage.map(async (image) => {
+          const buffer = Buffer.from(await image.arrayBuffer());
+          return uploadFileToS3(buffer, image.name);
+        });
+
+        tractorImages = await Promise.all(uploadPromises);
+        setImageUploading(false);
+      }
+
+      const attachment = {
+        name: en_name,
+        description: en_description,
+        tractorId: tractorType,
+        images: tractorImages,
+        fixed_price: `${fixedPrice}`
+      };
+
+      const res = await renderInstance.post("/attachment", attachment, {
         headers: {
           Authorization: `Bearer ${access_token}`,
         },
-      })
-      .then((res) => {
-        if (res.status === 201) {
-          successMessage("Attachment added");
-          router.push("/Attachments")
-        }
-      })
-      .catch((err) => {
-        if (
-          err.response &&
-          err.response.status === 409 &&
-          err.response.data.message ===
-          "Only admin users can create new attachments"
-        ) {
+      });
+
+      if (res.status === 201 || res.status === 200) {
+        successMessage("Attachment added");
+        router.push("/Attachments");
+      }
+    } catch (err: any) {
+      console.error("Error creating attachment:", err);
+      if (err.response?.status === 409) {
+        const msg = err.response.data?.message;
+        if (msg === "Only admin users can create new attachments") {
           errorMessage("Only admin can add new attachments");
-        } else if (
-          err.response &&
-          err.response.status === 409 &&
-          err.response.data.message ===
-          "A attachment with the same name is already exist"
-        ) {
+        } else if (msg === "A attachment with the same name is already exist") {
           errorMessage("Name already taken");
-        } else if (
-          err.response &&
-          err.response.status === 409 &&
-          err.response.data.message ===
-          "Tractor with the given id does not present"
-        ) {
+        } else if (msg === "Tractor with the given id does not present") {
           errorMessage("Selected tractor is not present");
         } else {
-          errorMessage("Some error occurred");
+          errorMessage(msg || "Conflict error occurred");
         }
-      })
-      .finally(() => {
-        setCreatingATtachment(false);
-      });
+      } else {
+        const apiMsg = err?.response?.data?.message || err?.message || "Some error occurred";
+        const displayMsg = Array.isArray(apiMsg) ? apiMsg.join(", ") : apiMsg;
+        errorMessage(displayMsg);
+      }
+    } finally {
+      setImageUploading(false);
+      setCreatingATtachment(false);
+    }
   }
 
   return (

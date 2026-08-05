@@ -125,33 +125,39 @@ const Bookings = () => {
     setPage(page);
   };
 
+  const defaultMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
   function fetchBookingCharts() {
     setFetchingBookingsChart(true);
 
     renderInstance
       .get(`/owner/get-booking-chart/${user.userId}?year=${year}`)
       .then((res) => {
-        setChartData(res.data);
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          setChartData(res.data);
+        } else {
+          setChartData(defaultMonths.map((m) => ({ time: m, passengers: 0 })));
+        }
       })
       .catch((err) => {
-        errorMessage("Error fetching operator lists");
+        setChartData(defaultMonths.map((m) => ({ time: m, passengers: 0 })));
       })
       .finally(() => {
         setFetchingBookingsChart(false);
       });
   }
 
-  // Calculate max bookings dynamically
+  // Calculate max bookings dynamically from actual chart data
   const maxBookings = useMemo(() => {
-    return Math.max(...chartData.map((data) => data.passengers), 200); // Default min 200
+    if (!chartData || chartData.length === 0) return 10;
+    const maxVal = Math.max(...chartData.map((d) => Number(d.passengers || 0)));
+    return maxVal > 0 ? Math.ceil(maxVal * 1.25) : 10;
   }, [chartData]);
 
-  // Generate dynamic ticks (intervals of 200 or another step)
+  // Generate dynamic Y-axis ticks based on maxBookings
   const yAxisTicks = useMemo(() => {
-    const step = Math.ceil(maxBookings / 4 / 100) * 100; // Adjust step size dynamically
-    return Array.from({ length: 5 }, (_, i) => i * step).filter(
-      (tick) => tick <= maxBookings
-    );
+    const step = Math.max(1, Math.ceil(maxBookings / 4));
+    return [0, step, step * 2, step * 3, step * 4];
   }, [maxBookings]);
 
   useEffect(() => {

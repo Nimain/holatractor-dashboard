@@ -118,6 +118,10 @@ const AddTractor = ({
     setSelectedTractorId(tractor.tractor.id);
     setSelectedInventoryId(tractor.id);
     setSelectedTractor(tractor);
+    const defaultPrice = parseFloat(tractor.fixed_price) || parseFloat(tractor.min_price) || 0;
+    if (defaultPrice > 0) {
+      setHourlyPrice(defaultPrice);
+    }
     setStep("details");
   };
 
@@ -326,6 +330,11 @@ const AddTractor = ({
                     onChange={(e) => setHourlyPrice(Number(e.target.value))}
                     className="mt-1 bg-white/10 border-white/20 text-white placeholder:text-white/50"
                   />
+                  {selectedTractor && (selectedTractor.min_price || selectedTractor.max_price) && (
+                    <p className="text-xs text-amber-300 mt-1 font-medium">
+                      Allowed price range: ${selectedTractor.min_price} – ${selectedTractor.max_price} USD
+                    </p>
+                  )}
                 </div>
 
                 {/* File Upload */}

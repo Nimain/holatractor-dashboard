@@ -1,21 +1,7 @@
-import dynamic from 'next/dynamic'
-import OwnerShrimmer from '../../../components/Dashboards/Owner/_components/OwnerShrimmer'
+"use client";
 
-const OwnerPage = dynamic(
-  ()=> import('@/components/Dashboards/Owner/Owner'),
-  {
-      ssr: false,
-      loading: () => (
-        <OwnerShrimmer />
-      )
-    }
-)
+import OwnerPage from "@/components/Dashboards/Owner/Owner";
 
-const OwnerDashboardPage = () => {
-  
-  return (
-    <OwnerPage />
-  )
+export default function OwnerDashboardPage() {
+  return <OwnerPage />;
 }
-
-export default OwnerDashboardPage

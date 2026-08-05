@@ -58,6 +58,12 @@ const LogInPage = () => {
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + 1);
 
+    const isFarmer = data.isFarmer === true || (Array.isArray(data.role) && data.role.includes("farmer"));
+    const isOperator = data.isOperator === true || (Array.isArray(data.role) && data.role.includes("operator"));
+    const isOwner = data.isOwner === true || (Array.isArray(data.role) && data.role.includes("owner"));
+    const isDealer = data.isDealer === true || (Array.isArray(data.role) && data.role.includes("dealer"));
+    const isAgent = data.isAgent === true || (Array.isArray(data.role) && data.role.includes("agent"));
+
     cookie.set("access_token", data.access_token, {
       path: "/",
       expires: expiryDate,
@@ -66,66 +72,46 @@ const LogInPage = () => {
       path: "/",
       expires: expiryDate,
     });
-    cookie.set("isFarmer", data.isFarmer === true ? "true" : "false", {
+    cookie.set("isFarmer", isFarmer ? "true" : "false", {
       path: "/",
       expires: expiryDate,
     });
-    cookie.set("isOperator", data.isOperator === true ? "true" : "false", {
+    cookie.set("isOperator", isOperator ? "true" : "false", {
       path: "/",
       expires: expiryDate,
     });
-    cookie.set("isOwner", data.isOwner === true ? "true" : "false", {
+    cookie.set("isOwner", isOwner ? "true" : "false", {
       path: "/",
       expires: expiryDate,
     });
-    cookie.set("isDealer", data.isDealer === true ? "true" : "false", {
+    cookie.set("isDealer", isDealer ? "true" : "false", {
       path: "/",
       expires: expiryDate,
     });
-    cookie.set("isAgent", data.isAgent === true ? "true" : "false", {
+    cookie.set("isAgent", isAgent ? "true" : "false", {
       path: "/",
       expires: expiryDate,
     });
-
-    // Log cookies to localStorage
-    const cookieLog = {
-      type: "Cookies Set",
-      access_token: cookie.get("access_token"),
-      user: cookie.get("user"),
-      allCookies: {
-        isFarmer: cookie.get("isFarmer"),
-        isOperator: cookie.get("isOperator"),
-        isOwner: cookie.get("isOwner"),
-        isDealer: cookie.get("isDealer"),
-        isAgent: cookie.get("isAgent"),
-      },
-      timestamp: new Date().toISOString(),
-    };
-    localStorage.setItem("cookieDebugLog", JSON.stringify(cookieLog));
 
     successMessage("Log in successful");
 
-    const redirectPath = data.isFarmer
+    const redirectPath = isFarmer
       ? "/farmer"
-      : data.isOperator
+      : isOperator
       ? "/operator"
-      : data.isOwner
+      : isOwner
       ? "/owner"
-      : data.isDealer
+      : isDealer
       ? "/dealer"
-      : data.isAgent
+      : isAgent
       ? "/agent"
       : "/";
 
-    localStorage.setItem(
-      "redirectDebugLog",
-      JSON.stringify({
-        path: redirectPath,
-        timestamp: new Date().toISOString(),
-      })
-    );
-
-    router.push(redirectPath);
+    if (typeof window !== "undefined") {
+      window.location.href = redirectPath;
+    } else {
+      router.push(redirectPath);
+    }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -160,7 +146,7 @@ const LogInPage = () => {
       };
       localStorage.setItem("loginDebugLog", JSON.stringify(apiLog));
 
-      if (res.status === 201 && res.data.access_token) {
+      if ((res.status === 200 || res.status === 201) && res.data.access_token) {
         setCookiesAndRedirect(res.data);
         setEmail("");
         setPassword("");
@@ -180,30 +166,10 @@ const LogInPage = () => {
           timestamp: new Date().toISOString(),
         })
       );
-      if (
-        err.response?.status === 409 &&
-        err.response.data.message === "User not found"
-      ) {
-        errorMessage("User not found");
-        setEmail("");
-        setPassword("");
-      } else if (
-        err.response?.status === 409 &&
-        err.response.data.message === "Wrong password"
-      ) {
-        errorMessage("Wrong password");
-        setPassword("");
-      } else if (
-        err.response?.status === 400 &&
-        err.response.data.message === "Account not active"
-      ) {
-        errorMessage(
-          "Your account is inactive. Please contact an administrator for assistance."
-        );
-        setPassword("");
-      } else {
-        errorMessage("Some error occurred");
-      }
+      const apiMsg = err?.response?.data?.message || err?.message || "Some error occurred";
+      const displayMsg = Array.isArray(apiMsg) ? apiMsg.join(", ") : apiMsg;
+      errorMessage(displayMsg);
+      setPassword("");
     } finally {
       setLoading(false);
     }
@@ -337,7 +303,7 @@ const GoogleSignIn = ({
         };
         localStorage.setItem("googleLoginDebugLog", JSON.stringify(apiLog));
 
-        if (loginRes.status === 201 && loginRes.data.access_token) {
+        if ((loginRes.status === 200 || loginRes.status === 201) && loginRes.data.access_token) {
           setCookiesAndRedirect(loginRes.data);
         }
       } catch (err: any) {
