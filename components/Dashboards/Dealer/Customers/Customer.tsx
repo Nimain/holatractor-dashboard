@@ -1,16 +1,18 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import type React from "react";
-import { MoreHorizontal, Plus, Upload, Search, Edit2, Trash2, X } from "lucide-react";
+import { MoreHorizontal, Plus, Upload, Search, Edit2, Trash2, X, Eye, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import * as XLSX from "xlsx";
 import AddCustomerModal from "../Modals/AddCustomerModal";
+import CustomerFleetDetails from "./CustomerFleetDetails";
 import { useCookie } from "next-cookie";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { CircularProgress } from "@mui/material";
+import { useDealerLanguage } from "@/context/DealerLanguageContext";
 
 interface Owner {
   id: string;
@@ -51,21 +53,22 @@ function CustomTooltip({
   );
 }
 
-// Mobile Customer Card Component
 const MobileCustomerCard = ({
   owner,
   index,
   onEdit,
   onDelete,
+  onSelectFleet,
 }: {
   owner: Owner;
   index: number;
   onEdit: (owner: Owner) => void;
   onDelete: (owner: Owner) => void;
+  onSelectFleet: (owner: Owner) => void;
 }) => (
   <div className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-lg shadow-md p-4 space-y-3 border border-gray-200">
     <div className="flex items-start justify-between">
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center space-x-3 cursor-pointer" onClick={() => onSelectFleet(owner)}>
         <Avatar className="h-12 w-12">
           <AvatarImage
             src={owner.image || "/placeholder.svg"}
@@ -76,10 +79,10 @@ const MobileCustomerCard = ({
           </AvatarFallback>
         </Avatar>
         <div>
-          <h3 className="font-semibold text-white">
+          <h3 className="font-semibold text-white hover:underline flex items-center gap-1">
             {owner.first_name} {owner.last_name}
           </h3>
-          <p className="text-xs text-white">ID: {index + 1}</p>
+          <p className="text-xs text-white/80">ID: {index + 1}</p>
         </div>
       </div>
       <span
@@ -116,20 +119,27 @@ const MobileCustomerCard = ({
       <Button
         variant="outline"
         size="sm"
-        className="flex-1 border-[#F91F1F] text-[#F91F1F] hover:bg-[#F91F1F] hover:text-white"
-        onClick={() => onEdit(owner)}
+        className="flex-1 border-white text-white hover:bg-white hover:text-black font-semibold"
+        onClick={() => onSelectFleet(owner)}
       >
-        <Edit2 className="h-3.5 w-3.5 mr-1.5" />
-        Edit
+        <Eye className="h-3.5 w-3.5 mr-1.5" />
+        Fleet & Tracking
       </Button>
       <Button
         variant="outline"
         size="sm"
-        className="flex-1 border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+        className="border-[#F91F1F] text-[#F91F1F] hover:bg-[#F91F1F] hover:text-white"
+        onClick={() => onEdit(owner)}
+      >
+        <Edit2 className="h-3.5 w-3.5" />
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
         onClick={() => onDelete(owner)}
       >
-        <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-        Delete
+        <Trash2 className="h-3.5 w-3.5" />
       </Button>
     </div>
   </div>
@@ -415,12 +425,14 @@ const TableHeader = ({
 );
 
 export default function EnhancedOwnerTable() {
+  const { t } = useDealerLanguage();
   const [owners, setOwners] = useState<Owner[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Owner | null>(null);
+  const [selectedCustomerView, setSelectedCustomerView] = useState<Owner | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [fetching, setFetching] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -600,6 +612,19 @@ export default function EnhancedOwnerTable() {
       .includes(searchTerm.toLowerCase())
   );
 
+  if (selectedCustomerView) {
+    return (
+      <CustomerFleetDetails
+        customer={selectedCustomerView}
+        onBack={() => setSelectedCustomerView(null)}
+        onEdit={(cust) => {
+          setSelectedCustomer(cust);
+          setShowEditModal(true);
+        }}
+      />
+    );
+  }
+
   if (fetching) {
     return (
       <div className="w-full p-4 sm:p-6">
@@ -618,7 +643,7 @@ export default function EnhancedOwnerTable() {
         <div className="mb-4 sm:mb-6">
           <div className="flex flex-col gap-4">
             <h1 className="text-xl sm:text-2xl font-bold text-[#F91F1F]">
-              Customers ({owners.length})
+              {t("customersTitle")} ({owners.length})
             </h1>
             
             {/* Search Bar */}
@@ -626,7 +651,7 @@ export default function EnhancedOwnerTable() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
               <input
                 type="text"
-                placeholder="Search Customers..."
+                placeholder={t("searchCustomers")}
                 className="pl-10 w-full h-10 sm:h-12 border border-gray-300 shadow-md focus:shadow-lg focus:ring-2 focus:ring-[#F91F1F]/50 focus:border-[#F91F1F] transition-all duration-200 rounded-md text-sm sm:text-base"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -639,13 +664,13 @@ export default function EnhancedOwnerTable() {
                 className="bg-[#F91F1F] hover:bg-[#E01010] text-white shadow-lg h-10 sm:h-12 font-medium text-sm sm:text-base flex-1 sm:flex-initial"
                 onClick={() => setShowAddModal(true)}
               >
-                <Plus className="mr-2 h-4 w-4" /> Add Customer
+                <Plus className="mr-2 h-4 w-4" /> {t("addCustomer")}
               </Button>
               <Button
                 className="bg-[#F76A1E] hover:bg-[#E55A0E] text-white shadow-lg h-10 sm:h-12 font-medium text-sm sm:text-base flex-1 sm:flex-initial"
                 onClick={() => fileInputRef.current?.click()}
               >
-                <Upload className="mr-2 h-4 w-4" /> Import Excel
+                <Upload className="mr-2 h-4 w-4" /> {t("importExcel")}
               </Button>
             </div>
           </div>
@@ -665,15 +690,15 @@ export default function EnhancedOwnerTable() {
               <div className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 text-xl sm:text-2xl">👤</div>
             </div>
             <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">
-              {searchTerm ? "No matching customers" : "No customers available"}
+              {searchTerm ? t("noMatchingCustomers") : t("noCustomersAvailable")}
             </h2>
             <p className="text-sm sm:text-base text-gray-500 mb-4 sm:mb-6">
               {searchTerm
-                ? "Try a different search term."
-                : "Add a new customer to get started."}
+                ? t("tryDifferentSearch")
+                : t("addNewCustomerToStart")}
             </p>
             <Button onClick={fetchCustomers} className="bg-red-500 hover:bg-red-600 text-sm sm:text-base">
-              Refresh Data
+              {t("refreshData")}
             </Button>
           </div>
         ) : (
@@ -687,6 +712,7 @@ export default function EnhancedOwnerTable() {
                   index={index}
                   onEdit={handleEditCustomer}
                   onDelete={handleDeleteCustomer}
+                  onSelectFleet={(cust) => setSelectedCustomerView(cust)}
                 />
               ))}
             </div>
@@ -704,19 +730,22 @@ export default function EnhancedOwnerTable() {
                     <TableHeader className="w-32 text-center">Gender</TableHeader>
                     <TableHeader className="w-40">City</TableHeader>
                     <TableHeader sortable className="w-32 text-center">Status</TableHeader>
-                    <TableHeader className="w-32 text-center">Actions</TableHeader>
+                    <TableHeader className="w-48 text-center">Actions</TableHeader>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/10">
                   {filteredOwners.map((owner, index) => (
                     <tr
                       key={owner.id}
-                      className="hover:bg-white/10 transition-colors duration-150"
+                      className="hover:bg-white/10 transition-colors duration-150 cursor-pointer"
                     >
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-center text-white">
                         {index + 1}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-center">
+                      <td
+                        className="px-4 py-3 whitespace-nowrap text-center"
+                        onClick={() => setSelectedCustomerView(owner)}
+                      >
                         <Avatar className="h-10 w-10 mx-auto">
                           <AvatarImage
                             src={owner.image || "/placeholder.svg"}
@@ -727,7 +756,10 @@ export default function EnhancedOwnerTable() {
                           </AvatarFallback>
                         </Avatar>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-white font-medium">
+                      <td
+                        className="px-4 py-3 whitespace-nowrap text-sm text-white font-medium hover:underline"
+                        onClick={() => setSelectedCustomerView(owner)}
+                      >
                         <CustomTooltip text={`${owner.first_name} ${owner.last_name}`} maxLength={20} />
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-white">
@@ -755,6 +787,15 @@ export default function EnhancedOwnerTable() {
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-center">
                         <div className="flex items-center justify-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="bg-white/10 hover:bg-white text-white hover:text-black font-semibold text-xs h-8 px-2.5 flex items-center gap-1 rounded-md"
+                            onClick={() => setSelectedCustomerView(owner)}
+                            title="Fleet & Map Tracking"
+                          >
+                            <Eye className="h-3.5 w-3.5" /> Fleet
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"

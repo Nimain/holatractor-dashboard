@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import AddUserModal from "./Modals/AddUserModal"
+import { useDealerLanguage } from "@/context/DealerLanguageContext"
 
 const timeData = [
   { time: "1", value: 65 },
@@ -83,7 +84,22 @@ const membersList = [
 ]
 
 export default function Dashboard() {
+  const { t, language } = useDealerLanguage()
   const [isModalOpen, setIsModalOpen] = useState(false)
+
+  const localizedSalesData = salesData.map((item) => {
+    let localizedName = item.name;
+    if (language === "es") {
+      if (item.name === "Sunday") localizedName = "Dom";
+      if (item.name === "Monday") localizedName = "Lun";
+      if (item.name === "Tuesday") localizedName = "Mar";
+      if (item.name === "Wednesday") localizedName = "Mié";
+      if (item.name === "Thursday") localizedName = "Jue";
+      if (item.name === "Friday") localizedName = "Vie";
+      if (item.name === "Saturday") localizedName = "Sáb";
+    }
+    return { ...item, name: localizedName };
+  });
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-gray-50/50">
@@ -95,28 +111,28 @@ export default function Dashboard() {
   {/* Total Customers Card */}
   <Card className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] text-white rounded-2xl sm:rounded-3xl border-none shadow-lg overflow-hidden">
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm sm:text-base font-normal">Total Customers</CardTitle>
+      <CardTitle className="text-sm sm:text-base font-normal">{t("totalCustomers")}</CardTitle>
       <div className="rounded-full bg-white p-1.5 sm:p-2">
         <ArrowUpRight className="h-3 w-3 sm:h-4 sm:w-4 text-[#A80000]" />
       </div>
     </CardHeader>
     <CardContent>
       <div className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tighter">2,521</div>
-      <p className="text-xs sm:text-sm text-white mt-2 sm:mt-3">Data per 29 June 2024</p>
+      <p className="text-xs sm:text-sm text-white mt-2 sm:mt-3">{t("dataPerJune")}</p>
     </CardContent>
   </Card>
 
   {/* Total Lease Card */}
   <Card className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] text-white rounded-2xl sm:rounded-3xl border-none shadow-lg overflow-hidden">
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-sm sm:text-base font-normal">Total Lease</CardTitle>
+      <CardTitle className="text-sm sm:text-base font-normal">{t("totalLease")}</CardTitle>
       <div className="rounded-full bg-white p-1.5 sm:p-2">
         <ArrowUpRight className="h-3 w-3 sm:h-4 sm:w-4 text-[#A80000]" />
       </div>
     </CardHeader>
     <CardContent>
       <div className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tighter">1,802</div>
-      <p className="text-xs sm:text-sm text-white mt-2 sm:mt-3">Data per 29 June 2024</p>
+      <p className="text-xs sm:text-sm text-white mt-2 sm:mt-3">{t("dataPerJune")}</p>
     </CardContent>
   </Card>
 </div>
@@ -125,7 +141,7 @@ export default function Dashboard() {
           {/* Average Time Worked Card */}
           <Card className="sm:col-span-2 xl:col-span-1 rounded-2xl sm:rounded-3xl border shadow-sm bg-gradient-to-br from-[#A10A0C] to-[#3B0404] text-white">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-base sm:text-lg lg:text-xl font-medium">Average Time Worked</CardTitle>
+              <CardTitle className="text-base sm:text-lg lg:text-xl font-medium">{t("avgTimeWorked")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tighter mb-4 sm:mb-6">6:39:32</div>
@@ -142,7 +158,7 @@ export default function Dashboard() {
               </div>
               <div className="flex items-center gap-2 mt-3 sm:mt-4">
                 <span className="text-white text-xs sm:text-sm font-medium">+1.2%</span>
-                <span className="text-xs sm:text-sm">Than yesterday</span>
+                <span className="text-xs sm:text-sm">{t("thanYesterday")}</span>
               </div>
             </CardContent>
           </Card>
@@ -151,10 +167,10 @@ export default function Dashboard() {
           {/* Leads by Sales Chart - Full width beside others */}
 <Card className="sm:col-span-2 xl:col-span-2 rounded-2xl sm:rounded-3xl border shadow-sm bg-gradient-to-br from-[#A10A0C] to-[#3B0404] text-white">
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0 pb-2">
-              <CardTitle className="text-base sm:text-lg lg:text-xl font-semibold">Leads by Sales</CardTitle>
+              <CardTitle className="text-base sm:text-lg lg:text-xl font-semibold">{t("leadsBySales")}</CardTitle>
               <div className="flex items-center gap-2 sm:gap-4">
                 <Button variant="outline" className="rounded-full text-xs sm:text-sm text-[#F91F1F] hover:bg-[white] bg-transparent px-3 py-1 h-8">
-                  This week
+                  {t("thisWeek")}
                 </Button>
                 <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 rounded-full">
                   <MoreHorizontal className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -164,7 +180,7 @@ export default function Dashboard() {
             <CardContent>
               <div className="h-[200px] sm:h-[240px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={salesData} barGap={8} margin={{ bottom: 20 }}>
+                  <BarChart data={localizedSalesData} barGap={8} margin={{ bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff20" />
                     <XAxis
                       dataKey="name"
@@ -201,7 +217,7 @@ export default function Dashboard() {
                       dataKey="value"
                       radius={[4, 4, 0, 0]}
                       shape={(props: any) => {
-                        const isFriday = props.payload.name === "Friday"
+                        const isFriday = props.payload.name === "Friday" || props.payload.name === "Vie"
                         return (
                           <g>
                             <defs>
@@ -237,21 +253,21 @@ export default function Dashboard() {
         {/* Customers Table/Cards */}
         <Card className="rounded-2xl sm:rounded-3xl border-none shadow-lg bg-gradient-to-br from-[#8B0000] to-[#4A0000] text-white overflow-hidden">
           <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-3 sm:space-y-0 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-            <CardTitle className="text-2xl sm:text-3xl font-bold">Customers</CardTitle>
+            <CardTitle className="text-2xl sm:text-3xl font-bold">{t("customersTitle")}</CardTitle>
             <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
               <Button
                 variant="outline"
                 className="flex-1 sm:flex-none rounded-full gap-2 border-white/30 text-white hover:bg-white/10 bg-transparent text-xs sm:text-sm h-9"
               >
                 <Filter className="h-3 w-3 sm:h-4 sm:w-4" />
-                Filter
+                {t("filter")}
               </Button>
               <Button
                 className="flex-1 sm:flex-none rounded-full gap-2 bg-white text-red-600 hover:bg-gray-100 text-xs sm:text-sm h-9"
                 onClick={() => setIsModalOpen(true)}
               >
                 <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-                Add User
+                {t("addUser")}
               </Button>
             </div>
           </CardHeader>
@@ -261,13 +277,13 @@ export default function Dashboard() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-white/20">
-                    <th className="px-8 py-4 text-left text-white font-semibold">Name</th>
-                    <th className="px-4 py-4 text-left text-white font-semibold">Task Progress</th>
-                    <th className="px-4 py-4 text-left text-white font-semibold">Email</th>
-                    <th className="px-4 py-4 text-left text-white font-semibold">Mobile</th>
-                    <th className="px-4 py-4 text-left text-white font-semibold">Gender</th>
-                    <th className="px-4 py-4 text-left text-white font-semibold">Age</th>
-                    <th className="px-4 py-4 text-left text-white font-semibold">Status</th>
+                    <th className="px-8 py-4 text-left text-white font-semibold">{t("name")}</th>
+                    <th className="px-4 py-4 text-left text-white font-semibold">{t("taskProgress")}</th>
+                    <th className="px-4 py-4 text-left text-white font-semibold">{t("email")}</th>
+                    <th className="px-4 py-4 text-left text-white font-semibold">{t("mobile")}</th>
+                    <th className="px-4 py-4 text-left text-white font-semibold">{t("gender")}</th>
+                    <th className="px-4 py-4 text-left text-white font-semibold">{t("age")}</th>
+                    <th className="px-4 py-4 text-left text-white font-semibold">{t("status")}</th>
                     <th className="px-8 py-4"></th>
                   </tr>
                 </thead>
@@ -297,12 +313,12 @@ export default function Dashboard() {
                       </td>
                       <td className="px-4 py-6 text-white/90">{member.email}</td>
                       <td className="px-4 py-6 text-white/90">{member.title}</td>
-                      <td className="px-4 py-6 text-white/90">Male</td>
+                      <td className="px-4 py-6 text-white/90">{t("male")}</td>
                       <td className="px-4 py-6">
                         <span className="text-white/90 font-medium">{member.teams}</span>
                       </td>
                       <td className="px-4 py-6">
-                        <span className="text-white font-medium">{member.lastActive}</span>
+                        <span className="text-white font-medium">{member.lastActive === "Active" ? t("activeStatus") : member.lastActive}</span>
                       </td>
                       <td className="px-8 py-6">
                         <Button
@@ -320,7 +336,6 @@ export default function Dashboard() {
             </div>
 
             {/* Mobile/Tablet Card View */}
-            {/* Mobile/Tablet Card View */}
 <div className="lg:hidden space-y-3 px-3 sm:px-4">
   {membersList.map((member) => (
     <div
@@ -332,10 +347,8 @@ export default function Dashboard() {
           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-base sm:text-lg flex-shrink-0">
             {member.initial}
           </div>
-          {/* Added min-w-0 to allow text truncation */}
           <div className="min-w-0">
             <h3 className="text-white font-semibold text-sm sm:text-base truncate">{member.name}</h3>
-            {/* THIS IS THE CHANGE */}
             <p className="text-white/70 text-xs sm:text-sm truncate">{member.email}</p>
           </div>
         </div>
@@ -350,7 +363,7 @@ export default function Dashboard() {
 
       <div className="space-y-2">
         <div>
-          <p className="text-white/60 text-xs mb-1">Task Progress</p>
+          <p className="text-white/60 text-xs mb-1">{t("taskProgress")}</p>
           <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-[#FF4444] to-[#FF6B6B] rounded-full transition-all duration-300"
@@ -360,20 +373,20 @@ export default function Dashboard() {
 
           <div className="grid grid-cols-2 gap-3 pt-2">
             <div>
-              <p className="text-white/60 text-xs">Mobile</p>
+              <p className="text-white/60 text-xs">{t("mobile")}</p>
               <p className="text-white text-sm font-medium">{member.title}</p>
             </div>
             <div>
-              <p className="text-white/60 text-xs">Gender</p>
-              <p className="text-white text-sm font-medium">Male</p>
+              <p className="text-white/60 text-xs">{t("gender")}</p>
+              <p className="text-white text-sm font-medium">{t("male")}</p>
             </div>
             <div>
-              <p className="text-white/60 text-xs">Age</p>
+              <p className="text-white/60 text-xs">{t("age")}</p>
               <p className="text-white text-sm font-medium">{member.teams}</p>
             </div>
             <div>
-              <p className="text-white/60 text-xs">Status</p>
-              <p className="text-white text-sm font-medium">{member.lastActive}</p>
+              <p className="text-white/60 text-xs">{t("status")}</p>
+              <p className="text-white text-sm font-medium">{member.lastActive === "Active" ? t("activeStatus") : member.lastActive}</p>
             </div>
           </div>
         </div>

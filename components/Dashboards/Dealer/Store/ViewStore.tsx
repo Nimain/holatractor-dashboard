@@ -9,6 +9,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { renderInstance } from "@/utils/Axios/RenderInstance"
 import { useCookie } from "next-cookie"
+import { useDealerLanguage } from "@/context/DealerLanguageContext"
 // Removed date-fns import - using native Date methods
 
 interface StoreLocation {
@@ -49,14 +50,15 @@ interface StoreData {
 }
 
 export default function ResponsiveDealerDashboard() {
+  const { t } = useDealerLanguage()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [stores, setStores] = useState<StoreData[]>([])
   const [loading, setLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const router = useRouter()
   const { cookie } = useCookie()
-  const user = cookie.get("user")
-  const access_token = cookie.get("access_token")
+  const user = cookie?.get ? cookie.get("user") : null
+  const access_token = cookie?.get ? cookie.get("access_token") : null
 
   useEffect(() => {
     const fetchStores = async () => {
@@ -111,7 +113,7 @@ export default function ResponsiveDealerDashboard() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
           <input
             type="text"
-            placeholder="Search your store..."
+            placeholder={t("searchStore")}
             className="w-full pl-9 pr-4 py-2 sm:py-2.5 text-sm rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
           />
         </div>
@@ -130,7 +132,7 @@ export default function ResponsiveDealerDashboard() {
             onClick={() => setIsModalOpen(true)}
           >
             <Store size={18} className="text-white" />
-            <span>Add Store</span>
+            <span>{t("addStoreBtn")}</span>
           </button>
         </div>
       </div>
@@ -149,12 +151,12 @@ export default function ResponsiveDealerDashboard() {
               <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-[150px] sm:w-[200px] h-[150px] sm:h-[200px] border border-white/20 rounded-full" />
             </div>
             <div className="relative z-10">
-              <div className="text-xs sm:text-sm uppercase tracking-wide mb-2">Dealer Dashboard</div>
+              <div className="text-xs sm:text-sm uppercase tracking-wide mb-2">{t("dealerDashboard")}</div>
               <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 md:mb-6 max-w-lg leading-tight">
-                Manage Your Stores and Inventory
+                {t("manageStoresInventory")}
               </h1>
               <button className="bg-white hover:bg-gray-100 text-[#F91F1F] px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-[5px] flex items-center gap-2 text-xs sm:text-sm transition-colors">
-                Join Now
+                {t("joinNow")}
                 <ChevronRight size={16} />
               </button>
             </div>
@@ -164,19 +166,19 @@ export default function ResponsiveDealerDashboard() {
           <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
             <div className="flex items-center gap-3 p-3 sm:p-4 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-lg sm:rounded-xl shadow-sm">
               <div className="p-2 sm:p-3 bg-blue-50 rounded-lg sm:rounded-xl flex-shrink-0">
-                <div className="text-[#F91F1F] font-medium text-xs sm:text-sm">Total Stores</div>
+                <div className="text-[#F91F1F] font-medium text-xs sm:text-sm">{t("totalStores")}</div>
               </div>
               <div className="text-sm sm:text-base text-white font-semibold">{stores.length}</div>
             </div>
             <div className="flex items-center gap-3 p-3 sm:p-4 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-lg sm:rounded-xl shadow-sm">
               <div className="p-2 sm:p-3 bg-green-50 rounded-lg sm:rounded-xl flex-shrink-0">
-                <div className="text-[#F91F1F] font-medium text-xs sm:text-sm">Branding</div>
+                <div className="text-[#F91F1F] font-medium text-xs sm:text-sm">{t("branding")}</div>
               </div>
               <div className="text-sm sm:text-base text-white font-semibold">{stores.length}</div>
             </div>
             <div className="flex items-center gap-3 p-3 sm:p-4 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] rounded-lg sm:rounded-xl shadow-sm xs:col-span-2 md:col-span-1">
               <div className="p-2 sm:p-3 bg-purple-50 rounded-lg sm:rounded-xl flex-shrink-0">
-                <div className="text-[#F91F1F] font-medium text-xs sm:text-sm">Front End</div>
+                <div className="text-[#F91F1F] font-medium text-xs sm:text-sm">{t("frontEnd")}</div>
               </div>
               <div className="text-sm sm:text-base text-white font-semibold">0 items</div>
             </div>
@@ -185,7 +187,7 @@ export default function ResponsiveDealerDashboard() {
           {/* All Stores Section */}
           <div>
             <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center mb-4 sm:mb-6 gap-3">
-              <h2 className="text-lg sm:text-xl font-bold text-[#F91F1F]">All Stores</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-[#F91F1F]">{t("allStores")}</h2>
               <div className="flex gap-2">
                 <button className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
                   <ChevronLeft size={20} className="text-gray-600" />
@@ -229,14 +231,14 @@ export default function ResponsiveDealerDashboard() {
                       <h3 className="font-semibold mb-2 sm:mb-3 line-clamp-1 text-sm sm:text-base">{store.name || "Unnamed Store"}</h3>
                       <div className="space-y-1.5 sm:space-y-2 mb-2 sm:mb-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-white font-medium min-w-[40px] sm:min-w-[45px]">Hours:</span>
+                          <span className="text-xs text-white font-medium min-w-[40px] sm:min-w-[45px]">{t("hours")}:</span>
                           <span className="text-xs sm:text-sm text-white font-medium">
                             {formatTime(store.opening_time)} - {formatTime(store.closing_time)}
                           </span>
                         </div>
                         {store.closing_days.length > 0 && store.closing_days[0] && (
                           <div className="flex items-start gap-2">
-                            <span className="text-xs text-white font-medium min-w-[40px] sm:min-w-[45px] mt-0.5">Closed:</span>
+                            <span className="text-xs text-white font-medium min-w-[40px] sm:min-w-[45px] mt-0.5">{t("closed")}:</span>
                             <div className="flex flex-wrap gap-1">
                               {store.closing_days.map((day, index) => (
                                 <span key={index} className="text-xs bg-red-50 text-red-600 px-1.5 sm:px-2 py-0.5 rounded">
@@ -249,7 +251,7 @@ export default function ResponsiveDealerDashboard() {
                       </div>
                       <div className="relative group mb-3 sm:mb-4">
                         <p className="text-xs sm:text-sm text-white leading-4 sm:leading-5 h-8 sm:h-10 overflow-hidden">
-                          {store.description || "No description available"}
+                          {store.description || t("noDescription")}
                         </p>
                         {store.description && store.description.length > 80 && (
                           <div className="absolute bottom-full left-0 right-0 mb-2 p-2 sm:p-3 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20 pointer-events-none shadow-lg">
@@ -274,7 +276,7 @@ export default function ResponsiveDealerDashboard() {
                             router.push(`/dealer/store/${store.id}`)
                           }}
                         >
-                          View
+                          {t("view")}
                         </button>
                       </div>
                     </div>
@@ -284,13 +286,13 @@ export default function ResponsiveDealerDashboard() {
             ) : (
               <div className="bg-white rounded-xl p-6 sm:p-8 text-center shadow-sm">
                 <Store size={48} className="mx-auto text-gray-300 mb-3 sm:mb-4" />
-                <h3 className="text-base sm:text-lg font-medium text-gray-800 mb-2">No Stores Found</h3>
-                <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">You haven't created any stores yet.</p>
+                <h3 className="text-base sm:text-lg font-medium text-gray-800 mb-2">{t("noStoresFound")}</h3>
+                <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">{t("noStoresYet")}</p>
                 <button
                   className="px-4 py-2 bg-[#F91F1F] text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
                   onClick={() => setIsModalOpen(true)}
                 >
-                  Create Your First Store
+                  {t("createFirstStore")}
                 </button>
               </div>
             )}
@@ -352,13 +354,13 @@ export default function ResponsiveDealerDashboard() {
                     </svg>
                   </div>
                 </div>
-                <h3 className="text-base sm:text-lg font-bold mt-3 sm:mt-4 mb-1 text-white">Welcome, {user?.name || "Dealer"} 👋</h3>
-                <p className="text-xs sm:text-sm text-white px-4">Manage your stores and inventory from one place</p>
+                <h3 className="text-base sm:text-lg font-bold mt-3 sm:mt-4 mb-1 text-white">{t("welcomeDealer")} {user?.name || "Dealer"} 👋</h3>
+                <p className="text-xs sm:text-sm text-white px-4">{t("manageStoreDesc")}</p>
               </div>
 
               {/* Chart Section */}
               <div className="mb-6 md:mb-8 bg-gradient-to-br from-[#A10A0C] to-[#3B0404] p-3 sm:p-4 md:p-6 rounded-[20px] border border-white">
-                <h3 className="font-semibold mb-3 sm:mb-4 text-white text-sm sm:text-base">Store Performance</h3>
+                <h3 className="font-semibold mb-3 sm:mb-4 text-white text-sm sm:text-base">{t("storePerformance")}</h3>
                 <ChartContainer
                   className="h-[140px] sm:h-[150px] md:h-[170px] w-full"
                   config={{
@@ -391,7 +393,7 @@ export default function ResponsiveDealerDashboard() {
               {/* Mentors Section */}
               <div className="bg-gradient-to-br from-[#A10A0C] to-[#3B0404] p-3 sm:p-4 md:p-6 rounded-[20px] border border-white">
                 <div className="flex justify-between items-center mb-4 sm:mb-6">
-                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-yellow-400">Your Mentor</h2>
+                  <h2 className="text-base sm:text-lg md:text-xl font-bold text-yellow-400">{t("yourMentor")}</h2>
                 </div>
                 <div className="space-y-3 sm:space-y-4">
                   {[
@@ -416,13 +418,13 @@ export default function ResponsiveDealerDashboard() {
                         </div>
                       </div>
                       <button className="text-yellow-400 font-medium hover:text-yellow-300 transition-colors text-xs sm:text-sm flex-shrink-0">
-                        Follow
+                        {t("follow")}
                       </button>
                     </div>
                   ))}
                 </div>
                 <button className="w-full text-center text-white mt-4 sm:mt-6 py-2.5 sm:py-3 bg-transparent border border-white/30 rounded-xl text-xs sm:text-sm font-medium hover:bg-white/10 transition-colors">
-                  See All
+                  {t("seeAll")}
                 </button>
               </div>
             </div>

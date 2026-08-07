@@ -10,6 +10,7 @@ import { useCookie } from "next-cookie"
 import { renderInstance } from "@/utils/Axios/RenderInstance"
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages"
 import { CircularProgress } from "@mui/material"
+import { useDealerLanguage } from "@/context/DealerLanguageContext"
 
 function CustomTooltip({ text, maxLength }: { text: string; maxLength: number }) {
   const [isHovered, setIsHovered] = useState(false)
@@ -124,6 +125,7 @@ interface TractorRental {
 }
 
 export default function EnhancedTractorRentalTable() {
+  const { t } = useDealerLanguage()
   const [rentals, setRentals] = useState<TractorRental[]>([])
   const [selectedRentals, setSelectedRentals] = useState<number[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -305,12 +307,12 @@ export default function EnhancedTractorRentalTable() {
           <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
             <Button className="bg-[#F91F1F] hover:bg-[#F91F1F] text-white px-4 py-2 rounded-[5px] text-sm font-medium flex items-center justify-center gap-2 w-full sm:w-auto">
               <Filter className="h-4 w-4" />
-              All Rentals
+              {t("allRentals")}
               <ChevronDown className="h-4 w-4" />
             </Button>
             <Button className="bg-[#F91F1F] hover:bg-[#F91F1F] text-white px-4 py-2 rounded-[5px] text-sm font-medium flex items-center justify-center gap-2 w-full sm:w-auto">
               <UserIcon className="h-4 w-4" />
-              Rented By
+              {t("rentedBy")}
               <ChevronDown className="h-4 w-4" />
             </Button>
           </div>
@@ -318,7 +320,7 @@ export default function EnhancedTractorRentalTable() {
           <div className="relative w-full lg:w-96">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#F91F1F]" />
             <Input
-              placeholder="Search in the List"
+              placeholder={t("searchInList")}
               className="pl-10 pr-4 py-2.5 w-full bg-white border border-[#F91F1F] rounded-md text-sm placeholder:text-[#A80000] focus:ring-2 focus:ring-[#F91F1F] focus:border-transparent"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -332,18 +334,18 @@ export default function EnhancedTractorRentalTable() {
         <div className="flex flex-col space-y-3 md:flex-row md:items-center md:justify-between md:space-y-0">
           <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-6">
             <h1 className="text-white font-semibold text-lg">
-              Total Rentals: <span className="font-bold">{filteredRentals.length}</span>
+              {t("totalRentals")}: <span className="font-bold">{filteredRentals.length}</span>
             </h1>
             <div className="flex items-center gap-2 bg-white py-1 px-4 rounded-full w-fit">
-              <span className="text-[#F91F1F] text-sm font-medium">Sort By:</span>
+              <span className="text-[#F91F1F] text-sm font-medium">{t("sortBy")}:</span>
               <Button className="bg-transparent text-red-500 hover:bg-red-50 px-2 py-1 rounded-md text-sm font-medium flex items-center gap-1">
-                Date
+                {t("date")}
                 <ChevronDown className="h-3 w-3" />
               </Button>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-white text-sm">Results:</span>
+            <span className="text-white text-sm">{t("results")}:</span>
             <Button variant="ghost" className="text-white hover:bg-red-600 px-3 py-1 text-sm flex items-center gap-1">
               {filteredRentals.length}
               <ChevronDown className="h-4 w-4" />
@@ -360,21 +362,21 @@ export default function EnhancedTractorRentalTable() {
               <div className="h-12 w-12 text-gray-400 text-2xl">🚜</div>
             </div>
             <h2 className="text-xl md:text-2xl font-semibold text-gray-900 mb-2">
-              {searchTerm ? "No matching rentals found" : "No rental leads available"}
+              {searchTerm ? t("noMatchingRentals") : t("noRentalLeads")}
             </h2>
             <p className="text-gray-500 mb-6 max-w-md mx-auto text-sm md:text-base">
               {searchTerm
-                ? "Try adjusting your search terms to find what you're looking for."
-                : "Check back later for new tractor lease inquiries, or refresh to load the latest data."}
+                ? t("tryDifferentSearch")
+                : t("addNewCustomerToStart")}
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-3">
               {searchTerm && (
                 <Button variant="outline" onClick={() => setSearchTerm("")} className="w-full sm:w-auto">
-                  Clear Search
+                  {t("clearSearch")}
                 </Button>
               )}
               <Button onClick={fetchTractorLeaseLeads} className="bg-red-500 hover:bg-red-600 w-full sm:w-auto">
-                Refresh Data
+                {t("refreshData")}
               </Button>
             </div>
           </div>
@@ -388,31 +390,31 @@ export default function EnhancedTractorRentalTable() {
                     <thead className="border-b border-gray-200">
                       <tr>
                         <th className="px-4 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
-                          S.NO
+                          {t("sNo")}
                         </th>
                         <th className="px-3 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider w-48">
-                          Customer Name
+                          {t("customerName")}
                         </th>
                         <th className="px-4 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
-                          Tractor Name & Model
+                          {t("tractorNameModel")}
                         </th>
                         <th className="px-4 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
-                          Start Date
+                          {t("startDate")}
                         </th>
                         <th className="px-4 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
-                          Lease Period
+                          {t("leasePeriod")}
                         </th>
                         <th className="px-4 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
-                          Monthly Cost
+                          {t("monthlyCost")}
                         </th>
                         <th className="px-4 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
-                          Payment Status
+                          {t("paymentStatus")}
                         </th>
                         <th className="px-4 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
-                          Lease Status
+                          {t("leaseStatus")}
                         </th>
                         <th className="px-4 py-4 text-left text-xs font-bold text-[#F91F1F] uppercase tracking-wider">
-                          Actions
+                          {t("actions")}
                         </th>
                       </tr>
                     </thead>

@@ -30,6 +30,7 @@ import { renderInstance } from "@/utils/Axios/RenderInstance"
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages"
 import type { TractorLead as BaseTractorLead, User as BaseUser } from "@/utils/Types/types"
 import { CircularProgress } from "@mui/material"
+import { useDealerLanguage } from "@/context/DealerLanguageContext"
 
 // Define user interface to match your Header component
 interface User {
@@ -73,6 +74,7 @@ interface ApiTractorLead extends Omit<BaseTractorLead, "tractor" | "user"> {
 }
 
 export default function SalesPage() {
+  const { t } = useDealerLanguage()
   const [leads, setLeads] = useState<ApiTractorLead[]>([])
   const [fetching, setFetching] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
@@ -263,7 +265,7 @@ export default function SalesPage() {
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white h-5 w-5" />
                 <Input
-                  placeholder="Search by Name, city, or email..."
+                  placeholder={t("searchLeadsPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-12 pr-4 py-3 bg-white/10 border-white/20 text-white placeholder:text-white/70 rounded-xl focus:bg-white/20 focus:border-white/40 transition-all"
@@ -307,22 +309,22 @@ export default function SalesPage() {
               <Tractor className="h-12 w-12 text-gray-400" />
             </div>
             <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-              {searchTerm ? "No matching leads found" : "No leads available"}
+              {searchTerm ? t("noLeadsFound") : t("noRentalLeads")}
             </h2>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
               {searchTerm
-                ? "Try adjusting your search terms or filters to find what you're looking for."
-                : "Check back later for new tractor inquiries, or refresh to load the latest data."}
+                ? t("tryDifferentSearch")
+                : t("addNewCustomerToStart")}
             </p>
             <div className="flex justify-center gap-3">
               {searchTerm && (
                 <Button variant="outline" onClick={() => setSearchTerm("")}>
-                  Clear Search
+                  {t("clearSearch")}
                 </Button>
               )}
               <Button onClick={fetchTractorLeads}>
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Try Again
+                {t("refreshData")}
               </Button>
             </div>
           </div>

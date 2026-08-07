@@ -1,5 +1,8 @@
+"use client"
+
 import React from 'react';
 import { Search, Filter, ChevronDown, MoreHorizontal, TrendingUp, DollarSign } from 'lucide-react';
+import { useDealerLanguage } from "@/context/DealerLanguageContext";
 
 interface MetricCardProps {
   title: string;
@@ -9,33 +12,37 @@ interface MetricCardProps {
   icon: React.ReactNode;
 }
 
-const MetricCard: React.FC<MetricCardProps> = ({ title, value, change, isPositive, icon }) => (
-  <div className="bg-red-800 rounded-xl p-5 sm:p-6 text-white shadow-md hover:shadow-lg transition-all duration-300">
-    <div className="flex items-center justify-between mb-2">
-      <span className="text-red-200 text-sm sm:text-base">{title}</span>
-      <div className="text-red-200">{icon}</div>
+const MetricCard: React.FC<MetricCardProps> = ({ title, value, change, isPositive, icon }) => {
+  const { t } = useDealerLanguage();
+  return (
+    <div className="bg-red-800 rounded-xl p-5 sm:p-6 text-white shadow-md hover:shadow-lg transition-all duration-300">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-red-200 text-sm sm:text-base">{title}</span>
+        <div className="text-red-200">{icon}</div>
+      </div>
+      <div className="text-xl sm:text-2xl font-bold mb-2">{value}</div>
+      <div className="flex items-center text-xs sm:text-sm">
+        <span className={`mr-1 ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+          {isPositive ? '↗' : '↘'}
+        </span>
+        <span className={isPositive ? 'text-green-400' : 'text-red-400'}>
+          {change} {t("thisMonth")}
+        </span>
+      </div>
     </div>
-    <div className="text-xl sm:text-2xl font-bold mb-2">{value}</div>
-    <div className="flex items-center text-xs sm:text-sm">
-      <span className={`mr-1 ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-        {isPositive ? '↗' : '↘'}
-      </span>
-      <span className={isPositive ? 'text-green-400' : 'text-red-400'}>
-        {change} This Month
-      </span>
-    </div>
-  </div>
-);
+  );
+};
 
 const SalesChart: React.FC = () => {
+  const { t, language } = useDealerLanguage();
   const data = [
-    { day: 'Mon', value: 28500, amount: '$28.5K', color: 'from-red-500 to-red-400' },
-    { day: 'Tue', value: 32100, amount: '$32.1K', color: 'from-red-500 to-red-400' },
-    { day: 'Wed', value: 24800, amount: '$24.8K', color: 'from-red-500 to-red-400' },
-    { day: 'Thu', value: 18200, amount: '$18.2K', color: 'from-red-600 to-red-500' },
-    { day: 'Fri', value: 45300, amount: '$45.3K', color: 'from-orange-500 to-red-400' },
-    { day: 'Sat', value: 38700, amount: '$38.7K', color: 'from-red-500 to-red-400' },
-    { day: 'Sun', value: 22100, amount: '$22.1K', color: 'from-red-600 to-red-500' },
+    { day: language === "es" ? 'Lun' : 'Mon', value: 28500, amount: '$28.5K', color: 'from-red-500 to-red-400' },
+    { day: language === "es" ? 'Mar' : 'Tue', value: 32100, amount: '$32.1K', color: 'from-red-500 to-red-400' },
+    { day: language === "es" ? 'Mié' : 'Wed', value: 24800, amount: '$24.8K', color: 'from-red-500 to-red-400' },
+    { day: language === "es" ? 'Jue' : 'Thu', value: 18200, amount: '$18.2K', color: 'from-red-600 to-red-500' },
+    { day: language === "es" ? 'Vie' : 'Fri', value: 45300, amount: '$45.3K', color: 'from-orange-500 to-red-400' },
+    { day: language === "es" ? 'Sáb' : 'Sat', value: 38700, amount: '$38.7K', color: 'from-red-500 to-red-400' },
+    { day: language === "es" ? 'Dom' : 'Sun', value: 22100, amount: '$22.1K', color: 'from-red-600 to-red-500' },
   ];
 
   const maxValue = Math.max(...data.map(d => d.value));
@@ -47,9 +54,9 @@ const SalesChart: React.FC = () => {
         <div>
           <h3 className="text-lg sm:text-xl font-bold mb-1 flex items-center">
             <TrendingUp className="w-5 h-5 mr-2 text-red-300" />
-            Sales Report
+            {t("salesReport")}
           </h3>
-          <p className="text-red-200 text-sm">Weekly performance analytics</p>
+          <p className="text-red-200 text-sm">{t("weeklyPerformance")}</p>
         </div>
         <div className="flex flex-wrap gap-2 justify-center sm:justify-end">
           {['1D', '7D', '30D', '3M', '1Y'].map((period, index) => (

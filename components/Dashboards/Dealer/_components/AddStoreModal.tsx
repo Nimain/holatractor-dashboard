@@ -53,8 +53,8 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
   const [creatingMessage, setCreatingMessage] = useState("")
 
   const { cookie } = useCookie()
-  const user: User = cookie.get("user")
-  const access_token = cookie.get("access_token")
+  const user: User = cookie?.get ? cookie.get("user") : ({} as User)
+  const access_token = cookie?.get ? cookie.get("access_token") : null
   const fileInputRef = useRef<HTMLInputElement>(null)
   const bannerInputRef = useRef<HTMLInputElement>(null)
 

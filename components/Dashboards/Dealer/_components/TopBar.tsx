@@ -2,24 +2,26 @@
 
 import { useCookie } from "next-cookie"
 import { useRouter } from "next/navigation"
-import { LogOut, User, Bell, Search, Settings, ChevronDown, Menu, X } from "lucide-react"
+import { LogOut, User, Bell, Search, Globe, ChevronDown, Menu, X, Check } from "lucide-react"
 import { successMessage } from "@/utils/Toastify/Messages"
 import { useState, useEffect } from "react"
+import { useDealerLanguage } from "@/context/DealerLanguageContext"
 
 const TopBar = () => {
   const { cookie } = useCookie()
   const router = useRouter()
+  const { language, setLanguage, t } = useDealerLanguage()
   const [currentTime, setCurrentTime] = useState(new Date())
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [isLangOpen, setIsLangOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [notifications] = useState(3)
 
   // Get user info from cookie
-  const userCookie = cookie.get("user")
   let user = null
-
   try {
+    const userCookie = cookie?.get ? cookie.get("user") : null
     if (userCookie) {
       user = typeof userCookie === 'string' ? JSON.parse(userCookie) : userCookie
     }
@@ -44,11 +46,14 @@ const TopBar = () => {
       if (isProfileOpen && !target.closest('.profile-dropdown')) {
         setIsProfileOpen(false)
       }
+      if (isLangOpen && !target.closest('.lang-dropdown')) {
+        setIsLangOpen(false)
+      }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isProfileOpen])
+  }, [isProfileOpen, isLangOpen])
 
   const handleLogout = () => {
     try {
@@ -80,7 +85,7 @@ const TopBar = () => {
   }
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', {
+    return date.toLocaleTimeString(language === "es" ? "es-ES" : "en-US", {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true
@@ -88,7 +93,7 @@ const TopBar = () => {
   }
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(language === "es" ? "es-ES" : "en-US", {
       weekday: 'short',
       month: 'short',
       day: 'numeric'
@@ -111,7 +116,7 @@ const TopBar = () => {
 
             <div>
               <h1 className="text-base sm:text-xl lg:text-2xl font-bold text-white truncate">
-                Dealer Dashboard
+                {t("dealerDashboard")}
               </h1>
             </div>
 
@@ -129,15 +134,15 @@ const TopBar = () => {
             <div className="relative w-full">
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder={t("searchPlaceholder")}
                 className="w-full px-4 py-2 pl-10 bg-gray-50 border border-gray-200 rounded-lg text-[#F91F1F] placeholder-[#A80000] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#F91F1F]" size={18} />
             </div>
           </div>
 
-          {/* Right Section - User Controls */}
-          <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-4">
+          {/* Right Section - User Controls & Language Dropdown */}
+          <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-3">
             {/* Mobile Search Button */}
             <button
               onClick={() => setIsSearchOpen(!isSearchOpen)}
@@ -158,10 +163,51 @@ const TopBar = () => {
               </button>
             </div>
 
-            {/* Settings - Hidden on mobile */}
-            <button className="hidden sm:block p-2 text-white hover:bg-red-700 rounded-lg transition-all">
-              <Settings className="w-5 h-5" />
-            </button>
+            {/* Language Selector Dropdown (Replaces Settings Icon) */}
+            <div className="relative lang-dropdown">
+              <button
+                onClick={() => setIsLangOpen(!isLangOpen)}
+                className="flex items-center space-x-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-lg transition-all text-xs font-bold"
+                title="Select Language"
+              >
+                <Globe className="w-4 h-4 text-white" />
+                <span className="uppercase tracking-wider">{language === "es" ? "ES 🇪🇸" : "EN 🇺🇸"}</span>
+                <ChevronDown size={14} className={`text-white transition-transform ${isLangOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Language Menu */}
+              {isLangOpen && (
+                <div className="absolute right-0 mt-2 w-40 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50 animate-in fade-in duration-150">
+                  <div className="px-3 py-2 border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                    {t("language")}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setLanguage("en");
+                      setIsLangOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3.5 py-2 text-xs font-semibold hover:bg-red-50 transition-colors ${
+                      language === "en" ? "text-[#A80000] bg-red-50/60 font-bold" : "text-gray-700"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">🇺🇸 English</span>
+                    {language === "en" && <Check className="w-4 h-4 text-[#A80000]" />}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setLanguage("es");
+                      setIsLangOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3.5 py-2 text-xs font-semibold hover:bg-red-50 transition-colors ${
+                      language === "es" ? "text-[#A80000] bg-red-50/60 font-bold" : "text-gray-700"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">🇪🇸 Español</span>
+                    {language === "es" && <Check className="w-4 h-4 text-[#A80000]" />}
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* User Profile Dropdown */}
             <div className="relative profile-dropdown">
@@ -179,7 +225,7 @@ const TopBar = () => {
                   <div className="text-sm font-medium text-white truncate max-w-[120px]">
                     {user?.name || user?.email?.split('@')[0] || "Dealer"}
                   </div>
-                  <div className="text-xs text-white">Online</div>
+                  <div className="text-xs text-white">{t("online")}</div>
                 </div>
                 <ChevronDown size={14} className={`hidden sm:block text-white transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
               </button>
@@ -203,28 +249,23 @@ const TopBar = () => {
                     </div>
                   </div>
 
-                  <div className="p-2">
-                    <button 
+                  <div className="p-2 space-y-1">
+                    <button
                       onClick={() => {
-                        router.push('/dealer/profile')
-                        setIsProfileOpen(false)
+                        setIsProfileOpen(false);
+                        router.push("/dealer/profile");
                       }}
-                      className="w-full flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-md transition-all"
+                      className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-all"
                     >
+                      <span>{t("profileSettings")}</span>
                       <User size={16} />
-                      <span>Profile Settings</span>
                     </button>
-                    <button className="w-full flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-md transition-all">
-                      <Settings size={16} />
-                      <span>Preferences</span>
-                    </button>
-                    <hr className="border-gray-100 my-2" />
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center space-x-3 px-3 py-2 text-red-600 hover:bg-red-50 rounded-md transition-all"
+                      className="w-full flex items-center justify-between px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-all font-medium"
                     >
+                      <span>{t("logout")}</span>
                       <LogOut size={16} />
-                      <span>Logout</span>
                     </button>
                   </div>
                 </div>
@@ -233,13 +274,13 @@ const TopBar = () => {
           </div>
         </div>
 
-        {/* Mobile Search Bar */}
+        {/* Mobile Search Overlay */}
         {isSearchOpen && (
-          <div className="md:hidden mt-3 pb-1">
-            <div className="relative">
+          <div className="mt-3 md:hidden">
+            <div className="relative w-full">
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder={t("searchPlaceholder")}
                 className="w-full px-4 py-2 pl-10 bg-gray-50 border border-gray-200 rounded-lg text-[#F91F1F] placeholder-[#A80000] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               />
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#F91F1F]" size={18} />
@@ -260,11 +301,31 @@ const TopBar = () => {
               </div>
             </div>
 
-            {/* Mobile Settings */}
-            <button className="w-full flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-md transition-all">
-              <Settings size={18} />
-              <span>Settings</span>
-            </button>
+            {/* Mobile Language Selector */}
+            <div className="p-3 bg-gray-50 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Globe className="w-4 h-4 text-[#A80000]" />
+                <span>{t("language")}</span>
+              </div>
+              <div className="flex bg-white p-1 rounded-lg border border-gray-200 text-xs font-bold">
+                <button
+                  onClick={() => setLanguage("en")}
+                  className={`px-3 py-1 rounded-md transition-all ${
+                    language === "en" ? "bg-[#A80000] text-white" : "text-gray-600"
+                  }`}
+                >
+                  🇺🇸 EN
+                </button>
+                <button
+                  onClick={() => setLanguage("es")}
+                  className={`px-3 py-1 rounded-md transition-all ${
+                    language === "es" ? "bg-[#A80000] text-white" : "text-gray-600"
+                  }`}
+                >
+                  🇪🇸 ES
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

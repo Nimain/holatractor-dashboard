@@ -165,7 +165,7 @@ export default function StorePage() {
 
   const { slug } = useParams()
   const { cookie } = useCookie()
-  const access_token = cookie.get("access_token")
+  const access_token = cookie?.get ? cookie.get("access_token") : null
 
   // Filter functions
   const filteredAttachments = allAttachments.filter((attachment) =>

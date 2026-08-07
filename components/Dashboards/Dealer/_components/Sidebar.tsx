@@ -31,76 +31,81 @@ import {
 } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import HolaTractor from "../../../../assets/traclog.png"
+import { useDealerLanguage } from "@/context/DealerLanguageContext"
 
-const navigationItems = [
-  { icon: Home, label: "Dashboard", href: "/dealer" },
-  { icon: Store, label: "Store", href: "/dealer/viewstore" },
+const getNavigationItems = (t: (key: any) => string) => [
+  { icon: Home, label: t("dashboard"), href: "/dealer" },
+  { icon: Store, label: t("store"), href: "/dealer/viewstore" },
 ]
 
-const dropdownSections = [
+const getDropdownSections = (t: (key: any) => string) => [
   {
     icon: Users,
-    label: "Customer",
+    label: t("customer"),
     items: [
-      { icon: FileText, label: "Customer List", href: "/dealer/customer" },
-      { icon: Ticket, label: "Support Tickets", href: "/demo" },
-      { icon: MessageSquare, label: "Feedback", href: "/demo" },
+      { icon: FileText, label: t("customerList"), href: "/dealer/customer" },
+      { icon: Ticket, label: t("supportTickets"), href: "/demo" },
+      { icon: MessageSquare, label: t("feedback"), href: "/demo" },
     ],
   },
   {
     icon: TrendingUp,
-    label: "Leads",
+    label: t("leads"),
     items: [
-      { icon: DollarSign, label: "Sales", href: "/dealer/leads/sells" },
-      { icon: FileText, label: "Lease", href: "/dealer/leads/lease" },
-      { icon: Target, label: "Lead Scoring", href: "/dealer/sells" },
-      { icon: BarChart, label: "Conversion Rates", href:"/dealer/leads/conversion" },
+      { icon: DollarSign, label: t("sales"), href: "/dealer/leads/sells" },
+      { icon: FileText, label: t("lease"), href: "/dealer/leads/lease" },
+      { icon: Target, label: t("leadScoring"), href: "/dealer/sells" },
+      { icon: BarChart, label: t("conversionRates"), href:"/dealer/leads/conversion" },
     ],
   },
   {
     icon: Megaphone,
-    label: "Marketing",
-    href: "/dealer/marketing", // Added href for the main Marketing section
+    label: t("marketing"),
+    href: "/dealer/marketing",
     items: [
-      { icon: Zap, label: "Campaigns", href: "/dealer/marketing/campaigns" },
-      { icon: FileText, label: "Template", href: "/dealer/marketing/template" }, // Added new sub-label
-      { icon: BarChart, label: "Analytics", href: "/dealer/marketing/analytics" },
-      { icon: Settings, label: "Automation", href: "/dealer/marketing/automation" },
+      { icon: Zap, label: t("campaigns"), href: "/dealer/marketing/campaigns" },
+      { icon: FileText, label: t("template"), href: "/dealer/marketing/template" },
+      { icon: BarChart, label: t("analytics"), href: "/dealer/marketing/analytics" },
+      { icon: Settings, label: t("automation"), href: "/dealer/marketing/automation" },
     ],
   },
   {
     icon: Bell,
-    label: "Notifications",
+    label: t("notifications"),
     items: [
-      { icon: Inbox, label: "All Notifications", href: "/dealer/notifications/allnotification" },
-      { icon: Settings, label: "Settings", href: "/dealer/notifications/settings" },
-      { icon: AlertTriangle, label: "Alerts", href: "/demo" },
+      { icon: Inbox, label: t("allNotifications"), href: "/dealer/notifications/allnotification" },
+      { icon: Settings, label: t("settings"), href: "/dealer/notifications/settings" },
+      { icon: AlertTriangle, label: t("alerts"), href: "/demo" },
     ],
   },
   {
     icon: Settings,
-    label: "Settings",
+    label: t("settings"),
     items: [
-      { icon: Settings, label: "General", href: "/dealer/settings/general" },
-      { icon: Shield, label: "Security", href: "/dealer/settings/security" },
-      { icon: LinkIcon, label: "Integrations", href: "/dealer/settings/integration" },
+      { icon: Settings, label: t("general"), href: "/dealer/settings/general" },
+      { icon: Shield, label: t("security"), href: "/dealer/settings/security" },
+      { icon: LinkIcon, label: t("integrations"), href: "/dealer/settings/integration" },
     ],
   },
   {
     icon: Wrench,
-    label: "Repairs",
+    label: t("repairs"),
     items: [
-      { icon: Calendar, label: "Schedule Repair", href: "/dealer/repair/ScheduleTractorRepair" },
-      { icon: Package, label: "Parts Inventory", href: "/dealer/repair/PartsInventory" },
-      { icon: BookOpen, label: "Mechanics", href: "/dealer/repair/Mechanics" }
+      { icon: Calendar, label: t("scheduleRepair"), href: "/dealer/repair/ScheduleTractorRepair" },
+      { icon: Package, label: t("partsInventory"), href: "/dealer/repair/PartsInventory" },
+      { icon: BookOpen, label: t("mechanics"), href: "/dealer/repair/Mechanics" }
     ],
   },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const { t } = useDealerLanguage()
   const [isExpanded, setIsExpanded] = useState(true)
   const [openSections, setOpenSections] = useState<string[]>([])
+
+  const navigationItems = getNavigationItems(t)
+  const dropdownSections = getDropdownSections(t)
 
   // Function to check if a route is active
   const isActiveRoute = (href: string) => {
