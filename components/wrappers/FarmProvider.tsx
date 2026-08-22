@@ -5,53 +5,79 @@ import { Farm } from '@/utils/Types/types';
 import { useCookie } from 'next-cookie';
 import { createContext, useState, useContext, ReactNode, Dispatch, SetStateAction } from 'react';
 import { useDispatch } from 'react-redux';
+
 const FarmContext = createContext<FarmContextType | undefined>(undefined);
-interface user {
-    userId: string;
-    image: string;
-    name: string;
-    email: string;
+
+interface UserData {
+    userId?: string;
+    id?: string;
+    sub?: string;
+    _id?: string;
+    image?: string;
+    name?: string;
+    email?: string;
 }
+
 interface FarmContextType {
     farms: Farm[];
     fetchFarmer: () => void;
     fetching: boolean;
     setFarms: Dispatch<SetStateAction<Farm[]>>
 }
+
 export const FarmProvider = ({ children }: { children: ReactNode }) => {
     const [farms, setFarms] = useState<Farm[]>([]);
-    const [fetching, setFetching] = useState(false)
+    const [fetching, setFetching] = useState(false);
     const dispatch = useDispatch();
     const { cookie } = useCookie();
-    const user: user = cookie.get('user');
+
+    function getUserId(): string | null {
+        const rawUser = cookie.get('user');
+        if (!rawUser) return null;
+        let user: UserData | null = null;
+        if (typeof rawUser === 'string') {
+            try {
+                user = JSON.parse(rawUser);
+            } catch {
+                return null;
+            }
+        } else if (typeof rawUser === 'object') {
+            user = rawUser as UserData;
+        }
+        return user?.userId || user?.id || user?.sub || user?._id || null;
+    }
+
     function fetchFarmer() {
-        setFetching(true)
+        const userId = getUserId();
+        if (!userId) {
+            return;
+        }
+
+        setFetching(true);
         renderInstance
-            .get(`/farmer/${user.userId}`)
+            .get(`/farmer/${userId}`)
             .then((res) => {
-                setFarms(res.data.farms);
-                dispatch(changeFarm(res.data.farms[0]));
+                const fetchedFarms = Array.isArray(res.data?.farms) ? res.data.farms : [];
+                setFarms(fetchedFarms);
+                if (fetchedFarms.length > 0) {
+                    dispatch(changeFarm(fetchedFarms[0]));
+                }
             })
             .catch((err) => {
-                if (
-                    err.response &&
-                    err.response.status === 404 &&
-                    err.response.data.message === 'Farmer not found'
-                ) {
-                    errorMessage('Farmer not found');
-                } else {
-                    errorMessage('Error fetching user details');
-                }
-            }).finally(() => {
-                setFetching(false)
+                console.error("Error fetching farmer details in FarmProvider:", err);
             })
+            .finally(() => {
+                setFetching(false);
+            });
     }
+
     return (
         <FarmContext.Provider value={{ farms, fetching, fetchFarmer, setFarms }}>
             {children}
         </FarmContext.Provider>
     );
 };
+
 export const useFarmContext = (): FarmContextType => {
     const context = useContext(FarmContext);
     if (!context) {

@@ -6,6 +6,7 @@ import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import axios from "axios"
 import { renderInstance } from "@/utils/Axios/RenderInstance"
 import { errorMessage } from "@/utils/Toastify/Messages"
 
@@ -75,33 +76,51 @@ function BookingChart() {
 
   useEffect(() => {
     // Update chart when year selection changes
-    if (farmers.length > 0) {
-      const filteredData = processChartData(farmers, selectedYear)
+    const safeFarmers = Array.isArray(farmers) ? farmers : []
+    if (safeFarmers.length > 0) {
+      const filteredData = processChartData(safeFarmers, selectedYear)
       setChartData(filteredData)
       
       // Recalculate totals for the selected year
-      const farmersForYear = farmers.filter(farmer => 
-        new Date(farmer.createdAt).getFullYear() === selectedYear
+      const farmersForYear = safeFarmers.filter(farmer => 
+        farmer?.createdAt && new Date(farmer.createdAt).getFullYear() === selectedYear
       )
       
       const maleCount = farmersForYear.filter(farmer => 
-        farmer.user.gender?.toLowerCase() === "male"
+        farmer?.user?.gender?.toLowerCase() === "male"
       ).length
       
       const femaleCount = farmersForYear.filter(farmer => 
-        farmer.user.gender?.toLowerCase() === "female"
+        farmer?.user?.gender?.toLowerCase() === "female"
       ).length
       
       setTotalMale(maleCount)
       setTotalFemale(femaleCount)
+    } else {
+      setChartData(processChartData([], selectedYear))
+      setTotalMale(0)
+      setTotalFemale(0)
     }
   }, [selectedYear, farmers])
 
   const fetchFarmerData = async () => {
     setLoading(true)
     try {
-      const response = await renderInstance.get("/farmer")
-      const fetchedFarmers: Farmer[] = response.data
+      let fetchedFarmers: Farmer[] = []
+      try {
+        const localRes = await axios.get("/api/farmer")
+        if (Array.isArray(localRes.data) && localRes.data.length > 0) {
+          fetchedFarmers = localRes.data
+        }
+      } catch {}
+
+      if (fetchedFarmers.length === 0) {
+        const response = await renderInstance.get("/farmer")
+        fetchedFarmers = Array.isArray(response.data) 
+          ? response.data 
+          : (response.data?.farmers || response.data?.data || [])
+      }
+
       setFarmers(fetchedFarmers)
 
       // Process data for the chart with the selected year
@@ -110,28 +129,31 @@ function BookingChart() {
 
       // Calculate totals for the selected year
       const farmersForYear = fetchedFarmers.filter(farmer => 
-        new Date(farmer.createdAt).getFullYear() === selectedYear
+        farmer?.createdAt && new Date(farmer.createdAt).getFullYear() === selectedYear
       )
       
       const maleCount = farmersForYear.filter(farmer => 
-        farmer.user.gender?.toLowerCase() === "male"
+        farmer?.user?.gender?.toLowerCase() === "male"
       ).length
       
       const femaleCount = farmersForYear.filter(farmer => 
-        farmer.user.gender?.toLowerCase() === "female"
+        farmer?.user?.gender?.toLowerCase() === "female"
       ).length
 
       setTotalMale(maleCount)
       setTotalFemale(femaleCount)
     } catch (err) {
-      errorMessage("Error fetching farmer data for chart")
       console.error("Error fetching farmer data:", err)
+      setFarmers([])
+      setChartData(processChartData([], selectedYear))
+      setTotalMale(0)
+      setTotalFemale(0)
     } finally {
       setLoading(false)
     }
   }
 
-  const processChartData = (farmers: Farmer[], year: number): ChartDataPoint[] => {
+  const processChartData = (farmers: Farmer[] = [], year: number): ChartDataPoint[] => {
     // Create a map to store counts by month
     const monthsData = new Map<string, { male: number; female: number }>()
 
@@ -156,16 +178,17 @@ function BookingChart() {
     })
 
     // Filter farmers by the selected year and count by gender and month
-    farmers
-      .filter(farmer => new Date(farmer.createdAt).getFullYear() === year)
+    const safeList = Array.isArray(farmers) ? farmers : []
+    safeList
+      .filter(farmer => farmer?.createdAt && new Date(farmer.createdAt).getFullYear() === year)
       .forEach((farmer) => {
         const joinDate = new Date(farmer.createdAt)
         const monthName = months[joinDate.getMonth()]
         const currentMonthData = monthsData.get(monthName) || { male: 0, female: 0 }
 
-        if (farmer.user.gender?.toLowerCase() === "male") {
+        if (farmer?.user?.gender?.toLowerCase() === "male") {
           currentMonthData.male += 1
-        } else if (farmer.user.gender?.toLowerCase() === "female") {
+        } else if (farmer?.user?.gender?.toLowerCase() === "female") {
           currentMonthData.female += 1
         }
 

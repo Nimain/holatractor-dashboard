@@ -117,7 +117,10 @@ const BookingStore = () => {
   const { slug } = useParams();
 
   const { cookie } = useCookie();
-  const user: user = cookie.get("user");
+  const rawUser = cookie.get("user");
+  const parsedUser: any = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser) } catch { return null } })() : rawUser;
+  const user: user = parsedUser || {};
+  const userId = parsedUser?.userId || parsedUser?.id || parsedUser?.sub || parsedUser?._id;
   const access_token = cookie.get("access_token");
 
   function handleBookClick(tractorId: string) {
@@ -141,12 +144,12 @@ const BookingStore = () => {
   }
 
   const fetchFarms = useCallback(() => {
-    if (!user?.userId) return;
+    if (!userId) return;
     setFetchingFarms(true);
     renderInstance
-      .get(`/farm/get-with-user-id/${user.userId}`)
+      .get(`/farm/get-with-user-id/${userId}`)
       .then((res) => {
-        setFarms(res.data);
+        setFarms(Array.isArray(res.data) ? res.data : []);
       })
       .catch(() => {
         errorMessage("Error fetching farms");
@@ -154,7 +157,7 @@ const BookingStore = () => {
       .finally(() => {
         setFetchingFarms(false);
       });
-  }, [user?.userId]);
+  }, [userId]);
 
   const fetchStoreDetails = useCallback(() => {
     if (!slug) return;

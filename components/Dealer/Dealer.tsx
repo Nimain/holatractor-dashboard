@@ -4,6 +4,7 @@ import { Dealer } from '@/utils/Types/types'
 import { useEffect, useState } from 'react'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import axios from 'axios';
 import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
 import Image from 'next/image';
@@ -25,16 +26,33 @@ const DealerSection = () => {
     const [newDealerName, setNewDealerName] = useState("")
     const [isSignUpCard, setIsSignUpCard] = useState(false)
 
-    function fetchAllUsers() {
+    async function fetchAllUsers() {
         setLoading(true)
-        renderInstance.get("/dealer")
-            .then((res) => {
-                setUsers(res.data)
-            }).catch((err) => {
-                errorMessage("Error fetching user list")
-            }).finally(() => {
-                setLoading(false)
+        try {
+            let dealerList: Dealer[] = []
+            try {
+                const localRes = await axios.get("/api/dealer")
+                if (Array.isArray(localRes.data) && localRes.data.length > 0) {
+                    dealerList = localRes.data
+                }
+            } catch {}
+
+            if (dealerList.length === 0) {
+                const res = await renderInstance.get("/dealer")
+                dealerList = Array.isArray(res.data)
+                    ? res.data
+                    : (res.data?.dealers || res.data?.data || [])
+            }
+
+            const sortedUsers = [...dealerList].sort((a: Dealer, b: Dealer) => {
+                return new Date(b?.createdAt || 0).getTime() - new Date(a?.createdAt || 0).getTime()
             })
+            setUsers(sortedUsers)
+        } catch (err) {
+            errorMessage("Error fetching user list")
+        } finally {
+            setLoading(false)
+        }
     }
 
     const splitFullName = (fullName: string) => {
@@ -89,28 +107,45 @@ const DealerSection = () => {
                             onClick={() => {
                                 setOpen(true)
                             }}
+                            className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-sm transition-all"
                         >
                             New dealer
                         </Button>
                     </DialogTrigger>
 
                     <DialogContent
-                        className="bg-white h-fit min-w-[400px] max-w-[400px] overflow-auto"
+                        className="bg-white rounded-2xl w-[95vw] max-w-[460px] p-0 overflow-hidden shadow-2xl border border-gray-100"
                         style={{ scrollbarWidth: "none" }}
                     >
+                        {/* Modal Header */}
+                        <div className="bg-slate-900 p-6 text-white relative">
+                            <p className="text-xs uppercase tracking-wider font-semibold text-emerald-400 mb-1">Dealer Network</p>
+                            <h2 className="text-xl font-bold">Register New Dealer</h2>
+                            <p className="text-xs text-slate-300 mt-1">Enter the dealership or commercial entity legal name.</p>
+                        </div>
 
-                        <Label className='mb-2 text-lg font-medium'>
-                            Name
-                        </Label>
+                        {/* Modal Body */}
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <Label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                                    Dealership / Full Legal Name *
+                                </Label>
+                                <Input
+                                    value={newDealerName}
+                                    onChange={e => { handleNameChage(e.target.value) }}
+                                    placeholder="e.g. AgroTech Machinery Solutions"
+                                    className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-medium"
+                                />
+                            </div>
+                        </div>
 
-                        <Input
-                            value={newDealerName}
-                            onChange={e => { handleNameChage(e.target.value) }}
-                            className='w-full' />
-
-                        <DialogFooter>
+                        {/* Modal Footer */}
+                        <div className="p-5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
                             <DialogClose asChild>
-                                <Button onClick={() => { setOpen(false) }}>
+                                <Button 
+                                    onClick={() => { setOpen(false) }}
+                                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-xl border border-slate-200 hover:bg-slate-100 transition-all bg-white"
+                                >
                                     Cancel
                                 </Button>
                             </DialogClose>
@@ -124,11 +159,12 @@ const DealerSection = () => {
                                         onClick={() => {
                                             errorMessage("Please give your name")
                                         }}
+                                        className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all active:scale-[0.98]"
                                     >
-                                        Next
+                                        Next Step →
                                     </Button>
                             }
-                        </DialogFooter>
+                        </div>
 
                     </DialogContent>
 

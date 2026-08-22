@@ -7,6 +7,7 @@ import { FarmerAndBookingChart } from "./FarmerAndBookingChart"
 import DetailBox from "./DetailBox"
 import { Tractor, Users, UserCheck, Store, RefreshCw } from "lucide-react"
 import FarmersPieChart from "./FarmersPieChart"
+import axios from "axios"
 import { renderInstance } from "@/utils/Axios/RenderInstance"
 import { errorMessage } from "@/utils/Toastify/Messages"
 
@@ -35,14 +36,26 @@ const Dashboard = () => {
 
   function fetchChartUserCounts() {
     setLoading(true)
-    renderInstance
-      .get("/user/charts/userCounts")
+    axios
+      .get("/api/user/charts/userCounts")
       .then((res) => {
-        setUserCounts(res.data)
+        if (res.data && typeof res.data === "object" && res.data.farmers !== undefined) {
+          setUserCounts(res.data)
+        }
         setLastUpdated(new Date())
       })
       .catch(() => {
-        errorMessage("Error in fetching user details")
+        renderInstance
+          .get("/user/charts/userCounts")
+          .then((res) => {
+            if (res.data && typeof res.data === "object") {
+              setUserCounts(res.data)
+            }
+            setLastUpdated(new Date())
+          })
+          .catch((err) => {
+            console.error("Error fetching userCounts:", err)
+          })
       })
       .finally(() => {
         setLoading(false)

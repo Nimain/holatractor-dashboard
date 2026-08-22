@@ -109,28 +109,32 @@ const WithoutStoreBooking = () => {
   const [newBooking, setNewBooking] = useState<Booking | null>(null);
 
   const { cookie } = useCookie();
-  const user: user = cookie.get("user");
+  const rawUser = cookie.get("user");
+  const parsedUser: any = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser) } catch { return null } })() : rawUser;
+  const user: user = parsedUser || {};
+  const userId = parsedUser?.userId || parsedUser?.id || parsedUser?.sub || parsedUser?._id;
   const access_token = cookie.get("access_token");
 
   const { StartPlaying } = useConfirmation();
 
   const fetchData = async () => {
+    if (!userId) return;
     setFetchingFarms(true);
     setFetchingTractors(true);
     setFetchingAttachments(true);
 
     try {
       const [farmsRes, tractorsRes, attachmentsRes] = await Promise.all([
-        renderInstance.get(`/farm/get-with-user-id/${user.userId}`),
+        renderInstance.get(`/farm/get-with-user-id/${userId}`),
         renderInstance.get("/tractor"),
         renderInstance.get("/attachment", {
           headers: { Authorization: `Bearer ${access_token}` },
         }),
       ]);
 
-      setFarms(farmsRes.data);
-      setTractors(tractorsRes.data);
-      setAttachments(attachmentsRes.data);
+      setFarms(Array.isArray(farmsRes.data) ? farmsRes.data : []);
+      setTractors(Array.isArray(tractorsRes.data) ? tractorsRes.data : []);
+      setAttachments(Array.isArray(attachmentsRes.data) ? attachmentsRes.data : []);
     } catch (error) {
       errorMessage("Error fetching data");
     } finally {

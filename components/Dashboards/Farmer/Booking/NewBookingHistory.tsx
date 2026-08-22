@@ -135,7 +135,10 @@ const NewBookingHistory = () => {
   const [openDuration, setOpenDuration] = useState(false);
 
   const { cookie } = useCookie();
-  const user: user = cookie.get("user");
+  const rawUser = cookie.get("user");
+  const parsedUser: any = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser) } catch { return null } })() : rawUser;
+  const user: user = parsedUser || {};
+  const userId = parsedUser?.userId || parsedUser?.id || parsedUser?.sub || parsedUser?._id;
 
   const handleClear = () => {
     setSearchTerm("");
@@ -203,17 +206,18 @@ const NewBookingHistory = () => {
   ];
 
   function fetchPayments() {
+    if (!userId) return;
     setFetching(true);
     renderInstance
       .get(
-        `/farmer/bookingPage/${user.userId}?filter=${activeFilter}&page=${pagination.page}&category=${searchCategory}&search=${searchTerm}`
+        `/farmer/bookingPage/${userId}?filter=${activeFilter}&page=${pagination.page}&category=${searchCategory}&search=${searchTerm}`
       )
       .then((res) => {
-        setPagination(res.data.pagination);
-        setBookings(res.data.bookings);
+        if (res.data?.pagination) setPagination(res.data.pagination);
+        if (Array.isArray(res.data?.bookings)) setBookings(res.data.bookings);
       })
       .catch((err) => {
-        errorMessage("Error fetching payments");
+        errorMessage("Error fetching bookings");
       })
       .finally(() => {
         setFetching(false);
@@ -359,16 +363,17 @@ const NewBookingHistory = () => {
   };
 
   useEffect(() => {
-    if (user) {
+    if (userId) {
       fetchPayments();
     }
-  }, [activeFilter, searchTerm, pagination.page]);
+  }, [userId, activeFilter, searchTerm, pagination.page]);
 
   useEffect(() => {
+    if (!userId) return;
     // Connect to the socket server
     const newSocket: Socket = io(NestJsBaseURL, {
       query: {
-        userId: user.userId,
+        userId: userId,
       },
     });
 

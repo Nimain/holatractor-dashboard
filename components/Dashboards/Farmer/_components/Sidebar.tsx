@@ -30,7 +30,10 @@ const Sidebar = () => {
   const router = useRouter()
 
   const { cookie } = useCookie()
-  const user: user = cookie.get("user")
+  const rawUser = cookie.get("user")
+  const parsedUser: any = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser) } catch { return null } })() : rawUser
+  const user: user = parsedUser || {}
+  const userId = parsedUser?.userId || parsedUser?.id || parsedUser?.sub || parsedUser?._id
 
   function handleLogOut() {
     const cookiesToRemove = [
@@ -56,12 +59,12 @@ const Sidebar = () => {
   }
 
   useEffect(() => {
-    if (user) {
+    if (userId) {
       fetchFarmer()
     }
-  }, [])
+  }, [userId])
 
-  if (!user) return
+  if (!userId) return null
 
   return (
     <aside

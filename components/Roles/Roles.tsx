@@ -266,39 +266,36 @@ const handleEditRoleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
           <DialogTrigger asChild>
             <button
               name="add__new_role"
-              className="px-[20px] py-[10px] bg-black text-white text-[18px] rounded flex items-center gap-[10px]"
+              className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium text-sm rounded-xl flex items-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
               onClick={() => {
                 setAddNewRole(true);
               }}
             >
-              <AddIcon />
+              <AddIcon fontSize="small" />
               Add new role
             </button>
           </DialogTrigger>
 
           <DialogContent
-            className="bg-white max-h-[90vh] overflow-auto"
-            style={{ scrollbarWidth: "none" }}
+            className="bg-white max-w-[480px] p-0 rounded-2xl border border-gray-100 shadow-2xl overflow-hidden"
           >
-            <DialogHeader>
-              <p className="text-2xl font-bold">Give role details</p>
-            </DialogHeader>
+            <div className="bg-slate-900 p-6 text-white relative">
+              <p className="text-xs uppercase tracking-wider font-semibold text-emerald-400 mb-1">Access Control</p>
+              <h2 className="text-xl font-bold">Create New Role</h2>
+              <p className="text-xs text-slate-300 mt-1">Define permissions and access boundaries for this role.</p>
+            </div>
 
-            <div
-              className="bg-white rounded-xl p-[30px] text-black flex gap-[16px] flex-col relative max-h-[80vh] overflow-auto"
-              style={{ scrollbarWidth: "none" }}
-            >
-              <label htmlFor="new_role_name" className="text-[26px] font-[600]">
-                Give a name to this new role
-              </label>
-
-              <div className="px-[10px] py-[6px] rounded border-[2px] w-full">
+            <div className="p-6 space-y-5">
+              <div>
+                <label htmlFor="new_role_name" className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                  Role Name *
+                </label>
                 <input
                   type="text"
                   name="new_role_name"
                   id="new_role_name"
-                  className="outline-none border-none w-full"
-                  placeholder="Enter the role name"
+                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
+                  placeholder="e.g. Supervisor, Inspector, Dispatcher"
                   value={addNewRoleName}
                   onChange={(e) => {
                     setAddNewRoleName(e.target.value);
@@ -306,44 +303,39 @@ const handleEditRoleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                 />
               </div>
 
-              <div className="flex items-center justify-center w-full">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                  Role Icon / Badge Image (Optional)
+                </label>
                 {image ? (
-                  <Image
-                    src={URL.createObjectURL(image)}
-                    alt="Role Image"
-                    width={150}
-                    height={150}
-                    className="object-cover rounded"
-                  />
+                  <div className="relative w-full h-40 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center p-3">
+                    <Image
+                      src={URL.createObjectURL(image)}
+                      alt="Role Image"
+                      width={100}
+                      height={100}
+                      className="object-cover rounded-xl shadow-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setImage(null)}
+                      className="absolute top-3 right-3 text-xs bg-red-100 text-red-600 hover:bg-red-200 px-2.5 py-1 rounded-lg font-medium transition-all"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 ) : (
                   <label
                     htmlFor="dropzone-file"
-                    className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50"
+                    className="flex flex-col items-center justify-center w-full h-36 border-2 border-slate-200 border-dashed rounded-xl cursor-pointer bg-slate-50/50 hover:bg-slate-50 hover:border-emerald-400 transition-all p-4 text-center"
                   >
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <svg
-                        className="w-8 h-8 mb-4 text-gray-500 dark:text-gray-400"
-                        aria-hidden="true"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 20 16"
-                      >
-                        <path
-                          stroke="currentColor"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
-                        />
-                      </svg>
-                      <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                        <span className="font-semibold">Click to upload</span>{" "}
-                        or drag and drop
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        SVG, PNG, JPG or GIF (MAX. 800x400px)
-                      </p>
+                    <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2">
+                      <AddIcon />
                     </div>
+                    <p className="text-xs font-medium text-slate-700">
+                      <span className="text-emerald-600 font-semibold">Click to upload</span> or drag and drop
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">PNG, JPG, SVG up to 5MB</p>
                     <input
                       id="dropzone-file"
                       type="file"
@@ -360,29 +352,27 @@ const handleEditRoleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
               </div>
             </div>
 
-            <DialogFooter>
-              <DialogClose asChild>
-                <button
-                  name="add_task_cancel_button"
-                  className="text-white bg-black font-semibold px-5 py-2 rounded-md"
-                  onClick={() => {
-                    setAddNewRole(false);
-                  }}
-                >
-                  Close
-                </button>
-              </DialogClose>
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+              <button
+                name="add_task_cancel_button"
+                className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 rounded-xl transition-all"
+                onClick={() => {
+                  setAddNewRole(false);
+                }}
+              >
+                Cancel
+              </button>
 
               <button
                 name="add_role_submit_button"
-                className="px-[20px] py-[10px] bg-black text-white text-[18px] rounded flex items-center gap-[10px] w-fit mx-auto"
-                onClick={(e) => {
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
+                onClick={() => {
                   handleCreateRole();
                 }}
               >
-                Add
+                Create Role
               </button>
-            </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
@@ -411,7 +401,6 @@ const handleEditRoleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                 className={`bg-white flex-1 flex items-center gap-2 px-2 w-full py-[20px] shadow-xl rounded-md text-[18px] cursor-pointer relative ${
                   role.name === "admin" && "hidden"
                 }`}
-                // onClick={() => { setActiveRole(roleNames) }}
                 key={index}
               >
                 <div
@@ -424,11 +413,12 @@ const handleEditRoleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                 </div>
 
                 {editOptionShow === index && (
-                  <div className="absolute top-0 right-[-20px] bg-white flex flex-col text-[14px] gap-[4px] p-[10px] shadow-md rounded-md">
+                  <div className="absolute top-0 right-[-20px] bg-white flex flex-col text-[14px] gap-[4px] p-[10px] shadow-md rounded-md z-10">
                     <Dialog open={editARole} onOpenChange={setEditARole}>
                       <DialogTrigger asChild>
                         <button
                           name="edit_specific_role"
+                          className="px-3 py-1.5 text-xs text-left hover:bg-slate-50 rounded font-medium text-slate-700"
                           onClick={() => {
                             handleEditRoleModalOpen(
                               role.name,
@@ -437,37 +427,32 @@ const handleEditRoleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                             );
                           }}
                         >
-                          Edit
+                          Edit Role
                         </button>
                       </DialogTrigger>
 
                       <DialogContent
-                        className="bg-white max-h-[90vh] overflow-auto"
-                        style={{ scrollbarWidth: "none" }}
+                        className="bg-white max-w-[480px] p-0 rounded-2xl border border-gray-100 shadow-2xl overflow-hidden"
                       >
-                        <DialogHeader>
-                          <p className="text-2xl font-bold">
-                            Give updated role details
-                          </p>
-                        </DialogHeader>
+                        <div className="bg-slate-900 p-6 text-white relative">
+                          <p className="text-xs uppercase tracking-wider font-semibold text-emerald-400 mb-1">Configuration</p>
+                          <h2 className="text-xl font-bold">Update Role Details</h2>
+                          <p className="text-xs text-slate-300 mt-1">Modify name and iconography for this role.</p>
+                        </div>
 
-                        <div
-                          className="bg-white rounded-xl p-[30px] text-black flex gap-[16px] flex-col relative max-h-[80vh] overflow-auto"
-                          style={{ scrollbarWidth: "none" }}
-                        >
-                          <label
-                            htmlFor="new_role_name"
-                            className="text-[26px] font-[600]"
-                          >
-                            Give a new name
-                          </label>
-
-                          <div className="px-[10px] py-[6px] rounded border-[2px] w-full">
+                        <div className="p-6 space-y-5">
+                          <div>
+                            <label
+                              htmlFor="edit_role_name"
+                              className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2"
+                            >
+                              Role Name *
+                            </label>
                             <input
                               type="text"
-                              name="new_role_name"
-                              id="new_role_name"
-                              className="outline-none border-none w-full"
+                              name="edit_role_name"
+                              id="edit_role_name"
+                              className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
                               placeholder="Enter the role name"
                               value={editRoleName}
                               onChange={(e) => {
@@ -476,96 +461,71 @@ const handleEditRoleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                             />
                           </div>
 
-                          <div className="flex items-center justify-center flex-col gap-2 w-full">
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                              Role Badge Image
+                            </label>
                             {editRoleImage ? (
-                              <Image
-                                src={
-                                  typeof editRoleImage === "string"
-                                    ? editRoleImage
-                                    : URL.createObjectURL(editRoleImage)
-                                }
-                                alt="Role Image"
-                                width={150}
-                                height={150}
-                                className="object-cover rounded"
-                              />
+                              <div className="relative w-full h-40 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center p-3">
+                                <Image
+                                  src={
+                                    typeof editRoleImage === "string"
+                                      ? editRoleImage
+                                      : URL.createObjectURL(editRoleImage)
+                                  }
+                                  alt="Role Image"
+                                  width={100}
+                                  height={100}
+                                  className="object-cover rounded-xl shadow-sm"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setEditRoleImage(null)}
+                                  className="absolute top-3 right-3 text-xs bg-red-100 text-red-600 hover:bg-red-200 px-2.5 py-1 rounded-lg font-medium transition-all"
+                                >
+                                  Change Image
+                                </button>
+                              </div>
                             ) : (
                               <label
-                                htmlFor="dropzone-file"
-                                className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50"
+                                htmlFor="edit-dropzone-file"
+                                className="flex flex-col items-center justify-center w-full h-36 border-2 border-slate-200 border-dashed rounded-xl cursor-pointer bg-slate-50/50 hover:bg-slate-50 hover:border-emerald-400 transition-all p-4 text-center"
                               >
-                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                  <svg
-                                    className="w-8 h-8 mb-4 text-gray-500 dark:text-gray-400"
-                                    aria-hidden="true"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 20 16"
-                                  >
-                                    <path
-                                      stroke="currentColor"
-                                      stroke-linecap="round"
-                                      stroke-linejoin="round"
-                                      stroke-width="2"
-                                      d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
-                                    />
-                                  </svg>
-                                  <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                                    <span className="font-semibold">
-                                      Click to upload
-                                    </span>{" "}
-                                    or drag and drop
-                                  </p>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    SVG, PNG, JPG or GIF (MAX. 800x400px)
-                                  </p>
+                                <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2">
+                                  <AddIcon />
                                 </div>
+                                <p className="text-xs font-medium text-slate-700">
+                                  <span className="text-emerald-600 font-semibold">Click to upload</span> or drag and drop
+                                </p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">PNG, JPG, SVG up to 5MB</p>
                                 <input
-                                  id="dropzone-file"
+                                  id="edit-dropzone-file"
                                   type="file"
                                   className="hidden"
                                   onChange={handleEditRoleImageChange}
                                 />
                               </label>
                             )}
-                            <label
-                              htmlFor="dropzone-file"
-                              className="px-[20px] py-[10px] bg-black text-white text-[18px] rounded flex items-center gap-[10px] w-fit mx-auto"
-                            >
-                              <p>Change the image</p>
-                              <input
-                                id="dropzone-file"
-                                type="file"
-                                className="hidden"
-                                onChange={handleEditRoleImageChange}
-                              />
-                            </label>
                           </div>
                         </div>
 
-                        <DialogFooter>
-                          <DialogClose asChild>
-                            <button
-                              name="add_task_cancel_button"
-                              className="text-white bg-black font-semibold px-5 py-2 rounded-md"
-                              onClick={() => {
-                                handleEditRoleModalClose();
-                              }}
-                            >
-                              Cancel
-                            </button>
-                          </DialogClose>
+                        <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                          <button
+                            type="button"
+                            className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 rounded-xl transition-all"
+                            onClick={handleEditRoleModalClose}
+                          >
+                            Cancel
+                          </button>
 
                           <button
-                            name="add_role_submit_button"
-                            className="px-[20px] py-[10px] bg-black text-white text-[18px] rounded flex items-center gap-[10px] w-fit mx-auto"
-                            onClick={() => {
-                              handleEditRole();
-                            }}
+                            type="button"
+                            className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
+                            onClick={handleEditRole}
                           >
-                            Update
+                            Save Changes
                           </button>
-                        </DialogFooter>
+                        </div>
                       </DialogContent>
                     </Dialog>
 

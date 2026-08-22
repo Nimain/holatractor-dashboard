@@ -74,17 +74,21 @@ const PaymentHistory = () => {
   const [date, setDate] = useState<Date>();
 
   const { cookie } = useCookie();
-  const user: user = cookie.get("user");
+  const rawUser = cookie.get("user");
+  const parsedUser: any = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser) } catch { return null } })() : rawUser;
+  const user: user = parsedUser || {};
+  const userId = parsedUser?.userId || parsedUser?.id || parsedUser?.sub || parsedUser?._id;
 
   function fetchPayments() {
+    if (!userId) return;
     setFetching(true);
     renderInstance
       .get(
-        `/farmer/paymentPage/${user.userId}?filter=${activeFilter}&page=${pagination.page}&category=${searchCategory}&search=${searchTerm}`
+        `/farmer/paymentPage/${userId}?filter=${activeFilter}&page=${pagination.page}&category=${searchCategory}&search=${searchTerm}`
       )
       .then((res) => {
-        setPayments(res.data.payments);
-        setPagination(res.data.pagination);
+        if (Array.isArray(res.data?.payments)) setPayments(res.data.payments);
+        if (res.data?.pagination) setPagination(res.data.pagination);
       })
       .catch((err) => {
         errorMessage("Error fetching payments");
@@ -230,16 +234,17 @@ const PaymentHistory = () => {
   };
 
   useEffect(() => {
-    if (user) {
+    if (userId) {
       fetchPayments();
     }
-  }, [activeFilter, searchTerm, pagination.page]);
+  }, [userId, activeFilter, searchTerm, pagination.page]);
 
   useEffect(() => {
+    if (!userId) return;
     // Connect to the socket server
     const newSocket: Socket = io(NestJsBaseURL, {
       query: {
-        userId: user.userId,
+        userId: userId,
       },
     });
 

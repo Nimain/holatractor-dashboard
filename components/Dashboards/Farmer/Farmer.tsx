@@ -98,29 +98,37 @@ const FarmerDashboard = () => {
   const dispatch = useDispatch()
 
   const { cookie } = useCookie()
-  const user: user = cookie.get("user")
+  const rawUser = cookie.get("user")
+  const parsedUser: any = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser) } catch { return null } })() : rawUser
+  const user: user = parsedUser || {}
+  const userId = parsedUser?.userId || parsedUser?.id || parsedUser?.sub || parsedUser?._id
 
   const limeOptions = { color: 'lime' }
 
   function fetchFarmer() {
+    if (!userId) return
+
     setFetchingFarmerDetails(true)
 
-    renderInstance.get(`/farmer/${user.userId}`)
+    renderInstance.get(`/farmer/${userId}`)
       .then((res) => {
-        setFarmer(res.data.details)
-        settotalPaid(res.data.totalPaid)
-        settotalUnpaid(res.data.totalUnpaid)
-        setcompletedBookingsCount(res.data.completedBookings)
-        settotalBookings(res.data.totalBookings)
-        setBookings(res.data.bookings)
-        setFarms(res.data.farms)
-        setAllLogs(res.data.logs)
-        dispatch(changeFarm(res.data.farms[0]))
+        setFarmer(res.data?.details || null)
+        settotalPaid(typeof res.data?.totalPaid === "number" ? res.data.totalPaid : 0)
+        settotalUnpaid(typeof res.data?.totalUnpaid === "number" ? res.data.totalUnpaid : 0)
+        setcompletedBookingsCount(typeof res.data?.completedBookings === "number" ? res.data.completedBookings : 0)
+        settotalBookings(typeof res.data?.totalBookings === "number" ? res.data.totalBookings : 0)
+        setBookings(Array.isArray(res.data?.bookings) ? res.data.bookings : [])
+        const fetchedFarms = Array.isArray(res.data?.farms) ? res.data.farms : []
+        setFarms(fetchedFarms)
+        setAllLogs(Array.isArray(res.data?.logs) ? res.data.logs : [])
+        if (fetchedFarms.length > 0) {
+          dispatch(changeFarm(fetchedFarms[0]))
+        }
       }).catch((err) => {
-        if (err.response && err.response.status === 404 && err.response.data.message === "Farmer not found") {
+        if (err.response && err.response.status === 404 && err.response.data?.message === "Farmer not found") {
           errorMessage("Farmer not found")
         } else {
-          errorMessage("Error fetching user detaild")
+          errorMessage("Error fetching user details")
         }
       }).finally(() => {
         setFetchingFarmerDetails(false)
@@ -138,18 +146,19 @@ const FarmerDashboard = () => {
 
     const dateObj = typeof date === "string" ? new Date(date) : date;
 
-    return dateObj.toLocaleDateString(undefined, options);
+    return isNaN(dateObj.getTime()) ? "N/A" : dateObj.toLocaleDateString(undefined, options);
   };
 
   const truncateDetails = (details: string) => {
+    if (!details) return ""
     return details.slice(0, 15) + (details.length > 15 ? '...' : '')
   }
 
   useEffect(() => {
-    if (user) {
+    if (userId) {
       fetchFarmer()
     }
-  }, [])
+  }, [userId])
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -289,7 +298,7 @@ const FarmerDashboard = () => {
                   <CardContent>
                     <div className="text-2xl font-bold flex items-center gap-2 flex-wrap">
                       <p>
-                        {activeFarm && activeFarm.boundary.area.toFixed(2)}
+                        {activeFarm && activeFarm.boundary && typeof activeFarm.boundary.area === "number" ? activeFarm.boundary.area.toFixed(2) : "0.00"}
                       </p>
                       <Badge className="bg-red-200 text-red-700 hover:bg-red-300 hover:text-red-900">Sq.m</Badge>
                     </div>
@@ -302,7 +311,11 @@ const FarmerDashboard = () => {
                   <p>Error: {error}</p>
                 ) : (location.latitude && location.longitude) ? (
                   <MapContainer
-                    center={!activeFarm ? [location.latitude, location.longitude] : activeFarm.boundary.coordinates[0]}
+                    center={
+                      activeFarm?.boundary?.coordinates && activeFarm.boundary.coordinates.length > 0
+                        ? (activeFarm.boundary.coordinates[0] as [number, number])
+                        : [location.latitude, location.longitude]
+                    }
                     zoom={20}
                     scrollWheelZoom={false}
                     style={{ width: "100%", height: "300px", borderRadius: "16px", zIndex: 1 }}>
@@ -312,6 +325,7 @@ const FarmerDashboard = () => {
                     />
                     {
                       farms.length != 0 && farms.map((details, index) => {
+                        if (!details?.boundary?.coordinates) return null
                         return (
                           <div key={index}>
                             <Polygon pathOptions={limeOptions} positions={details.boundary.coordinates} />

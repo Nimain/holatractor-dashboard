@@ -28,9 +28,11 @@ const Dashboard = () => {
     setLoading(true)
     renderInstance.get("/user/charts/userCounts")
       .then((res) => {
-        setUserCounts(res.data)
-      }).catch(() => {
-        errorMessage("Error in fetching user details")
+        if (res.data && typeof res.data === "object") {
+          setUserCounts(res.data)
+        }
+      }).catch((err) => {
+        console.error("Error in fetching user details:", err)
       }).finally(() => {
         setLoading(false)
       })

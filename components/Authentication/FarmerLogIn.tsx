@@ -32,10 +32,18 @@ const AuthHandler = () => {
 
         // Verify and decode token
         try {
-          const user = decode(token)
-          if (!user) {
+          const rawUser: any = decode(token)
+          if (!rawUser) {
             handleNavigateBack()
             return
+          }
+          const user = {
+            ...rawUser,
+            userId: rawUser?.userId || rawUser?.id || rawUser?.sub || rawUser?._id || "",
+            name: rawUser?.name || `${rawUser?.first_name || ""} ${rawUser?.last_name || ""}`.trim() || "Farmer",
+            email: rawUser?.email || "",
+            email_varified: rawUser?.email_varified ?? rawUser?.emailVerified ?? false,
+            image: rawUser?.image || "",
           }
 
           // Set expiry date for cookies

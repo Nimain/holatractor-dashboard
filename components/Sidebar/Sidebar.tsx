@@ -38,7 +38,43 @@ import {
 } from "@/assets/sidebar/SidebarImages";
 import Link from "next/link";
 import { Tooltip } from "@mui/material";
-import { ReceiptIcon, SettingsIcon } from "lucide-react";
+import {
+  LayoutDashboard,
+  LandPlot,
+  Radio,
+  Briefcase,
+  Users,
+  Sprout,
+  Headphones,
+  Store,
+  HardHat,
+  ShieldCheck,
+  CalendarCheck,
+  FileSignature,
+  Share2,
+  Repeat,
+  HelpCircle,
+  Tractor,
+  Wrench,
+  Layers,
+  LayoutGrid,
+  Settings2,
+  Coins,
+  Package,
+  Ticket,
+  ShoppingCart,
+  Receipt,
+  FileText,
+  History,
+  CreditCard,
+  Calculator,
+  Settings,
+  Shield,
+  Lock,
+  Globe,
+  Building2,
+  ScrollText,
+} from "lucide-react";
 
 const getTranslation = (locale: string, translations: any) => {
   return translations[locale] || translations["en"];
@@ -102,6 +138,12 @@ const Sidebar = () => {
     "/Package": "Package",
     "/Coupon": "Coupon",
     "/Purchase": "Purchase",
+    "/Owner": "Owner",
+    "/Admin": "Admins",
+    "/Country": "Country",
+    "/City": "City",
+    "/Lease": "Lease",
+    "/booking-inquiry": "inquiry",
   };
 
   useEffect(() => {
@@ -133,15 +175,7 @@ const Sidebar = () => {
 
   const topLeftSideList = [
     {
-      icon: (
-        <Image
-          src={DashboardIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Dashboard"
-        />
-      ),
+      icon: <LayoutDashboard className="w-[20px] h-[20px] text-gray-700" />,
       name: getTranslation(locale, {
         en: "Dashboard",
         es: "Panel",
@@ -152,15 +186,7 @@ const Sidebar = () => {
       route: "/",
     },
     {
-      icon: (
-        <Image
-          src={FarmsIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Farms"
-        />
-      ),
+      icon: <LandPlot className="w-[20px] h-[20px] text-emerald-700" />,
       name: getTranslation(locale, {
         en: "Farms",
         es: "Campos",
@@ -171,15 +197,7 @@ const Sidebar = () => {
       route: "/Farms",
     },
     {
-      icon: (
-        <Image
-          src={BusinessIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Devices"
-        />
-      ),
+      icon: <Radio className="w-[20px] h-[20px] text-blue-600" />,
       name: getTranslation(locale, {
         en: "Devices",
         es: "Dispositivos",
@@ -193,15 +211,7 @@ const Sidebar = () => {
 
   const inventoryList = [
     {
-      icon: (
-        <Image
-          src={TractorsIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Tractors"
-        />
-      ),
+      icon: <Tractor className="w-[20px] h-[20px] text-green-700" />,
       name: getTranslation(locale, {
         en: "Tractors",
         es: "Tractores",
@@ -212,15 +222,7 @@ const Sidebar = () => {
       route: "/Inventory",
     },
     {
-      icon: (
-        <Image
-          src={LoanssIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Attachments"
-        />
-      ),
+      icon: <Wrench className="w-[20px] h-[20px] text-gray-700" />,
       name: getTranslation(locale, {
         en: "Attachments",
         es: "Adjuntos",
@@ -231,15 +233,7 @@ const Sidebar = () => {
       route: "/Attachments",
     },
     {
-      icon: (
-        <Image
-          src={InvestorsIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Store"
-        />
-      ),
+      icon: <Store className="w-[20px] h-[20px] text-blue-600" />,
       name: getTranslation(locale, {
         en: "Store",
         es: "Tienda",
@@ -250,15 +244,7 @@ const Sidebar = () => {
       route: "/Store",
     },
     {
-      icon: (
-        <Image
-          src={FarmerIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Storetractors"
-        />
-      ),
+      icon: <Layers className="w-[20px] h-[20px] text-emerald-600" />,
       name: getTranslation(locale, {
         en: "Storetractors",
         es: "Tractores de Tienda",
@@ -269,15 +255,7 @@ const Sidebar = () => {
       route: "/Storetractors",
     },
     {
-      icon: (
-        <Image
-          src={FarmerIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Category"
-        />
-      ),
+      icon: <LayoutGrid className="w-[20px] h-[20px] text-indigo-600" />,
       name: getTranslation(locale, {
         en: "Category",
         es: "Categoria",
@@ -288,15 +266,7 @@ const Sidebar = () => {
       route: "/Category",
     },
     {
-      icon: (
-        <Image
-          src={BusinessIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Services"
-        />
-      ),
+      icon: <Settings2 className="w-[20px] h-[20px] text-amber-600" />,
       name: getTranslation(locale, {
         en: "Services",
         es: "Servicios",
@@ -310,15 +280,7 @@ const Sidebar = () => {
 
   const middleLeftSideList = [
     {
-      icon: (
-        <Image
-          src={StatementsIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Statements"
-        />
-      ),
+      icon: <FileText className="w-[20px] h-[20px] text-blue-600" />,
       name: getTranslation(locale, {
         en: "Statements",
         es: "Declaraciones",
@@ -329,15 +291,7 @@ const Sidebar = () => {
       route: "#",
     },
     {
-      icon: (
-        <Image
-          src={PaymentHistoryIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Payment History"
-        />
-      ),
+      icon: <History className="w-[20px] h-[20px] text-emerald-600" />,
       name: getTranslation(locale, {
         en: "Payment History",
         es: "Historial de pagos",
@@ -348,15 +302,7 @@ const Sidebar = () => {
       route: "/PaymentHistory",
     },
     {
-      icon: (
-        <Image
-          src={PaymentMethodsIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Payment Methods"
-        />
-      ),
+      icon: <CreditCard className="w-[20px] h-[20px] text-indigo-600" />,
       name: getTranslation(locale, {
         en: "Payment Methods",
         es: "Métodos de pago",
@@ -367,15 +313,7 @@ const Sidebar = () => {
       route: "#",
     },
     {
-      icon: (
-        <Image
-          src={AccountingIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Accounting"
-        />
-      ),
+      icon: <Calculator className="w-[20px] h-[20px] text-amber-600" />,
       name: getTranslation(locale, {
         en: "Accounting",
         es: "Contabilidad",
@@ -389,15 +327,7 @@ const Sidebar = () => {
 
   const bookingList = [
     {
-      icon: (
-        <Image
-          src={BookingIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Bookings"
-        />
-      ),
+      icon: <CalendarCheck className="w-[20px] h-[20px] text-blue-600" />,
       name: getTranslation(locale, {
         en: "Bookings",
         es: "Reservaciones",
@@ -408,15 +338,7 @@ const Sidebar = () => {
       route: "/Bookings",
     },
     {
-      icon: (
-        <Image
-          src={LogIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Lease"
-        />
-      ),
+      icon: <FileSignature className="w-[20px] h-[20px] text-teal-600" />,
       name: getTranslation(locale, {
         en: "Lease",
         es: "Arrendamiento",
@@ -427,15 +349,7 @@ const Sidebar = () => {
       route: "/Lease",
     },
     {
-      icon: (
-        <Image
-          src={LogOutIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Share"
-        />
-      ),
+      icon: <Share2 className="w-[20px] h-[20px] text-purple-600" />,
       name: getTranslation(locale, {
         en: "Share",
         es: "Compartir",
@@ -446,15 +360,7 @@ const Sidebar = () => {
       route: "#",
     },
     {
-      icon: (
-        <Image
-          src={SubcriptionsIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Subscriptions"
-        />
-      ),
+      icon: <Repeat className="w-[20px] h-[20px] text-green-600" />,
       name: getTranslation(locale, {
         en: "Subscriptions",
         es: "Suscripciones",
@@ -465,18 +371,10 @@ const Sidebar = () => {
       route: "/Subscriptions",
     },
     {
-      icon: (
-        <Image
-          src={SubcriptionsIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Subscriptions"
-        />
-      ),
+      icon: <HelpCircle className="w-[20px] h-[20px] text-amber-600" />,
       name: getTranslation(locale, {
         en: "inquiry",
-        es: "",
+        es: "Consultas",
         ay: "",
         qu: "",
         gn: "",
@@ -488,15 +386,7 @@ const Sidebar = () => {
   // <<< ADDED: NEW DATA LIST FOR CREDIT SECTION
   const creditList = [
     {
-      icon: (
-        <Image
-          src={StatementsIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Currency"
-        />
-      ),
+      icon: <Coins className="w-[20px] h-[20px] text-yellow-600" />,
       name: getTranslation(locale, {
         en: "Currency",
         es: "Moneda",
@@ -507,15 +397,7 @@ const Sidebar = () => {
       route: "/Currency",
     },
     {
-      icon: (
-        <Image
-          src={PaymentHistoryIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Package"
-        />
-      ),
+      icon: <Package className="w-[20px] h-[20px] text-blue-600" />,
       name: getTranslation(locale, {
         en: "Package",
         es: "Paquete",
@@ -526,15 +408,7 @@ const Sidebar = () => {
       route: "/Package",
     },
     {
-      icon: (
-        <Image
-          src={AffiliationIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Coupon"
-        />
-      ),
+      icon: <Ticket className="w-[20px] h-[20px] text-purple-600" />,
       name: getTranslation(locale, {
         en: "Coupon",
         es: "Cupón",
@@ -545,15 +419,7 @@ const Sidebar = () => {
       route: "/Coupon",
     },
     {
-      icon: (
-        <Image
-          src={StatementsIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Purchase"
-        />
-      ),
+      icon: <ShoppingCart className="w-[20px] h-[20px] text-emerald-600" />,
       name: getTranslation(locale, {
         en: "Purchase",
         es: "Compra",
@@ -567,15 +433,7 @@ const Sidebar = () => {
 
   const SettingsOptions = [
     {
-      icon: (
-        <Image
-          src={RolesIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Roles"
-        />
-      ),
+      icon: <Shield className="w-[20px] h-[20px] text-blue-600" />,
       name: getTranslation(locale, {
         en: "Roles",
         es: "Roles",
@@ -586,15 +444,7 @@ const Sidebar = () => {
       route: "/Roles",
     },
     {
-      icon: (
-        <Image
-          src={PermissionsIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Permission"
-        />
-      ),
+      icon: <Lock className="w-[20px] h-[20px] text-amber-600" />,
       name: getTranslation(locale, {
         en: "Permission",
         es: "Permiso",
@@ -605,15 +455,7 @@ const Sidebar = () => {
       route: "/Permissions",
     },
     {
-      icon: (
-        <Image
-          src={UsersIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Country"
-        />
-      ),
+      icon: <Globe className="w-[20px] h-[20px] text-emerald-600" />,
       name: getTranslation(locale, {
         en: "Country",
         es: "País",
@@ -624,18 +466,10 @@ const Sidebar = () => {
       route: "/Country",
     },
     {
-      icon: (
-        <Image
-          src={UsersIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="City"
-        />
-      ),
+      icon: <Building2 className="w-[20px] h-[20px] text-indigo-600" />,
       name: getTranslation(locale, {
         en: "City",
-        es: "",
+        es: "Ciudad",
         ay: "",
         qu: "",
         gn: "",
@@ -643,18 +477,10 @@ const Sidebar = () => {
       route: "/City",
     },
     {
-      icon: (
-        <Image
-          src={AffiliationIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Notifications"
-        />
-      ),
+      icon: <ScrollText className="w-[20px] h-[20px] text-purple-600" />,
       name: getTranslation(locale, {
         en: "Logs",
-        es: "",
+        es: "Registros",
         ay: "",
         qu: "",
         gn: "",
@@ -665,18 +491,10 @@ const Sidebar = () => {
 
   const UsersOptions = [
     {
-      icon: (
-        <Image
-          src={RolesIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Roles"
-        />
-      ),
+      icon: <Briefcase className="w-[20px] h-[20px] text-amber-700" />,
       name: getTranslation(locale, {
         en: "Owner",
-        es: "",
+        es: "Propietarios",
         ay: "",
         qu: "",
         gn: "",
@@ -684,15 +502,7 @@ const Sidebar = () => {
       route: "/Owner",
     },
     {
-      icon: (
-        <Image
-          src={FarmerIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Farmers"
-        />
-      ),
+      icon: <Sprout className="w-[20px] h-[20px] text-green-700" />,
       name: getTranslation(locale, {
         en: "Farmers",
         es: "Agricultores",
@@ -703,15 +513,7 @@ const Sidebar = () => {
       route: "/Farmers",
     },
     {
-      icon: (
-        <Image
-          src={AgentIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Agents"
-        />
-      ),
+      icon: <Headphones className="w-[20px] h-[20px] text-indigo-600" />,
       name: getTranslation(locale, {
         en: "Agents",
         es: "Agentes",
@@ -722,15 +524,7 @@ const Sidebar = () => {
       route: "/Agent",
     },
     {
-      icon: (
-        <Image
-          src={DealersIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Dealers"
-        />
-      ),
+      icon: <Store className="w-[20px] h-[20px] text-blue-700" />,
       name: getTranslation(locale, {
         en: "Dealers",
         es: "Distribuidores",
@@ -741,15 +535,7 @@ const Sidebar = () => {
       route: "/Dealer",
     },
     {
-      icon: (
-        <Image
-          src={OperatorsIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Operators"
-        />
-      ),
+      icon: <HardHat className="w-[20px] h-[20px] text-orange-600" />,
       name: getTranslation(locale, {
         en: "Operators",
         es: "Operadores",
@@ -760,21 +546,13 @@ const Sidebar = () => {
       route: "/Operator",
     },
     {
-      icon: (
-        <Image
-          src={OperatorsIcon || "/placeholder.svg"}
-          className="w-[20px] h-auto object-cover"
-          width={20}
-          height={20}
-          alt="Admins"
-        />
-      ),
+      icon: <ShieldCheck className="w-[20px] h-[20px] text-red-600" />,
       name: getTranslation(locale, {
         en: "Admins",
-        es: "",
-        ay: "",
-        qu: "",
-        gn: "",
+        es: "Administradores",
+        ay: "Jach'a p'iqinchiri",
+        qu: "Kamayuq",
+        gn: "Mburuvicha",
       }),
       route: "/Admin",
     },
@@ -878,13 +656,7 @@ const Sidebar = () => {
               title={translations[locale]?.users || translations.en.users}
               placement="right"
             >
-              <Image
-                src={UsersIcon || "/placeholder.svg"} // <<< CORRECTED ICON
-                className="w-[20px] h-auto object-cover"
-                width={20}
-                height={20}
-                alt="Users"
-              />
+              <Users className="w-[20px] h-[20px] text-gray-700" />
             </Tooltip>
           </div>
 
@@ -920,13 +692,7 @@ const Sidebar = () => {
               title={translations[locale]?.bookings || translations.en.bookings}
               placement="right"
             >
-              <Image
-                src={BookingIcon || "/placeholder.svg"} // <<< CORRECTED ICON
-                className="w-[20px] h-auto object-cover"
-                width={20}
-                height={20}
-                alt="Bookings"
-              />
+              <CalendarCheck className="w-[20px] h-[20px] text-gray-700" />
             </Tooltip>
           </div>
 
@@ -964,13 +730,7 @@ const Sidebar = () => {
               }
               placement="right"
             >
-              <Image
-                src={TractorsIcon || "/placeholder.svg"} // <<< CORRECTED ICON
-                className="w-[20px] h-auto object-cover"
-                width={20}
-                height={20}
-                alt="Inventory"
-              />
+              <Tractor className="w-[20px] h-[20px] text-gray-700" />
             </Tooltip>
           </div>
 
@@ -1007,13 +767,7 @@ const Sidebar = () => {
               title={translations[locale]?.credit || translations.en.credit}
               placement="right"
             >
-              <Image
-                src={LoanssIcon || "/placeholder.svg"}
-                className="w-[20px] h-auto object-cover"
-                width={20}
-                height={20}
-                alt="Credit"
-              />
+              <Coins className="w-[20px] h-[20px] text-amber-600" />
             </Tooltip>
           </div>
 
@@ -1050,7 +804,7 @@ const Sidebar = () => {
               title={translations[locale]?.billing || translations.en.billing}
               placement="right"
             >
-              <ReceiptIcon />
+              <Receipt className="w-[20px] h-[20px] text-gray-700" />
             </Tooltip>
           </div>
 
@@ -1085,7 +839,7 @@ const Sidebar = () => {
             title={translations[locale]?.settings || translations.en.settings}
             placement="right"
           >
-            <SettingsIcon />
+            <Settings className="w-[20px] h-[20px] text-gray-700" />
           </Tooltip>
         </div>
 

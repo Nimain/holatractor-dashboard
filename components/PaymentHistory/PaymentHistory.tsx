@@ -225,43 +225,76 @@ const PaymentHistory = () => {
 
       {/* Add Payment Modal */}
       {openModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-[400px] relative">
-            <h2 className="text-xl font-semibold mb-4">Add New Payment</h2>
-            <input
-              type="number"
-              placeholder="Amount in $"
-              value={form.amount}
-              onChange={(e) => setForm({ ...form, amount: e.target.value })}
-              className="w-full border rounded p-2 mb-3 focus:outline-none focus:ring-2 focus:ring-black"
-            />
-            <select
-              value={form.status}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  status: e.target.value as Payment["status"],
-                })
-              }
-              className="w-full border rounded p-2 focus:outline-none focus:ring-2 focus:ring-black"
-            >
-              <option value="Pending">Pending</option>
-              <option value="Success">Success</option>
-              <option value="Failed">Failed</option>
-              <option value="NotGenerated">Not Generated</option>
-            </select>
-            <div className="flex justify-end gap-3 mt-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-[440px] shadow-2xl border border-gray-100 overflow-hidden relative">
+            <div className="bg-slate-900 p-6 text-white relative">
+              <p className="text-xs uppercase tracking-wider font-semibold text-emerald-400 mb-1">Financial Records</p>
+              <h2 className="text-xl font-bold">Add New Payment</h2>
+              <p className="text-xs text-slate-300 mt-1">Record a manual transaction or settlement entry.</p>
               <button
+                type="button"
                 onClick={() => setOpenModal(false)}
-                className="px-4 py-2 rounded border hover:bg-gray-50"
+                className="absolute top-5 right-5 text-slate-400 hover:text-white bg-white/10 hover:bg-white/20 rounded-xl p-1.5 transition-all text-xs"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                  Payment Amount (USD) *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={form.amount}
+                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                    className="w-full pl-8 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-medium"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                  Transaction Status *
+                </label>
+                <select
+                  value={form.status}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      status: e.target.value as Payment["status"],
+                    })
+                  }
+                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-medium"
+                >
+                  <option value="Pending">🟡 Pending Verification</option>
+                  <option value="Success">🟢 Completed (Success)</option>
+                  <option value="Failed">🔴 Failed / Rejected</option>
+                  <option value="NotGenerated">⚪ Not Generated</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="p-5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setOpenModal(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-xl border border-slate-200 hover:bg-slate-100 transition-all"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleAddPayment}
-                className="px-4 py-2 rounded bg-black text-white hover:bg-gray-800"
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all active:scale-[0.98]"
               >
-                Add Payment
+                Record Payment
               </button>
             </div>
           </div>

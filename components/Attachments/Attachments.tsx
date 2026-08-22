@@ -556,33 +556,37 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
 
       {/* Edit Modal */}
       {editModalOpen && selectedAttachment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center overflow-y-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-2xl mx-4 my-8 p-6 relative">
-            <button
-              onClick={closeAllModals}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <X size={20} />
-            </button>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-2xl my-8 shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden relative">
+            <div className="bg-slate-900 p-6 text-white relative">
+              <p className="text-xs uppercase tracking-wider font-semibold text-emerald-400 mb-1">Inventory Management</p>
+              <h2 className="text-xl font-bold">Edit Attachment</h2>
+              <p className="text-xs text-slate-300 mt-1">Update attachment specifications, fixed pricing, and media gallery.</p>
+              <button
+                onClick={closeAllModals}
+                className="absolute top-5 right-5 text-slate-400 hover:text-white bg-white/10 hover:bg-white/20 rounded-xl p-1.5 transition-all text-xs"
+              >
+                ✕
+              </button>
+            </div>
 
-            <h2 className="text-xl font-semibold mb-6">Edit Attachment</h2>
-
-            <div className="space-y-4">
+            <div className="p-6 space-y-4 max-h-[calc(90vh-180px)] overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
               <div>
-                <label className="block text-sm font-medium mb-1">Name</label>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-2">Attachment Name *</label>
                 <input
                   type="text"
                   value={editForm.name}
                   onChange={(e) =>
                     setEditForm((prev) => ({ ...prev, name: e.target.value }))
                   }
-                  className={`w-full px-3 py-2 border rounded-lg ${themeClasses.inputBg} ${themeClasses.borderColor} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                  className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
+                  placeholder="e.g. Heavy Duty Disc Harrow"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Description
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-2">
+                  Detailed Description
                 </label>
                 <textarea
                   value={editForm.description}
@@ -592,13 +596,15 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
                       description: e.target.value,
                     }))
                   }
-                  className={`w-full px-3 py-2 border rounded-lg h-24 ${themeClasses.inputBg} ${themeClasses.borderColor} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                  rows={3}
+                  className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
+                  placeholder="Equipment condition, compatibility, and technical specs..."
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Fixed Price
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-2">
+                  Fixed Price ($ USD) *
                 </label>
                 <input
                   type="number"
@@ -609,64 +615,70 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
                       fixed_price: e.target.value,
                     }))
                   }
-                  className={`w-full px-3 py-2 border rounded-lg ${themeClasses.inputBg} ${themeClasses.borderColor} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                  className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
+                  placeholder="0.00"
                 />
               </div>
 
               {/* Existing Images */}
               {editForm.images.length > 0 && (
-                <div className="grid grid-cols-3 gap-3 mb-3">
-                  {editForm.images.map((image, index) => (
-                    <div
-                      key={index}
-                      className="relative group w-full h-24 rounded-lg overflow-hidden"
-                    >
-                      <SafeImage
-                        src={image}
-                        alt={`Current ${index + 1}`}
-                        className="w-full h-full"
-                      />
-                      <button
-                        onClick={() => handleRemoveExistingImage(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                <div>
+                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-2">Current Media Gallery</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {editForm.images.map((image, index) => (
+                      <div
+                        key={index}
+                        className="relative group w-full h-24 rounded-xl overflow-hidden border border-slate-200 shadow-sm"
                       >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  ))}
+                        <SafeImage
+                          src={image}
+                          alt={`Current ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveExistingImage(index)}
+                          className="absolute top-1.5 right-1.5 bg-red-500/90 text-white rounded-lg p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
               {/* New Previews */}
               {previewImages.length > 0 && (
-                <div className="grid grid-cols-3 gap-3 mb-3">
-                  {previewImages.map((preview, index) => (
-                    <div
-                      key={index}
-                      className="relative group w-full h-24 rounded-lg overflow-hidden"
-                    >
-                      <Image
-                        src={preview}
-                        alt={`Preview ${index + 1}`}
-                        className="w-full h-full object-cover"
-                        fill
-                        unoptimized
-                      />
-                      <button
-                        onClick={() => handleRemoveNewImage(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                <div>
+                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-2">New Uploads</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {previewImages.map((preview, index) => (
+                      <div
+                        key={index}
+                        className="relative group w-full h-24 rounded-xl overflow-hidden border border-slate-200 shadow-sm"
                       >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  ))}
+                        <Image
+                          src={preview}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-full object-cover"
+                          fill
+                          unoptimized
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveNewImage(index)}
+                          className="absolute top-1.5 right-1.5 bg-red-500/90 text-white rounded-lg p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Add Images
-                </label>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -676,28 +688,31 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
                   className="hidden"
                 />
                 <button
+                  type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-xl hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-all"
                 >
-                  <Upload size={16} />
-                  Upload Images
+                  <Upload size={14} className="text-emerald-600" />
+                  Upload Additional Images
                 </button>
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="p-5 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
               <button
+                type="button"
                 onClick={closeAllModals}
-                className="px-4 py-2 rounded-lg border hover:bg-gray-50"
+                className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-all"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleEditSave}
                 disabled={updatingAttachment || uploadingImages}
-                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                className="px-5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 disabled:opacity-50 shadow-md transition-all active:scale-[0.98]"
               >
-                {updatingAttachment || uploadingImages ? "Saving..." : "Save"}
+                {updatingAttachment || uploadingImages ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </div>
@@ -706,39 +721,39 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
 
       {/* View Modal */}
       {viewModalOpen && selectedAttachment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center overflow-y-auto">
-          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-2xl mx-4 my-8 p-6 relative">
-            <button
-              onClick={closeAllModals}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <X size={20} />
-            </button>
-
-            <h2 className="text-xl font-semibold mb-6">Attachment Details</h2>
-
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-500">Name</p>
-                <p className="font-medium">{selectedAttachment.name}</p>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-2xl my-8 shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden relative">
+            <div className="bg-slate-900 p-6 text-white relative">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-wider font-semibold text-emerald-400 mb-1">Equipment Details</p>
+                  <h2 className="text-xl font-bold">{selectedAttachment.name}</h2>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-slate-400">Fixed Value</p>
+                  <p className="text-lg font-bold text-emerald-400">{formatPrice(selectedAttachment.fixedPrice)}</p>
+                </div>
               </div>
+              <button
+                onClick={closeAllModals}
+                className="absolute top-5 right-5 text-slate-400 hover:text-white bg-white/10 hover:bg-white/20 rounded-xl p-1.5 transition-all text-xs"
+              >
+                ✕
+              </button>
+            </div>
 
-              <div>
-                <p className="text-sm text-gray-500">Description</p>
-                <p>{selectedAttachment.description || "No description"}</p>
-              </div>
-
-              <div>
-                <p className="text-sm text-gray-500">Fixed Price</p>
-                <p className="font-medium">
-                  {formatPrice(selectedAttachment.fixedPrice)}
+            <div className="p-6 space-y-5 max-h-[calc(90vh-160px)] overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+              <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Description</p>
+                <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+                  {selectedAttachment.description || "No description provided."}
                 </p>
               </div>
 
               <div>
-                <p className="text-sm text-gray-500 mb-2">Images</p>
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-3">Gallery Preview</p>
                 {selectedAttachment.images?.length ? (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     {selectedAttachment.images
                       .filter(
                         (img) =>
@@ -747,23 +762,33 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
                       .map((image, index) => (
                         <div
                           key={index}
-                          className="relative w-full h-32 rounded-lg overflow-hidden"
+                          className="relative w-full h-36 rounded-xl overflow-hidden border border-slate-200 shadow-sm group"
                         >
                           <SafeImage
                             src={image}
                             alt={`${selectedAttachment.name} ${index + 1}`}
-                            className="w-full h-full"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         </div>
                       ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8 bg-gray-50 rounded-lg">
-                    <Camera size={48} className="text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-500">No images available</p>
+                  <div className="text-center py-10 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-dashed border-slate-200">
+                    <Camera size={36} className="text-slate-400 mx-auto mb-2" />
+                    <p className="text-xs text-slate-500 font-medium">No media uploaded for this attachment</p>
                   </div>
                 )}
               </div>
+            </div>
+
+            <div className="p-5 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 flex justify-end">
+              <button
+                type="button"
+                onClick={closeAllModals}
+                className="px-5 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-all shadow-md active:scale-[0.98]"
+              >
+                Close Window
+              </button>
             </div>
           </div>
         </div>
@@ -771,42 +796,54 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
 
       {/* Price Modal */}
       {priceModalOpen && selectedAttachment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-          <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md p-6 relative">
-            <button
-              onClick={closeAllModals}
-              className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <X size={20} />
-            </button>
-
-            <h2 className="text-xl font-semibold mb-6">Update Fixed Price</h2>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Fixed Price
-              </label>
-              <input
-                type="number"
-                value={fixedPrice}
-                onChange={(e) => setFixedPrice(e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg ${themeClasses.inputBg} ${themeClasses.borderColor} focus:outline-none focus:ring-2 focus:ring-blue-500`}
-              />
-            </div>
-
-            <div className="flex justify-end gap-3 mt-6">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden relative">
+            <div className="bg-slate-900 p-6 text-white relative">
+              <p className="text-xs uppercase tracking-wider font-semibold text-emerald-400 mb-1">Pricing Configuration</p>
+              <h2 className="text-xl font-bold">Update Fixed Price</h2>
+              <p className="text-xs text-slate-300 mt-1">Set the baseline purchase/rental price for {selectedAttachment.name}.</p>
               <button
                 onClick={closeAllModals}
-                className="px-4 py-2 rounded-lg border hover:bg-gray-50"
+                className="absolute top-5 right-5 text-slate-400 hover:text-white bg-white/10 hover:bg-white/20 rounded-xl p-1.5 transition-all text-xs"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider mb-2">
+                  Fixed Price ($ USD) *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-semibold text-sm">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={fixedPrice}
+                    onChange={(e) => setFixedPrice(e.target.value)}
+                    className="w-full pl-8 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-medium"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeAllModals}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-all"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handlePriceSave}
-                disabled={updatingPrice}
-                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                disabled={updatingAttachment}
+                className="px-5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 disabled:opacity-50 shadow-md transition-all active:scale-[0.98]"
               >
-                {updatingPrice ? "Saving..." : "Save"}
+                {updatingAttachment ? "Updating..." : "Update Price"}
               </button>
             </div>
           </div>

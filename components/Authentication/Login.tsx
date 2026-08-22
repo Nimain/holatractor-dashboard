@@ -54,7 +54,15 @@ const LogInPage = () => {
   };
 
   const setCookiesAndRedirect = (data: any) => {
-    const user = decode(data.access_token);
+    const rawUser: any = decode(data.access_token) || {};
+    const user = {
+      ...rawUser,
+      userId: rawUser?.userId || rawUser?.id || rawUser?.sub || rawUser?._id || data?.user?.id || data?.user?.userId || "",
+      name: rawUser?.name || `${rawUser?.first_name || ""} ${rawUser?.last_name || ""}`.trim() || data?.user?.name || "User",
+      email: rawUser?.email || data?.user?.email || "",
+      email_varified: rawUser?.email_varified ?? rawUser?.emailVerified ?? false,
+      image: rawUser?.image || data?.user?.image || "",
+    };
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + 1);
 

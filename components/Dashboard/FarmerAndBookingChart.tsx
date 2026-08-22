@@ -42,6 +42,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import axios from "axios";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage } from "@/utils/Toastify/Messages";
 import { Badge } from "@/components/ui/badge";
@@ -178,25 +179,44 @@ export function FarmerAndBookingChart() {
     setLoading(true);
     try {
       // Fetch farmers data
-      const farmersResponse = await renderInstance.get("/farmer");
-      const farmers: Farmer[] = farmersResponse.data;
+      let farmers: Farmer[] = [];
+      try {
+        const localRes = await axios.get("/api/farmer");
+        if (Array.isArray(localRes.data) && localRes.data.length > 0) {
+          farmers = localRes.data;
+        }
+      } catch {}
+
+      if (farmers.length === 0) {
+        try {
+          const farmersResponse = await renderInstance.get("/farmer");
+          farmers = Array.isArray(farmersResponse.data)
+            ? farmersResponse.data
+            : (farmersResponse.data?.farmers || farmersResponse.data?.data || []);
+        } catch (fErr) {
+          console.error("Farmer fetch error in FarmerAndBookingChart:", fErr);
+        }
+      }
 
       // Fetch bookings data with token from cookies
-      const cookies = document.cookie
-        .split("; ")
-        .reduce((acc: Record<string, string>, cookie) => {
-          const [key, value] = cookie.split("=");
-          acc[key] = value;
-          return acc;
-        }, {} as Record<string, string>);
-      const token = cookies["access_token"];
+      let bookings: Booking[] = [];
+      try {
+        const cookies = document.cookie
+          .split("; ")
+          .reduce((acc: Record<string, string>, cookie) => {
+            const [key, value] = cookie.split("=");
+            if (key) acc[key] = value;
+            return acc;
+          }, {} as Record<string, string>);
+        const token = cookies["access_token"];
 
-      const bookingsResponse = await renderInstance.get("/booking", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const bookings: Booking[] = bookingsResponse.data;
+        const bookingsResponse = await renderInstance.get("/booking", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        bookings = Array.isArray(bookingsResponse.data) ? bookingsResponse.data : [];
+      } catch (bErr) {
+        console.error("Booking fetch error in FarmerAndBookingChart:", bErr);
+      }
 
       // Process data for the chart
       const processedData = processChartData(farmers, bookings);
@@ -209,22 +229,29 @@ export function FarmerAndBookingChart() {
       // Calculate growth rates (comparing to previous month)
       calculateGrowthRates(farmers, bookings);
     } catch (err) {
-      // errorMessage("Error fetching data for chart")
       console.error("Error fetching data:", err);
+      setChartData(processChartData([], []));
+      setTotalFarmers(0);
+      setTotalBookings(0);
+      setGrowthRate({ farmer: 0, booking: 0 });
     } finally {
       setLoading(false);
     }
   };
 
-  const calculateGrowthRates = (farmers: Farmer[], bookings: Booking[]) => {
+  const calculateGrowthRates = (farmers: Farmer[] = [], bookings: Booking[] = []) => {
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth();
     const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
     const currentYear = Number.parseInt(value);
 
+    const safeFarmers = Array.isArray(farmers) ? farmers : [];
+    const safeBookings = Array.isArray(bookings) ? bookings : [];
+
     // Count farmers by month
     const farmersByMonth = [0, 0]; // [previousMonth, currentMonth]
-    farmers.forEach((farmer) => {
+    safeFarmers.forEach((farmer) => {
+      if (!farmer?.createdAt) return;
       const createdAt = new Date(farmer.createdAt);
       if (createdAt.getFullYear() === currentYear) {
         const month = createdAt.getMonth();
@@ -235,7 +262,8 @@ export function FarmerAndBookingChart() {
 
     // Count bookings by month
     const bookingsByMonth = [0, 0]; // [previousMonth, currentMonth]
-    bookings.forEach((booking) => {
+    safeBookings.forEach((booking) => {
+      if (!booking?.createdAt) return;
       const createdAt = new Date(booking.createdAt);
       if (createdAt.getFullYear() === currentYear) {
         const month = createdAt.getMonth();

@@ -6,6 +6,7 @@ import MoreVertIcon from "@mui/icons-material/MoreVert"
 import EditIcon from "@mui/icons-material/Edit"
 import CloseIcon from "@mui/icons-material/Close"
 import type { Agent } from "@/utils/Types/types"
+import axios from "axios"
 import { renderInstance } from "@/utils/Axios/RenderInstance"
 import { errorMessage } from "@/utils/Toastify/Messages"
 import { Label } from "../ui/label"
@@ -54,24 +55,34 @@ const AgentSection = () => {
     else setIsSignUpCard(false)
   }
 
-  function fetchAllUsers() {
+  async function fetchAllUsers() {
     setLoading(true)
-    renderInstance
-      .get("/agent")
-      .then((res) => {
-        // Sort agents by creation date (newest first)
-        const sortedUsers = res.data.sort((a: Agent, b: Agent) => {
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        })
-        setUsers(sortedUsers)
-        setCurrentPage(1) // Reset to first page on fetch
+    try {
+      let agentList: Agent[] = []
+      try {
+        const localRes = await axios.get("/api/agent")
+        if (Array.isArray(localRes.data) && localRes.data.length > 0) {
+          agentList = localRes.data
+        }
+      } catch {}
+
+      if (agentList.length === 0) {
+        const res = await renderInstance.get("/agent")
+        agentList = Array.isArray(res.data)
+          ? res.data
+          : (res.data?.agents || res.data?.data || [])
+      }
+
+      const sortedUsers = [...agentList].sort((a: Agent, b: Agent) => {
+        return new Date(b?.createdAt || 0).getTime() - new Date(a?.createdAt || 0).getTime()
       })
-      .catch((err) => {
-        errorMessage("Error fetching user list")
-      })
-      .finally(() => {
-        setLoading(false)
-      })
+      setUsers(sortedUsers)
+      setCurrentPage(1)
+    } catch (err) {
+      errorMessage("Error fetching user list")
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -124,33 +135,48 @@ const AgentSection = () => {
               onClick={() => {
                 setOpen(true)
               }}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-sm transition-all"
             >
               New agent
             </Button>
           </DialogTrigger>
 
           <DialogContent
-            className="bg-white h-fit w-[90vw] sm:min-w-[400px] sm:max-w-[400px] overflow-auto"
+            className="bg-white rounded-2xl w-[95vw] max-w-[460px] p-0 overflow-hidden shadow-2xl border border-gray-100"
             style={{ scrollbarWidth: "none" }}
           >
-            <Label className="mb-2 text-lg font-medium">Name</Label>
+            {/* Modal Header */}
+            <div className="bg-slate-900 p-6 text-white relative">
+              <p className="text-xs uppercase tracking-wider font-semibold text-emerald-400 mb-1">Agent Network</p>
+              <h2 className="text-xl font-bold">Register New Agent</h2>
+              <p className="text-xs text-slate-300 mt-1">Enter the agent's full legal name to initiate registration.</p>
+            </div>
 
-            <Input
-              value={newAgentName}
-              onChange={(e) => {
-                handleNameChage(e.target.value)
-              }}
-              className="w-full"
-            />
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              <div>
+                <Label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                  Full Legal Name *
+                </Label>
+                <Input
+                  value={newAgentName}
+                  onChange={(e) => {
+                    handleNameChage(e.target.value)
+                  }}
+                  placeholder="e.g. Maria Fernanda Lopez"
+                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-medium"
+                />
+              </div>
+            </div>
 
-            <DialogFooter>
+            {/* Modal Footer */}
+            <div className="p-5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
               <DialogClose asChild>
                 <Button
                   onClick={() => {
                     setOpen(false)
                   }}
-                  className="w-full sm:w-auto"
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-xl border border-slate-200 hover:bg-slate-100 transition-all bg-white"
                 >
                   Cancel
                 </Button>
@@ -164,12 +190,12 @@ const AgentSection = () => {
                   onClick={() => {
                     errorMessage("Please give your name")
                   }}
-                  className="w-full sm:w-auto"
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all active:scale-[0.98]"
                 >
-                  Next
+                  Next Step →
                 </Button>
               )}
-            </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
@@ -460,119 +486,117 @@ const AgentSection = () => {
       {/* Mobile Edit Modal */}
       {selectedAgent && (
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
-          <DialogContent className="bg-white w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto p-0">
-            {/* Header with gradient */}
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 relative">
+          <DialogContent className="bg-white w-[95vw] max-w-[520px] max-h-[90vh] overflow-hidden p-0 rounded-2xl border border-gray-100 shadow-2xl">
+            {/* Header with Dark Modern Slate & Emerald Accent */}
+            <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 relative overflow-hidden text-white">
+              <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+              
               <button 
                 onClick={() => setEditOpen(false)}
-                className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full p-1 transition-colors"
+                className="absolute top-4 right-4 text-slate-400 hover:text-white bg-white/10 hover:bg-white/20 rounded-xl p-2 transition-all"
               >
-                <CloseIcon />
+                <CloseIcon fontSize="small" />
               </button>
               
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 relative z-10">
                 {selectedAgent.user.image ? (
                   <Image
                     src={selectedAgent.user.image}
                     alt={selectedAgent.user.first_name}
-                    width={80}
-                    height={80}
-                    className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg"
+                    width={72}
+                    height={72}
+                    className="w-[72px] h-[72px] rounded-2xl object-cover ring-4 ring-white/10 shadow-xl"
                     unoptimized={true}
                   />
                 ) : (
-                  <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center text-blue-600 font-bold text-3xl shadow-lg">
+                  <div className="w-[72px] h-[72px] rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white font-bold text-2xl shadow-xl ring-4 ring-white/10">
                     {selectedAgent.user.first_name.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <div className="text-white">
-                  <h2 className="text-2xl font-bold">
-                    {selectedAgent.user.first_name} {selectedAgent.user.middle_name} {selectedAgent.user.last_name}
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      Agent
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                      selectedAgent.user.emailVerified
+                        ? 'bg-green-500/20 text-green-300'
+                        : 'bg-amber-500/20 text-amber-300'
+                    }`}>
+                      {selectedAgent.user.emailVerified ? '● Verified' : '○ Pending'}
+                    </span>
+                  </div>
+                  <h2 className="text-xl font-bold tracking-tight text-white">
+                    {selectedAgent.user.first_name} {selectedAgent.user.middle_name || ''} {selectedAgent.user.last_name}
                   </h2>
-                  <p className="text-blue-100 text-sm">{selectedAgent.user.email}</p>
+                  <p className="text-slate-300 text-xs mt-0.5 break-all">{selectedAgent.user.email}</p>
                 </div>
               </div>
             </div>
 
             {/* Content */}
-            <div className="p-6 space-y-4">
-              {/* Status & Verification */}
-              <div className="flex gap-3">
-                <div className="flex-1 bg-gray-50 rounded-lg p-4">
-                  <p className="text-xs text-gray-500 mb-1">Status</p>
-                  <span className={`inline-block px-3 py-1 text-sm font-medium rounded-full ${
-                    selectedAgent.status === 'active' 
-                      ? 'bg-green-100 text-green-700' 
-                      : 'bg-gray-100 text-gray-700'
-                  }`}>
-                    {selectedAgent.status}
-                  </span>
+            <div className="p-6 space-y-4 max-h-[calc(90vh-180px)] overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+              {/* Bento Info Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5">
+                  <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1">Status</p>
+                  <div className="flex items-center gap-1.5 font-semibold text-sm text-slate-800">
+                    <span className={`w-2 h-2 rounded-full ${selectedAgent.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+                    <span className="capitalize">{selectedAgent.status || 'Active'}</span>
+                  </div>
                 </div>
                 
-                <div className="flex-1 bg-gray-50 rounded-lg p-4">
-                  <p className="text-xs text-gray-500 mb-1">Email Verified</p>
-                  <span className={`inline-block px-3 py-1 text-sm font-medium rounded-full ${
-                    selectedAgent.user.emailVerified 
-                      ? 'bg-green-100 text-green-700' 
-                      : 'bg-red-100 text-red-700'
-                  }`}>
-                    {selectedAgent.user.emailVerified ? 'Verified' : 'Not Verified'}
-                  </span>
+                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5">
+                  <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1">Role Type</p>
+                  <p className="font-semibold text-sm text-slate-800">Field Agent</p>
                 </div>
               </div>
 
-              {/* Details Grid */}
-              <div className="space-y-3">
-                <div className="border-b pb-3">
-                  <p className="text-xs text-gray-500 mb-1">Agent ID</p>
-                  <p className="font-medium text-gray-900">{selectedAgent.id}</p>
+              {/* Details List */}
+              <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-4 space-y-3">
+                <div className="flex justify-between items-center text-xs pb-2 border-b border-slate-200/60">
+                  <span className="text-slate-500">Agent Identifier</span>
+                  <span className="font-mono text-slate-800 font-medium text-[11px]">{selectedAgent.id}</span>
                 </div>
-
-                <div className="border-b pb-3">
-                  <p className="text-xs text-gray-500 mb-1">Email</p>
-                  <p className="font-medium text-gray-900 break-all">{selectedAgent.user.email}</p>
+                <div className="flex justify-between items-center text-xs pb-2 border-b border-slate-200/60">
+                  <span className="text-slate-500">Contact Email</span>
+                  <span className="font-medium text-slate-900">{selectedAgent.user.email}</span>
                 </div>
-
-                <div className="border-b pb-3">
-                  <p className="text-xs text-gray-500 mb-1">Location ID</p>
-                  <p className="font-medium text-gray-900">
-                    {selectedAgent.loaction_id || selectedAgent.user.location_id || 'N/A'}
-                  </p>
+                <div className="flex justify-between items-center text-xs pb-2 border-b border-slate-200/60">
+                  <span className="text-slate-500">Location ID</span>
+                  <span className="font-medium text-slate-800">{selectedAgent.loaction_id || selectedAgent.user.location_id || 'N/A'}</span>
                 </div>
-
-                <div className="border-b pb-3">
-                  <p className="text-xs text-gray-500 mb-1">Document ID</p>
-                  <p className="font-medium text-gray-900">{selectedAgent.document_id || 'N/A'}</p>
+                <div className="flex justify-between items-center text-xs pb-2 border-b border-slate-200/60">
+                  <span className="text-slate-500">Document ID</span>
+                  <span className="font-medium text-slate-800">{selectedAgent.document_id || 'N/A'}</span>
                 </div>
-
-                <div className="border-b pb-3">
-                  <p className="text-xs text-gray-500 mb-1">Joined At</p>
-                  <p className="font-medium text-gray-900">{formatDate(selectedAgent.createdAt)}</p>
+                <div className="flex justify-between items-center text-xs pb-2 border-b border-slate-200/60">
+                  <span className="text-slate-500">Joined At</span>
+                  <span className="font-medium text-slate-800">{formatDate(selectedAgent.createdAt)}</span>
                 </div>
-
-                <div className="pb-3">
-                  <p className="text-xs text-gray-500 mb-1">Last Updated</p>
-                  <p className="font-medium text-gray-900">{formatDate(selectedAgent.updatedAt)}</p>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-500">Last Modified</span>
+                  <span className="font-medium text-slate-800">{formatDate(selectedAgent.updatedAt)}</span>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-2">
                 <Button 
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl py-2.5 font-medium shadow-md transition-all active:scale-[0.98]"
                   onClick={() => {
                     console.log('Edit agent:', selectedAgent)
                   }}
                 >
-                  <EditIcon className="mr-2" fontSize="small" />
+                  <EditIcon className="mr-1.5 !w-4 !h-4" />
                   Edit Agent
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="flex-1"
+                  className="px-5 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 font-medium"
                   onClick={() => setEditOpen(false)}
                 >
-                  Close
+                  Done
                 </Button>
               </div>
             </div>

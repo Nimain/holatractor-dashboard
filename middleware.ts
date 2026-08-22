@@ -25,15 +25,20 @@ export function middleware(req: NextRequest) {
     parsedValue: isAgent,
   })
 
-  // If there is no access_token, redirect to the login page
-  if (!token) {
+  // Get the current pathname
+  const { pathname } = req.nextUrl
+
+  // Allow all API routes to pass through without redirecting to login pages
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next()
+  }
+
+  // If there is no access_token and no authorization header, redirect to the login page
+  const authHeader = req.headers.get("authorization")
+  if (!token && !authHeader) {
     console.log("No access token, redirecting to login")
     return NextResponse.redirect(new URL(`/login`, req.url))
   }
-
-  // Get the current pathname
-  const { pathname } = req.nextUrl
-  console.log("Current pathname:", pathname)
 
   // Check each role and redirect if not on the correct path
   // Process only one role at a time, with priority order

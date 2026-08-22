@@ -399,144 +399,150 @@ export default function ServiceSection({ theme = "light" }: ServiceSectionProps)
       </div>
 
       {openModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className={`${bgColor} rounded-lg p-6 w-[450px] relative max-h-[90vh] overflow-y-auto ${textColor}`}>
-            <h2 className="text-xl font-semibold mb-4">Add New Service</h2>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-[540px] relative max-h-[90vh] shadow-2xl border border-gray-100 overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="bg-slate-900 p-6 text-white relative">
+              <p className="text-xs uppercase tracking-wider font-semibold text-emerald-400 mb-1">Catalog Management</p>
+              <h2 className="text-xl font-bold">Add New Service</h2>
+              <p className="text-xs text-slate-300 mt-1">Configure service pricing, category assignment, and slug.</p>
+              <button
+                type="button"
+                onClick={() => setOpenModal(false)}
+                className="absolute top-5 right-5 text-slate-400 hover:text-white bg-white/10 hover:bg-white/20 rounded-xl p-1.5 transition-all text-xs"
+              >
+                ✕
+              </button>
+            </div>
 
-            <div className="flex flex-col gap-4">
+            {/* Scrollable Form Body */}
+            <div className="p-6 space-y-4 overflow-y-auto max-h-[calc(90vh-170px)]" style={{ scrollbarWidth: "none" }}>
               <div>
-                <label className="block text-sm font-medium mb-1">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
                   Service Name *
                 </label>
                 <input
                   type="text"
-                  placeholder="Service Name (e.g., Land Preparation)"
+                  placeholder="e.g., Land Preparation & Plowing"
                   value={form.name}
                   onChange={handleNameChange}
-                  className={`w-full border rounded p-2 ${inputBg} ${borderColor}`}
+                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
                   URL Slug *
-                  <span className="text-xs text-gray-500 ml-1">
-                    (Auto-generated from name)
-                  </span>
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="Auto-generated slug"
+                    placeholder="auto-generated-slug"
                     value={form.slug}
                     onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                    className={`flex-1 border rounded p-2 ${inputBg} ${borderColor}`}
+                    className="flex-1 px-4 py-2.5 text-sm font-mono bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
                     required
                   />
                   <button
                     type="button"
                     onClick={handleRegenerateSlug}
                     disabled={!form.name.trim() || checkingSlug}
-                    className="px-3 py-2 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                    title="Regenerate slug from name"
+                    className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all"
+                    title="Regenerate slug"
                   >
                     <RefreshCw
-                      size={16}
-                      className={checkingSlug ? "animate-spin" : ""}
+                      size={15}
+                      className={checkingSlug ? "animate-spin text-emerald-600" : ""}
                     />
                   </button>
                 </div>
                 {form.slug && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    URL will be:{" "}
-                    <span className="font-mono bg-gray-100 px-1 rounded">
-                      /{form.slug}
-                    </span>
+                  <p className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
+                    Route: <span className="font-mono bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[11px]">/{form.slug}</span>
                   </p>
                 )}
                 {checkingSlug && (
-                  <p className="text-xs text-blue-500 mt-1">
-                    Checking availability...
+                  <p className="text-[11px] text-emerald-600 mt-1">
+                    Checking uniqueness...
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
                   Description *
                 </label>
                 <textarea
-                  placeholder="Description"
+                  placeholder="Detailed description of the service deliverables..."
                   value={form.description}
                   onChange={(e) =>
                     setForm({ ...form, description: e.target.value })
                   }
-                  className={`w-full border rounded p-2 ${inputBg} ${borderColor}`}
+                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
                   rows={3}
                   required
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Price *
-                </label>
-                <input
-                  type="text"
-                  placeholder="Price (e.g 30)"
-                  value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
-                  className={`w-full border rounded p-2 ${inputBg} ${borderColor}`}
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Enter numbers only (e.g., 30). Dollar sign will be added automatically.
-                </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                    Price (USD) *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 45"
+                    value={form.price}
+                    onChange={(e) => setForm({ ...form, price: e.target.value })}
+                    className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                    Category *
+                  </label>
+                  <select
+                    value={form.category_id}
+                    onChange={(e) =>
+                      setForm({ ...form, category_id: e.target.value })
+                    }
+                    className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
+                    required
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Category *
-                </label>
-                <select
-                  value={form.category_id}
-                  onChange={(e) =>
-                    setForm({ ...form, category_id: e.target.value })
-                  }
-                  className={`w-full border rounded p-2 ${inputBg} ${borderColor}`}
-                  required
-                >
-                  <option value="">Select Category</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
                   Image URL (Optional)
                 </label>
                 <input
                   type="url"
-                  placeholder="https://example.com/image.jpg"
+                  placeholder="https://example.com/service-banner.jpg"
                   value={form.image}
                   onChange={(e) => setForm({ ...form, image: e.target.value })}
-                  className={`w-full border rounded p-2 ${inputBg} ${borderColor}`}
+                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
                 />
-                <p className="text-sm text-gray-500 mt-1">
-                  If no image is provided, the category image will be used automatically
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Default category image will apply if left empty.
                 </p>
                 {form.image && isImageAvailable(form.image) && (
-                  <div className="mt-2 w-32 h-32 relative border rounded">
+                  <div className="mt-2 w-28 h-20 relative border border-slate-200 rounded-xl overflow-hidden shadow-sm">
                     <Image
                       src={form.image}
                       alt="Preview"
                       fill
-                      className="object-cover rounded"
+                      className="object-cover"
                       onError={(e) => {
                         const target = e.target as HTMLElement;
                         target.style.display = "none";
@@ -547,20 +553,23 @@ export default function ServiceSection({ theme = "light" }: ServiceSectionProps)
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 mt-6">
+            {/* Footer */}
+            <div className="p-5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
               <button
+                type="button"
                 onClick={() => setOpenModal(false)}
-                className="px-4 py-2 rounded border hover:bg-gray-50"
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-xl border border-slate-200 hover:bg-slate-100 transition-all"
                 disabled={addingService}
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleAddService}
                 disabled={addingService || checkingSlug}
-                className="px-4 py-2 rounded bg-black text-white hover:bg-gray-800 disabled:opacity-50"
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all active:scale-[0.98] disabled:opacity-50"
               >
-                {addingService ? "Adding..." : "Add Service"}
+                {addingService ? "Creating Service..." : "Create Service"}
               </button>
             </div>
           </div>

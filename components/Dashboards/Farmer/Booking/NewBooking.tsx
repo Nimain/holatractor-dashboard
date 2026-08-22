@@ -60,7 +60,10 @@ const NewBooking = () => {
 
     const { cookie } = useCookie()
     const access_token = cookie.get("access_token")
-    const user = cookie.get("user");
+    const rawUser = cookie.get("user");
+    const parsedUser: any = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser) } catch { return null } })() : rawUser;
+    const user: any = parsedUser || {};
+    const userId = parsedUser?.userId || parsedUser?.id || parsedUser?.sub || parsedUser?._id;
 
     function handleBookClick(tractorId: string) {
         setSelectedTractorIds((prevIds) => {
@@ -333,10 +336,11 @@ const NewBooking = () => {
     }
 
     function fetchAllFarms() {
+        if (!userId) return;
         setFetchingFarms(true);
-        renderInstance.get(`/farm/get-with-user-id/${user.userId}`)
+        renderInstance.get(`/farm/get-with-user-id/${userId}`)
             .then((res) => {
-                setFarms(res.data);
+                setFarms(Array.isArray(res.data) ? res.data : []);
             })
             .catch((err) => {
                 errorMessage("Error fetching farms");
@@ -347,8 +351,10 @@ const NewBooking = () => {
     }
 
     useEffect(() => {
-        fetchAllFarms()
-    }, [])
+        if (userId) {
+            fetchAllFarms()
+        }
+    }, [userId])
 
     const renderStepContent = () => {
         switch (step) {

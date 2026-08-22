@@ -265,10 +265,12 @@ const SingleFarm = () => {
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 />
-                <Polygon
-                  pathOptions={limeOptions}
-                  positions={farm.farmDetails.boundary.coordinates}
-                />
+                {farm?.farmDetails?.boundary?.coordinates && (
+                  <Polygon
+                    pathOptions={limeOptions}
+                    positions={farm.farmDetails.boundary.coordinates}
+                  />
+                )}
               </MapContainer>
             ) : (
               <div className="flex items-center justify-center h-full">

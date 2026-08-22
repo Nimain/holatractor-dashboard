@@ -1,5 +1,4 @@
 "use client"
-
 import React, { useState, useEffect, useMemo, memo, useRef } from "react"
 import {
   Truck,
@@ -13,10 +12,20 @@ import {
   AlertCircle,
   History,
   X,
+  Plus,
+  Radio,
+  Store,
+  User as UserIcon,
+  ChevronRight,
+  ChevronLeft,
+  Check,
+  Search,
+  RefreshCw,
 } from "lucide-react"
-import { renderInstance } from "@/utils/Axios/RenderInstance"
+import { renderInstance, TractorAIBaseURL } from "@/utils/Axios/RenderInstance"
 import { useCookie } from "next-cookie"
 import axios from "axios"
+import { successMessage, errorMessage } from "@/utils/Toastify/Messages"
 
 // Google Maps API Key - Replace with your actual API key
 const GOOGLE_MAPS_API_KEY = "AIzaSyDjMCI0xj2Q-WTc9J7yWX-Mvh0DBM7oHbg"
@@ -30,6 +39,42 @@ const deviceInstance = axios.create({
     "Content-Type": "application/json",
   },
 })
+
+interface BaseTractorItem {
+  base_tractor_id: string
+  name: string
+  model: string
+  image: string
+  hourly_price: number
+}
+
+interface TractorOption {
+  tractor_store_id: string
+  base_tractor_id: string
+  name: string
+  model: string
+  image: string
+  hourly_price: number
+  has_device: boolean
+  current_imei: string | null
+}
+
+interface StoreOption {
+  store_id: string
+  store_name: string
+  store_image: string
+  tractors: TractorOption[]
+}
+
+interface OwnerOption {
+  owner_id: string
+  user_id?: string
+  owner_name: string
+  owner_email: string
+  owner_mobile?: string
+  owner_image: string
+  stores: StoreOption[]
+}
 
 interface Device {
   id: string
@@ -362,12 +407,53 @@ export default function DeviceSection() {
   const [gpsHistory, setGpsHistory] = useState<GPSLocation[]>([])
   const [selectedFilter, setSelectedFilter] = useState<string>("today")
 
+  // Add Device Stepped Modal states
+  const [showAddDeviceModal, setShowAddDeviceModal] = useState<boolean>(false)
+  const [addStep, setAddStep] = useState<number>(1)
+  const [deviceOptions, setDeviceOptions] = useState<OwnerOption[]>([])
+  const [availableBaseTractors, setAvailableBaseTractors] = useState<BaseTractorItem[]>([])
+  const [optionsLoading, setOptionsLoading] = useState<boolean>(false)
+  const [loadingMoreOwners, setLoadingMoreOwners] = useState<boolean>(false)
+  const [ownerPage, setOwnerPage] = useState<number>(1)
+  const [totalOwnersCount, setTotalOwnersCount] = useState<number>(0)
+  const [hasMoreOwners, setHasMoreOwners] = useState<boolean>(false)
+
+  const [selectedOwner, setSelectedOwner] = useState<OwnerOption | null>(null)
+  const [selectedStore, setSelectedStore] = useState<StoreOption | null>(null)
+  const [selectedTractorForDevice, setSelectedTractorForDevice] = useState<TractorOption | null>(null)
+  const [ownerSearchTerm, setOwnerSearchTerm] = useState<string>("")
+  const [deviceImei, setDeviceImei] = useState<string>("")
+  const [deviceName, setDeviceName] = useState<string>("")
+  const [deviceRegion, setDeviceRegion] = useState<string>("SW")
+  const [submittingDevice, setSubmittingDevice] = useState<boolean>(false)
+  const [deviceSubmitError, setDeviceSubmitError] = useState<string | null>(null)
+
+  // Inline Quick Store Creation states
+  const [showCreateStoreModal, setShowCreateStoreModal] = useState<boolean>(false)
+  const [newStoreName, setNewStoreName] = useState<string>("")
+  const [newStoreDescription, setNewStoreDescription] = useState<string>("")
+  const [newStoreImage, setNewStoreImage] = useState<string>("")
+  const [creatingStore, setCreatingStore] = useState<boolean>(false)
+  const [createStoreError, setCreateStoreError] = useState<string | null>(null)
+
+  // Inline Quick Add Tractor states
+  const [showAddTractorModal, setShowAddTractorModal] = useState<boolean>(false)
+  const [selectedBaseTractorId, setSelectedBaseTractorId] = useState<string>("")
+  const [newTractorHourlyPrice, setNewTractorHourlyPrice] = useState<number>(20)
+  const [creatingTractor, setCreatingTractor] = useState<boolean>(false)
+  const [createTractorError, setCreateTractorError] = useState<string | null>(null)
+
   const mapRef = useRef<HTMLDivElement>(null)
   const googleMapRef = useRef<google.maps.Map | null>(null)
   const markersRef = useRef<Map<string, google.maps.Marker>>(new Map())
 
-  const { cookie } = useCookie()
-  const access_token = cookie.get("access_token")
+  const cookie = useCookie()
+  const access_token =
+    (typeof cookie?.get === "function" ? cookie.get("access_token") : null) ||
+    (typeof document !== "undefined"
+      ? document.cookie.match(/(?:^|;\s*)access_token=([^;]+)/)?.[1]
+      : null) ||
+    ""
 
   // Load Google Maps
   useEffect(() => {
@@ -381,22 +467,423 @@ export default function DeviceSection() {
     fetchDevices()
   }, [])
 
+  // Debounced search for high-scale owner list (10,000+ records)
+  useEffect(() => {
+    if (!showAddDeviceModal) return
+    const timer = setTimeout(() => {
+      setOwnerPage(1)
+      fetchDeviceOptions(ownerSearchTerm, 1, false)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [ownerSearchTerm, showAddDeviceModal])
+
+  const fetchDeviceOptions = async (searchQuery = "", pageNumber = 1, append = false) => {
+    if (append) {
+      setLoadingMoreOwners(true)
+    } else {
+      setOptionsLoading(true)
+    }
+    try {
+      let optionsData: OwnerOption[] = []
+      let baseTractorsList: BaseTractorItem[] = []
+      let totalCount = 0
+      let hasMore = false
+
+      const queryParams = new URLSearchParams()
+      if (searchQuery.trim()) queryParams.set("search", searchQuery.trim())
+      queryParams.set("page", String(pageNumber))
+      queryParams.set("limit", "20")
+
+      // 1. Try local Next.js proxy route /api/devices/options
+      let loaded = false
+      try {
+        const localRes = await axios.get(`/api/devices/options?${queryParams.toString()}`, {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+          },
+          timeout: 15000,
+        })
+        if (localRes.data?.success && Array.isArray(localRes.data?.data)) {
+          optionsData = localRes.data.data
+          if (Array.isArray(localRes.data.base_tractors)) {
+            baseTractorsList = localRes.data.base_tractors
+          }
+          if (localRes.data.pagination) {
+            totalCount = localRes.data.pagination.total || optionsData.length
+            hasMore = Boolean(localRes.data.pagination.has_more)
+          }
+          loaded = true
+        }
+      } catch (errProxy) {
+        console.warn("Local proxy options fallback:", errProxy)
+      }
+
+      // 2. Direct FastAPI localhost /api/v1/admin/devices/options
+      if (!loaded) {
+        try {
+          const fastApiUrl = `${(TractorAIBaseURL || "http://127.0.0.1:8000/").replace(/\/$/, "")}/api/v1/admin/devices/options?${queryParams.toString()}`
+          const res = await axios.get(fastApiUrl, {
+            headers: {
+              Authorization: `Bearer ${access_token}`,
+            },
+            timeout: 15000,
+          })
+          if (res.data?.success && Array.isArray(res.data?.data)) {
+            optionsData = res.data.data
+            if (Array.isArray(res.data.base_tractors)) {
+              baseTractorsList = res.data.base_tractors
+            }
+            if (res.data.pagination) {
+              totalCount = res.data.pagination.total || optionsData.length
+              hasMore = Boolean(res.data.pagination.has_more)
+            }
+            loaded = true
+          }
+        } catch (errFast) {
+          console.warn("FastAPI device options fallback:", errFast)
+        }
+      }
+
+      if (baseTractorsList.length > 0) {
+        setAvailableBaseTractors(baseTractorsList)
+        if (!selectedBaseTractorId) {
+          setSelectedBaseTractorId(baseTractorsList[0].base_tractor_id)
+        }
+      }
+
+      setOwnerPage(pageNumber)
+      setTotalOwnersCount(totalCount || optionsData.length)
+      setHasMoreOwners(hasMore)
+
+      if (append) {
+        setDeviceOptions((prev) => {
+          const existingIds = new Set(prev.map((o) => o.owner_id))
+          const fresh = optionsData.filter((o) => !existingIds.has(o.owner_id))
+          return [...prev, ...fresh]
+        })
+      } else {
+        setDeviceOptions(optionsData)
+      }
+    } catch (err) {
+      console.error("Failed to load device options:", err)
+    } finally {
+      setOptionsLoading(false)
+      setLoadingMoreOwners(false)
+    }
+  }
+
+  const handleLoadMoreOwners = () => {
+    if (hasMoreOwners && !loadingMoreOwners) {
+      fetchDeviceOptions(ownerSearchTerm, ownerPage + 1, true)
+    }
+  }
+
+  const handleOpenAddDevice = () => {
+    setShowAddDeviceModal(true)
+    setAddStep(1)
+    setSelectedOwner(null)
+    setSelectedStore(null)
+    setSelectedTractorForDevice(null)
+    setDeviceImei("")
+    setDeviceName("")
+    setDeviceRegion("SW")
+    setDeviceSubmitError(null)
+    setOwnerSearchTerm("")
+    setOwnerPage(1)
+    setShowCreateStoreModal(false)
+    setShowAddTractorModal(false)
+    fetchDeviceOptions("", 1, false)
+  }
+
+  const handleCreateStore = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedOwner) return
+    if (!newStoreName.trim()) {
+      setCreateStoreError("Please enter a valid store name.")
+      return
+    }
+
+    setCreatingStore(true)
+    setCreateStoreError(null)
+
+    try {
+      const payload = {
+        owner_id: selectedOwner.owner_id,
+        name: newStoreName.trim(),
+        description: newStoreDescription.trim() || "Hola Store Unit",
+        image: newStoreImage.trim() || "https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=600&q=80",
+      }
+
+      const res = await axios.post("/api/admin/stores", payload, {
+        headers: { Authorization: `Bearer ${access_token}` },
+      })
+
+      if (res.data?.success) {
+        const createdStore: StoreOption = {
+          store_id: res.data.data?.store_id || `store-${Date.now()}`,
+          store_name: res.data.data?.store_name || newStoreName.trim(),
+          store_image: res.data.data?.store_image || payload.image,
+          tractors: [],
+        }
+
+        const updatedOwner = {
+          ...selectedOwner,
+          stores: [createdStore, ...selectedOwner.stores],
+        }
+        setSelectedOwner(updatedOwner)
+
+        setDeviceOptions((prev) =>
+          prev.map((o) => (o.owner_id === selectedOwner.owner_id ? updatedOwner : o))
+        )
+
+        setSelectedStore(createdStore)
+        setShowCreateStoreModal(false)
+        setNewStoreName("")
+        setNewStoreDescription("")
+        setNewStoreImage("")
+        successMessage(`Store "${createdStore.store_name}" created successfully!`)
+        setAddStep(3)
+      } else {
+        throw new Error(res.data?.message || "Failed to create store.")
+      }
+    } catch (err: any) {
+      setCreateStoreError(err?.response?.data?.message || err.message || "Failed to create store.")
+    } finally {
+      setCreatingStore(false)
+    }
+  }
+
+  const handleAddTractorToStore = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedStore) return
+    if (!selectedBaseTractorId) {
+      setCreateTractorError("Please select a base tractor model from the catalog.")
+      return
+    }
+
+    setCreatingTractor(true)
+    setCreateTractorError(null)
+
+    try {
+      const payload = {
+        store_id: selectedStore.store_id,
+        base_tractor_id: selectedBaseTractorId,
+        hourly_price: Number(newTractorHourlyPrice) || 20.0,
+      }
+
+      const res = await axios.post("/api/admin/store-tractors", payload, {
+        headers: { Authorization: `Bearer ${access_token}` },
+      })
+
+      if (res.data?.success) {
+        const createdTractor: TractorOption = {
+          tractor_store_id: res.data.data?.tractor_store_id || `tis-${Date.now()}`,
+          base_tractor_id: selectedBaseTractorId,
+          name: res.data.data?.name || "Tractor Unit",
+          model: res.data.data?.model || "Standard",
+          image: res.data.data?.image || "",
+          hourly_price: Number(newTractorHourlyPrice) || 20.0,
+          has_device: false,
+          current_imei: null,
+        }
+
+        const updatedStore = {
+          ...selectedStore,
+          tractors: [createdTractor, ...selectedStore.tractors],
+        }
+        setSelectedStore(updatedStore)
+
+        if (selectedOwner) {
+          const updatedOwner = {
+            ...selectedOwner,
+            stores: selectedOwner.stores.map((s) =>
+              s.store_id === selectedStore.store_id ? updatedStore : s
+            ),
+          }
+          setSelectedOwner(updatedOwner)
+
+          setDeviceOptions((prev) =>
+            prev.map((o) => (o.owner_id === selectedOwner.owner_id ? updatedOwner : o))
+          )
+        }
+
+        setSelectedTractorForDevice(createdTractor)
+        setShowAddTractorModal(false)
+        successMessage(`Tractor "${createdTractor.name}" added to store!`)
+        setAddStep(4)
+      } else {
+        throw new Error(res.data?.message || "Failed to add tractor to store.")
+      }
+    } catch (err: any) {
+      setCreateTractorError(err?.response?.data?.message || err.message || "Failed to add tractor to store.")
+    } finally {
+      setCreatingTractor(false)
+    }
+  }
+
+  const handleAddDeviceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!deviceImei.trim()) {
+      setDeviceSubmitError("Please enter a valid Device IMEI number.")
+      return
+    }
+    if (!selectedStore) {
+      setDeviceSubmitError("Please select a store.")
+      return
+    }
+    if (!selectedTractorForDevice) {
+      setDeviceSubmitError("Please select a tractor to link.")
+      return
+    }
+
+    setSubmittingDevice(true)
+    setDeviceSubmitError(null)
+
+    const payload = {
+      owner_id: selectedOwner?.owner_id || undefined,
+      store_id: selectedStore.store_id,
+      tractor_id: selectedTractorForDevice.tractor_store_id || selectedTractorForDevice.base_tractor_id,
+      device_imei: deviceImei.trim(),
+      device_name: deviceName.trim() || undefined,
+      device_region: deviceRegion,
+      device_type: "tractor",
+    }
+
+    try {
+      let created = false
+
+      // 1. Try local proxy /api/devices
+      try {
+        const localRes = await axios.post("/api/devices", payload, {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+          },
+          timeout: 7000,
+        })
+        if (localRes.status === 200 || localRes.status === 201) {
+          created = true
+        }
+      } catch (localErr: any) {
+        if (localErr.response?.data?.detail) {
+          setDeviceSubmitError(localErr.response.data.detail)
+          setSubmittingDevice(false)
+          return
+        }
+      }
+
+      // 2. Direct FastAPI Admin endpoint fallback
+      if (!created) {
+        try {
+          const fastApiUrl = `${(TractorAIBaseURL || "http://127.0.0.1:8000/").replace(/\/$/, "")}/api/v1/admin/devices`
+          const res = await axios.post(fastApiUrl, payload, {
+            headers: {
+              Authorization: `Bearer ${access_token}`,
+            },
+            timeout: 7000,
+          })
+          if (res.status === 200 || res.status === 201) {
+            created = true
+          }
+        } catch (fastErr: any) {
+          if (fastErr.response?.data?.detail) {
+            setDeviceSubmitError(fastErr.response.data.detail)
+            setSubmittingDevice(false)
+            return
+          }
+        }
+      }
+
+      // 3. Fallback to renderInstance /store/addDevicetoTractor
+      if (!created) {
+        try {
+          await renderInstance.post(
+            "/store/addDevicetoTractor",
+            {
+              device_id: deviceImei.trim(),
+              tractor_store_id: selectedTractorForDevice.tractor_store_id,
+              device_region: deviceRegion,
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${access_token}`,
+              },
+            }
+          )
+          created = true
+        } catch (renderErr: any) {
+          const msg = renderErr.response?.data?.message || renderErr.message || "Failed to register device"
+          setDeviceSubmitError(msg)
+          setSubmittingDevice(false)
+          return
+        }
+      }
+
+      successMessage(`Device ${deviceImei} successfully linked to ${selectedTractorForDevice.name}!`)
+      setShowAddDeviceModal(false)
+      fetchDevices()
+    } catch (err: any) {
+      setDeviceSubmitError(err.message || "An unexpected error occurred.")
+    } finally {
+      setSubmittingDevice(false)
+    }
+  }
+
+  const filteredOwners = useMemo(() => {
+    if (!ownerSearchTerm.trim()) return deviceOptions
+    const term = ownerSearchTerm.toLowerCase().trim()
+    const cleanDigits = term.replace(/\D/g, "")
+
+    return deviceOptions.filter((o) => {
+      const nameMatch = o.owner_name.toLowerCase().includes(term)
+      const emailMatch = o.owner_email.toLowerCase().includes(term)
+      const mob = (o.owner_mobile || "").toLowerCase()
+      const mobDigits = mob.replace(/\D/g, "")
+      const mobileMatch = mob.includes(term) || (cleanDigits.length >= 3 && mobDigits.includes(cleanDigits))
+      const storeMatch = o.stores.some((s) => s.store_name.toLowerCase().includes(term))
+      const tractorMatch = o.stores.some((s) =>
+        s.tractors.some(
+          (t) =>
+            t.name.toLowerCase().includes(term) ||
+            t.model.toLowerCase().includes(term) ||
+            (t.current_imei && t.current_imei.toLowerCase().includes(term))
+        )
+      )
+      return nameMatch || emailMatch || mobileMatch || storeMatch || tractorMatch
+    })
+  }, [deviceOptions, ownerSearchTerm])
+
   const fetchDevices = async () => {
     try {
       setLoading(true)
       setError(null)
 
-      const response = await renderInstance.get("/store/getalluniversaldevices", {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      })
+      let rawData: any[] = []
 
-      if (response.data.success && response.data.data) {
-        const transformedDevices: Device[] = response.data.data.map((device: any) => {
+      try {
+        const localRes = await axios.get("/api/store/getalluniversaldevices")
+        if (localRes.data?.success && Array.isArray(localRes.data?.data) && localRes.data.data.length > 0) {
+          rawData = localRes.data.data
+        }
+      } catch {}
+
+      if (rawData.length === 0) {
+        try {
+          const response = await renderInstance.get("/store/getalluniversaldevices", {
+            headers: {
+              Authorization: `Bearer ${access_token}`,
+            },
+          })
+          if (response.data?.success && Array.isArray(response.data?.data)) {
+            rawData = response.data.data
+          }
+        } catch {}
+      }
+
+      if (rawData.length > 0) {
+        const transformedDevices: Device[] = rawData.map((device: any) => {
           const rawLat = Number.parseFloat(device.tractorInStore?.store?.location?.lat || "0")
           const rawLon = Number.parseFloat(device.tractorInStore?.store?.location?.lan || "0")
-          const region = device.device_region || "NE"
+          const region = device.device_region || "SW"
 
           return {
             id: device.device_imei,
@@ -606,21 +1093,29 @@ export default function DeviceSection() {
             <div className="flex flex-col h-full max-h-[80vh] md:max-h-screen overflow-y-auto p-4 sm:p-6 space-y-6">
               {/* Header */}
               <div className="flex items-center justify-between">
-                <h2 className="text-xl sm:text-2xl font-bold text-white">Tractor Control</h2>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-green-400 text-sm">LIVE</span>
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Tractor Control</h2>
+                  <div className="flex items-center space-x-2 mt-0.5">
+                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                    <span className="text-emerald-400 text-xs font-semibold uppercase tracking-wider">LIVE TELEMETRY</span>
+                  </div>
                 </div>
+                <button
+                  onClick={handleOpenAddDevice}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-3.5 py-2 rounded-xl flex items-center shadow-lg shadow-emerald-600/20 transition-all active:scale-95"
+                >
+                  <Plus className="w-4 h-4 mr-1" /> Add Device
+                </button>
               </div>
 
               {/* Active Tractors */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-white font-semibold flex items-center">
-                    <Truck className="w-5 h-5 mr-2 text-red-400" /> Active Devices ({devices.length})
+                  <h3 className="text-white font-semibold flex items-center text-sm">
+                    <Truck className="w-4 h-4 mr-2 text-emerald-400" /> Active Devices ({devices.length})
                   </h3>
-                  <button onClick={fetchDevices} className="text-xs text-gray-400 hover:text-white transition-colors">
-                    Refresh
+                  <button onClick={fetchDevices} className="text-xs text-slate-400 hover:text-white flex items-center transition-colors">
+                    <RefreshCw className="w-3 h-3 mr-1" /> Refresh
                   </button>
                 </div>
                 <div className="space-y-2">
@@ -630,7 +1125,7 @@ export default function DeviceSection() {
                       onClick={() => handleMarkerClick(device.id)}
                       className={`p-3 rounded-xl cursor-pointer transition-all duration-300 ${
                         selectedTractor === device.id
-                          ? "bg-gradient-to-r from-red-500/30 to-red-400/10 border-2 border-red-400/60"
+                          ? "bg-gradient-to-r from-emerald-500/30 to-emerald-400/10 border-2 border-emerald-400/60"
                           : "bg-white/10 hover:bg-white/20 border border-white/10"
                       }`}
                     >
@@ -751,11 +1246,14 @@ export default function DeviceSection() {
                 >
                   <History className="w-5 h-5 mr-2" /> View GPS History
                 </button>
-                <button className="w-full bg-gradient-to-r from-red-500/80 to-red-600/70 hover:from-red-500 hover:to-red-500 text-white font-medium py-3 px-4 rounded-xl flex items-center justify-center">
-                  <Zap className="w-5 h-5 mr-2" /> Send Command
+                <button className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-medium py-3 px-4 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-700/20">
+                  <Radio className="w-5 h-5 mr-2" /> Live Tracker Ping
                 </button>
-                <button className="w-full bg-white/10 hover:bg-white/20 text-white font-medium py-3 px-4 rounded-xl flex items-center justify-center">
-                  <Settings className="w-5 h-5 mr-2" /> Settings
+                <button
+                  onClick={handleOpenAddDevice}
+                  className="w-full bg-white/10 hover:bg-white/20 text-white font-medium py-3 px-4 rounded-xl flex items-center justify-center border border-white/10"
+                >
+                  <Plus className="w-5 h-5 mr-2 text-emerald-400" /> Link New GPS Device
                 </button>
               </div>
             </div>
@@ -765,56 +1263,58 @@ export default function DeviceSection() {
 
       {/* GPS HISTORY MODAL */}
       {showHistoryModal && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-white/20">
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
+          <div className="bg-slate-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-slate-700/60 overflow-hidden">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-white/10">
+            <div className="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-950/50">
               <div className="flex items-center space-x-3">
-                <History className="w-6 h-6 text-blue-400" />
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
+                  <History className="w-5 h-5" />
+                </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white">GPS History</h3>
-                  <p className="text-sm text-gray-400">{selectedDevice?.name}</p>
+                  <h3 className="text-xl font-bold text-white tracking-tight">GPS Telemetry History</h3>
+                  <p className="text-xs text-slate-400 font-mono mt-0.5">{selectedDevice?.name || "Active Tracking Device"}</p>
                 </div>
               </div>
               <button
                 onClick={() => setShowHistoryModal(false)}
-                className="text-gray-400 hover:text-white transition-colors"
+                className="text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl p-2 transition-all"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Content */}
-            <div className="flex-1 overflow-auto p-6">
+            <div className="flex-1 overflow-auto p-6" style={{ scrollbarWidth: "none" }}>
               {historyLoading ? (
                 <div className="flex items-center justify-center h-64">
                   <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-                    <p className="text-white">Loading GPS history...</p>
+                    <div className="animate-spin rounded-full h-10 w-10 border-2 border-emerald-500 border-t-transparent mx-auto mb-4"></div>
+                    <p className="text-slate-300 text-sm font-medium">Fetching real-time GPS telemetry...</p>
                   </div>
                 </div>
               ) : historyError ? (
                 <div className="flex items-center justify-center h-64">
                   <div className="text-center">
-                    <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-                    <p className="text-white mb-4">{historyError}</p>
+                    <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
+                    <p className="text-slate-200 text-sm mb-4">{historyError}</p>
                     <button
                       onClick={() => selectedTractor && fetchGPSHistory(selectedTractor)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-md active:scale-[0.98]"
                     >
-                      Retry
+                      Retry Connection
                     </button>
                   </div>
                 </div>
               ) : gpsHistory.length === 0 ? (
                 <div className="flex items-center justify-center h-64">
-                  <p className="text-gray-400">No GPS history available</p>
+                  <p className="text-slate-400 text-sm">No GPS historical coordinates found for this device</p>
                 </div>
               ) : (
                 <>
-                  <div className="mb-6 pb-6 border-b border-white/10">
-                    <h4 className="text-white font-semibold mb-3">Filter History</h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="mb-6 pb-6 border-b border-slate-800">
+                    <h4 className="text-xs uppercase tracking-wider font-semibold text-slate-400 mb-3">Time Range Filter</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                       {[
                         { label: "Today", value: "today" },
                         { label: "Yesterday", value: "yesterday" },
@@ -824,10 +1324,10 @@ export default function DeviceSection() {
                         <button
                           key={filter.value}
                           onClick={() => setSelectedFilter(filter.value)}
-                          className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
+                          className={`px-4 py-2.5 rounded-xl font-semibold text-xs transition-all duration-200 ${
                             selectedFilter === filter.value
-                              ? "bg-blue-500/80 text-white border border-blue-400"
-                              : "bg-white/10 text-gray-300 border border-white/20 hover:bg-white/20"
+                              ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20 border border-emerald-500"
+                              : "bg-slate-800/80 text-slate-300 border border-slate-700/60 hover:bg-slate-800 hover:text-white"
                           }`}
                         >
                           {filter.label}
@@ -844,6 +1344,737 @@ export default function DeviceSection() {
                   />
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* STEPPED ADD DEVICE MODAL */}
+      {showAddDeviceModal && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
+          <div className="bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] flex flex-col border border-slate-700/70 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-800 bg-slate-950/60">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
+                    <Radio className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white tracking-tight">Add & Link GPS Tracker</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">Select Owner, Store, and Tractor to link live telemetry</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowAddDeviceModal(false)}
+                  className="text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl p-2 transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Progress Steps Header */}
+              <div className="grid grid-cols-4 gap-2 pt-2">
+                {[
+                  { step: 1, label: "1. Owner", done: Boolean(selectedOwner) },
+                  { step: 2, label: "2. Store", done: Boolean(selectedStore) },
+                  { step: 3, label: "3. Tractor", done: Boolean(selectedTractorForDevice) },
+                  { step: 4, label: "4. Device", done: false },
+                ].map((s) => (
+                  <div
+                    key={s.step}
+                    onClick={() => {
+                      if (s.step === 1) setAddStep(1)
+                      if (s.step === 2 && selectedOwner) setAddStep(2)
+                      if (s.step === 3 && selectedStore) setAddStep(3)
+                    }}
+                    className={`py-2 px-2.5 rounded-lg text-center cursor-pointer transition-all text-xs font-semibold flex items-center justify-center space-x-1 ${
+                      addStep === s.step
+                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/25 border border-emerald-500"
+                        : s.done
+                        ? "bg-emerald-950/40 text-emerald-300 border border-emerald-800/60"
+                        : "bg-slate-800/60 text-slate-500 border border-slate-700/40"
+                    }`}
+                  >
+                    {s.done && addStep !== s.step ? <Check className="w-3.5 h-3.5" /> : null}
+                    <span>{s.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4" style={{ scrollbarWidth: "none" }}>
+              {/* STEP 1: SELECT OWNER */}
+              {addStep === 1 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center">
+                      <UserIcon className="w-4 h-4 mr-2 text-emerald-400" /> Step 1: Select Owner ({deviceOptions.length}
+                      {totalOwnersCount > deviceOptions.length ? ` of ${totalOwnersCount}` : ""})
+                    </h4>
+                    {optionsLoading && (
+                      <div className="flex items-center text-xs text-emerald-400 font-medium space-x-1.5">
+                        <div className="animate-spin rounded-full h-3 w-3 border border-emerald-400 border-t-transparent"></div>
+                        <span>Searching...</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Search Owner */}
+                  <div className="relative">
+                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      autoFocus
+                      value={ownerSearchTerm}
+                      onChange={(e) => setOwnerSearchTerm(e.target.value)}
+                      placeholder="Search owner by name, mobile, email, or store..."
+                      className="w-full bg-slate-800/80 border border-slate-700/80 rounded-xl pl-10 pr-12 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    />
+                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center space-x-1.5">
+                      {optionsLoading && (
+                        <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-emerald-400 border-t-transparent"></div>
+                      )}
+                      {ownerSearchTerm && (
+                        <button
+                          type="button"
+                          onClick={() => setOwnerSearchTerm("")}
+                          className="text-xs text-slate-400 hover:text-white p-0.5"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Owners List */}
+                  <div className="space-y-2.5 max-h-[48vh] overflow-y-auto pr-1">
+                    {optionsLoading && deviceOptions.length === 0 ? (
+                      <div className="py-16 text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-2 border-emerald-500 border-t-transparent mx-auto mb-3"></div>
+                        <p className="text-slate-400 text-xs font-medium">Searching owners in database...</p>
+                      </div>
+                    ) : deviceOptions.length === 0 ? (
+                      <div className="py-12 text-center text-slate-400 text-sm">
+                        No owners matching &quot;{ownerSearchTerm}&quot; found.
+                      </div>
+                    ) : (
+                      deviceOptions.map((owner) => {
+                            const isSelected = selectedOwner?.owner_id === owner.owner_id
+                            const totalTractors = owner.stores.reduce((acc, s) => acc + s.tractors.length, 0)
+                            return (
+                              <div
+                                key={owner.owner_id}
+                                onClick={() => {
+                                  setSelectedOwner(owner)
+                                  setSelectedStore(null)
+                                  setSelectedTractorForDevice(null)
+                                  setAddStep(2)
+                                }}
+                                className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                                  isSelected
+                                    ? "bg-emerald-950/30 border-emerald-500 ring-1 ring-emerald-500 shadow-md"
+                                    : "bg-slate-800/60 border-slate-700/60 hover:bg-slate-800 hover:border-slate-600"
+                                }`}
+                              >
+                                <div className="flex items-center space-x-3">
+                                  {owner.owner_image ? (
+                                    <img
+                                      src={owner.owner_image}
+                                      alt={owner.owner_name}
+                                      className="w-10 h-10 rounded-full object-cover border border-slate-600"
+                                    />
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20 flex items-center justify-center text-sm">
+                                      {owner.owner_name.slice(0, 2).toUpperCase()}
+                                    </div>
+                                  )}
+                                  <div>
+                                    <h5 className="text-sm font-semibold text-white">{owner.owner_name}</h5>
+                                    <div className="flex flex-wrap items-center gap-x-2 text-xs text-slate-400 mt-0.5">
+                                      {owner.owner_email && <span>{owner.owner_email}</span>}
+                                      {owner.owner_mobile && (
+                                        <span className="text-emerald-400 font-mono font-medium">
+                                          📱 {owner.owner_mobile}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-3">
+                                  <div className="text-right">
+                                    <span className="text-xs text-slate-300 font-medium block">
+                                      {owner.stores.length} {owner.stores.length === 1 ? "Store" : "Stores"}
+                                    </span>
+                                    <span className="text-[11px] text-slate-500">
+                                      {totalTractors} {totalTractors === 1 ? "Tractor" : "Tractors"}
+                                    </span>
+                                  </div>
+                                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                                </div>
+                              </div>
+                            )
+                          })
+                        )}
+
+                        {/* Load More Button for High Scale */}
+                        {hasMoreOwners && (
+                          <div className="pt-2 text-center">
+                            <button
+                              type="button"
+                              onClick={handleLoadMoreOwners}
+                              disabled={loadingMoreOwners}
+                              className="px-4 py-2 text-xs font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-800/60 rounded-xl transition-all flex items-center justify-center mx-auto space-x-2 disabled:opacity-50"
+                            >
+                              {loadingMoreOwners ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-emerald-400 border-t-transparent"></div>
+                                  <span>Loading more owners...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Plus className="w-3.5 h-3.5" />
+                                  <span>Load More Owners ({Math.max(0, totalOwnersCount - deviceOptions.length)} remaining)</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* STEP 2: SELECT STORE */}
+                  {addStep === 2 && selectedOwner && (
+                    <div className="space-y-4">
+                      {/* Active Owner Banner */}
+                      <div className="p-3 bg-emerald-950/30 border border-emerald-800/50 rounded-xl flex items-center justify-between">
+                        <div className="flex items-center space-x-2.5">
+                          <span className="text-xs text-slate-400">Selected Owner:</span>
+                          <span className="text-xs font-bold text-white">{selectedOwner.owner_name}</span>
+                          {selectedOwner.owner_mobile && (
+                            <span className="text-xs text-emerald-400 font-mono font-medium">
+                              ({selectedOwner.owner_mobile})
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => setAddStep(1)}
+                          className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold"
+                        >
+                          Change Owner
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center">
+                          <Store className="w-4 h-4 mr-2 text-emerald-400" /> Step 2: Select Store ({selectedOwner.stores.length})
+                        </h4>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowCreateStoreModal(true)
+                            setCreateStoreError(null)
+                            setNewStoreName(`${selectedOwner.owner_name}'s Store`)
+                          }}
+                          className="px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 transition-all flex items-center space-x-1.5"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Create Store</span>
+                        </button>
+                      </div>
+
+                      {/* INLINE CREATE STORE FORM / MODAL */}
+                      {showCreateStoreModal && (
+                        <div className="p-4 bg-slate-950/80 border border-emerald-500/50 rounded-2xl space-y-3 animate-in fade-in zoom-in-95">
+                          <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                            <div className="flex items-center space-x-2">
+                              <Store className="w-4 h-4 text-emerald-400" />
+                              <h5 className="text-xs font-bold text-white uppercase tracking-wider">
+                                Quick Create Store for {selectedOwner.owner_name}
+                              </h5>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setShowCreateStoreModal(false)}
+                              className="text-slate-400 hover:text-white p-1"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          {createStoreError && (
+                            <div className="p-2.5 bg-red-500/15 border border-red-500/30 rounded-xl text-red-300 text-xs flex items-center space-x-2">
+                              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                              <span>{createStoreError}</span>
+                            </div>
+                          )}
+
+                          <form onSubmit={handleCreateStore} className="space-y-3">
+                            <div>
+                              <label className="block text-[11px] font-bold uppercase text-slate-300 mb-1">
+                                Store Name *
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                value={newStoreName}
+                                onChange={(e) => setNewStoreName(e.target.value)}
+                                placeholder="e.g. Santa Cruz Agricultural Center"
+                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-bold uppercase text-slate-300 mb-1">
+                                Store Description / Address
+                              </label>
+                              <input
+                                type="text"
+                                value={newStoreDescription}
+                                onChange={(e) => setNewStoreDescription(e.target.value)}
+                                placeholder="e.g. Primary machinery fleet depot"
+                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                              />
+                            </div>
+
+                            <div className="flex justify-end space-x-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={() => setShowCreateStoreModal(false)}
+                                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-800"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="submit"
+                                disabled={creatingStore}
+                                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/25 flex items-center disabled:opacity-50"
+                              >
+                                {creatingStore ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-3 w-3 border border-white border-t-transparent mr-1.5"></div>
+                                    Creating Store...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Check className="w-3.5 h-3.5 mr-1" /> Save & Select Store
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </form>
+                        </div>
+                      )}
+
+                      {/* Store Cards Grid */}
+                      {selectedOwner.stores.length === 0 && !showCreateStoreModal ? (
+                        <div className="py-10 px-6 text-center border border-dashed border-slate-700/80 rounded-2xl bg-slate-800/30 space-y-3">
+                          <Store className="w-10 h-10 text-slate-500 mx-auto" />
+                          <div>
+                            <h5 className="text-sm font-bold text-white">No Stores Registered</h5>
+                            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                              This owner does not have an active store yet. Create one now to link tractors and GPS devices.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowCreateStoreModal(true)
+                              setCreateStoreError(null)
+                              setNewStoreName(`${selectedOwner.owner_name}'s Store`)
+                            }}
+                            className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/25 inline-flex items-center space-x-1.5"
+                          >
+                            <Plus className="w-4 h-4" />
+                            <span>Create Store for this Owner</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[48vh] overflow-y-auto">
+                          {selectedOwner.stores.map((store) => {
+                            const isSelected = selectedStore?.store_id === store.store_id
+                            return (
+                              <div
+                                key={store.store_id}
+                                onClick={() => {
+                                  setSelectedStore(store)
+                                  setSelectedTractorForDevice(null)
+                                  setAddStep(3)
+                                }}
+                                className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
+                                  isSelected
+                                    ? "bg-emerald-950/40 border-emerald-500 ring-1 ring-emerald-500 shadow-md"
+                                    : "bg-slate-800/60 border-slate-700/60 hover:bg-slate-800 hover:border-slate-600"
+                                }`}
+                              >
+                                <div>
+                                  {store.store_image && (
+                                    <img
+                                      src={store.store_image}
+                                      alt={store.store_name}
+                                      className="w-full h-24 rounded-lg object-cover mb-3 border border-slate-700"
+                                    />
+                                  )}
+                                  <h5 className="text-sm font-bold text-white">{store.store_name}</h5>
+                                  <p className="text-xs text-slate-400 mt-1">
+                                    {store.tractors.length}{" "}
+                                    {store.tractors.length === 1 ? "Tractor unit available" : "Tractor units available"}
+                                  </p>
+                                </div>
+                                <div className="mt-3 pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs text-emerald-400 font-semibold">
+                                  <span>View Tractors ({store.tractors.length})</span>
+                                  <ChevronRight className="w-4 h-4" />
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* STEP 3: SELECT TRACTOR */}
+                  {addStep === 3 && selectedStore && (
+                    <div className="space-y-4">
+                      {/* Active Hierarchy Banner */}
+                      <div className="p-3 bg-emerald-950/30 border border-emerald-800/50 rounded-xl flex items-center justify-between">
+                        <div className="flex items-center space-x-2 text-xs">
+                          <span className="text-slate-400">Owner:</span>
+                          <span className="font-bold text-white">{selectedOwner?.owner_name}</span>
+                          <span className="text-slate-600">/</span>
+                          <span className="text-slate-400">Store:</span>
+                          <span className="font-bold text-emerald-300">{selectedStore.store_name}</span>
+                        </div>
+                        <button
+                          onClick={() => setAddStep(2)}
+                          className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold"
+                        >
+                          Change Store
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center">
+                          <Truck className="w-4 h-4 mr-2 text-emerald-400" /> Step 3: Select Tractor Unit ({selectedStore.tractors.length})
+                        </h4>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAddTractorModal(true)
+                            setCreateTractorError(null)
+                            if (availableBaseTractors.length > 0 && !selectedBaseTractorId) {
+                              setSelectedBaseTractorId(availableBaseTractors[0].base_tractor_id)
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 transition-all flex items-center space-x-1.5"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add Tractor to Store</span>
+                        </button>
+                      </div>
+
+                      {/* INLINE ADD TRACTOR FORM / MODAL */}
+                      {showAddTractorModal && (
+                        <div className="p-4 bg-slate-950/80 border border-emerald-500/50 rounded-2xl space-y-3 animate-in fade-in zoom-in-95">
+                          <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                            <div className="flex items-center space-x-2">
+                              <Truck className="w-4 h-4 text-emerald-400" />
+                              <h5 className="text-xs font-bold text-white uppercase tracking-wider">
+                                Add Tractor to {selectedStore.store_name}
+                              </h5>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setShowAddTractorModal(false)}
+                              className="text-slate-400 hover:text-white p-1"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          {createTractorError && (
+                            <div className="p-2.5 bg-red-500/15 border border-red-500/30 rounded-xl text-red-300 text-xs flex items-center space-x-2">
+                              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                              <span>{createTractorError}</span>
+                            </div>
+                          )}
+
+                          <form onSubmit={handleAddTractorToStore} className="space-y-3">
+                            <div>
+                              <label className="block text-[11px] font-bold uppercase text-slate-300 mb-1.5">
+                                Select Tractor Model from Catalog *
+                              </label>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto p-1 bg-slate-900/80 rounded-xl border border-slate-800">
+                                {availableBaseTractors.map((bt) => {
+                                  const isChosen = selectedBaseTractorId === bt.base_tractor_id
+                                  return (
+                                    <div
+                                      key={bt.base_tractor_id}
+                                      onClick={() => setSelectedBaseTractorId(bt.base_tractor_id)}
+                                      className={`p-2 rounded-lg border cursor-pointer transition-all flex items-center space-x-2.5 ${
+                                        isChosen
+                                          ? "bg-emerald-950/60 border-emerald-500 ring-1 ring-emerald-500 text-white"
+                                          : "bg-slate-800/40 border-slate-700/50 text-slate-300 hover:bg-slate-800"
+                                      }`}
+                                    >
+                                      {bt.image ? (
+                                        <img
+                                          src={bt.image}
+                                          alt={bt.name}
+                                          className="w-8 h-8 rounded object-cover border border-slate-700 flex-shrink-0"
+                                        />
+                                      ) : (
+                                        <div className="w-8 h-8 rounded bg-emerald-500/10 text-emerald-400 flex items-center justify-center flex-shrink-0">
+                                          <Truck className="w-4 h-4" />
+                                        </div>
+                                      )}
+                                      <div className="truncate">
+                                        <h6 className="text-xs font-semibold truncate">{bt.name}</h6>
+                                        <p className="text-[10px] text-slate-400 truncate">{bt.model}</p>
+                                      </div>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-bold uppercase text-slate-300 mb-1">
+                                Hourly Rental Rate ($/hr) *
+                              </label>
+                              <input
+                                type="number"
+                                required
+                                min="1"
+                                step="0.5"
+                                value={newTractorHourlyPrice}
+                                onChange={(e) => setNewTractorHourlyPrice(Number(e.target.value))}
+                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                              />
+                            </div>
+
+                            <div className="flex justify-end space-x-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={() => setShowAddTractorModal(false)}
+                                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-800"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="submit"
+                                disabled={creatingTractor}
+                                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/25 flex items-center disabled:opacity-50"
+                              >
+                                {creatingTractor ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-3 w-3 border border-white border-t-transparent mr-1.5"></div>
+                                    Adding Tractor...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Check className="w-3.5 h-3.5 mr-1" /> Add & Select Tractor
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </form>
+                        </div>
+                      )}
+
+                      {/* Tractor Cards List */}
+                      {selectedStore.tractors.length === 0 && !showAddTractorModal ? (
+                        <div className="py-10 px-6 text-center border border-dashed border-slate-700/80 rounded-2xl bg-slate-800/30 space-y-3">
+                          <Truck className="w-10 h-10 text-slate-500 mx-auto" />
+                          <div>
+                            <h5 className="text-sm font-bold text-white">No Tractors in this Store</h5>
+                            <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                              Add a tractor model from the machinery catalog to assign its GPS device and start tracking telemetry.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowAddTractorModal(true)
+                              setCreateTractorError(null)
+                              if (availableBaseTractors.length > 0 && !selectedBaseTractorId) {
+                                setSelectedBaseTractorId(availableBaseTractors[0].base_tractor_id)
+                              }
+                            }}
+                            className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/25 inline-flex items-center space-x-1.5"
+                          >
+                            <Plus className="w-4 h-4" />
+                            <span>Add Tractor from Catalog</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2.5 max-h-[48vh] overflow-y-auto">
+                          {selectedStore.tractors.map((tractor) => {
+                            const isSelected = selectedTractorForDevice?.tractor_store_id === tractor.tractor_store_id
+                            return (
+                              <div
+                                key={tractor.tractor_store_id || tractor.base_tractor_id}
+                                onClick={() => {
+                                  setSelectedTractorForDevice(tractor)
+                                  setAddStep(4)
+                                }}
+                                className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                                  isSelected
+                                    ? "bg-emerald-950/40 border-emerald-500 ring-1 ring-emerald-500 shadow-md"
+                                    : "bg-slate-800/60 border-slate-700/60 hover:bg-slate-800 hover:border-slate-600"
+                                }`}
+                              >
+                                <div className="flex items-center space-x-3.5">
+                                  {tractor.image ? (
+                                    <img
+                                      src={tractor.image}
+                                      alt={tractor.name}
+                                      className="w-12 h-12 rounded-lg object-cover border border-slate-600"
+                                    />
+                                  ) : (
+                                    <div className="w-12 h-12 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
+                                      <Truck className="w-6 h-6" />
+                                    </div>
+                                  )}
+                                  <div>
+                                    <h5 className="text-sm font-bold text-white">{tractor.name}</h5>
+                                    <p className="text-xs text-slate-400">Model: {tractor.model} • Rate: ${tractor.hourly_price}/hr</p>
+                                    {tractor.current_imei && (
+                                      <p className="text-[11px] text-amber-400 mt-0.5">Currently linked to IMEI: {tractor.current_imei}</p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-3">
+                                  <span
+                                    className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                      tractor.has_device
+                                        ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                                        : "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                                    }`}
+                                  >
+                                    {tractor.has_device ? "Reassign Device" : "Ready for Device"}
+                                  </span>
+                                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* STEP 4: CONFIGURE DEVICE */}
+                  {addStep === 4 && selectedTractorForDevice && (
+                    <form onSubmit={handleAddDeviceSubmit} className="space-y-4">
+                      {/* Summary Breadcrumb Badge */}
+                      <div className="p-3.5 bg-slate-950/60 border border-slate-800 rounded-xl space-y-1.5 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Owner:</span>
+                          <span className="font-semibold text-white">{selectedOwner?.owner_name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Store:</span>
+                          <span className="font-semibold text-white">{selectedStore?.store_name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Tractor:</span>
+                          <span className="font-bold text-emerald-400">{selectedTractorForDevice.name} ({selectedTractorForDevice.model})</span>
+                        </div>
+                      </div>
+
+                      {deviceSubmitError && (
+                        <div className="p-3 bg-red-500/15 border border-red-500/30 rounded-xl text-red-300 text-xs flex items-center space-x-2">
+                          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                          <span>{deviceSubmitError}</span>
+                        </div>
+                      )}
+
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                            Device IMEI / Unique Serial Number *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={deviceImei}
+                            onChange={(e) => setDeviceImei(e.target.value)}
+                            placeholder="e.g. 864521049281726"
+                            className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white font-mono placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                          />
+                          <p className="text-[11px] text-slate-500 mt-1">Found on the physical GPS hardware label or SIM card registration.</p>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                            Device Friendly Name / Label (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={deviceName}
+                            onChange={(e) => setDeviceName(e.target.value)}
+                            placeholder={`e.g. ${selectedTractorForDevice.name} Telemetry Unit`}
+                            className="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                            Coordinate Region
+                          </label>
+                          <div className="grid grid-cols-2 gap-2.5">
+                            {[
+                              { label: "SW (South West / Latin America)", value: "SW" },
+                              { label: "NE (North East / Alternate)", value: "NE" },
+                            ].map((reg) => (
+                              <button
+                                key={reg.value}
+                                type="button"
+                                onClick={() => setDeviceRegion(reg.value)}
+                                className={`py-2.5 px-3 rounded-xl text-xs font-semibold border transition-all ${
+                                  deviceRegion === reg.value
+                                    ? "bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-600/20"
+                                    : "bg-slate-800/60 text-slate-400 border-slate-700/60 hover:bg-slate-800 hover:text-white"
+                                }`}
+                              >
+                                {reg.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Form Actions */}
+                      <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={() => setAddStep(3)}
+                          className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 transition-all flex items-center"
+                        >
+                          <ChevronLeft className="w-4 h-4 mr-1" /> Back
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={submittingDevice}
+                          className="px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/25 transition-all flex items-center disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                        >
+                          {submittingDevice ? (
+                            <>
+                              <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent mr-2"></div>
+                              Linking Device...
+                            </>
+                          ) : (
+                            <>
+                              <Check className="w-4 h-4 mr-1.5" /> Register & Link Device
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  )}
             </div>
           </div>
         </div>

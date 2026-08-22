@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { Owner } from "@/utils/Types/types";
+import axios from "axios";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage } from "@/utils/Toastify/Messages";
 import {
@@ -35,27 +36,39 @@ const OwnerSection = () => {
 
   // Sort users by updatedAt in descending order (most recent first)
   const sortUsersByUpdateDate = (usersList: Owner[]) => {
-    return usersList.sort((a, b) => {
-      const dateA = new Date(a.updatedAt).getTime();
-      const dateB = new Date(b.updatedAt).getTime();
+    if (!Array.isArray(usersList)) return [];
+    return [...usersList].sort((a, b) => {
+      const dateA = new Date(a?.updatedAt || 0).getTime();
+      const dateB = new Date(b?.updatedAt || 0).getTime();
       return dateB - dateA;
     });
   };
 
-  function fetchAllUsers() {
+  async function fetchAllUsers() {
     setLoading(true);
-    renderInstance
-      .get("/owner")
-      .then((res) => {
-        const sortedUsers = sortUsersByUpdateDate(res.data);
-        setUsers(sortedUsers);
-      })
-      .catch((err) => {
-        errorMessage("Error fetching user list");
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    try {
+      let ownerList: Owner[] = [];
+      try {
+        const localRes = await axios.get("/api/owner");
+        if (Array.isArray(localRes.data) && localRes.data.length > 0) {
+          ownerList = localRes.data;
+        }
+      } catch {}
+
+      if (ownerList.length === 0) {
+        const res = await renderInstance.get("/owner");
+        ownerList = Array.isArray(res.data)
+          ? res.data
+          : (res.data?.owners || res.data?.data || []);
+      }
+
+      const sortedUsers = sortUsersByUpdateDate(ownerList);
+      setUsers(sortedUsers);
+    } catch (err) {
+      errorMessage("Error fetching user list");
+    } finally {
+      setLoading(false);
+    }
   }
 
   const { language: locale } = useSelector(
@@ -128,7 +141,7 @@ const OwnerSection = () => {
               onClick={() => {
                 setOpen(true);
               }}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-sm transition-all"
             >
               {getTranslation(locale, {
                 en: "New owner",
@@ -141,34 +154,63 @@ const OwnerSection = () => {
           </DialogTrigger>
 
           <DialogContent
-            className="bg-white h-fit w-[90vw] max-w-[400px] overflow-auto"
+            className="bg-white rounded-2xl w-[95vw] max-w-[460px] p-0 overflow-hidden shadow-2xl border border-gray-100"
             style={{ scrollbarWidth: "none" }}
           >
-            <Label className="mb-2 text-base md:text-lg font-medium">
-              {getTranslation(locale, {
-                en: "Name",
-                es: "Nombre",
-                ay: "Suti",
-                qu: "Suti",
-                gn: "Téra",
-              })}
-            </Label>
+            {/* Modal Header */}
+            <div className="bg-slate-900 p-6 text-white relative">
+              <p className="text-xs uppercase tracking-wider font-semibold text-emerald-400 mb-1">Owner Directory</p>
+              <h2 className="text-xl font-bold">
+                {getTranslation(locale, {
+                  en: "Register New Owner",
+                  es: "Registrar Nuevo Propietario",
+                  ay: "Machaqa Jilata Qillqaña",
+                  qu: "Musuq Dueño Qillqay",
+                  gn: "Jára Pyahu Mboheraguasu",
+                })}
+              </h2>
+              <p className="text-xs text-slate-300 mt-1">
+                {getTranslation(locale, {
+                  en: "Enter the owner's full legal name to start registration.",
+                  es: "Ingrese el nombre completo del propietario para comenzar.",
+                  ay: "Qalltañatakix jilatan taqpach sutip qillqaña.",
+                  qu: "Qallarinaykipaq dueñopa llapan sutinta qillqay.",
+                  gn: "Emoinge jára réra hekopete eñepyrũ hag̃ua.",
+                })}
+              </p>
+            </div>
 
-            <Input
-              value={newOwnerName}
-              onChange={(e) => {
-                handleNameChage(e.target.value);
-              }}
-              className="w-full"
-            />
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              <div>
+                <Label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                  {getTranslation(locale, {
+                    en: "Full Legal Name *",
+                    es: "Nombre Completo *",
+                    ay: "Taqpacha Suti *",
+                    qu: "Llapan Suti *",
+                    gn: "Téra Hekopete *",
+                  })}
+                </Label>
+                <Input
+                  value={newOwnerName}
+                  onChange={(e) => {
+                    handleNameChage(e.target.value);
+                  }}
+                  placeholder="e.g. Juan Carlos Martinez"
+                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-medium"
+                />
+              </div>
+            </div>
 
-            <DialogFooter className="flex-col sm:flex-row gap-2">
+            {/* Modal Footer */}
+            <div className="p-5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
               <DialogClose asChild>
                 <Button
                   onClick={() => {
                     setOpen(false);
                   }}
-                  className="w-full sm:w-auto"
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-xl border border-slate-200 hover:bg-slate-100 transition-all bg-white"
                 >
                   {getTranslation(locale, {
                     en: "Cancel",
@@ -188,18 +230,18 @@ const OwnerSection = () => {
                   onClick={() => {
                     errorMessage("Please give your name");
                   }}
-                  className="w-full sm:w-auto"
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all active:scale-[0.98]"
                 >
                   {getTranslation(locale, {
-                    en: "Next",
-                    es: "Siguiente",
-                    ay: "Jutiri",
-                    qu: "Ñawpaq",
-                    gn: "Upeigua",
+                    en: "Next Step →",
+                    es: "Siguiente Paso →",
+                    ay: "Jutiri Paso →",
+                    qu: "Qatiqnin Paso →",
+                    gn: "Paso Upeigua →",
                   })}
                 </Button>
               )}
-            </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

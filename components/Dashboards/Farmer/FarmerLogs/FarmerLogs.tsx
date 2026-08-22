@@ -52,7 +52,10 @@ const FarmerLogs = () => {
   const [fetching, setFetching] = useState(false);
 
   const { cookie } = useCookie();
-  const user: user = cookie.get("user");
+  const rawUser = cookie.get("user");
+  const parsedUser: any = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser) } catch { return null } })() : rawUser;
+  const user: user = parsedUser || {};
+  const userId = parsedUser?.userId || parsedUser?.id || parsedUser?.sub || parsedUser?._id;
 
   // Search handler
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,16 +64,17 @@ const FarmerLogs = () => {
 
     const filteredPayments = payments.filter(
       (payment) =>
-        payment.id.toLowerCase().includes(term) ||
-        payment.email.toLowerCase().includes(term) ||
-        payment.action.toLowerCase().includes(term) ||
-        payment.details.toLowerCase().includes(term)
+        (payment?.id || "").toLowerCase().includes(term) ||
+        (payment?.email || "").toLowerCase().includes(term) ||
+        (payment?.action || "").toLowerCase().includes(term) ||
+        (payment?.details || "").toLowerCase().includes(term)
     );
 
     setPayments(filteredPayments);
   };
 
   const truncateDetails = (details: string) => {
+    if (!details) return "";
     return details.slice(0, 15) + (details.length > 15 ? "..." : "");
   };
 
@@ -85,18 +89,19 @@ const FarmerLogs = () => {
 
     const dateObj = typeof date === "string" ? new Date(date) : date;
 
-    return dateObj.toLocaleDateString(undefined, options);
+    return isNaN(dateObj.getTime()) ? "N/A" : dateObj.toLocaleDateString(undefined, options);
   };
 
   function fetchPayments() {
+    if (!userId) return;
     setFetching(true);
     renderInstance
-      .get(`/farmer/logPage/${user.userId}`)
+      .get(`/farmer/logPage/${userId}`)
       .then((res) => {
-        setPayments(res.data);
+        setPayments(Array.isArray(res.data) ? res.data : []);
       })
       .catch((err) => {
-        errorMessage("Error fetching payments");
+        errorMessage("Error fetching logs");
       })
       .finally(() => {
         setFetching(false);
@@ -104,10 +109,10 @@ const FarmerLogs = () => {
   }
 
   useEffect(() => {
-    if (user) {
+    if (userId) {
       fetchPayments();
     }
-  }, []);
+  }, [userId]);
 
   return (
     <div className="p-6 pt-0">

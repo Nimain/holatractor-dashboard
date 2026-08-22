@@ -318,122 +318,113 @@ const AdminSection = () => {
                                 )
                             })
                 }
-
             </div>
-
-            {/* Mobile Edit Modal */}
+            {/* Mobile / Quick View Admin Modal */}
             {selectedAdmin && (
                 <Dialog open={editOpen} onOpenChange={setEditOpen}>
-                    <DialogContent className="bg-white w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto p-0">
-                        {/* Header with gradient */}
-                        <div className="bg-gradient-to-r from-indigo-500 to-blue-600 p-6 relative">
+                    <DialogContent className="bg-white w-[95vw] max-w-[520px] max-h-[90vh] overflow-hidden p-0 rounded-2xl border border-gray-100 shadow-2xl">
+                        {/* Header with Dark Modern Slate & Emerald Accent */}
+                        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 relative overflow-hidden text-white">
+                            <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+                            
                             <button 
                                 onClick={() => setEditOpen(false)}
-                                className="absolute top-4 right-4 text-white hover:bg-white/20 rounded-full p-1 transition-colors"
+                                className="absolute top-4 right-4 text-gray-400 hover:text-white bg-white/10 hover:bg-white/20 rounded-xl p-2 transition-all"
                             >
-                                <CloseIcon />
+                                <CloseIcon fontSize="small" />
                             </button>
                             
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 relative z-10">
                                 {selectedAdmin.user.image ? (
                                     <Image
                                         src={selectedAdmin.user.image}
                                         alt={selectedAdmin.user.first_name}
-                                        width={80}
-                                        height={80}
-                                        className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg"
+                                        width={72}
+                                        height={72}
+                                        className="w-[72px] h-[72px] rounded-2xl object-cover ring-4 ring-white/10 shadow-xl"
                                         unoptimized={true}
                                     />
                                 ) : (
-                                    <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center text-indigo-600 font-bold text-3xl shadow-lg">
+                                    <div className="w-[72px] h-[72px] rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white font-bold text-2xl shadow-xl ring-4 ring-white/10">
                                         {selectedAdmin.user.first_name.charAt(0).toUpperCase()}
                                     </div>
                                 )}
-                                <div className="text-white">
-                                    <h2 className="text-2xl font-bold">
-                                        {selectedAdmin.user.first_name} {selectedAdmin.user.middle_name} {selectedAdmin.user.last_name}
+                                <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                            Admin
+                                        </span>
+                                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                                            selectedAdmin.user.emailVerified
+                                                ? 'bg-green-500/20 text-green-300'
+                                                : 'bg-amber-500/20 text-amber-300'
+                                        }`}>
+                                            {selectedAdmin.user.emailVerified ? '● Verified' : '○ Pending'}
+                                        </span>
+                                    </div>
+                                    <h2 className="text-xl font-bold tracking-tight text-white">
+                                        {selectedAdmin.user.first_name} {selectedAdmin.user.middle_name || ''} {selectedAdmin.user.last_name}
                                     </h2>
-                                    <p className="text-indigo-100 text-sm">{selectedAdmin.user.email}</p>
-                                    <p className="text-indigo-200 text-xs mt-1 font-medium">Admin</p>
+                                    <p className="text-slate-300 text-xs mt-0.5 break-all">{selectedAdmin.user.email}</p>
                                 </div>
                             </div>
                         </div>
 
                         {/* Content */}
-                        <div className="p-6 space-y-4">
-                            {/* Status & Verification */}
-                            <div className="flex gap-3">
-                                <div className="flex-1 bg-gray-50 rounded-lg p-4">
-                                    <p className="text-xs text-gray-500 mb-1">Status</p>
-                                    <span className={`inline-block px-3 py-1 text-sm font-medium rounded-full ${
-                                        selectedAdmin.user.emailVerified 
-                                            ? 'bg-green-100 text-green-700' 
-                                            : 'bg-gray-100 text-gray-700'
-                                    }`}>
-                                        {selectedAdmin.user.emailVerified ? 'Active' : 'Inactive'}
-                                    </span>
+                        <div className="p-6 space-y-4 max-h-[calc(90vh-180px)] overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+                            {/* Bento Info Grid */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5">
+                                    <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1">Account Status</p>
+                                    <div className="flex items-center gap-1.5 font-semibold text-sm text-slate-800">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                        {selectedAdmin.user.emailVerified ? 'Active Admin' : 'Invited'}
+                                    </div>
                                 </div>
                                 
-                                <div className="flex-1 bg-gray-50 rounded-lg p-4">
-                                    <p className="text-xs text-gray-500 mb-1">Email Verified</p>
-                                    <span className={`inline-block px-3 py-1 text-sm font-medium rounded-full ${
-                                        selectedAdmin.user.emailVerified 
-                                            ? 'bg-green-100 text-green-700' 
-                                            : 'bg-red-100 text-red-700'
-                                    }`}>
-                                        {selectedAdmin.user.emailVerified ? 'Verified' : 'Not Verified'}
-                                    </span>
+                                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5">
+                                    <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1">Role Type</p>
+                                    <p className="font-semibold text-sm text-slate-800">System Admin</p>
                                 </div>
                             </div>
 
-                            {/* Details Grid */}
-                            <div className="space-y-3">
-                                <div className="border-b pb-3">
-                                    <p className="text-xs text-gray-500 mb-1">Admin ID</p>
-                                    <p className="font-medium text-gray-900">{selectedAdmin.id}</p>
+                            {/* Details List */}
+                            <div className="bg-slate-50/70 border border-slate-100 rounded-xl p-4 space-y-3">
+                                <div className="flex justify-between items-center text-xs pb-2 border-b border-slate-200/60">
+                                    <span className="text-slate-500">Admin Identifier</span>
+                                    <span className="font-mono text-slate-800 font-medium text-[11px]">{selectedAdmin.id}</span>
                                 </div>
-
-                                <div className="border-b pb-3">
-                                    <p className="text-xs text-gray-500 mb-1">Full Name</p>
-                                    <p className="font-medium text-gray-900">
-                                        {selectedAdmin.user.first_name} {selectedAdmin.user.middle_name} {selectedAdmin.user.last_name}
-                                    </p>
+                                <div className="flex justify-between items-center text-xs pb-2 border-b border-slate-200/60">
+                                    <span className="text-slate-500">Contact Email</span>
+                                    <span className="font-medium text-slate-900">{selectedAdmin.user.email}</span>
                                 </div>
-
-                                <div className="border-b pb-3">
-                                    <p className="text-xs text-gray-500 mb-1">Email</p>
-                                    <p className="font-medium text-gray-900 break-all">{selectedAdmin.user.email}</p>
+                                <div className="flex justify-between items-center text-xs pb-2 border-b border-slate-200/60">
+                                    <span className="text-slate-500">Account Created</span>
+                                    <span className="font-medium text-slate-800">{formatDate(selectedAdmin.createdAt)}</span>
                                 </div>
-
-                                <div className="border-b pb-3">
-                                    <p className="text-xs text-gray-500 mb-1">Joined At</p>
-                                    <p className="font-medium text-gray-900">{formatDate(selectedAdmin.createdAt)}</p>
-                                </div>
-
-                                <div className="pb-3">
-                                    <p className="text-xs text-gray-500 mb-1">Last Updated</p>
-                                    <p className="font-medium text-gray-900">{formatDate(selectedAdmin.updatedAt)}</p>
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="text-slate-500">Last Modified</span>
+                                    <span className="font-medium text-slate-800">{formatDate(selectedAdmin.updatedAt)}</span>
                                 </div>
                             </div>
 
                             {/* Action Buttons */}
-                            <div className="flex gap-3 pt-4">
+                            <div className="flex gap-3 pt-2">
                                 <Button 
-                                    className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                                    className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl py-2.5 font-medium shadow-md transition-all active:scale-[0.98]"
                                     onClick={() => {
-                                        // Add your edit logic here
                                         console.log('Edit admin:', selectedAdmin)
                                     }}
                                 >
-                                    <EditIcon className="mr-2" fontSize="small" />
-                                    Edit Admin
+                                    <EditIcon className="mr-1.5 !w-4 !h-4" />
+                                    Edit Permissions
                                 </Button>
                                 <Button 
                                     variant="outline" 
-                                    className="flex-1"
+                                    className="px-5 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 font-medium"
                                     onClick={() => setEditOpen(false)}
                                 >
-                                    Close
+                                    Done
                                 </Button>
                             </div>
                         </div>

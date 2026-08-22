@@ -32,7 +32,10 @@ const Header = () => {
     const [socket, setSocket] = useState<Socket | null>(null);
 
     const { cookie } = useCookie()
-    const user: user = cookie.get("user")
+    const rawUser = cookie.get("user")
+    const parsedUser: any = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser) } catch { return null } })() : rawUser
+    const user: user = parsedUser || {}
+    const userId = parsedUser?.userId || parsedUser?.id || parsedUser?.sub || parsedUser?._id
     const access_token = cookie.get("access_token")
 
     const deleteNotification = (id: string) => {
@@ -41,18 +44,22 @@ const Header = () => {
         headers: {
           Authorization: `Bearer ${access_token}`,
         },
-      })
+      }).catch((err) => console.error("Error deleting notification:", err))
     }
  
   const fetchNotifications = async () => {
-    renderInstance.get(`/farmer/${user.userId}`)
+    if (!userId) return
+    renderInstance.get(`/farmer/${userId}`)
       .then((res) => {
-        setNotifications(res.data.notifications)
+        setNotifications(Array.isArray(res.data?.notifications) ? res.data.notifications : [])
+      })
+      .catch((err) => {
+        console.error("Error fetching notifications:", err)
       })
   }
 
   const showBrowserNotification = (notification: any) => {
-    if (Notification.permission === 'granted') {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       new Notification(notification.title, {
         body: notification.message
       });
@@ -60,22 +67,23 @@ const Header = () => {
   };
 
   useEffect(() => {
-    if(user){
-        fetchNotifications()
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!isOpen) {
+    if (userId) {
       fetchNotifications()
     }
-  }, [isOpen])
+  }, [userId])
 
   useEffect(() => {
+    if (!isOpen && userId) {
+      fetchNotifications()
+    }
+  }, [isOpen, userId])
+
+  useEffect(() => {
+    if (!userId) return
     // Connect to the socket server
     const newSocket: Socket = io(NestJsBaseURL, {
       query: {
-        userId: user.userId
+        userId: userId
       }
     });
     setSocket(newSocket);
@@ -90,7 +98,7 @@ const Header = () => {
     return () => {
       newSocket.disconnect();
     };
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     if (Notification.permission === 'default') {
