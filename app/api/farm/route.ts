@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 
 const FastApiBaseURL =
-  process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "http://127.0.0.1:8000/";
+  process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "https://tractorai.sinsignal.com/";
 const NestJsBaseURL =
   process.env.NEXT_PUBLIC_API_URL ||
   "https://holatractor-backend-render.onrender.com/";

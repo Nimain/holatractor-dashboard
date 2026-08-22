@@ -521,7 +521,7 @@ export default function DeviceSection() {
       // 2. Direct FastAPI localhost /api/v1/admin/devices/options
       if (!loaded) {
         try {
-          const fastApiUrl = `${(TractorAIBaseURL || "http://127.0.0.1:8000/").replace(/\/$/, "")}/api/v1/admin/devices/options?${queryParams.toString()}`
+          const fastApiUrl = `${(TractorAIBaseURL || "https://tractorai.sinsignal.com/").replace(/\/$/, "")}/api/v1/admin/devices/options?${queryParams.toString()}`
           const res = await axios.get(fastApiUrl, {
             headers: {
               Authorization: `Bearer ${access_token}`,
@@ -774,7 +774,7 @@ export default function DeviceSection() {
       // 2. Direct FastAPI Admin endpoint fallback
       if (!created) {
         try {
-          const fastApiUrl = `${(TractorAIBaseURL || "http://127.0.0.1:8000/").replace(/\/$/, "")}/api/v1/admin/devices`
+          const fastApiUrl = `${(TractorAIBaseURL || "https://tractorai.sinsignal.com/").replace(/\/$/, "")}/api/v1/admin/devices`
           const res = await axios.post(fastApiUrl, payload, {
             headers: {
               Authorization: `Bearer ${access_token}`,

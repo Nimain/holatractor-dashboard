@@ -6,7 +6,7 @@ export const NestJsBaseURL =
 export const DeviceBaseURL = "https://device.holatractor.com/";
 export const TractorAIBaseURL =
   process.env.NEXT_PUBLIC_TRACTOR_AI_URL ||
-  "http://127.0.0.1:8000/";
+  "https://tractorai.sinsignal.com/";
 
 function getCookie(name: string): string | null {
   if (typeof document === "undefined") return null;

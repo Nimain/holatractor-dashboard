@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 
 const FastApiBaseURL =
-  process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "http://127.0.0.1:8000/";
+  process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "https://tractorai.sinsignal.com/";
 const NestJsBaseURL =
   process.env.NEXT_PUBLIC_API_URL ||
   "https://holatractor-backend-render.onrender.com/";
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
     // 1. Try FastAPI admin store tractor assignment
     try {
-      const base = (FastApiBaseURL || "http://127.0.0.1:8000/").replace(/\/$/, "");
+      const base = (FastApiBaseURL || "https://tractorai.sinsignal.com/").replace(/\/$/, "");
       const fastApiRes = await axios.post(
         `${base}/api/v1/admin/store-tractors`,
         body,

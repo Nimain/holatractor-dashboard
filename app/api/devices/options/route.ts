@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 
 const FastApiBaseURL =
-  process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "http://127.0.0.1:8000/";
+  process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "https://tractorai.sinsignal.com/";
 const NestJsBaseURL =
   process.env.NEXT_PUBLIC_API_URL ||
   "https://holatractor-backend-render.onrender.com/";
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     // 1. Try FastAPI localhost /api/v1/admin/devices/options
     try {
-      const base = (FastApiBaseURL || "http://127.0.0.1:8000/").replace(/\/$/, "");
+      const base = (FastApiBaseURL || "https://tractorai.sinsignal.com/").replace(/\/$/, "");
       const params = new URLSearchParams();
       if (search) params.set("search", search);
       if (page) params.set("page", page);
