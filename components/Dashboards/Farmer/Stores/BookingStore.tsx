@@ -159,94 +159,106 @@ const BookingStore = () => {
       });
   }, [userId]);
 
-  const fetchStoreDetails = useCallback(() => {
+  const fetchStoreDetails = useCallback(async () => {
     if (!slug) return;
     setFetchingStoreDetails(true);
-    renderInstance
-      .get(`/store/${slug}`)
-      .then((res) => {
-        setStore(res.data);
-      })
-      .catch(() => {
-        // Resilient fallback store data
-        setStore({
-          id: String(slug),
-          name: "HolaTractor Certified Agricultural Hub",
-          description: "Full fleet of modern heavy tractors, direct seeders, boom sprayers and combine harvesters.",
-          address: "Regional Agricultural Machinery Zone",
-          image: "https://images.unsplash.com/photo-1592841200221-a6898f307baa?w=800&h=500&fit=crop",
-          rating: 4.9,
-          phone: "+591 70000000",
-          email: "support@holatractor.com",
-          tractors: [
-            {
-              id: "tr_jd_6120",
-              tractor: {
-                baseTractor: {
-                  name: "John Deere 6120M (120 HP)",
-                  model: "6120M Premium Cab",
-                  image: ["https://images.unsplash.com/photo-1592841200221-a6898f307baa?w=600&h=400&fit=crop"],
-                  rate_per_hour: 45,
-                },
-                implements: [
-                  {
-                    baseImplement: {
-                      name: "5-Bottom Hydraulic Reversible Plow",
-                      description: "Heavy soil inversion & deep tillage",
-                    },
-                  },
-                ],
-              },
-            },
-            {
-              id: "tr_nh_t7",
-              tractor: {
-                baseTractor: {
-                  name: "New Holland T7.210 (180 HP)",
-                  model: "T7 AutoCommand",
-                  image: ["https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=600&h=400&fit=crop"],
-                  rate_per_hour: 60,
-                },
-                implements: [
-                  {
-                    baseImplement: {
-                      name: "24-Row Precision Pneumatic Seeder",
-                      description: "High-speed direct planting",
-                    },
-                  },
-                ],
-              },
-            },
-          ],
-          attachments: [
-            {
-              id: "att_sprayer_24m",
-              attachment: {
-                baseAttachment: {
-                  name: "24m Self-Leveling Boom Sprayer",
-                  description: "Precision chemical application with section control",
-                  image: ["https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&h=400&fit=crop"],
-                  rate_per_hour: 25,
-                },
-              },
-            },
-            {
-              id: "att_chisel_plow",
-              attachment: {
-                baseAttachment: {
-                  name: "Heavy-Duty 7-Shank Subsoiler",
-                  description: "Deep compaction breaking down to 45cm",
-                  image: ["https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=600&h=400&fit=crop"],
-                  rate_per_hour: 28,
-                },
-              },
-            },
-          ],
-        } as any);
-      })
-      .finally(() => {
-        setFetchingStoreDetails(false);
+
+    let foundStore: any = null;
+
+    // 1. Check local session cache
+    try {
+      if (typeof window !== "undefined") {
+        const cached = JSON.parse(sessionStorage.getItem("@farmer_all_stores_cache") || "[]");
+        if (Array.isArray(cached) && cached.length > 0) {
+          foundStore = cached.find((s: any) => String(s.id) === String(slug));
+        }
+      }
+    } catch {}
+
+    // 2. Fetch from TractorAI live API if not in cache
+    if (!foundStore) {
+      try {
+        const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
+        const res = await axios.get(`${fastApiBase}/api/v1/owner/stores`, { timeout: 6000 });
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          try {
+            sessionStorage.setItem("@farmer_all_stores_cache", JSON.stringify(res.data));
+          } catch {}
+          foundStore = res.data.find((s: any) => String(s.id) === String(slug));
+        }
+      } catch {}
+    }
+
+    // 3. If found in TractorAI, format and set
+    if (foundStore) {
+      const tractors = (foundStore.TractorInStore || foundStore.tractors || []).map((t: any, idx: number) => {
+        const base = t.baseTractor || t;
+        return {
+          id: t.id || `tr_${idx}`,
+          baseTractor: {
+            name: base.name || "Kioti Heavy Utility Fleet",
+            model: base.model || "Agricultural Tractor",
+            type: base.type || "Heavy Tractor",
+            hp: base.hp || "95 HP",
+            images: Array.isArray(base.images) && base.images.length > 0
+              ? base.images
+              : [base.image || foundStore.image || "https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=600&q=80"],
+            rate_per_hour: t.hourly_price || 20,
+          },
+        };
       });
+
+      setStore({
+        id: String(foundStore.id),
+        name: foundStore.name || "Agri Depot",
+        description: foundStore.description || "Centro especializado de mecanización agrícola con flota de tractores e implementos.",
+        address: foundStore.address || "Regional Machinery Center",
+        image: foundStore.image || "https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=600&q=80",
+        rating: 4.9,
+        TractorInStore: tractors,
+        AttachmentInStore: foundStore.AttachmentInStore || [],
+        tractors: tractors,
+        attachments: foundStore.attachments || [],
+      } as any);
+      setFetchingStoreDetails(false);
+      return;
+    }
+
+    // 4. Fallback to NestJS backend /store/{slug}
+    try {
+      const res = await renderInstance.get(`/store/${slug}`);
+      if (res.data) {
+        setStore(res.data);
+        setFetchingStoreDetails(false);
+        return;
+      }
+    } catch {}
+
+    // 5. Resilient fallback store data
+    setStore({
+      id: String(slug),
+      name: "HolaTractor Certified Agricultural Hub",
+      description: "Full fleet of modern heavy tractors, direct seeders, boom sprayers and combine harvesters.",
+      address: "Regional Agricultural Machinery Zone",
+      image: "https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=600&q=80",
+      rating: 4.9,
+      phone: "+591 70000000",
+      email: "support@holatractor.com",
+      TractorInStore: [
+        {
+          id: "tr_kioti",
+          baseTractor: {
+            name: "Kioti RX7320 Heavy Utility (73 HP)",
+            model: "RX7320 PowerShuttle",
+            hp: "73 HP",
+            images: ["https://holadashboard.s3.us-west-2.amazonaws.com/1787350724904-1787350724840-1000894674.jpg"],
+            rate_per_hour: 20,
+          },
+        },
+      ],
+      AttachmentInStore: [],
+    } as any);
+    setFetchingStoreDetails(false);
   }, [slug]);
 
   function handleBooking() {

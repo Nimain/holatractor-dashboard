@@ -16,12 +16,14 @@ import {
   ShieldCheck,
   Building2,
   Sparkles,
+  Clock,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { renderInstance, TractorAIBaseURL } from "@/utils/Axios/RenderInstance";
+import { useCookie } from "next-cookie";
 
 interface Location {
   latitude: number | null;
@@ -39,58 +41,10 @@ interface StoreItem {
   available_tractors_count?: number;
   available_implements_count?: number;
   rate_range?: string;
+  tractors?: any[];
+  opening_time?: string;
+  closing_time?: string;
 }
-
-const FALLBACK_STORES: StoreItem[] = [
-  {
-    id: "store_ht_central",
-    name: "HolaTractor Central Machinery Depot",
-    description: "Full fleet of John Deere Class 6 Combines, heavy tillage & high-clearance sprayers.",
-    address: "Agricultural Logistics Corridor, Hub 1",
-    image: "https://images.unsplash.com/photo-1592841200221-a6898f307baa?w=800&h=500&fit=crop",
-    rating: 4.9,
-    distance_km: 2.8,
-    available_tractors_count: 14,
-    available_implements_count: 28,
-    rate_range: "$35 - $65 / Ha",
-  },
-  {
-    id: "store_jd_certified",
-    name: "John Deere Certified Agronomic Store",
-    description: "8R & 6M series high-HP tractors with RTK GPS autoguidance and precision planters.",
-    address: "North Agribusiness Highway km 18",
-    image: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=800&h=500&fit=crop",
-    rating: 4.8,
-    distance_km: 4.5,
-    available_tractors_count: 9,
-    available_implements_count: 18,
-    rate_range: "$38 - $70 / Ha",
-  },
-  {
-    id: "store_nh_regional",
-    name: "New Holland Precision Fleet Center",
-    description: "T7 & T8 series heavy tractors equipped with round balers, deep plows & boom sprayers.",
-    address: "Grain Terminal Road, Sector 4",
-    image: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800&h=500&fit=crop",
-    rating: 4.7,
-    distance_km: 6.2,
-    available_tractors_count: 8,
-    available_implements_count: 15,
-    rate_range: "$32 - $58 / Ha",
-  },
-  {
-    id: "store_mf_agri",
-    name: "Massey Ferguson Regional Service Hub",
-    description: "Specialized direct seeding units, subsoilers, disk harrows and certified operators.",
-    address: "Central Silo Compound, Gateway 2",
-    image: "https://images.unsplash.com/photo-1597848212624-a19eb35e2651?w=800&h=500&fit=crop",
-    rating: 4.9,
-    distance_km: 7.9,
-    available_tractors_count: 11,
-    available_implements_count: 22,
-    rate_range: "$30 - $62 / Ha",
-  },
-];
 
 export default function FarmerStores() {
   const [stores, setStores] = useState<StoreItem[]>([]);
@@ -99,64 +53,126 @@ export default function FarmerStores() {
   const [searchQuery, setSearchQuery] = useState("");
   const [location, setLocation] = useState<Location>({ latitude: null, longitude: null });
 
+  const { cookie } = useCookie();
+  const access_token = cookie.get("access_token");
+
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // km
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return Math.round(R * c * 10) / 10;
+  };
+
   const fetchStores = async () => {
     setRefreshing(true);
     let loadedList: StoreItem[] = [];
 
-    // 1. Try fetching from Render standard backend
+    // 1. Primary Live API: TractorAI FastAPI Backend (/api/v1/owner/stores)
     try {
-      const url =
-        location.latitude && location.longitude
-          ? `/store/all_stores/with_in_distance?lat=${location.latitude}&lng=${location.longitude}&radius=100`
-          : `/store`;
-      const res = await renderInstance.get(url);
-      const data = Array.isArray(res.data) ? res.data : [];
-      if (data.length > 0) {
-        loadedList = data.map((item: any, idx: number) => {
-          const s = item.store || item;
+      const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
+      const res = await axios.get(`${fastApiBase}/api/v1/owner/stores`, { timeout: 8000 });
+
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        // Cache in sessionStorage for single-store detail routing
+        try {
+          if (typeof window !== "undefined") {
+            sessionStorage.setItem("@farmer_all_stores_cache", JSON.stringify(res.data));
+          }
+        } catch {}
+
+        loadedList = res.data.map((s: any, idx: number) => {
+          const tractors = s.TractorInStore || s.tractors || [];
+          const attachments = s.AttachmentInStore || s.attachments || [];
+
+          // Compute dynamic rate range from live machinery
+          const prices = tractors
+            .map((t: any) => Number(t.hourly_price || t.rate_per_hour || 0))
+            .filter((p: number) => p > 0);
+
+          const minRate = prices.length > 0 ? Math.min(...prices) : 20;
+          const maxRate = prices.length > 0 ? Math.max(...prices) : 45;
+
+          // Compute distance if lat/lng available
+          let dist = (idx % 8) * 1.8 + 2.4;
+          if (location.latitude && location.longitude && tractors[0]?.lat && tractors[0]?.lan) {
+            dist = calculateDistance(
+              location.latitude,
+              location.longitude,
+              tractors[0].lat,
+              tractors[0].lan
+            );
+          }
+
+          const storeImg =
+            s.image ||
+            tractors[0]?.baseTractor?.images?.[0] ||
+            "https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=600&q=80";
+
           return {
             id: s.id || `store_${idx}`,
-            name: s.name || `Machinery Store #${idx + 1}`,
-            description: s.description || "Certified agricultural machinery store with verified operators.",
-            address: s.address || "Regional Agricultural Center",
-            image: s.image || FALLBACK_STORES[idx % FALLBACK_STORES.length].image,
-            rating: s.rating || 4.8,
-            distance_km: item.distance || (idx + 1) * 2.3,
-            available_tractors_count: s.tractors?.length || 6 + idx * 2,
-            available_implements_count: s.attachments?.length || 12 + idx * 3,
-            rate_range: item.cheapestEquipment
-              ? `$${item.cheapestEquipment} - $${item.mostExpensiveEquipment || item.cheapestEquipment * 2} / Ha`
-              : "$35 - $65 / Ha",
+            name: s.name && s.name.trim() !== "" ? s.name : `Agri Depot #${idx + 1}`,
+            description:
+              s.description && s.description.trim() !== ""
+                ? s.description
+                : "Centro especializado de mecanización agrícola con tractores modernos y equipo certificado.",
+            address: s.address || "Hub Regional de Maquinaria Agrícola",
+            image: storeImg,
+            rating: 4.8,
+            distance_km: dist,
+            available_tractors_count: tractors.length,
+            available_implements_count: attachments.length,
+            rate_range: minRate === maxRate ? `$${minRate} / hr` : `$${minRate} - $${maxRate} / hr`,
+            tractors: tractors,
+            opening_time: s.opening_time,
+            closing_time: s.closing_time,
           };
         });
       }
-    } catch {}
-
-    // 2. Try fetching from FastAPI TractorAI backend
-    if (loadedList.length === 0) {
-      try {
-        const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
-        const res = await axios.get(`${fastApiBase}/api/v1/owner/stores`, { timeout: 4000 });
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          loadedList = res.data.map((s: any, idx: number) => ({
-            id: s.id || `store_fastapi_${idx}`,
-            name: s.name || s.store_name || `Agri Machinery Store #${idx + 1}`,
-            description: s.description || "Modern tractor and implement fleet ready for immediate dispatch.",
-            address: s.address || s.location || "Central Machinery Zone",
-            image: s.image || FALLBACK_STORES[idx % FALLBACK_STORES.length].image,
-            rating: 4.8,
-            distance_km: (idx + 1) * 3.1,
-            available_tractors_count: 8,
-            available_implements_count: 16,
-            rate_range: "$35 - $65 / Ha",
-          }));
-        }
-      } catch {}
+    } catch (errFastApi) {
+      console.warn("TractorAI stores fetch error:", errFastApi);
     }
 
-    // 3. Fallback stores if database has 0 stores
+    // 2. Secondary Backend: NestJS (/store) with access token
     if (loadedList.length === 0) {
-      loadedList = FALLBACK_STORES;
+      try {
+        const headers: Record<string, string> = {};
+        if (access_token) headers["Authorization"] = `Bearer ${access_token}`;
+
+        const url =
+          location.latitude && location.longitude
+            ? `/store/all_stores/with_in_distance?lat=${location.latitude}&lng=${location.longitude}&radius=150`
+            : `/store`;
+
+        const res = await renderInstance.get(url, { headers });
+        const data = Array.isArray(res.data) ? res.data : [];
+        if (data.length > 0) {
+          loadedList = data.map((item: any, idx: number) => {
+            const s = item.store || item;
+            return {
+              id: s.id || `store_nest_${idx}`,
+              name: s.name || `Machinery Store #${idx + 1}`,
+              description: s.description || "Centro de maquinaria agrícola con flota activa de tractores.",
+              address: s.address || "Regional Agricultural Depot",
+              image: s.image || "https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=600&q=80",
+              rating: 4.8,
+              distance_km: item.distance || (idx + 1) * 2.5,
+              available_tractors_count: s.tractors?.length || s.TractorInStore?.length || 0,
+              available_implements_count: s.attachments?.length || s.AttachmentInStore?.length || 0,
+              rate_range: "$20 - $45 / hr",
+              tractors: s.tractors || s.TractorInStore || [],
+            };
+          });
+        }
+      } catch (errNest) {
+        console.warn("NestJS stores fetch error:", errNest);
+      }
     }
 
     setStores(loadedList);
@@ -205,7 +221,7 @@ export default function FarmerStores() {
             </h1>
           </div>
           <p className="text-xs text-slate-500 font-medium mt-1">
-            Browse verified regional tractor stores, available attachments, and certified operator fleets.
+            Real-time live registry of verified agricultural machinery stores, certified dealer fleets, and available equipment.
           </p>
         </div>
 
@@ -218,7 +234,7 @@ export default function FarmerStores() {
             className="rounded-xl border-slate-200 dark:border-slate-800 text-xs font-bold flex items-center gap-1.5"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-emerald-600" : ""}`} />
-            <span>Refresh Stores</span>
+            <span>Refresh Live Registry</span>
           </Button>
 
           <Link href="/farmer/new-booking">
@@ -237,11 +253,11 @@ export default function FarmerStores() {
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <Badge className="bg-emerald-600 text-white text-xs font-bold px-3 py-1">
-            {stores.length} Verified Stores
+            {stores.length} Live Stores
           </Badge>
           <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>TractorAI Guaranteed Fleets</span>
+            <span>TractorAI Real-time Fleet Sync</span>
           </span>
         </div>
 
@@ -249,7 +265,7 @@ export default function FarmerStores() {
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <Input
             type="text"
-            placeholder="Search stores, brands, location..."
+            placeholder="Search stores, brands, equipment..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 pr-3 py-1.5 text-xs rounded-xl border-slate-200 dark:border-slate-800 h-9"
@@ -261,14 +277,14 @@ export default function FarmerStores() {
       {loading ? (
         <div className="py-20 text-center text-xs text-slate-400 space-y-3">
           <RefreshCw className="w-7 h-7 text-emerald-600 animate-spin mx-auto" />
-          <p className="font-semibold text-sm">Locating nearest agricultural machinery stores...</p>
+          <p className="font-semibold text-sm">Querying TractorAI live store network...</p>
         </div>
       ) : filteredStores.length === 0 ? (
         <Card className="rounded-3xl border-slate-200/80 dark:border-slate-800 p-12 text-center bg-white dark:bg-slate-900 shadow-sm space-y-4">
           <StoreIcon className="w-12 h-12 text-slate-400 mx-auto" />
           <div>
             <h3 className="font-black text-lg text-slate-900 dark:text-white">No Stores Found</h3>
-            <p className="text-xs text-slate-400 mt-1">Try adjusting your search query or refresh the location.</p>
+            <p className="text-xs text-slate-400 mt-1">Try adjusting your search query or refresh the live registry.</p>
           </div>
         </Card>
       ) : (
@@ -283,13 +299,13 @@ export default function FarmerStores() {
                 {/* Store Cover Image */}
                 <div className="relative w-full h-44 overflow-hidden bg-slate-100 dark:bg-slate-800">
                   <Image
-                    src={store.image || FALLBACK_STORES[0].image!}
+                    src={store.image || "https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=600&q=80"}
                     alt={store.name}
                     fill
                     unoptimized
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/20 to-transparent" />
 
                   {/* Rating Badge */}
                   <div className="absolute top-3 right-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-xl text-xs font-black text-slate-900 dark:text-white flex items-center gap-1 shadow-sm">
@@ -323,7 +339,7 @@ export default function FarmerStores() {
                         <span>Tractors:</span>
                       </span>
                       <span className="font-bold text-slate-700 dark:text-slate-200">
-                        {store.available_tractors_count} units
+                        {store.available_tractors_count} {store.available_tractors_count === 1 ? "unit" : "units"}
                       </span>
                     </div>
 
@@ -333,7 +349,7 @@ export default function FarmerStores() {
                         <span>Implements:</span>
                       </span>
                       <span className="font-bold text-slate-700 dark:text-slate-200">
-                        {store.available_implements_count} units
+                        {store.available_implements_count} {store.available_implements_count === 1 ? "unit" : "units"}
                       </span>
                     </div>
 
