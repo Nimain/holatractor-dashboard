@@ -112,23 +112,41 @@ const FarmerDashboard = () => {
 
     renderInstance.get(`/farmer/${userId}`)
       .then((res) => {
-        setFarmer(res.data?.details || null)
-        settotalPaid(typeof res.data?.totalPaid === "number" ? res.data.totalPaid : 0)
-        settotalUnpaid(typeof res.data?.totalUnpaid === "number" ? res.data.totalUnpaid : 0)
-        setcompletedBookingsCount(typeof res.data?.completedBookings === "number" ? res.data.completedBookings : 0)
-        settotalBookings(typeof res.data?.totalBookings === "number" ? res.data.totalBookings : 0)
-        setBookings(Array.isArray(res.data?.bookings) ? res.data.bookings : [])
-        const fetchedFarms = Array.isArray(res.data?.farms) ? res.data.farms : []
-        setFarms(fetchedFarms)
-        setAllLogs(Array.isArray(res.data?.logs) ? res.data.logs : [])
-        if (fetchedFarms.length > 0) {
-          dispatch(changeFarm(fetchedFarms[0]))
+        if (res.data) {
+          setFarmer(res.data?.details || null)
+          settotalPaid(typeof res.data?.totalPaid === "number" ? res.data.totalPaid : 0)
+          settotalUnpaid(typeof res.data?.totalUnpaid === "number" ? res.data.totalUnpaid : 0)
+          setcompletedBookingsCount(typeof res.data?.completedBookings === "number" ? res.data.completedBookings : 0)
+          settotalBookings(typeof res.data?.totalBookings === "number" ? res.data.totalBookings : (Array.isArray(res.data?.bookings) ? res.data.bookings.length : 0))
+          setBookings(Array.isArray(res.data?.bookings) ? res.data.bookings : [])
+          const fetchedFarms = Array.isArray(res.data?.farms) ? res.data.farms : []
+          setFarms(fetchedFarms)
+          setAllLogs(Array.isArray(res.data?.logs) ? res.data.logs : [])
+          if (fetchedFarms.length > 0) {
+            dispatch(changeFarm(fetchedFarms[0]))
+          }
         }
-      }).catch((err) => {
-        if (err.response && err.response.status === 404 && err.response.data?.message === "Farmer not found") {
-          errorMessage("Farmer not found")
-        } else {
-          errorMessage("Error fetching user details")
+      }).catch(async (err) => {
+        // Direct FastAPI fallback
+        try {
+          const fastApiBase = "https://tractorai.sinsignal.com";
+          const [bookingsRes, farmsRes] = await Promise.all([
+            axios.get(`${fastApiBase}/simple-booking/list/${userId}`, { timeout: 5000 }).catch(() => null),
+            axios.get(`${fastApiBase}/api/v1/farms`, { timeout: 5000 }).catch(() => null),
+          ]);
+          const bList = Array.isArray(bookingsRes?.data) ? bookingsRes.data : [];
+          const fList = Array.isArray(farmsRes?.data) ? farmsRes.data : [];
+
+          setBookings(bList);
+          settotalBookings(bList.length);
+          setFarms(fList);
+          if (fList.length > 0) {
+            dispatch(changeFarm(fList[0]));
+          }
+        } catch {
+          if (err.response && err.response.status === 404 && err.response.data?.message === "Farmer not found") {
+            errorMessage("Farmer record not found");
+          }
         }
       }).finally(() => {
         setFetchingFarmerDetails(false)

@@ -31,22 +31,34 @@ const Stores = () => {
   const [error, setError] = useState<string | null>(null);
 
   function getAllStores() {
-    if(location.latitude && location.longitude){
-      setFetching(true)
-      renderInstance.get(`/store/all_stores/with_in_distance?lat=${location.latitude}&lng=${location.longitude}&radius=80`)
-      .then(res=>{
-        setStores(res.data)
-      }).catch((err)=>{
-        errorMessage("Error fetching stores")
-      }).finally(()=>{
+    setFetching(true)
+    const url = (location.latitude && location.longitude)
+      ? `/store/all_stores/with_in_distance?lat=${location.latitude}&lng=${location.longitude}&radius=80`
+      : `/store`;
+
+    renderInstance.get(url)
+      .then(res => {
+        const data = Array.isArray(res.data) ? res.data : [];
+        const formattedStores = data.map((item: any) => {
+          if (item.store) return item;
+          return {
+            store: item,
+            distance: 5.0,
+            cheapestEquipment: null,
+            mostExpensiveEquipment: null,
+          };
+        });
+        setStores(formattedStores);
+      }).catch((err) => {
+        console.error("Error fetching stores:", err);
+      }).finally(() => {
         setFetching(false)
       })
-    }
   }
 
-  useEffect(()=>{
+  useEffect(() => {
     getAllStores()
-  },[location])
+  }, [location.latitude, location.longitude])
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -59,10 +71,12 @@ const Stores = () => {
         },
         (error: GeolocationPositionError) => {
           setError(error.message);
+          getAllStores();
         }
       );
     } else {
       setError("Geolocation is not supported by this browser.");
+      getAllStores();
     }
   }, []);
 

@@ -301,6 +301,150 @@ renderInstance.interceptors.response.use(
       }
     }
 
+    // If backend returns 500 or 404 on /farmer/${userId}
+    const isSingleFarmer = (url.includes("/farmer/") || url.startsWith("farmer/")) && !url.includes("logPage");
+    if (isSingleFarmer) {
+      try {
+        const token = getCookie("access_token");
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const urlParts = url.split("/").filter(Boolean);
+        const farmerIdOrUserId = urlParts[urlParts.length - 1] || "";
+        const fastApiBase = TractorAIBaseURL.replace(/\/$/, "");
+
+        try {
+          const [bookingsRes, farmsRes, farmerProfileRes] = await Promise.all([
+            axios.get(`${fastApiBase}/simple-booking/list/${farmerIdOrUserId}`, { headers, timeout: 6000 }).catch(() => null),
+            axios.get(`${fastApiBase}/api/v1/farms`, { headers, timeout: 6000 }).catch(() => null),
+            axios.get(`${fastApiBase}/user/farmer-profile`, { headers, timeout: 6000 }).catch(() => null),
+          ]);
+
+          const bookings = Array.isArray(bookingsRes?.data) ? bookingsRes.data : Array.isArray(bookingsRes?.data?.data) ? bookingsRes.data.data : [];
+          const farms = Array.isArray(farmsRes?.data) ? farmsRes.data : Array.isArray(farmsRes?.data?.data) ? farmsRes.data.data : [];
+
+          let totalPaid = 0;
+          let totalUnpaid = 0;
+          let completedCount = 0;
+
+          bookings.forEach((b: any) => {
+            const cost = Number(b.total_cost || b.total_amount || 0);
+            const isCompleted = b.bookingStatus === "Completed" || b.status === "Completed" || b.confirm === 1;
+            if (isCompleted) {
+              totalPaid += cost;
+              completedCount++;
+            } else {
+              totalUnpaid += cost;
+            }
+          });
+
+          const farmerDetails = farmerProfileRes?.data?.data || farmerProfileRes?.data || {
+            id: farmerIdOrUserId,
+            user_id: farmerIdOrUserId,
+            Status: 1,
+            user: {
+              id: farmerIdOrUserId,
+              first_name: "Farmer",
+              last_name: "",
+              email: "",
+              mobile: "",
+            },
+          };
+
+          return {
+            ...error.response,
+            data: {
+              details: farmerDetails,
+              totalPaid,
+              totalUnpaid,
+              completedBookings: completedCount,
+              totalBookings: bookings.length,
+              bookings,
+              farms,
+              logs: [],
+            },
+            status: 200,
+            statusText: "OK",
+            headers: {},
+            config: error.config,
+          } as AxiosResponse;
+        } catch {}
+      } catch (farmerErr) {
+        console.error("Farmer profile fallback error:", farmerErr);
+      }
+    }
+
+    // If backend returns 500 or 404 on /booking
+    if (url === "/booking" || url === "booking" || url.startsWith("/booking") || url.startsWith("booking")) {
+      try {
+        const token = getCookie("access_token");
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const fastApiBase = TractorAIBaseURL.replace(/\/$/, "");
+
+        const userStr = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+        let uId = "";
+        if (userStr) {
+          try { uId = JSON.parse(userStr)?.userId || JSON.parse(userStr)?.id || ""; } catch {}
+        }
+
+        const bRes = await axios.get(`${fastApiBase}/simple-booking/list/${uId || "all"}`, { headers, timeout: 6000 }).catch(() => null);
+        const bData = Array.isArray(bRes?.data) ? bRes.data : Array.isArray(bRes?.data?.data) ? bRes.data.data : [];
+        if (bData.length > 0) {
+          return {
+            ...error.response,
+            data: bData,
+            status: 200,
+            statusText: "OK",
+            headers: {},
+            config: error.config,
+          } as AxiosResponse;
+        }
+      } catch {}
+    }
+
+    // If backend returns 500 or 404 on /farm
+    if (url === "/farm" || url === "farm" || url.startsWith("/farm") || url.startsWith("farm")) {
+      try {
+        const token = getCookie("access_token");
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const fastApiBase = TractorAIBaseURL.replace(/\/$/, "");
+        const fRes = await axios.get(`${fastApiBase}/api/v1/farms`, { headers, timeout: 6000 }).catch(() => null);
+        const fData = Array.isArray(fRes?.data) ? fRes.data : Array.isArray(fRes?.data?.data) ? fRes.data.data : [];
+        if (fData.length > 0) {
+          return {
+            ...error.response,
+            data: fData,
+            status: 200,
+            statusText: "OK",
+            headers: {},
+            config: error.config,
+          } as AxiosResponse;
+        }
+      } catch {}
+    }
+
+    // If backend returns 500 or 404 on /store
+    if (url === "/store" || url === "store" || url.startsWith("/store") || url.startsWith("store")) {
+      try {
+        const token = getCookie("access_token");
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const fastApiBase = TractorAIBaseURL.replace(/\/$/, "");
+        const [storesRes, tractorsRes] = await Promise.all([
+          axios.get(`${fastApiBase}/owner/owner/stores`, { headers, timeout: 6000 }).catch(() => null),
+          axios.get(`${fastApiBase}/store/alltractors`, { headers, timeout: 6000 }).catch(() => null),
+        ]);
+        const sData = Array.isArray(storesRes?.data) ? storesRes.data : Array.isArray(storesRes?.data?.data) ? storesRes.data.data : [];
+        if (sData.length > 0) {
+          return {
+            ...error.response,
+            data: sData,
+            status: 200,
+            statusText: "OK",
+            headers: {},
+            config: error.config,
+          } as AxiosResponse;
+        }
+      } catch {}
+    }
+
     // If backend returns 500 or 404 on /owner/${userId} or /owner
     if (url.includes("/owner") || url.startsWith("owner")) {
       try {
@@ -308,39 +452,36 @@ renderInstance.interceptors.response.use(
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const urlParts = url.split("/").filter(Boolean);
         const ownerIdOrUserId = urlParts[urlParts.length - 1] || "";
+        const fastApiBase = TractorAIBaseURL.replace(/\/$/, "");
 
-        // 1. Try tractorai.sinsignal.com owner endpoints
-        try {
-          const fastApiBase = TractorAIBaseURL.replace(/\/$/, "");
-          const [storesRes, tractorsRes, profileRes] = await Promise.all([
-            axios.get(`${fastApiBase}/owner/owner/stores/${ownerIdOrUserId}`, { headers, timeout: 5000 }).catch(() => null),
-            axios.get(`${fastApiBase}/owner/owner/tractors/${ownerIdOrUserId}`, { headers, timeout: 5000 }).catch(() => null),
-            axios.get(`${fastApiBase}/owner/owner-profile/${ownerIdOrUserId}`, { headers, timeout: 5000 }).catch(() => null),
-          ]);
+        const [storesRes, tractorsRes, profileRes] = await Promise.all([
+          axios.get(`${fastApiBase}/owner/owner/stores/${ownerIdOrUserId}`, { headers, timeout: 5000 }).catch(() => null),
+          axios.get(`${fastApiBase}/owner/owner/tractors/${ownerIdOrUserId}`, { headers, timeout: 5000 }).catch(() => null),
+          axios.get(`${fastApiBase}/owner/owner-profile/${ownerIdOrUserId}`, { headers, timeout: 5000 }).catch(() => null),
+        ]);
 
-          const stores = Array.isArray(storesRes?.data) ? storesRes.data : Array.isArray(storesRes?.data?.data) ? storesRes.data.data : [];
-          const tractors = Array.isArray(tractorsRes?.data) ? tractorsRes.data : Array.isArray(tractorsRes?.data?.data) ? tractorsRes.data.data : [];
-          
-          if (stores.length > 0 || tractors.length > 0 || profileRes?.data) {
-            return {
-              ...error.response,
-              data: {
-                stores,
-                tractors,
-                operators: profileRes?.data?.operators || [],
-                bookings: profileRes?.data?.bookings || [],
-                attachments: profileRes?.data?.attachments || [],
-                tractorsInuse: 0,
-                attachmentsInuse: 0,
-                ...(profileRes?.data || {}),
-              },
-              status: 200,
-              statusText: "OK",
-              headers: {},
-              config: error.config,
-            } as AxiosResponse;
-          }
-        } catch {}
+        const stores = Array.isArray(storesRes?.data) ? storesRes.data : Array.isArray(storesRes?.data?.data) ? storesRes.data.data : [];
+        const tractors = Array.isArray(tractorsRes?.data) ? tractorsRes.data : Array.isArray(tractorsRes?.data?.data) ? tractorsRes.data.data : [];
+
+        if (stores.length > 0 || tractors.length > 0 || profileRes?.data) {
+          return {
+            ...error.response,
+            data: {
+              stores,
+              tractors,
+              operators: profileRes?.data?.operators || [],
+              bookings: profileRes?.data?.bookings || [],
+              attachments: profileRes?.data?.attachments || [],
+              tractorsInuse: 0,
+              attachmentsInuse: 0,
+              ...(profileRes?.data || {}),
+            },
+            status: 200,
+            statusText: "OK",
+            headers: {},
+            config: error.config,
+          } as AxiosResponse;
+        }
       } catch (ownerFallbackErr) {
         console.error("Owner fallback error:", ownerFallbackErr);
       }

@@ -77,11 +77,11 @@ const FarmerBookingHistory = () => {
 
   const startedBookings = bookings.filter((booking) => (booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped))
 
-  const unpaidBookings = bookings.filter((booking) => (((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED"))))
+  const unpaidBookings = bookings.filter((booking) => (((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment?.[0]?.status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment?.[0]?.status}` === "OwnerREJECTED"))))
 
-  const reviewBookings = bookings.filter((booking) => (booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerCONFIRMED"))
+  const reviewBookings = bookings.filter((booking) => (booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment?.[0]?.status}` === "FarmerCONFIRMED"))
 
-  const completedBookings = bookings.filter((booking) => (booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
+  const completedBookings = bookings.filter((booking) => (booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment?.[0]?.status}` === "COMPLETED"))
 
   function userBookingConfirm(booking_id: string) {
     setBookingConfirm(true)

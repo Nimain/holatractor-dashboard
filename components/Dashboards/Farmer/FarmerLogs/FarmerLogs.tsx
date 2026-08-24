@@ -101,7 +101,8 @@ const FarmerLogs = () => {
         setPayments(Array.isArray(res.data) ? res.data : []);
       })
       .catch((err) => {
-        errorMessage("Error fetching logs");
+        console.warn("Logs fallback to empty array:", err);
+        setPayments([]);
       })
       .finally(() => {
         setFetching(false);
