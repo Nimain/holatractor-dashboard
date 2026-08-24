@@ -34,6 +34,13 @@ const Header = () => {
   const user: user = cookie.get("user");
   const access_token = cookie.get("access_token");
 
+  const isOwner = cookie.get("isOwner") === "true";
+  const isFarmer = cookie.get("isFarmer") === "true";
+  const isDealer = cookie.get("isDealer") === "true";
+  const isAgent = cookie.get("isAgent") === "true";
+  const isOperator = cookie.get("isOperator") === "true";
+  const hasMultipleRoles = [isOwner, isFarmer, isDealer, isAgent, isOperator].filter(Boolean).length > 1;
+
   const fetchNotifications = async () => {
     if (user?.userId) {
       renderInstance.get(`/owner/${user.userId}`).then((res) => {
@@ -81,20 +88,24 @@ const Header = () => {
           />
         </div>
 
-        {/* Switch Account / Role Button */}
-        <Button
-          onClick={() => setIsSwitchAccountOpen(true)}
-          variant="outline"
-          className="border-slate-300 hover:border-slate-400 bg-white/80 hover:bg-slate-50 text-slate-700 font-bold py-2 px-4 rounded-full text-xs transition-all shadow-sm flex items-center gap-1.5"
-        >
-          <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
-          Switch Account
-        </Button>
+        {/* Switch Account / Role Button (Shown only when user has multiple roles) */}
+        {hasMultipleRoles && (
+          <>
+            <Button
+              onClick={() => setIsSwitchAccountOpen(true)}
+              variant="outline"
+              className="border-slate-300 hover:border-slate-400 bg-white/80 hover:bg-slate-50 text-slate-700 font-bold py-2 px-4 rounded-full text-xs transition-all shadow-sm flex items-center gap-1.5"
+            >
+              <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+              Switch Account
+            </Button>
 
-        <SwitchAccountModal
-          isOpen={isSwitchAccountOpen}
-          onClose={() => setIsSwitchAccountOpen(false)}
-        />
+            <SwitchAccountModal
+              isOpen={isSwitchAccountOpen}
+              onClose={() => setIsSwitchAccountOpen(false)}
+            />
+          </>
+        )}
 
         {/* Upgrade Plan Button */}
         <Button

@@ -48,6 +48,13 @@ const ProfileComponent = () => {
   const access_token = cookie.get("access_token");
   const user = cookie.get("user");
 
+  const isOwner = cookie.get("isOwner") === "true";
+  const isFarmer = cookie.get("isFarmer") === "true";
+  const isDealer = cookie.get("isDealer") === "true";
+  const isAgent = cookie.get("isAgent") === "true";
+  const isOperator = cookie.get("isOperator") === "true";
+  const hasMultipleRoles = [isOwner, isFarmer, isDealer, isAgent, isOperator].filter(Boolean).length > 1;
+
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const image = acceptedFiles[0];
     const reader = new FileReader();
@@ -325,16 +332,18 @@ const ProfileComponent = () => {
             </div>
           </div>
 
-          {/* ─── SWITCH ACCOUNT / ROLE ─── */}
-          <div className="px-6 pb-2">
-            <button
-              onClick={() => setSwitchModalOpen(true)}
-              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-950/40 to-slate-800/60 hover:from-emerald-900/60 hover:to-slate-700/60 border border-emerald-700/40 hover:border-emerald-500/60 text-emerald-300 text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]"
-            >
-              <UserCheck className="w-4 h-4 text-emerald-400" />
-              Switch Account / Role Dashboard
-            </button>
-          </div>
+          {/* ─── SWITCH ACCOUNT / ROLE (Only shown if user has multiple roles) ─── */}
+          {hasMultipleRoles && (
+            <div className="px-6 pb-2">
+              <button
+                onClick={() => setSwitchModalOpen(true)}
+                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-950/40 to-slate-800/60 hover:from-emerald-900/60 hover:to-slate-700/60 border border-emerald-700/40 hover:border-emerald-500/60 text-emerald-300 text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]"
+              >
+                <UserCheck className="w-4 h-4 text-emerald-400" />
+                Switch Account / Role Dashboard
+              </button>
+            </div>
+          )}
 
           {/* ─── DIVIDER ─── */}
           <div className="border-t border-slate-800/80 mx-6" />

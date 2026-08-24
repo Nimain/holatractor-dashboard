@@ -145,7 +145,7 @@ export default function SwitchAccountModal({
       return false;
     });
 
-    setAvailableRoles(roles.length > 0 ? roles : ALL_ROLES.slice(0, 2));
+    setAvailableRoles(roles);
 
     // Detect current role based on path or cookie
     const activeCookie = cookie.get("active_role");
@@ -156,6 +156,11 @@ export default function SwitchAccountModal({
     else if (pathname.startsWith("/operator")) setCurrentRole("operator");
     else if (activeCookie) setCurrentRole(activeCookie);
   }, [pathname, isOpen]);
+
+  // If user has 1 or 0 roles, do not display switching modal
+  if (availableRoles.length <= 1 && !isOpen) {
+    return null;
+  }
 
   const handleSelect = (role: RoleConfig) => {
     const expiryDate = new Date();
