@@ -42,6 +42,7 @@ import { Booking, Farm, Farmer, Logs } from "@/utils/Types/types";
 import { renderInstance, TractorAIBaseURL } from "@/utils/Axios/RenderInstance";
 import { errorMessage } from "@/utils/Toastify/Messages";
 import FarmerShrimmer from "./_components/FarmerShrimmer";
+import MandiSpotPrices from "./_components/MandiSpotPrices";
 import TranslatedText from "@/components/Menubar/TranslatedText";
 import {
   activeBookings,
@@ -375,6 +376,9 @@ export default function FarmerDashboard() {
           ))}
         </div>
       </div>
+
+      {/* ── LIVE MANDI SPOT PRICES TICKER & COMMODITY RATES ───────────────── */}
+      <MandiSpotPrices />
 
       {/* ── MAIN CONTENT GRID: LIVE MAP & RECENT DISPATCHES ─────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
