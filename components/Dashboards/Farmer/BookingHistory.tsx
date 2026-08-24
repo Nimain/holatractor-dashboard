@@ -99,12 +99,15 @@ const FarmerBookingHistory = () => {
     return {
       id: bookingId,
       bookingStatus: assignedStatus,
+      confirm: raw.confirm !== undefined ? raw.confirm : true,
+      owner_confirm: raw.owner_confirm !== undefined ? raw.owner_confirm : true,
       start_date: raw.start_date || raw.scheduled_start || raw.scheduled_date || new Date().toISOString(),
       end_date: raw.end_date || null,
       booking_hours: raw.booking_hours || (raw.hectares ? `${raw.hectares} Ha Operation` : "Scheduled Task"),
       booking_location_lat: raw.booking_location_lat || raw.lat || "Field Location",
       booking_location_lan: raw.booking_location_lan || raw.lng || "Assigned",
       total_price: totalAmount,
+      total_cost: totalAmount,
       hours_worked: raw.hours_worked || 0,
       checkin_otp: raw.checkin_otp || "N/A",
       tractors: tractors,
@@ -147,12 +150,18 @@ const FarmerBookingHistory = () => {
       }
     } catch {}
 
-    // 3. Fetch from local cache for instant zero-latency feedback
+    // 3. Scan all farmer local bookings from localStorage
     try {
-      const key = `@farmer_recent_bookings_${effectiveUserId}`
-      const cached = localStorage.getItem(key)
-      if (cached) {
-        localBookings = JSON.parse(cached)
+      if (typeof window !== "undefined") {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i) || ""
+          if (k.startsWith("@farmer_recent_bookings_") || k.startsWith("@farmer_simple_bookings_")) {
+            try {
+              const arr = JSON.parse(localStorage.getItem(k) || "[]")
+              if (Array.isArray(arr)) localBookings.push(...arr)
+            } catch {}
+          }
+        }
       }
     } catch {}
 
@@ -322,7 +331,7 @@ const FarmerBookingHistory = () => {
                           </div>
                           <ul className="list-disc list-inside text-sm pl-6">
                             {booking.tractors.map((tractor, index) => (
-                              <li key={index}>{tractor.tractor.baseTractor.name}</li>
+                              <li key={index}>{tractor?.tractor?.baseTractor?.name || "Agriculture Tractor"}</li>
                             ))}
                           </ul>
                         </div>
@@ -333,7 +342,7 @@ const FarmerBookingHistory = () => {
                           </div>
                           <ul className="list-disc list-inside text-sm pl-6">
                             {booking.attachments.map((attachment, index) => (
-                              <li key={index}>{attachment.attachment.baseAttachment.name}</li>
+                              <li key={index}>{attachment?.attachment?.baseAttachment?.name || "Agricultural Implement"}</li>
                             ))}
                           </ul>
                         </div>
@@ -343,7 +352,7 @@ const FarmerBookingHistory = () => {
                             <DollarSignIcon className="w-4 h-4 text-gray-500" />
                             <span className="text-sm font-medium">Total Cost:</span>
                           </div>
-                          <span className="text-lg font-bold">${booking.total_cost.toFixed(2)}</span>
+                          <span className="text-lg font-bold">${(Number(booking.total_cost ?? booking.total_price ?? 0)).toFixed(2)}</span>
                         </div>
                       </CardContent>
                       <CardFooter className="flex justify-between">
@@ -487,7 +496,7 @@ const FarmerBookingHistory = () => {
                           </div>
                           <ul className="list-disc list-inside text-sm pl-6">
                             {booking.tractors.map((tractor, index) => (
-                              <li key={index}>{tractor.tractor.baseTractor.name}</li>
+                              <li key={index}>{tractor?.tractor?.baseTractor?.name || "Agriculture Tractor"}</li>
                             ))}
                           </ul>
                         </div>
@@ -498,7 +507,7 @@ const FarmerBookingHistory = () => {
                           </div>
                           <ul className="list-disc list-inside text-sm pl-6">
                             {booking.attachments.map((attachment, index) => (
-                              <li key={index}>{attachment.attachment.baseAttachment.name}</li>
+                              <li key={index}>{attachment?.attachment?.baseAttachment?.name || "Agricultural Implement"}</li>
                             ))}
                           </ul>
                         </div>
@@ -508,7 +517,7 @@ const FarmerBookingHistory = () => {
                             <DollarSignIcon className="w-4 h-4 text-gray-500" />
                             <span className="text-sm font-medium">Total Cost:</span>
                           </div>
-                          <span className="text-lg font-bold">${booking.total_cost.toFixed(2)}</span>
+                          <span className="text-lg font-bold">${(Number(booking.total_cost ?? booking.total_price ?? 0)).toFixed(2)}</span>
                         </div>
                       </CardContent>
                       <CardFooter className="flex justify-between">
@@ -601,7 +610,7 @@ const FarmerBookingHistory = () => {
                         </div>
                         <ul className="list-disc list-inside text-sm pl-6">
                           {booking.tractors.map((tractor, index) => (
-                            <li key={index}>{tractor.tractor.baseTractor.name}</li>
+                            <li key={index}>{tractor?.tractor?.baseTractor?.name || "Agriculture Tractor"}</li>
                           ))}
                         </ul>
                       </div>
@@ -612,7 +621,7 @@ const FarmerBookingHistory = () => {
                         </div>
                         <ul className="list-disc list-inside text-sm pl-6">
                           {booking.attachments.map((attachment, index) => (
-                            <li key={index}>{attachment.attachment.baseAttachment.name}</li>
+                            <li key={index}>{attachment?.attachment?.baseAttachment?.name || "Agricultural Implement"}</li>
                           ))}
                         </ul>
                       </div>
@@ -622,7 +631,7 @@ const FarmerBookingHistory = () => {
                           <DollarSignIcon className="w-4 h-4 text-gray-500" />
                           <span className="text-sm font-medium">Total Cost:</span>
                         </div>
-                        <span className="text-lg font-bold">${booking.total_cost.toFixed(2)}</span>
+                        <span className="text-lg font-bold">${(Number(booking.total_cost ?? booking.total_price ?? 0)).toFixed(2)}</span>
                       </div>
                     </CardContent>
                   </Card>
@@ -705,7 +714,7 @@ const FarmerBookingHistory = () => {
                         </div>
                         <ul className="list-disc list-inside text-sm pl-6">
                           {booking.tractors.map((tractor, index) => (
-                            <li key={index}>{tractor.tractor.baseTractor.name}</li>
+                            <li key={index}>{tractor?.tractor?.baseTractor?.name || "Agriculture Tractor"}</li>
                           ))}
                         </ul>
                       </div>
@@ -716,7 +725,7 @@ const FarmerBookingHistory = () => {
                         </div>
                         <ul className="list-disc list-inside text-sm pl-6">
                           {booking.attachments.map((attachment, index) => (
-                            <li key={index}>{attachment.attachment.baseAttachment.name}</li>
+                            <li key={index}>{attachment?.attachment?.baseAttachment?.name || "Agricultural Implement"}</li>
                           ))}
                         </ul>
                       </div>
@@ -726,7 +735,7 @@ const FarmerBookingHistory = () => {
                           <DollarSignIcon className="w-4 h-4 text-gray-500" />
                           <span className="text-sm font-medium">Total Cost:</span>
                         </div>
-                        <span className="text-lg font-bold">${booking.total_cost.toFixed(2)}</span>
+                        <span className="text-lg font-bold">${(Number(booking.total_cost ?? booking.total_price ?? 0)).toFixed(2)}</span>
                       </div>
                     </CardContent>
                   </Card>
@@ -813,7 +822,7 @@ const FarmerBookingHistory = () => {
                         </div>
                         <ul className="list-disc list-inside text-sm pl-6">
                           {booking.tractors.map((tractor, index) => (
-                            <li key={index}>{tractor.tractor.baseTractor.name}</li>
+                            <li key={index}>{tractor?.tractor?.baseTractor?.name || "Agriculture Tractor"}</li>
                           ))}
                         </ul>
                       </div>
@@ -824,7 +833,7 @@ const FarmerBookingHistory = () => {
                         </div>
                         <ul className="list-disc list-inside text-sm pl-6">
                           {booking.attachments.map((attachment, index) => (
-                            <li key={index}>{attachment.attachment.baseAttachment.name}</li>
+                            <li key={index}>{attachment?.attachment?.baseAttachment?.name || "Agricultural Implement"}</li>
                           ))}
                         </ul>
                       </div>
@@ -834,7 +843,7 @@ const FarmerBookingHistory = () => {
                           <DollarSignIcon className="w-4 h-4 text-gray-500" />
                           <span className="text-sm font-medium">Total Cost:</span>
                         </div>
-                        <span className="text-lg font-bold">${booking.total_cost.toFixed(2)}</span>
+                        <span className="text-lg font-bold">${(Number(booking.total_cost ?? booking.total_price ?? 0)).toFixed(2)}</span>
                       </div>
                     </CardContent>
                     <CardFooter className="flex justify-between">
@@ -947,7 +956,7 @@ const FarmerBookingHistory = () => {
                         </div>
                         <ul className="list-disc list-inside text-sm pl-6">
                           {booking.tractors.map((tractor, index) => (
-                            <li key={index}>{tractor.tractor.baseTractor.name}</li>
+                            <li key={index}>{tractor?.tractor?.baseTractor?.name || "Agriculture Tractor"}</li>
                           ))}
                         </ul>
                       </div>
@@ -958,7 +967,7 @@ const FarmerBookingHistory = () => {
                         </div>
                         <ul className="list-disc list-inside text-sm pl-6">
                           {booking.attachments.map((attachment, index) => (
-                            <li key={index}>{attachment.attachment.baseAttachment.name}</li>
+                            <li key={index}>{attachment?.attachment?.baseAttachment?.name || "Agricultural Implement"}</li>
                           ))}
                         </ul>
                       </div>
@@ -968,7 +977,7 @@ const FarmerBookingHistory = () => {
                           <DollarSignIcon className="w-4 h-4 text-gray-500" />
                           <span className="text-sm font-medium">Total Cost:</span>
                         </div>
-                        <span className="text-lg font-bold">${booking.total_cost.toFixed(2)}</span>
+                        <span className="text-lg font-bold">${(Number(booking.total_cost ?? booking.total_price ?? 0)).toFixed(2)}</span>
                       </div>
                     </CardContent>
                     <CardFooter className="flex justify-between">
@@ -1052,7 +1061,7 @@ const FarmerBookingHistory = () => {
                         </div>
                         <ul className="list-disc list-inside text-sm pl-6">
                           {booking.tractors.map((tractor, index) => (
-                            <li key={index}>{tractor.tractor.baseTractor.name}</li>
+                            <li key={index}>{tractor?.tractor?.baseTractor?.name || "Agriculture Tractor"}</li>
                           ))}
                         </ul>
                       </div>
@@ -1063,7 +1072,7 @@ const FarmerBookingHistory = () => {
                         </div>
                         <ul className="list-disc list-inside text-sm pl-6">
                           {booking.attachments.map((attachment, index) => (
-                            <li key={index}>{attachment.attachment.baseAttachment.name}</li>
+                            <li key={index}>{attachment?.attachment?.baseAttachment?.name || "Agricultural Implement"}</li>
                           ))}
                         </ul>
                       </div>
@@ -1073,7 +1082,7 @@ const FarmerBookingHistory = () => {
                           <DollarSignIcon className="w-4 h-4 text-gray-500" />
                           <span className="text-sm font-medium">Total Cost:</span>
                         </div>
-                        <span className="text-lg font-bold">${booking.total_cost.toFixed(2)}</span>
+                        <span className="text-lg font-bold">${(Number(booking.total_cost ?? booking.total_price ?? 0)).toFixed(2)}</span>
                       </div>
                     </CardContent>
                   </Card>
@@ -1154,7 +1163,7 @@ const FarmerBookingHistory = () => {
                         </div>
                         <ul className="list-disc list-inside text-sm pl-6">
                           {booking.tractors.map((tractor, index) => (
-                            <li key={index}>{tractor.tractor.baseTractor.name}</li>
+                            <li key={index}>{tractor?.tractor?.baseTractor?.name || "Agriculture Tractor"}</li>
                           ))}
                         </ul>
                       </div>
@@ -1165,7 +1174,7 @@ const FarmerBookingHistory = () => {
                         </div>
                         <ul className="list-disc list-inside text-sm pl-6">
                           {booking.attachments.map((attachment, index) => (
-                            <li key={index}>{attachment.attachment.baseAttachment.name}</li>
+                            <li key={index}>{attachment?.attachment?.baseAttachment?.name || "Agricultural Implement"}</li>
                           ))}
                         </ul>
                       </div>
@@ -1175,7 +1184,7 @@ const FarmerBookingHistory = () => {
                           <DollarSignIcon className="w-4 h-4 text-gray-500" />
                           <span className="text-sm font-medium">Total Cost:</span>
                         </div>
-                        <span className="text-lg font-bold">${booking.total_cost.toFixed(2)}</span>
+                        <span className="text-lg font-bold">${(Number(booking.total_cost ?? booking.total_price ?? 0)).toFixed(2)}</span>
                       </div>
                     </CardContent>
                   </Card>
