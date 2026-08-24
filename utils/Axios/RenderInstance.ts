@@ -7,6 +7,7 @@ export const DeviceBaseURL = "https://device.holatractor.com/";
 export const TractorAIBaseURL =
   process.env.NEXT_PUBLIC_TRACTOR_AI_URL ||
   "https://tractorai.sinsignal.com/";
+export const FastApiBaseURL = TractorAIBaseURL;
 
 function getCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
