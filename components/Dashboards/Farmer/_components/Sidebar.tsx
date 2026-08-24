@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useCookie } from "next-cookie";
+import FarmerBrandIcon from "@/components/Common/FarmerBrandIcon";
 import {
   LayoutDashboard,
   Zap,
@@ -137,11 +138,7 @@ export default function FarmerSidebar() {
         <div>
           <div className="p-4 flex items-center justify-between border-b border-slate-800/80">
             <Link href="/farmer" className="flex items-center gap-3 overflow-hidden">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 p-0.5 flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20">
-                <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-                  <Tractor className="w-5 h-5 text-emerald-400" />
-                </div>
-              </div>
+              <FarmerBrandIcon size={38} className="shrink-0 drop-shadow-md rounded-2xl" />
               {isExpanded && (
                 <div className="leading-tight">
                   <span className="font-black text-sm text-white tracking-tight flex items-center gap-1.5">

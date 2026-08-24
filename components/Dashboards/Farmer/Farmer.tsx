@@ -43,6 +43,7 @@ import { renderInstance, TractorAIBaseURL } from "@/utils/Axios/RenderInstance";
 import { errorMessage } from "@/utils/Toastify/Messages";
 import FarmerShrimmer from "./_components/FarmerShrimmer";
 import MandiSpotPrices from "./_components/MandiSpotPrices";
+import FarmerBrandIcon from "@/components/Common/FarmerBrandIcon";
 import TranslatedText from "@/components/Menubar/TranslatedText";
 import {
   activeBookings,
@@ -211,22 +212,25 @@ export default function FarmerDashboard() {
         <div className="absolute bottom-0 right-1/4 -mb-8 w-48 h-48 bg-teal-500/10 rounded-full blur-2xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-xl">
-            <div className="flex items-center gap-2">
-              <Badge className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5">
-                🌱 Precision Agriculture Hub
-              </Badge>
-              <span className="text-xs text-emerald-200/70 font-semibold flex items-center gap-1">
-                <MapPin className="w-3 h-3 text-emerald-400" />
-                {city}
-              </span>
+          <div className="flex items-center gap-5">
+            <FarmerBrandIcon size={64} className="shrink-0 rounded-2xl shadow-xl hidden sm:block border border-emerald-400/30" />
+            <div className="space-y-2 max-w-xl">
+              <div className="flex items-center gap-2">
+                <Badge className="bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5">
+                  🌱 Precision Agriculture Hub
+                </Badge>
+                <span className="text-xs text-emerald-200/70 font-semibold flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-emerald-400" />
+                  {city}
+                </span>
+              </div>
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tight text-white">
+                Welcome Back, {user.name || "Farmer"}!
+              </h1>
+              <p className="text-xs md:text-sm text-emerald-100/80 leading-relaxed">
+                Schedule tractors, tillage machinery, precision seeding, and harvesting services with real-time TractorAI fleet dispatching.
+              </p>
             </div>
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tight text-white">
-              Welcome Back, {user.name || "Farmer"}!
-            </h1>
-            <p className="text-xs md:text-sm text-emerald-100/80 leading-relaxed">
-              Schedule tractors, tillage machinery, precision seeding, and harvesting services with real-time TractorAI fleet dispatching.
-            </p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
