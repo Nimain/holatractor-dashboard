@@ -430,9 +430,13 @@ export default function NewBookingFlow() {
       if (createdRecord) {
         try {
           const key = `@farmer_recent_bookings_${uId}`;
+          const globalKey = "@farmer_all_recent_bookings";
           const existing = JSON.parse(localStorage.getItem(key) || "[]");
+          const globalExisting = JSON.parse(localStorage.getItem(globalKey) || "[]");
           const updated = [createdRecord, ...existing.filter((x: any) => x.booking_id !== createdRecord.booking_id)];
+          const globalUpdated = [createdRecord, ...globalExisting.filter((x: any) => x.booking_id !== createdRecord.booking_id)];
           localStorage.setItem(key, JSON.stringify(updated.slice(0, 50)));
+          localStorage.setItem(globalKey, JSON.stringify(globalUpdated.slice(0, 50)));
           window.dispatchEvent(new CustomEvent("farmer_booking_created", { detail: createdRecord }));
         } catch {}
       }
@@ -464,9 +468,13 @@ export default function NewBookingFlow() {
       setConfirmedBooking(fallbackConfirmation);
       try {
         const key = `@farmer_recent_bookings_${uId}`;
+        const globalKey = "@farmer_all_recent_bookings";
         const existing = JSON.parse(localStorage.getItem(key) || "[]");
+        const globalExisting = JSON.parse(localStorage.getItem(globalKey) || "[]");
         const updated = [fallbackConfirmation, ...existing.filter((x: any) => x.booking_id !== fallbackConfirmation.booking_id)];
+        const globalUpdated = [fallbackConfirmation, ...globalExisting.filter((x: any) => x.booking_id !== fallbackConfirmation.booking_id)];
         localStorage.setItem(key, JSON.stringify(updated.slice(0, 50)));
+        localStorage.setItem(globalKey, JSON.stringify(globalUpdated.slice(0, 50)));
         window.dispatchEvent(new CustomEvent("farmer_booking_created", { detail: fallbackConfirmation }));
       } catch {}
       successMessage("Booking confirmed!");
