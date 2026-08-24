@@ -19,7 +19,7 @@ const SidebarWrapper = ({
 }) => {
 
     return (
-        <div className="flex h-screen bg-[#EAF6FA] gap-4 px-4 md:px-8">
+        <div className="flex h-screen bg-slate-100/60 dark:bg-slate-950 gap-4 px-3 md:px-6 overflow-hidden">
             <FarmProvider>
                 <ConfirmationProvider>
                     <Sidebar />

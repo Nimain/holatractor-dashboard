@@ -61,7 +61,19 @@ const FarmBooking = () => {
   const router = useRouter();
 
   const { cookie } = useCookie();
-  const user: user = cookie.get("user");
+  const rawUser = cookie.get("user");
+  const parsedUser: any =
+    typeof rawUser === "string"
+      ? (() => {
+          try {
+            return JSON.parse(rawUser);
+          } catch {
+            return null;
+          }
+        })()
+      : rawUser;
+  const user: user = parsedUser || {};
+  const userId = parsedUser?.userId || parsedUser?.id || parsedUser?.sub || parsedUser?._id;
   const access_token = cookie.get("access_token");
 
   const _created = (e: any) => {
@@ -100,7 +112,7 @@ const FarmBooking = () => {
       .post(
         "/farm",
         {
-          owner_id: user.userId,
+          owner_id: userId,
           type: layerType,
           name: farmName,
           description: farmDescription,
