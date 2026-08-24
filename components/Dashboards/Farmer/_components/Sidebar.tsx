@@ -22,6 +22,7 @@ import {
   Tractor,
   Wheat,
   ShieldCheck,
+  TrendingUp,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
@@ -114,16 +115,17 @@ export default function FarmerSidebar() {
       active: pathname.startsWith("/farmer/stores"),
     },
     {
+      title: "Mandi Spot Prices",
+      href: "/farmer/mandi",
+      icon: TrendingUp,
+      active: pathname.startsWith("/farmer/mandi"),
+      badge: "Live",
+    },
+    {
       title: "Payments",
       href: "/farmer/paymenthistory",
       icon: CreditCard,
       active: pathname.startsWith("/farmer/paymenthistory"),
-    },
-    {
-      title: "Activity Logs",
-      href: "/farmer/logs",
-      icon: Activity,
-      active: pathname.startsWith("/farmer/logs"),
     },
   ];
 
@@ -272,17 +274,23 @@ export default function FarmerSidebar() {
 
           {/* User Profile Card & Sign Out */}
           <div className="flex items-center justify-between gap-2 p-1.5 rounded-2xl">
-            <div className="flex items-center gap-2.5 overflow-hidden">
+            <Link
+              href="/farmer/profile"
+              className="flex items-center gap-2.5 overflow-hidden flex-1 hover:opacity-90 transition-opacity"
+              title="Farmer Profile & Settings"
+            >
               <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-xs font-black text-white shrink-0">
                 {(user.name || "F").substring(0, 1).toUpperCase()}
               </div>
               {isExpanded && (
                 <div className="leading-tight truncate">
-                  <p className="font-bold text-xs text-white truncate">{user.name || "Farmer"}</p>
+                  <p className="font-bold text-xs text-white truncate hover:text-emerald-400 transition-colors">
+                    {user.name || "Farmer"}
+                  </p>
                   <p className="text-[10px] text-slate-400 truncate">{user.email || "farmer@holatractor.com"}</p>
                 </div>
               )}
-            </div>
+            </Link>
 
             <Tooltip>
               <TooltipTrigger asChild>

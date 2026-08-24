@@ -4,14 +4,17 @@ import { RootState } from "@/redux/store";
 import { useSelector } from "react-redux";
 import { operatorDashboardTranslations } from "../Dashboards/Operator/OperatorDashboardTranslations";
 
-type LanguageCode = "en" | "es" | "ay" | "qu" | "gn";
+export type LanguageCode = "en" | "es" | "pt" | "hi" | "ay" | "qu" | "gn";
 
-type Greetings = {
+export type Greetings = {
   en: string;
   es?: string;
+  pt?: string;
+  hi?: string;
   ay?: string;
   qu?: string;
   gn?: string;
+  [key: string]: string | undefined;
 };
 
 const TranslatedText = ({ greetings }: { greetings?: Greetings }) => {
@@ -19,10 +22,12 @@ const TranslatedText = ({ greetings }: { greetings?: Greetings }) => {
     (state: RootState) => state.ActiveLanguage.language
   ) as LanguageCode;
 
-  // ✅ fallback safety
+  // Fallback chain: selected language -> Spanish (if Latin American) -> English
   const activeGreeting =
     greetings?.[language] ??
-    greetings?.en ??
+    (language === "pt" || language === "ay" || language === "qu" || language === "gn"
+      ? greetings?.es || greetings?.en
+      : greetings?.en) ??
     "";
 
   return activeGreeting;
@@ -33,14 +38,16 @@ export const TranslatedTaskText = ({ greetings }: { greetings: number }) => {
     (state: RootState) => state.ActiveLanguage.language
   ) as LanguageCode;
 
-  const fn = operatorDashboardTranslations?.tasksToday?.[language];
+  const fn = (operatorDashboardTranslations?.tasksToday as any)?.[language];
 
-  // ✅ safely handle function
+  // safely handle function
   if (typeof fn === "function") {
     return fn(greetings);
   }
 
-  return operatorDashboardTranslations.tasksToday.en(greetings);
+  return operatorDashboardTranslations?.tasksToday?.en
+    ? operatorDashboardTranslations.tasksToday.en(greetings)
+    : `${greetings} tasks`;
 };
 
 export default TranslatedText;

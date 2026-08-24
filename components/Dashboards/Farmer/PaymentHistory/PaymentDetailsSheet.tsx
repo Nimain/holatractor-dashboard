@@ -1,5 +1,24 @@
 "use client";
 
+import React, { useState } from "react";
+import Image from "next/image";
+import {
+  Download,
+  Eye,
+  Printer,
+  Wallet,
+  Receipt,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  XCircle,
+  UploadCloud,
+  X,
+  Building2,
+  Mail,
+  User,
+  ShieldCheck,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,32 +34,22 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { TableCell, TableRow } from "@/components/ui/table";
-import { Payment } from "@/utils/Types/types";
-import { PaymentStatus } from '@/utils/Types/types';
-import { Download, Eye, Printer, Wallet } from "lucide-react";
-import Image from "next/image";
-import { BankAccountForm, PayPalForm, UPIForm } from "../BookingHistory";
-import { useState } from "react";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { uploadFileToS3 } from "@/utils/AWS/FileUpload";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { useCookie } from "next-cookie";
-import { paymentHistoryTranslations } from "./PaymentHistoryTranslations";
-import TranslatedText from "@/components/Menubar/TranslatedText";
+import { BankAccountForm, PayPalForm, UPIForm } from "../BookingHistory";
 
-const PaymentDetailsSheet = ({
+export default function PaymentDetailsSheet({
   payment,
   paymentRefresh,
 }: {
-  payment: Payment;
+  payment: any;
   paymentRefresh: () => void;
-}) => {
+}) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
   const [loading, setLoading] = useState(false);
-
   const [open, setOpen] = useState(false);
 
   const { cookie } = useCookie();
@@ -50,36 +59,33 @@ const PaymentDetailsSheet = ({
     const file = event.target.files?.[0];
     if (file) {
       setSelectedFile(file);
-
-      // Generate a preview URL for the selected image
       const preview = URL.createObjectURL(file);
       setPreviewUrl(preview);
     }
   };
 
-  
   const handleRemoveFile = () => {
     setSelectedFile(null);
     setPreviewUrl(null);
   };
 
   const handleSubmit = async () => {
-    // Here you would typically send the data to your backend
     if (!selectedFile) {
-      errorMessage("Upload the payment screenshot or image");
+      errorMessage("Please select a payment receipt/screenshot to upload");
       return;
     }
     setLoading(true);
-    const buffer = Buffer.from(await selectedFile.arrayBuffer());
-    const imageLink = await uploadFileToS3(buffer, selectedFile.name);
+    try {
+      const buffer = Buffer.from(await selectedFile.arrayBuffer());
+      const imageLink = await uploadFileToS3(buffer, selectedFile.name);
 
-    if (!imageLink) {
-      errorMessage("Error uploading payment proof");
-      return;
-    }
+      if (!imageLink) {
+        errorMessage("Error uploading payment proof");
+        setLoading(false);
+        return;
+      }
 
-    renderInstance
-      .patch(
+      await renderInstance.patch(
         `/farmer/payment_confirm/${payment.id}`,
         {
           ref_no: "",
@@ -90,450 +96,188 @@ const PaymentDetailsSheet = ({
             Authorization: `Bearer ${access_token}`,
           },
         }
-      )
-      .then((res) => {
-        successMessage("Payment details submitted");
-        paymentRefresh();
-        setOpen(false);
-      })
-      .catch((err) => {
-        if (
-          err.response &&
-          err.response.status === 404 &&
-          err.response.data.message === "Log in user not found"
-        ) {
-          errorMessage("Log in user not found");
-        } else if (
-          err.response &&
-          err.response.status === 404 &&
-          err.response.data.message === "Farmer not found"
-        ) {
-          errorMessage("Farmer not found");
-        } else if (
-          err.response &&
-          err.response.status === 404 &&
-          err.response.data.message === "Payment not found"
-        ) {
-          errorMessage("Payment not found");
-        } else if (
-          err.response &&
-          err.response.status === 409 &&
-          err.response.data.message === "You are not allowed for this task"
-        ) {
-          errorMessage("You are not allowed for this task");
-        } else {
-          errorMessage("Error in submitting payment proofs");
-        }
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+      );
+      successMessage("Payment proof uploaded successfully");
+      paymentRefresh();
+      setOpen(false);
+    } catch (err: any) {
+      errorMessage(err?.response?.data?.message || "Error submitting payment proof");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const booking = payment.booking || {};
+  const tractors = booking.tractors || [];
+  const attachments = booking.attachments || [];
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <TableRow className="border-b hover:bg-gray-100">
-          {/* <TableCell className='p-4'>
-                        <Input
-                            type="checkbox"
-                            className="rounded w-4 h-4 accent-primaryColor"
-                            onClick={e => { e.stopPropagation() }} />
-                    </TableCell> */}
-          <TableCell className="p-4 text-sm text-white">{payment.id}</TableCell>
-          <TableCell className="p-4 text-sm">{payment.booking_id}</TableCell>
-          <TableCell className="p-4 text-sm font-medium">
-            ${payment.amount.toFixed(2)}
-          </TableCell>
-          <TableCell className="p-4 text-sm">
-            <Badge
-              className={`capitalize ${
-                payment.status === PaymentStatus.PAID
-                  ? "bg-green-500 text-white"
-                  : payment.status === PaymentStatus.FarmerPENDING
-                  ? "bg-orange-600 text-white"
-                  : payment.status === PaymentStatus.OwnerREJECTED
-                  ? "bg-red-500 text-white"
-                  : "bg-gray-100 text-gray-800"
-              }`}
-            >
-              {payment.status === PaymentStatus.FarmerPENDING ? (
-                <TranslatedText
-                  greetings={paymentHistoryTranslations.pending}
-                />
-              ) : payment.status === PaymentStatus.FarmerCONFIRMED ? (
-                <TranslatedText
-                  greetings={paymentHistoryTranslations.ownerReview}
-                />
-              ) : payment.status === PaymentStatus.OwnerREJECTED ? (
-                <TranslatedText
-                  greetings={paymentHistoryTranslations.rejected}
-                />
-              ) : (
-                <TranslatedText greetings={paymentHistoryTranslations.paid} />
-              )}
-            </Badge>
-          </TableCell>
-          <TableCell className="p-4 text-sm">
-            {payment.transactionMethod}
-          </TableCell>
-          <TableCell className="p-4 text-sm text-white">{`${
-            payment.reciever.first_name
-          } ${payment.reciever.middle_name ?? ""} ${
-            payment.reciever.last_name
-          }`}</TableCell>
-          <TableCell className="p-4 text-sm text-white">
-            {`${payment.status}` === "COMPLETED" ? (
-              new Date(payment.createdAt).toLocaleDateString()
-            ) : (
-              <TranslatedText
-                greetings={paymentHistoryTranslations.paymentNotSettledYet}
-              />
-            )}
-          </TableCell>
-          {`${payment.status}` === "FarmerPENDING" && (
-            <TableCell className="p-4">
-              <Button className="bg-primaryColor">
-                <TranslatedText greetings={paymentHistoryTranslations.action} />
-              </Button>
-            </TableCell>
-          )}
-        </TableRow>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-emerald-500 hover:text-emerald-600 flex items-center gap-1.5"
+        >
+          <Receipt className="w-3.5 h-3.5" />
+          <span>View Invoice</span>
+        </Button>
       </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white">
-        <SheetHeader className="space-y-4">
-          <p className="text-center text-white">Payment Details</p>
-          <div className="items-center">
-            <SheetTitle>Payment ID: {payment.id}</SheetTitle>
-            <div className="flex items-center gap-2 mt-8">
-              <Button variant="outline" className="bg-orange-600 text-white">
-                <Download className="h-4 w-4 mr-2" />
-                <TranslatedText greetings={paymentHistoryTranslations.export} />
-              </Button>
-              <Button variant="outline" size="sm" className="bg-orange-600 text-white">
-                <Printer className="h-4 w-4 mr-2" />
-                <TranslatedText greetings={paymentHistoryTranslations.print} />
-              </Button>
-            </div>
+
+      <SheetContent className="w-full sm:max-w-xl overflow-y-auto bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 p-6 space-y-6 text-slate-900 dark:text-white">
+        {/* ── HEADER ────────────────────────────────────────────── */}
+        <SheetHeader className="space-y-2 border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div className="flex items-center justify-between">
+            <Badge className="bg-emerald-600 text-white font-bold text-xs px-2.5 py-0.5 rounded-lg">
+              Official Tax Invoice / Receipt
+            </Badge>
+            <span className="font-mono text-xs text-slate-400">Ref: {payment.id}</span>
           </div>
+          <SheetTitle className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+            Settlement Summary: ${Number(payment.amount || 0).toFixed(2)} USD
+          </SheetTitle>
+          <p className="text-xs text-slate-500">
+            Issued for Booking Ref #{payment.booking_id} • {new Date(payment.createdAt).toLocaleString()}
+          </p>
         </SheetHeader>
 
-        <div className="space-y-6 py-6">
-          {/* Order Items Section */}
-          <div className="space-y-4 bg-white/10 backdrop-blur-sm text-white">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium">
-                <TranslatedText
-                  greetings={paymentHistoryTranslations.orderItems}
-                />
-              </h3>
-              <span className="text-sm text-white">
-                {payment.booking.tractors.length +
-                  payment.booking.attachments.length}
-              </span>
-            </div>
+        {/* ── EQUIPMENT & WORK BREAKDOWN ────────────────────────── */}
+        <div className="space-y-3">
+          <h3 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center justify-between">
+            <span>Dispatched Machinery Fleet</span>
+            <span className="text-xs text-slate-400 font-normal">
+              {tractors.length + attachments.length > 0
+                ? `${tractors.length + attachments.length} Units Assigned`
+                : "Standard Fleet Operation"}
+            </span>
+          </h3>
 
-            <div className="space-y-4">
-              {payment.booking.tractors.map((tractor) => {
-                return (
-                  <div
-                    className="flex items-start gap-4"
-                    key={tractor.tractor.id}
-                  >
-                    <Image
-                      src={tractor.tractor.baseTractor.images[0]}
-                      alt={tractor.tractor.baseTractor.name}
-                      width={80}
-                      height={80}
-                      className="rounded-lg"
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-medium">
-                        {tractor.tractor.baseTractor.name}
-                      </h4>
-                      <div className="flex items-center justify-between mt-1">
-                        <div className="text-sm text-muted-foreground">
-                          {tractor.tractor.baseTractor.model}
-                        </div>
-                        <div className="font-medium">
-                          ${tractor.tractor.hourly_price}/hr
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+          <div className="space-y-2.5">
+            {tractors.map((t: any, idx: number) => {
+              const tractorObj = t.tractor || t;
+              const base = tractorObj.baseTractor || {};
+              const img = base.images?.[0] || tractorObj.image || "https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=600&q=80";
 
-              {payment.booking.attachments.map((attachment) => {
-                return (
-                  <div
-                    className="flex items-start gap-4"
-                    key={attachment.attachment.id}
-                  >
-                    <Image
-                      src={attachment.attachment.baseAttachment.images[0]}
-                      alt={attachment.attachment.baseAttachment.name}
-                      width={80}
-                      height={80}
-                      className="rounded-lg"
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-medium">
-                        {attachment.attachment.baseAttachment.name}
-                      </h4>
-                      <div className="flex items-center justify-between mt-1">
-                        <div className="font-medium">
-                          ${attachment.attachment.hourly_price}/hr
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex items-center justify-between pt-4 font-medium">
-              <div>
-                <TranslatedText greetings={paymentHistoryTranslations.total} />
-              </div>
-              <div>${payment.booking.total_cost}</div>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Contact Section */}
-          <div className="space-y-4 w-[60%] bg-white/10 backdrop-blur-sm text-white">
-            <h3 className="text-lg font-medium">
-              <TranslatedText
-                greetings={paymentHistoryTranslations.contactInformation}
-              />
-            </h3>
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label htmlFor="name">
-                  <TranslatedText greetings={paymentHistoryTranslations.name} />
-                </Label>
-                <Input
-                  id="name"
-                  value={`${payment.booking.store?.owner.user.first_name} ${
-                    payment.booking.store?.owner.user.middle_name ?? ""
-                  } ${payment.booking.store?.owner.user.last_name}`}
-                  readOnly={true} className="bg-white/10 backdrop-blur-sm  text-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">
-                  <TranslatedText
-                    greetings={paymentHistoryTranslations.email}
-                  />
-                </Label>
-                <Input
-                  id="email"
-                  value={payment.booking.store?.owner.user.email}
-                  readOnly={true}
-                  className="bg-white/10 backdrop-blur-sm  text-white"
-                />
-              </div>
-              {`${payment.status} === "OwnerREJECTED` &&
-                payment.rejecting_reasons.length >= 1 && (
-                  <div className="space-y-2">
-                    <Label>
-                      <TranslatedText
-                        greetings={paymentHistoryTranslations.rejectionReason}
-                      />
-                    </Label>
-                    <Textarea
-                      value={
-                        payment.rejecting_reasons[
-                          payment.rejecting_reasons.length - 1
-                        ]
-                      }
-                      readOnly={true}
-                    />
-                  </div>
-                )}
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Payment Method Section */}
-
-          <Card className="w-full max-w-2xl  text-white">
-            <CardContent className="p-6">
-              <h2 className="text-lg font-semibold mb-4 text-white">
-                <TranslatedText
-                  greetings={paymentHistoryTranslations.paymentMethods}
-                />
-              </h2>
-              <div className="space-y-4">
-                {/* Payment method */}
-
-                <div className="flex items-center justify-between py-3 border-b bg-white/10 backdrop-blur-sm  text-white">
+              return (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800"
+                >
                   <div className="flex items-center gap-3">
-                    <div className="bg-purple-100 p-2 rounded-lg">
-                      <Wallet className="h-5 w-5 text-purple-600" />
+                    <div className="w-12 h-12 rounded-xl overflow-hidden relative bg-slate-200 dark:bg-slate-700 shrink-0">
+                      <Image src={img} alt={base.name || "Tractor"} fill unoptimized className="object-cover" />
                     </div>
                     <div>
-                      <p className="font-medium">
-                        {payment.transactionMethod}{" "}
-                        <TranslatedText
-                          greetings={paymentHistoryTranslations.payment}
-                        />
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(payment.updatedAt).toLocaleDateString()}
-                      </p>
+                      <h4 className="font-bold text-xs text-slate-900 dark:text-white">{base.name || "Commercial Tractor"}</h4>
+                      <p className="text-[11px] text-slate-400">{base.model || "Heavy Field Unit"}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="ghost" size="sm" className="bg-orange-400 text-white">
-                          <Eye className="h-4 w-4 mr-1" />
-                          <TranslatedText
-                            greetings={paymentHistoryTranslations.view}
-                          />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="w-fit">
-                        {payment.BankAccount && (
-                          <BankAccountForm
-                            username={payment.BankAccount.accountHolderName}
-                            bankname={payment.BankAccount.bankName}
-                            accnum={payment.BankAccount.accountNumber}
-                            branchCode={payment.BankAccount.branchCode ?? ""}
-                            country={payment.BankAccount.country}
-                            currency={payment.BankAccount.currency}
-                            iban={payment.BankAccount.iban ?? ""}
-                            routingnum={payment.BankAccount.routingNumber ?? ""}
-                            swiftcode={payment.BankAccount.swiftCode ?? ""}
-                          />
-                        )}
-                        {payment.PayPal && (
-                          <PayPalForm email={payment.PayPal.email} />
-                        )}
-                        {payment.UPI && (
-                          <UPIForm
-                            upiId={payment.UPI.upi_id ?? ""}
-                            upi={payment.UPI.qr_code}
-                          />
-                        )}
-                      </DialogContent>
-                    </Dialog>
-                    <Button variant="ghost" size="sm"  className="bg-orange-400 text-white">
-                      <Download className="h-4 w-4 mr-1" />
-                      <TranslatedText
-                        greetings={paymentHistoryTranslations.download}
-                      />
-                    </Button>
-                  </div>
+                  <span className="font-extrabold text-xs text-emerald-600 dark:text-emerald-400">
+                    ${tractorObj.hourly_price || 25}/hr
+                  </span>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Separator />
+              );
+            })}
 
-          {/* Payment Proof Section */}
-          {(`${payment.status}` === "FarmerPENDING" ||
-            `${payment.status}` === "OwnerREJECTED") && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">
-                <TranslatedText
-                  greetings={paymentHistoryTranslations.paymentProof}
-                />
-              </h3>
-              <div className="border-2  rounded-lg bg-white/10 backdrop-blur-sm  text-white">
-                <label
-                  htmlFor="payment-proof"
-                  className="relative flex flex-col items-center justify-center gap-1 p-8 text-center cursor-pointer"
+            {attachments.map((att: any, idx: number) => {
+              const attObj = att.attachment || att;
+              const base = attObj.baseAttachment || {};
+              return (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs"
                 >
-                  {!previewUrl ? (
-                    <>
-                      <div className="size-10 flex items-center justify-center rounded-full bg-primary/10">
-                        <svg
-                          className="size-6 text-primary"
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                          <polyline points="17 8 12 3 7 8" />
-                          <line x1="12" x2="12" y1="3" y2="15" />
-                        </svg>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        <TranslatedText
-                          greetings={paymentHistoryTranslations.dragAndDrop}
-                        />
-                      </p>
-                      <input
-                        id="payment-proof"
-                        type="file"
-                        accept="image/*,.pdf"
-                        className="sr-only"
-                        onChange={handleFileChange}
-                      />
-                    </>
-                  ) : (
-                    <div className="relative">
-                      <img
-                        src={previewUrl}
-                        alt="Uploaded File Preview"
-                        className="max-h-40 rounded-lg object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleRemoveFile}
-                        className="absolute top-2 right-2 bg-red-500 text-white text-xs rounded-full p-1"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  )}
-                </label>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                    {base.name || attObj.name || "Agricultural Implement"}
+                  </span>
+                  <span className="font-bold text-slate-500">${attObj.hourly_price || 15}/hr</span>
+                </div>
+              );
+            })}
+
+            {tractors.length === 0 && (
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-xs space-y-1">
+                <span className="font-bold text-slate-900 dark:text-white block">
+                  {payment.service_name || "Commercial Plowing & Precision Seeding"}
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  {payment.area || 5} Hectares • Certified Operator & Real-Time Telemetry Included
+                </span>
               </div>
-              {selectedFile && (
-                <p className="text-sm text-muted-foreground">
-                  <TranslatedText
-                    greetings={paymentHistoryTranslations.uploadedFile}
+            )}
+          </div>
+
+          <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/40 flex items-center justify-between">
+            <span className="font-extrabold text-xs text-slate-900 dark:text-white">Total Dispatched Amount</span>
+            <span className="font-black text-base text-emerald-600 dark:text-emerald-400">
+              ${Number(payment.amount || 0).toFixed(2)} USD
+            </span>
+          </div>
+        </div>
+
+        {/* ── SETTLEMENT CHANNEL DETAILS ────────────────────────── */}
+        <div className="space-y-3">
+          <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">Payment Channel & Depot Account</h3>
+
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 space-y-2 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-400">Method</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200">{payment.paymentType || "Direct Card"}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-400">Receiver Hub</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200">{payment.receiver_name}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-400">Transaction Status</span>
+              <span className="font-bold text-emerald-600 dark:text-emerald-400 uppercase">{payment.status}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── UPLOAD PROOF OF PAYMENT (IF PENDING) ──────────────── */}
+        {(payment.status === "FarmerPENDING" || payment.status === "OwnerREJECTED") && (
+          <div className="space-y-3 pt-2">
+            <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">Upload Transfer Voucher / Receipt</h3>
+
+            <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-6 text-center">
+              {!previewUrl ? (
+                <label className="cursor-pointer space-y-2 block">
+                  <UploadCloud className="w-8 h-8 text-emerald-600 mx-auto" />
+                  <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Click to select bank receipt or QR transaction screenshot
+                  </p>
+                  <p className="text-[10px] text-slate-400">PNG, JPG or PDF up to 10MB</p>
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    className="hidden"
+                    onChange={handleFileChange}
                   />
-                  : <span className="font-medium">{selectedFile.name}</span>
-                </p>
+                </label>
+              ) : (
+                <div className="relative inline-block">
+                  <img src={previewUrl} alt="Voucher" className="max-h-36 rounded-xl object-contain mx-auto" />
+                  <button
+                    onClick={handleRemoveFile}
+                    className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-1 shadow-md"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               )}
             </div>
-          )}
-          {(`${payment.status}` === "FarmerPENDING" ||
-            `${payment.status}` === "OwnerREJECTED") && (
+
             <Button
-              className="w-full bg-orange-500 text-white"
               disabled={loading || !selectedFile}
-              onClick={() => {
-                handleSubmit();
-              }}
+              onClick={handleSubmit}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl h-10 shadow-sm"
             >
-              {loading ? (
-                <TranslatedText
-                  greetings={paymentHistoryTranslations.submitting}
-                />
-              ) : (
-                <TranslatedText
-                  greetings={paymentHistoryTranslations.submitPaymentDetails}
-                />
-              )}
+              {loading ? "Submitting Voucher..." : "Submit Proof of Payment"}
             </Button>
-          )}
-        </div>
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   );
-};
-
-export default PaymentDetailsSheet;
+}

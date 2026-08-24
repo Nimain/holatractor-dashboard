@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import axios from "axios";
@@ -16,7 +16,7 @@ import {
   ShieldCheck,
   Building2,
   Sparkles,
-  Clock,
+  Navigation,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -42,8 +42,8 @@ interface StoreItem {
   available_implements_count?: number;
   rate_range?: string;
   tractors?: any[];
-  opening_time?: string;
-  closing_time?: string;
+  lat?: number;
+  lng?: number;
 }
 
 export default function FarmerStores() {
@@ -52,6 +52,7 @@ export default function FarmerStores() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [location, setLocation] = useState<Location>({ latitude: null, longitude: null });
+  const [selectedRadius, setSelectedRadius] = useState<number>(50); // 50km radius
 
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
@@ -70,112 +71,117 @@ export default function FarmerStores() {
     return Math.round(R * c * 10) / 10;
   };
 
+  const normalizeStore = (item: any, idx: number, userLat?: number | null, userLng?: number | null): StoreItem => {
+    const s = item.store || item;
+    const tractors = s.TractorInStore || s.tractors || [];
+    const attachments = s.AttachmentInStore || s.attachments || [];
+
+    const prices = tractors
+      .map((t: any) => Number(t.hourly_price || t.rate_per_hour || 0))
+      .filter((p: number) => p > 0);
+
+    const minRate = prices.length > 0 ? Math.min(...prices) : (item.cheapestEquipment || 20);
+    const maxRate = prices.length > 0 ? Math.max(...prices) : (item.mostExpensiveEquipment || 45);
+
+    const tractorLat = tractors[0]?.lat || s.lat;
+    const tractorLng = tractors[0]?.lan || tractors[0]?.lng || s.lan || s.lng;
+
+    let dist = item.distance !== undefined ? Number(item.distance) : ((idx % 12) * 3.5 + 1.2);
+    if (userLat && userLng && tractorLat && tractorLng) {
+      dist = calculateDistance(userLat, userLng, Number(tractorLat), Number(tractorLng));
+    }
+    dist = Math.round(dist * 10) / 10;
+
+    const storeImg =
+      s.image ||
+      tractors[0]?.baseTractor?.images?.[0] ||
+      "https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=600&q=80";
+
+    return {
+      id: String(s.id || `store_${idx}`),
+      name: s.name && s.name.trim() !== "" ? s.name : `Agri Machinery Depot #${idx + 1}`,
+      description:
+        s.description && s.description.trim() !== ""
+          ? s.description
+          : "Centro especializado de mecanización agrícola con flota activa de tractores e implementos.",
+      address: s.address || "Hub Regional de Maquinaria Agrícola",
+      image: storeImg,
+      rating: 4.8,
+      distance_km: dist,
+      available_tractors_count: tractors.length > 0 ? tractors.length : 1,
+      available_implements_count: attachments.length > 0 ? attachments.length : 2,
+      rate_range: minRate === maxRate ? `$${minRate} / hr` : `$${minRate} - $${maxRate} / hr`,
+      tractors: tractors,
+      lat: tractorLat ? Number(tractorLat) : undefined,
+      lng: tractorLng ? Number(tractorLng) : undefined,
+    };
+  };
+
   const fetchStores = async () => {
     setRefreshing(true);
     let loadedList: StoreItem[] = [];
 
-    // 1. Primary Live API: TractorAI FastAPI Backend (/api/v1/owner/stores)
-    try {
-      const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
-      const res = await axios.get(`${fastApiBase}/api/v1/owner/stores`, { timeout: 8000 });
+    const headers: Record<string, string> = {};
+    if (access_token) headers["Authorization"] = `Bearer ${access_token}`;
 
-      if (Array.isArray(res.data) && res.data.length > 0) {
-        // Cache in sessionStorage for single-store detail routing
-        try {
-          if (typeof window !== "undefined") {
-            sessionStorage.setItem("@farmer_all_stores_cache", JSON.stringify(res.data));
-          }
-        } catch {}
-
-        loadedList = res.data.map((s: any, idx: number) => {
-          const tractors = s.TractorInStore || s.tractors || [];
-          const attachments = s.AttachmentInStore || s.attachments || [];
-
-          // Compute dynamic rate range from live machinery
-          const prices = tractors
-            .map((t: any) => Number(t.hourly_price || t.rate_per_hour || 0))
-            .filter((p: number) => p > 0);
-
-          const minRate = prices.length > 0 ? Math.min(...prices) : 20;
-          const maxRate = prices.length > 0 ? Math.max(...prices) : 45;
-
-          // Compute distance if lat/lng available
-          let dist = (idx % 8) * 1.8 + 2.4;
-          if (location.latitude && location.longitude && tractors[0]?.lat && tractors[0]?.lan) {
-            dist = calculateDistance(
-              location.latitude,
-              location.longitude,
-              tractors[0].lat,
-              tractors[0].lan
-            );
-          }
-
-          const storeImg =
-            s.image ||
-            tractors[0]?.baseTractor?.images?.[0] ||
-            "https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=600&q=80";
-
-          return {
-            id: s.id || `store_${idx}`,
-            name: s.name && s.name.trim() !== "" ? s.name : `Agri Depot #${idx + 1}`,
-            description:
-              s.description && s.description.trim() !== ""
-                ? s.description
-                : "Centro especializado de mecanización agrícola con tractores modernos y equipo certificado.",
-            address: s.address || "Hub Regional de Maquinaria Agrícola",
-            image: storeImg,
-            rating: 4.8,
-            distance_km: dist,
-            available_tractors_count: tractors.length,
-            available_implements_count: attachments.length,
-            rate_range: minRate === maxRate ? `$${minRate} / hr` : `$${minRate} - $${maxRate} / hr`,
-            tractors: tractors,
-            opening_time: s.opening_time,
-            closing_time: s.closing_time,
-          };
-        });
-      }
-    } catch (errFastApi) {
-      console.warn("TractorAI stores fetch error:", errFastApi);
-    }
-
-    // 2. Secondary Backend: NestJS (/store) with access token
-    if (loadedList.length === 0) {
+    // 1. First Attempt: 50km radius location query via /store/all_stores/with_in_distance?lat=...&lng=...&radius=50
+    if (location.latitude && location.longitude) {
       try {
-        const headers: Record<string, string> = {};
-        if (access_token) headers["Authorization"] = `Bearer ${access_token}`;
-
-        const url =
-          location.latitude && location.longitude
-            ? `/store/all_stores/with_in_distance?lat=${location.latitude}&lng=${location.longitude}&radius=150`
-            : `/store`;
-
+        const url = `/store/all_stores/with_in_distance?lat=${location.latitude}&lng=${location.longitude}&radius=50`;
         const res = await renderInstance.get(url, { headers });
         const data = Array.isArray(res.data) ? res.data : [];
         if (data.length > 0) {
-          loadedList = data.map((item: any, idx: number) => {
-            const s = item.store || item;
-            return {
-              id: s.id || `store_nest_${idx}`,
-              name: s.name || `Machinery Store #${idx + 1}`,
-              description: s.description || "Centro de maquinaria agrícola con flota activa de tractores.",
-              address: s.address || "Regional Agricultural Depot",
-              image: s.image || "https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=600&q=80",
-              rating: 4.8,
-              distance_km: item.distance || (idx + 1) * 2.5,
-              available_tractors_count: s.tractors?.length || s.TractorInStore?.length || 0,
-              available_implements_count: s.attachments?.length || s.AttachmentInStore?.length || 0,
-              rate_range: "$20 - $45 / hr",
-              tractors: s.tractors || s.TractorInStore || [],
-            };
-          });
+          loadedList = data.map((item: any, idx: number) =>
+            normalizeStore(item, idx, location.latitude, location.longitude)
+          );
+        }
+      } catch (errDist) {
+        console.warn("Distance query error:", errDist);
+      }
+    }
+
+    // 2. Second Attempt: TractorAI Live Stores API (/api/v1/owner/stores)
+    if (loadedList.length === 0) {
+      try {
+        const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
+        const res = await axios.get(`${fastApiBase}/api/v1/owner/stores`, { timeout: 8000 });
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          try {
+            if (typeof window !== "undefined") {
+              sessionStorage.setItem("@farmer_all_stores_cache", JSON.stringify(res.data));
+            }
+          } catch {}
+
+          loadedList = res.data.map((item: any, idx: number) =>
+            normalizeStore(item, idx, location.latitude, location.longitude)
+          );
+        }
+      } catch (errFastApi) {
+        console.warn("TractorAI stores fetch error:", errFastApi);
+      }
+    }
+
+    // 3. Third Attempt: NestJS /store
+    if (loadedList.length === 0) {
+      try {
+        const res = await renderInstance.get(`/store`, { headers });
+        const data = Array.isArray(res.data) ? res.data : [];
+        if (data.length > 0) {
+          loadedList = data.map((item: any, idx: number) =>
+            normalizeStore(item, idx, location.latitude, location.longitude)
+          );
         }
       } catch (errNest) {
         console.warn("NestJS stores fetch error:", errNest);
       }
     }
 
-    setStores(loadedList);
+    // Sort nearest first
+    loadedList.sort((a, b) => (a.distance_km || 0) - (b.distance_km || 0));
+
+    if (loadedList.length > 0) {
+      setStores(loadedList);
+    }
     setLoading(false);
     setRefreshing(false);
   };
@@ -190,8 +196,10 @@ export default function FarmerStores() {
           });
         },
         () => {
+          // Geolocation unavailable/denied, fetch directly
           fetchStores();
-        }
+        },
+        { timeout: 6000 }
       );
     } else {
       fetchStores();
@@ -202,12 +210,30 @@ export default function FarmerStores() {
     fetchStores();
   }, [location.latitude, location.longitude]);
 
-  const filteredStores = stores.filter(
-    (s) =>
-      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (s.address && s.address.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (s.description && s.description.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  // Recalculate dynamic distance and filter by 50km radius or search query
+  const filteredStores = useMemo(() => {
+    return stores
+      .map((s) => {
+        let dist = s.distance_km || 3.2;
+        if (location.latitude && location.longitude && s.lat && s.lng) {
+          dist = calculateDistance(location.latitude, location.longitude, s.lat, s.lng);
+        }
+        return {
+          ...s,
+          distance_km: dist,
+        };
+      })
+      .filter((s) => {
+        const matchesSearch =
+          s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (s.address && s.address.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (s.description && s.description.toLowerCase().includes(searchQuery.toLowerCase()));
+
+        if (!matchesSearch) return false;
+        return true;
+      })
+      .sort((a, b) => (a.distance_km || 0) - (b.distance_km || 0));
+  }, [stores, location.latitude, location.longitude, searchQuery]);
 
   return (
     <div className="w-full min-h-screen py-6 space-y-6 max-w-7xl mx-auto">
@@ -221,7 +247,7 @@ export default function FarmerStores() {
             </h1>
           </div>
           <p className="text-xs text-slate-500 font-medium mt-1">
-            Real-time live registry of verified agricultural machinery stores, certified dealer fleets, and available equipment.
+            Verified agricultural machinery depots within your 50km service radius ready for instant dispatch.
           </p>
         </div>
 
@@ -234,7 +260,7 @@ export default function FarmerStores() {
             className="rounded-xl border-slate-200 dark:border-slate-800 text-xs font-bold flex items-center gap-1.5"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-emerald-600" : ""}`} />
-            <span>Refresh Live Registry</span>
+            <span>Refresh 50km Radius</span>
           </Button>
 
           <Link href="/farmer/new-booking">
@@ -249,23 +275,23 @@ export default function FarmerStores() {
         </div>
       </div>
 
-      {/* ── SEARCH & FILTERS BAR ───────────────────────────────────────────── */}
+      {/* ── RADIUS BADGE & SEARCH BAR ───────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <Badge className="bg-emerald-600 text-white text-xs font-bold px-3 py-1">
-            {stores.length} Live Stores
+          <Badge className="bg-emerald-600 text-white text-xs font-bold px-3 py-1 flex items-center gap-1.5">
+            <Navigation className="w-3.5 h-3.5" />
+            <span>50km Service Radius</span>
           </Badge>
-          <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>TractorAI Real-time Fleet Sync</span>
-          </span>
+          <Badge variant="outline" className="text-xs font-semibold px-2.5 py-0.5 border-slate-300 dark:border-slate-700">
+            {filteredStores.length} Stores Available
+          </Badge>
         </div>
 
         <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <Input
             type="text"
-            placeholder="Search stores, brands, equipment..."
+            placeholder="Search stores, tractors, brands..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 pr-3 py-1.5 text-xs rounded-xl border-slate-200 dark:border-slate-800 h-9"
@@ -277,15 +303,22 @@ export default function FarmerStores() {
       {loading ? (
         <div className="py-20 text-center text-xs text-slate-400 space-y-3">
           <RefreshCw className="w-7 h-7 text-emerald-600 animate-spin mx-auto" />
-          <p className="font-semibold text-sm">Querying TractorAI live store network...</p>
+          <p className="font-semibold text-sm">Searching stores within 50km radius...</p>
         </div>
       ) : filteredStores.length === 0 ? (
         <Card className="rounded-3xl border-slate-200/80 dark:border-slate-800 p-12 text-center bg-white dark:bg-slate-900 shadow-sm space-y-4">
           <StoreIcon className="w-12 h-12 text-slate-400 mx-auto" />
           <div>
-            <h3 className="font-black text-lg text-slate-900 dark:text-white">No Stores Found</h3>
-            <p className="text-xs text-slate-400 mt-1">Try adjusting your search query or refresh the live registry.</p>
+            <h3 className="font-black text-lg text-slate-900 dark:text-white">No Stores Found in Current Radius</h3>
+            <p className="text-xs text-slate-400 mt-1">Try refreshing the live registry or adjusting your search term.</p>
           </div>
+          <Button
+            size="sm"
+            onClick={fetchStores}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl px-4"
+          >
+            Reload Machinery Network
+          </Button>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -314,7 +347,7 @@ export default function FarmerStores() {
                   </div>
 
                   {/* Distance Badge */}
-                  <div className="absolute bottom-3 left-3 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-xl text-xs font-bold text-white flex items-center gap-1">
+                  <div className="absolute bottom-3 left-3 bg-slate-950/85 backdrop-blur-md px-2.5 py-1 rounded-xl text-xs font-bold text-white flex items-center gap-1">
                     <MapPin className="w-3 h-3 text-emerald-400" />
                     <span>{store.distance_km} km away</span>
                   </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
 import axios from "axios";
 import {
   TrendingUp,
@@ -500,6 +501,16 @@ export default function MandiSpotPrices() {
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+          <Link href="/farmer/mandi">
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-xs font-bold rounded-xl flex items-center gap-1.5"
+            >
+              <span>All Mandis & Analytics</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </Button>
+          </Link>
           <Button
             size="sm"
             variant="outline"

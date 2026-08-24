@@ -223,13 +223,15 @@ const Header = () => {
           </PopoverContent>
         </Popover>
 
-        {/* User Avatar */}
-        <Avatar className="h-9 w-9 border-2 border-emerald-500/40">
-          {user.image && <AvatarImage src={user.image} alt={user.name} />}
-          <AvatarFallback className="bg-emerald-600 text-white font-bold text-xs shadow-md">
-            {(user.name || "Farmer").substring(0, 2).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
+        {/* User Avatar & Profile Link */}
+        <Link href="/farmer/profile" title="View & Edit Profile">
+          <Avatar className="h-9 w-9 border-2 border-emerald-500/40 hover:border-emerald-500 hover:scale-105 transition-all cursor-pointer shadow-sm">
+            {user.image && <AvatarImage src={user.image} alt={user.name} />}
+            <AvatarFallback className="bg-emerald-600 text-white font-bold text-xs shadow-md">
+              {(user.name || "Farmer").substring(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+        </Link>
       </div>
     </header>
   );
