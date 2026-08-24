@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { RefreshCw, History, Crosshair } from "lucide-react"
+import { getLeafletTractorDivIcon } from "@/utils/map/tractorIcon"
 
 interface UserLocation {
   latitude: number
@@ -146,13 +147,15 @@ export default function InteractiveMap({
           bounds.extend([userLocation.latitude, userLocation.longitude])
         }
 
-        // Add device location marker
+        // Add device location marker with transparent tractor icon
         if (deviceLocation) {
-          const deviceIcon = L.divIcon({
-            html: `<div style="background-color: ${isRealTimeTracking ? "#10b981" : "#ef4444"}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
-            className: "custom-div-icon",
-            iconSize: [16, 16],
-            iconAnchor: [8, 8],
+          const deviceIcon = getLeafletTractorDivIcon(L, {
+            course: (deviceLocation as any).course || 0,
+            isSelected: true,
+            isLive: isRealTimeTracking,
+            isMoving: (deviceLocation.speed || 0) > 0.5,
+            status: "Active",
+            size: 54,
           })
 
           const deviceMarker = L.marker([deviceLocation.latitude, deviceLocation.longitude], {

@@ -25,6 +25,7 @@ import {
 } from "lucide-react"
 import dynamic from "next/dynamic"
 import DeviceLocationService, { type DeviceLocationData, type LocationHistoryParams } from "@/utils/Axios/DeviceLocationService"
+import { getLeafletTractorDivIcon } from "@/utils/map/tractorIcon"
 import { io, type Socket } from "socket.io-client"
 import React from "react"
 
@@ -79,7 +80,7 @@ interface LiveLocationData {
   created_at: string
 }
 
-type DateFilter = 'today' | 'yesterday' | 'week' | 'month' | 'custom';
+type DateFilter = 'today' | 'yesterday' | 'week' | 'month' | 'custom' | 'all';
 
 export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: DeviceMapModalProps) {
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null)
@@ -92,6 +93,7 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
   const [isLiveTracking, setIsLiveTracking] = useState(false)
   const [socket, setSocket] = useState<Socket | null>(null)
   const [liveLocationCount, setLiveLocationCount] = useState(0)
+  const [LInstance, setLInstance] = useState<any>(null)
   const mapRef = useRef<any>(null)
   const [mapKey, setMapKey] = useState(0)
   const [mapStyle, setMapStyle] = useState<"osm" | "carto" | "transport">("transport")
@@ -101,6 +103,22 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')
   const [showDatePicker, setShowDatePicker] = useState(false)
+
+  // Initialize Leaflet instance on client side
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      import("leaflet").then((mod) => {
+        const L = mod.default || mod
+        delete (L.Icon.Default.prototype as any)._getIconUrl
+        L.Icon.Default.mergeOptions({
+          iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+          iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+          shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+        })
+        setLInstance(L)
+      })
+    }
+  }, [])
 
   const translations = {
     en: {
@@ -342,18 +360,27 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
     }
   }, [open, device])
 
-  // Auto-zoom to device location when available
+  // Auto-zoom to device location or fit bounds to route when available
   useEffect(() => {
-    if (mapRef.current && currentLocation && currentLocation.lat && currentLocation.lon) {
+    if (!mapRef.current) return
+
+    if (routePath.length > 1 && LInstance) {
+      try {
+        const bounds = LInstance.latLngBounds(routePath)
+        mapRef.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 })
+      } catch (err) {
+        console.warn("[DeviceMapModal] Error fitting bounds:", err)
+      }
+    } else if (currentLocation && currentLocation.lat && currentLocation.lon) {
       const lat = Number(currentLocation.lat)
       const lon = Number(currentLocation.lon)
       
       if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0) {
         console.log("[DeviceMapModal] Auto-zooming to device location:", { lat, lon, region: device?.device_region })
-        mapRef.current.setView([lat, lon], 16) // Zoom closer to the device
+        mapRef.current.setView([lat, lon], 16)
       }
     }
-  }, [currentLocation, mapLoaded, device?.device_region])
+  }, [routePath, currentLocation, mapLoaded, LInstance, device?.device_region])
 
   // Load device location when filter changes
   useEffect(() => {
@@ -427,6 +454,9 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
           break
         case 'month':
           params = { filter: 'month' }
+          break
+        case 'all':
+          params = {}
           break
         case 'custom':
           if (customStartDate && customEndDate) {
@@ -697,6 +727,7 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
                     <option value="yesterday">{t.yesterday}</option>
                     <option value="week">{t.week}</option>
                     <option value="month">{t.month}</option>
+                    <option value="all">All History</option>
                     <option value="custom">{t.custom}</option>
                   </select>
                 </div>
@@ -836,9 +867,23 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
                       </Marker>
                     )}
 
-                    {/* Device current location marker */}
+                    {/* Device current location marker with transparent tractor icon */}
                     {currentLocation && currentLocation.lat && currentLocation.lon && (
-                      <Marker position={[Number(currentLocation.lat), Number(currentLocation.lon)]}>
+                      <Marker
+                        position={[Number(currentLocation.lat), Number(currentLocation.lon)]}
+                        icon={
+                          LInstance
+                            ? getLeafletTractorDivIcon(LInstance, {
+                                course: currentLocation.course || 0,
+                                isSelected: true,
+                                isLive: isLiveTracking,
+                                isMoving: (currentLocation.speed || 0) > 0.5,
+                                status: isOnline ? "Active" : "Offline",
+                                size: 58,
+                              })
+                            : undefined
+                        }
+                      >
                         <Popup>
                           <div className="text-center">
                             <strong>{t.deviceLocation}</strong>
@@ -871,39 +916,59 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
 
                     {/* Route polyline */}
                     {showRoute && routePath.length > 1 && (
-                      <Polyline positions={routePath} color="blue" weight={3} opacity={0.7} smoothFactor={1} />
+                      <Polyline
+                        positions={routePath}
+                        pathOptions={{
+                          color: "#3B82F6",
+                          weight: 4,
+                          opacity: 0.85,
+                        }}
+                      />
                     )}
 
-                    {/* Route history markers (showing first 10 points) */}
+                    {/* Route history waypoint markers */}
                     {showRoute &&
                       routePath.length > 0 &&
-                      routePath.slice(0, 10).map((point, index) => (
-                        <Marker key={`route-point-${index}`} position={point}>
-                          <Popup>
-                            <div className="text-sm">
-                              <div>
-                                <strong>Route Point {index + 1}</strong>
+                      routePath.slice(0, 15).map((point, index) => {
+                        const isStart = index === routePath.length - 1
+                        const isLatest = index === 0
+                        const waypointIcon = LInstance
+                          ? LInstance.divIcon({
+                              html: `<div style="width: ${isStart || isLatest ? 12 : 8}px; height: ${isStart || isLatest ? 12 : 8}px; border-radius: 50%; background: ${isLatest ? "#EF4444" : isStart ? "#10B981" : "#3B82F6"}; border: 2px solid #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.5);"></div>`,
+                              className: "custom-waypoint-dot",
+                              iconSize: [isStart || isLatest ? 12 : 8, isStart || isLatest ? 12 : 8],
+                              iconAnchor: [isStart || isLatest ? 6 : 4, isStart || isLatest ? 6 : 4],
+                            })
+                          : undefined
+
+                        return (
+                          <Marker key={`route-point-${index}`} position={point} icon={waypointIcon}>
+                            <Popup>
+                              <div className="text-sm">
+                                <div>
+                                  <strong>{isLatest ? "Latest Waypoint" : isStart ? "Start Point" : `Route Point ${index + 1}`}</strong>
+                                </div>
+                                <div className="text-xs font-mono">
+                                  Lat: {point[0].toFixed(6)}, Lon: {point[1].toFixed(6)}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {t.region} {device.device_region}
+                                </div>
+                                {deviceLocations[index] && (
+                                  <>
+                                    <div>
+                                      {t.speed} {Number(deviceLocations[index].speed || 0).toFixed(1)} km/h
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {formatTime(deviceLocations[index].timestamp || deviceLocations[index].created_at)}
+                                    </div>
+                                  </>
+                                )}
                               </div>
-                              <div className="text-xs font-mono">
-                                Lat: {point[0].toFixed(6)}, Lon: {point[1].toFixed(6)}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {t.region} {device.device_region}
-                              </div>
-                              {deviceLocations[index] && (
-                                <>
-                                  <div>
-                                    {t.speed} {Number(deviceLocations[index].speed || 0).toFixed(1)} km/h
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {formatTime(deviceLocations[index].timestamp || deviceLocations[index].created_at)}
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          </Popup>
-                        </Marker>
-                      ))}
+                            </Popup>
+                          </Marker>
+                        )
+                      })}
                   </MapContainer>
                 )}
 

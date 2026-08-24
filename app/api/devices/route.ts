@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 
+export const dynamic = "force-dynamic";
+
 const FastApiBaseURL =
   process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "https://tractorai.sinsignal.com/";
 const NestJsBaseURL =

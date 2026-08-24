@@ -26,6 +26,9 @@ import { renderInstance, TractorAIBaseURL } from "@/utils/Axios/RenderInstance"
 import { useCookie } from "next-cookie"
 import axios from "axios"
 import { successMessage, errorMessage } from "@/utils/Toastify/Messages"
+import DeviceLocationService, { type DeviceLocationData } from "@/utils/Axios/DeviceLocationService"
+import { getGoogleMapsTractorIcon } from "@/utils/map/tractorIcon"
+import { io, type Socket } from "socket.io-client"
 
 // Google Maps API Key - Replace with your actual API key
 const GOOGLE_MAPS_API_KEY = "AIzaSyDjMCI0xj2Q-WTc9J7yWX-Mvh0DBM7oHbg"
@@ -81,8 +84,13 @@ interface Device {
   name: string
   lat: number
   lng: number
+  speed?: number
+  course?: number
+  battery?: number
+  lastSeen?: string
   field: string
   status: string
+  hasGps?: boolean
   region: string
   model: string
   hourlyPrice: number
@@ -123,6 +131,7 @@ const fixCoordinates = (lat: number, lon: number, region: string): [number, numb
 }
 
 const filterGPSByTimeRange = (history: GPSLocation[], filterType: string): GPSLocation[] => {
+  if (!Array.isArray(history) || history.length === 0) return []
   const now = new Date()
   let startDate: Date
 
@@ -130,28 +139,30 @@ const filterGPSByTimeRange = (history: GPSLocation[], filterType: string): GPSLo
     case "today":
       startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
       break
-    case "yesterday":
+    case "yesterday": {
       const yesterday = new Date(now)
       yesterday.setDate(yesterday.getDate() - 1)
       startDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate())
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      return history.filter((h) => {
-        const hDate = new Date(h.timestamp)
+      const filtered = history.filter((h) => {
+        const hDate = new Date(h.timestamp || h.created_at)
         return hDate >= startDate && hDate < todayStart
       })
+      return filtered.length > 0 ? filtered : history.slice(0, 50)
+    }
     case "week":
-      startDate = new Date(now)
-      startDate.setDate(startDate.getDate() - 7)
+      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
       break
     case "month":
-      startDate = new Date(now)
-      startDate.setDate(startDate.getDate() - 30)
+      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
       break
+    case "all":
     default:
       return history
   }
 
-  return history.filter((h) => new Date(h.timestamp) >= startDate)
+  const filtered = history.filter((h) => new Date(h.timestamp || h.created_at) >= startDate)
+  return filtered.length > 0 ? filtered : history.slice(0, 50)
 }
 
 // Load Google Maps Script
@@ -176,220 +187,7 @@ const loadGoogleMapsScript = (callback: () => void) => {
   document.head.appendChild(script)
 }
 
-const HistoryModalContent: React.FC<{
-  gpsHistory: GPSLocation[]
-  selectedDevice: Device | undefined
-  mapCenter: { lat: number; lng: number }
-  selectedFilter: string
-}> = memo(({ gpsHistory, selectedDevice, mapCenter, selectedFilter }) => {
-  const mapRef = useRef<HTMLDivElement>(null)
-  const googleMapRef = useRef<google.maps.Map | null>(null)
-  const polylineRef = useRef<google.maps.Polyline | null>(null)
-  const markersRef = useRef<google.maps.Marker[]>([])
 
-  const filteredHistory = useMemo(() => {
-    return filterGPSByTimeRange(gpsHistory, selectedFilter)
-  }, [gpsHistory, selectedFilter])
-
-  const processedLocations = useMemo(() => {
-    if (!selectedDevice || filteredHistory.length === 0) {
-      return []
-    }
-
-    return filteredHistory.map((location) => {
-      const [fixedLat, fixedLon] = fixCoordinates(location.lat, location.lon, selectedDevice.region)
-      return {
-        ...location,
-        fixedLat,
-        fixedLon,
-      }
-    })
-  }, [filteredHistory, selectedDevice])
-
-  const historyPath = useMemo(() => {
-    return processedLocations.map((loc) => ({ lat: loc.fixedLat, lng: loc.fixedLon }))
-  }, [processedLocations])
-
-  useEffect(() => {
-    if (!mapRef.current || !window.google) return
-
-    // Initialize map
-    if (!googleMapRef.current) {
-      googleMapRef.current = new google.maps.Map(mapRef.current, {
-        center: historyPath.length > 0 ? historyPath[0] : mapCenter,
-        zoom: 15,
-        mapTypeId: google.maps.MapTypeId.ROADMAP,
-      })
-    }
-
-    // Clear previous markers and polyline
-    markersRef.current.forEach(marker => marker.setMap(null))
-    markersRef.current = []
-    if (polylineRef.current) {
-      polylineRef.current.setMap(null)
-    }
-
-    // Draw polyline
-    if (historyPath.length > 0) {
-      polylineRef.current = new google.maps.Polyline({
-        path: historyPath,
-        geodesic: true,
-        strokeColor: '#3B82F6',
-        strokeOpacity: 0.8,
-        strokeWeight: 4,
-        map: googleMapRef.current,
-      })
-
-      // Add start marker (last in array - oldest)
-      const startMarker = new google.maps.Marker({
-        position: historyPath[historyPath.length - 1],
-        map: googleMapRef.current,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: '#10B981',
-          fillOpacity: 1,
-          strokeColor: '#FFFFFF',
-          strokeWeight: 2,
-        },
-        title: 'Start Point',
-      })
-
-      const startInfo = new google.maps.InfoWindow({
-        content: `
-          <div style="color: #000; padding: 5px;">
-            <strong style="color: #10B981;">Start Point</strong><br/>
-            Time: ${new Date(processedLocations[processedLocations.length - 1].timestamp).toLocaleString()}<br/>
-            Speed: ${processedLocations[processedLocations.length - 1].speed} km/h
-          </div>
-        `
-      })
-
-      startMarker.addListener('click', () => {
-        startInfo.open(googleMapRef.current, startMarker)
-      })
-
-      // Add end marker (first in array - newest)
-      const endMarker = new google.maps.Marker({
-        position: historyPath[0],
-        map: googleMapRef.current,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: '#EF4444',
-          fillOpacity: 1,
-          strokeColor: '#FFFFFF',
-          strokeWeight: 2,
-        },
-        title: 'End Point',
-      })
-
-      const endInfo = new google.maps.InfoWindow({
-        content: `
-          <div style="color: #000; padding: 5px;">
-            <strong style="color: #EF4444;">End Point</strong><br/>
-            Time: ${new Date(processedLocations[0].timestamp).toLocaleString()}<br/>
-            Speed: ${processedLocations[0].speed} km/h
-          </div>
-        `
-      })
-
-      endMarker.addListener('click', () => {
-        endInfo.open(googleMapRef.current, endMarker)
-      })
-
-      markersRef.current.push(startMarker, endMarker)
-
-      // Fit bounds to show all markers
-      const bounds = new google.maps.LatLngBounds()
-      historyPath.forEach(point => bounds.extend(point))
-      googleMapRef.current.fitBounds(bounds)
-    }
-  }, [historyPath, processedLocations, mapCenter])
-
-  return (
-    <div className="space-y-4">
-      {/* Map with History Path */}
-      <div className="h-96 rounded-lg overflow-hidden border border-white/20">
-        <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
-      </div>
-
-      {/* Coordinate Analysis Warning */}
-      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
-        <div className="flex items-start space-x-3">
-          <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
-          <div>
-            <h4 className="text-yellow-500 font-semibold text-sm">Coordinate Information</h4>
-            <p className="text-yellow-200 text-xs mt-1">
-              Region: <strong>{selectedDevice?.region}</strong> | 
-              Raw coordinates are being converted: NE → Positive (+), SW → Negative (-)
-            </p>
-            <p className="text-yellow-200 text-xs mt-1">
-              If markers appear off-road, the raw GPS data from the device may need calibration.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-        <div className="flex justify-between items-center">
-          <div>
-            <h4 className="text-white font-semibold">Route Summary</h4>
-            <p className="text-gray-400 text-sm mt-1">{filteredHistory.length} GPS points recorded</p>
-          </div>
-          <div className="text-right">
-            <p className="text-3xl font-bold text-blue-400">{filteredHistory.length}</p>
-            <p className="text-gray-400 text-sm">locations visited</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Time Range */}
-      {filteredHistory.length > 0 && (
-        <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-          <h4 className="text-white font-semibold mb-2">Time Range</h4>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-gray-400 text-xs">Start Time</p>
-              <p className="text-white text-sm">
-                {new Date(filteredHistory[filteredHistory.length - 1].timestamp).toLocaleString()}
-              </p>
-            </div>
-            <div>
-              <p className="text-gray-400 text-xs">End Time</p>
-              <p className="text-white text-sm">{new Date(filteredHistory[0].timestamp).toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Sample Coordinates for Debugging */}
-      <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-        <h4 className="text-white font-semibold mb-3">Sample GPS Coordinates (First 3)</h4>
-        <div className="space-y-2 text-xs">
-          {processedLocations.slice(0, 3).map((location) => (
-            <div key={location._id.$oid} className="bg-white/5 p-2 rounded border border-white/10">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <span className="text-gray-400">Raw:</span>
-                  <span className="text-white ml-2">{location.lat.toFixed(6)}, {location.lon.toFixed(6)}</span>
-                </div>
-                <div>
-                  <span className="text-gray-400">Fixed:</span>
-                  <span className="text-blue-400 ml-2">{location.fixedLat.toFixed(6)}, {location.fixedLon.toFixed(6)}</span>
-                </div>
-              </div>
-              <span className="text-gray-500 text-xs block mt-1">
-                {new Date(location.timestamp).toLocaleString()}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-})
-HistoryModalContent.displayName = "HistoryModalContent"
 
 export default function DeviceSection() {
   const [selectedTractor, setSelectedTractor] = useState<string | null>(null)
@@ -400,12 +198,23 @@ export default function DeviceSection() {
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 40.7128, lng: -74.006 })
   const [mapsLoaded, setMapsLoaded] = useState<boolean>(false)
 
-  // History modal states
-  const [showHistoryModal, setShowHistoryModal] = useState<boolean>(false)
+  // Real-time tracking & socket state
+  const [socket, setSocket] = useState<Socket | null>(null)
+  const [isSocketConnected, setIsSocketConnected] = useState<boolean>(false)
+  const [livePacketCount, setLivePacketCount] = useState<number>(0)
+  const [liveTrails, setLiveTrails] = useState<Record<string, { lat: number; lng: number }[]>>({})
+  const livePolylineRef = useRef<google.maps.Polyline | null>(null)
+  const [pinging, setPinging] = useState<boolean>(false)
+
+  // Route history, filter, and map style state on main map
+  const [selectedFilter, setSelectedFilter] = useState<string>("all")
+  const [showRoutePath, setShowRoutePath] = useState<boolean>(true)
+  const [mapType, setMapType] = useState<"roadmap" | "satellite" | "hybrid">("hybrid")
   const [historyLoading, setHistoryLoading] = useState<boolean>(false)
-  const [historyError, setHistoryError] = useState<string | null>(null)
-  const [gpsHistory, setGpsHistory] = useState<GPSLocation[]>([])
-  const [selectedFilter, setSelectedFilter] = useState<string>("today")
+  const [historyLocations, setHistoryLocations] = useState<DeviceLocationData[]>([])
+  const historyPolylineRef = useRef<google.maps.Polyline | null>(null)
+  const startMarkerRef = useRef<google.maps.Marker | null>(null)
+  const waypointMarkersRef = useRef<google.maps.Marker[]>([])
 
   // Add Device Stepped Modal states
   const [showAddDeviceModal, setShowAddDeviceModal] = useState<boolean>(false)
@@ -462,10 +271,148 @@ export default function DeviceSection() {
     })
   }, [])
 
-  // Fetch devices from API
+  // Fetch devices from API and resolve GPS locations from device.holatractor.com
   useEffect(() => {
     fetchDevices()
   }, [])
+
+  // Load main map route for selected tractor with current filter
+  const loadMainMapRoute = async (deviceImei: string, filterVal = selectedFilter) => {
+    if (!deviceImei) return
+    setHistoryLoading(true)
+    try {
+      const dev = devices.find((d) => d.id === deviceImei)
+      const devRegion = dev?.region || "SW"
+
+      console.log("[Devices Main Map] Loading route history for:", deviceImei, "Filter:", filterVal, "Region:", devRegion)
+
+      const historyData = await DeviceLocationService.getDeviceLocationHistory(
+        deviceImei,
+        { filter: filterVal === "all" ? undefined : (filterVal as any) },
+        devRegion
+      )
+
+      setHistoryLocations(historyData || [])
+    } catch (err) {
+      console.warn("[Devices Main Map] Error loading route history:", err)
+      setHistoryLocations([])
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
+
+  // Reload main map route whenever selected tractor or filter changes
+  useEffect(() => {
+    if (selectedTractor) {
+      loadMainMapRoute(selectedTractor, selectedFilter)
+    } else {
+      setHistoryLocations([])
+    }
+  }, [selectedTractor, selectedFilter])
+
+  // Socket.IO Real-time Motion Tracking Connection to device.holatractor.com
+  useEffect(() => {
+    if (devices.length === 0) return
+
+    console.log("[Devices] Connecting to Socket.IO at https://device.holatractor.com for real-time motion tracking...")
+    const socketInstance = io("https://device.holatractor.com", {
+      transports: ["websocket", "polling"],
+      autoConnect: true,
+      forceNew: true,
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+      timeout: 20000,
+      withCredentials: false,
+    })
+
+    socketInstance.on("connect", () => {
+      console.log("[Devices] Socket.IO live stream connected successfully")
+      setIsSocketConnected(true)
+      devices.forEach((d) => {
+        if (d.id) {
+          socketInstance.emit("join-device", d.id)
+        }
+      })
+    })
+
+    socketInstance.on("disconnect", () => {
+      console.log("[Devices] Socket.IO disconnected")
+      setIsSocketConnected(false)
+    })
+
+    socketInstance.on("connect_error", (err) => {
+      console.warn("[Devices] Socket.IO connect error:", err)
+    })
+
+    socketInstance.on("location-update", (data: any) => {
+      console.log("[Devices] Received live location-update:", data)
+      if (!data || !data.imei) return
+
+      setLivePacketCount((prev) => prev + 1)
+
+      setDevices((prevDevices) => {
+        const target = prevDevices.find((d) => d.id === data.imei)
+        if (!target) return prevDevices
+
+        const [fixedLat, fixedLon] = fixCoordinates(data.lat, data.lon, target.region)
+        if (isNaN(fixedLat) || isNaN(fixedLon) || (fixedLat === 0 && fixedLon === 0)) {
+          return prevDevices
+        }
+
+        const speedVal = typeof data.speed === "number" ? data.speed : Number(data.speed || 0)
+        const courseVal = typeof data.course === "number" ? data.course : Number(data.course || 0)
+        const batteryVal = data.battery_level || target.battery || 85
+
+        // Smoothly animate Google Maps marker position and heading rotation
+        const marker = markersRef.current.get(data.imei)
+        if (marker && window.google) {
+          const newPos = new window.google.maps.LatLng(fixedLat, fixedLon)
+          marker.setPosition(newPos)
+          marker.setIcon(
+            getGoogleMapsTractorIcon({
+              course: courseVal,
+              isSelected: selectedTractor === data.imei,
+              isLive: true,
+              isMoving: speedVal > 0.5,
+              status: "Active",
+              size: 72,
+            })
+          )
+        }
+
+        // Update live breadcrumb trail
+        setLiveTrails((prevTrails) => {
+          const currentTrail = prevTrails[data.imei] || []
+          const newTrail = [...currentTrail, { lat: fixedLat, lng: fixedLon }].slice(-60)
+          return { ...prevTrails, [data.imei]: newTrail }
+        })
+
+        return prevDevices.map((d) =>
+          d.id === data.imei
+            ? {
+                ...d,
+                lat: fixedLat,
+                lng: fixedLon,
+                speed: speedVal,
+                course: courseVal,
+                battery: batteryVal,
+                lastSeen: data.timestamp || data.created_at || new Date().toISOString(),
+                status: "Active",
+              }
+            : d
+        )
+      })
+    })
+
+    setSocket(socketInstance)
+
+    return () => {
+      socketInstance.disconnect()
+      setSocket(null)
+      setIsSocketConnected(false)
+    }
+  }, [devices.map((d) => d.id).join(",")])
 
   // Debounced search for high-scale owner list (10,000+ records)
   useEffect(() => {
@@ -890,8 +837,13 @@ export default function DeviceSection() {
             name: device.tractorInStore?.baseTractor?.name || "Unknown Tractor",
             lat: rawLat,
             lng: rawLon,
+            speed: 0,
+            course: 0,
+            battery: 0,
+            lastSeen: device.updatedAt || new Date().toISOString(),
             field: device.tractorInStore?.store?.name || "Unknown Store",
-            status: device.base?.status === 1 ? "Active" : "Maintenance",
+            status: "Not Connected",
+            hasGps: false,
             region: region,
             model: device.tractorInStore?.baseTractor?.model || "N/A",
             hourlyPrice: device.tractorInStore?.hourly_price || 0,
@@ -908,6 +860,54 @@ export default function DeviceSection() {
           setSelectedTractor(transformedDevices[0].id)
           setMapCenter({ lat: transformedDevices[0].lat, lng: transformedDevices[0].lng })
         }
+
+        // Concurrently fetch real-time GPS locations from device.holatractor.com for all devices
+        try {
+          const gpsPromises = transformedDevices.map(async (dev) => {
+            try {
+              const gpsData = await DeviceLocationService.getCurrentDeviceLocation(dev.id, dev.region)
+              if (gpsData && gpsData.lat && gpsData.lon && !isNaN(gpsData.lat) && !isNaN(gpsData.lon) && gpsData.lat !== 0 && gpsData.lon !== 0) {
+                return {
+                  id: dev.id,
+                  lat: Number(gpsData.lat),
+                  lng: Number(gpsData.lon),
+                  speed: gpsData.speed || 0,
+                  course: gpsData.course || 0,
+                  battery: gpsData.battery_level || 85,
+                  lastSeen: gpsData.timestamp || gpsData.created_at,
+                  status: "Active",
+                  hasGps: true,
+                }
+              }
+            } catch (err) {
+              console.warn(`[Devices] Device ${dev.id} not responding to GPS query:`, err)
+            }
+            return {
+              id: dev.id,
+              status: "Not Connected",
+              hasGps: false,
+            }
+          })
+
+          const resolvedGps = await Promise.all(gpsPromises)
+          setDevices((prev) =>
+            prev.map((d) => {
+              const gps = resolvedGps.find((r) => r && r.id === d.id)
+              if (gps) {
+                return { ...d, ...gps }
+              }
+              return d
+            })
+          )
+
+          // If selected tractor resolved to a valid GPS location, center map there
+          const firstGps = resolvedGps.find((r) => r && r.hasGps && r.lat && r.lng)
+          if (firstGps && firstGps.lat && firstGps.lng) {
+            setMapCenter({ lat: firstGps.lat, lng: firstGps.lng })
+          }
+        } catch (gpsError) {
+          console.warn("[Devices] Failed to resolve initial GPS from device.holatractor.com:", gpsError)
+        }
       }
     } catch (err: any) {
       setError(err.message || "Failed to fetch devices")
@@ -916,30 +916,51 @@ export default function DeviceSection() {
     }
   }
 
-  const fetchGPSHistory = async (deviceImei: string) => {
+  const handlePingSelectedDevice = async () => {
+    const dev = getSelectedDevice()
+    if (!dev) return
+    setPinging(true)
     try {
-      setHistoryLoading(true)
-      setHistoryError(null)
-
-      const response = await deviceInstance.get(`/api/device/${deviceImei}/locations`)
-
-      if (response.data && Array.isArray(response.data)) {
-        setGpsHistory(response.data)
+      successMessage(`Pinging GPS telemetry for ${dev.name}...`)
+      const latest = await DeviceLocationService.getCurrentDeviceLocation(dev.id, dev.region)
+      if (latest && latest.lat && latest.lon && latest.lat !== 0 && latest.lon !== 0) {
+        setDevices((prev) =>
+          prev.map((d) =>
+            d.id === dev.id
+              ? {
+                  ...d,
+                  lat: Number(latest.lat),
+                  lng: Number(latest.lon),
+                  speed: latest.speed || d.speed,
+                  course: latest.course || d.course,
+                  battery: latest.battery_level || d.battery,
+                  lastSeen: latest.timestamp || latest.created_at,
+                  status: "Active",
+                  hasGps: true,
+                }
+              : d
+          )
+        )
+        if (googleMapRef.current) {
+          googleMapRef.current.panTo({ lat: Number(latest.lat), lng: Number(latest.lon) })
+          googleMapRef.current.setZoom(16)
+        }
+        // Refresh route history as well
+        loadMainMapRoute(dev.id, selectedFilter)
+        successMessage(`GPS coordinates updated from device.holatractor.com!`)
       } else {
-        setGpsHistory([])
+        setDevices((prev) =>
+          prev.map((d) => (d.id === dev.id ? { ...d, status: "Not Connected", hasGps: false } : d))
+        )
+        errorMessage("Device is not connected / No GPS response received.")
       }
     } catch (err: any) {
-      setHistoryError(err.message || "Failed to fetch GPS history")
+      setDevices((prev) =>
+        prev.map((d) => (d.id === dev.id ? { ...d, status: "Not Connected", hasGps: false } : d))
+      )
+      errorMessage("Device is not connected / Server timeout.")
     } finally {
-      setHistoryLoading(false)
-    }
-  }
-
-  const handleShowHistory = () => {
-    if (selectedTractor) {
-      setShowHistoryModal(true)
-      setSelectedFilter("today")
-      fetchGPSHistory(selectedTractor)
+      setPinging(false)
     }
   }
 
@@ -954,65 +975,211 @@ export default function DeviceSection() {
     const device = devices.find((d) => d.id === deviceId)
     if (device && googleMapRef.current) {
       googleMapRef.current.panTo({ lat: device.lat, lng: device.lng })
-      googleMapRef.current.setZoom(15)
+      googleMapRef.current.setZoom(16)
     }
   }
 
-  // Initialize Google Map
+  // Initialize Google Map with selected map type (satellite/hybrid/roadmap)
   useEffect(() => {
     if (!mapRef.current || !mapsLoaded || !window.google) return
 
     if (!googleMapRef.current) {
       googleMapRef.current = new google.maps.Map(mapRef.current, {
         center: mapCenter,
-        zoom: 13,
-        mapTypeId: google.maps.MapTypeId.ROADMAP,
+        zoom: 14,
+        mapTypeId: mapType,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
       })
     }
   }, [mapsLoaded, mapCenter])
 
-  // Update markers when devices change
+  // Sync map type (satellite / hybrid / roadmap) dynamically
+  useEffect(() => {
+    if (googleMapRef.current) {
+      googleMapRef.current.setMapTypeId(mapType)
+    }
+  }, [mapType])
+
+  // Update marker for ONLY the selected tractor on the map
   useEffect(() => {
     if (!googleMapRef.current || !mapsLoaded || !window.google) return
 
     // Clear existing markers
-    markersRef.current.forEach(marker => marker.setMap(null))
+    markersRef.current.forEach((marker) => marker.setMap(null))
     markersRef.current.clear()
 
-    // Add new markers
-    devices.forEach((device) => {
-      const isSelected = selectedTractor === device.id
-      const marker = new google.maps.Marker({
-        position: { lat: device.lat, lng: device.lng },
-        map: googleMapRef.current,
-        icon: {
-          url: device.tractorImage || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><circle cx="24" cy="24" r="20" fill="%231F2937" stroke="%233B82F6" stroke-width="3"/></svg>',
-          scaledSize: new google.maps.Size(48, 48),
-          anchor: new google.maps.Point(24, 48),
-        },
-        title: device.name,
-      })
+    const selectedDev = devices.find((d) => d.id === selectedTractor) || devices[0]
+    if (!selectedDev) return
 
-      const infoWindow = new google.maps.InfoWindow({
-        content: `
-          <div style="color: #000; padding: 10px; max-width: 200px;">
-            ${device.tractorImage ? `<img src="${device.tractorImage}" style="width: 100%; border-radius: 4px; margin-bottom: 8px;" />` : ''}
-            <strong>${device.name}</strong><br/>
-            ${device.field}<br/>
-            Status: ${device.status}<br/>
-            Model: ${device.model}
-          </div>
-        `
-      })
-
-      marker.addListener('click', () => {
-        handleMarkerClick(device.id)
-        infoWindow.open(googleMapRef.current, marker)
-      })
-
-      markersRef.current.set(device.id, marker)
+    const marker = new google.maps.Marker({
+      position: { lat: selectedDev.lat, lng: selectedDev.lng },
+      map: googleMapRef.current,
+      icon: getGoogleMapsTractorIcon({
+        course: selectedDev.course || 0,
+        isSelected: true,
+        isLive: isSocketConnected,
+        isMoving: (selectedDev.speed || 0) > 0.5,
+        status: selectedDev.status,
+        size: 72,
+      }),
+      title: `${selectedDev.name} (IMEI: ${selectedDev.id})`,
+      zIndex: 100,
     })
-  }, [devices, mapsLoaded, selectedTractor])
+
+    const infoWindow = new google.maps.InfoWindow({
+      content: `
+        <div style="color: #000; padding: 8px; font-family: system-ui, -apple-system, sans-serif; max-width: 220px;">
+          ${selectedDev.tractorImage ? `<img src="${selectedDev.tractorImage}" style="width: 100%; height: 90px; object-fit: cover; border-radius: 6px; margin-bottom: 8px;" />` : ""}
+          <div style="font-weight: 700; font-size: 14px; color: #0F172A; margin-bottom: 2px;">${selectedDev.name}</div>
+          <div style="font-size: 12px; color: #475569; margin-bottom: 4px;">${selectedDev.field}</div>
+          <div style="display: flex; gap: 4px; margin-bottom: 6px;">
+            <span style="font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: ${selectedDev.status === "Active" ? "#DCFCE7; color: #166534;" : "#FEF3C7; color: #92400E;"}">${selectedDev.status}</span>
+            <span style="font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: #F1F5F9; color: #475569;">${selectedDev.region}</span>
+          </div>
+          <div style="font-size: 11px; color: #334155; line-height: 1.4;">
+            <strong>Speed:</strong> ${(selectedDev.speed || 0).toFixed(1)} km/h<br/>
+            <strong>Heading:</strong> ${selectedDev.course || 0}°<br/>
+            <strong>Battery:</strong> ${selectedDev.battery || 85}%<br/>
+            <span style="font-size: 10px; color: #64748B; font-family: monospace;">Lat: ${selectedDev.lat.toFixed(5)}, Lon: ${selectedDev.lng.toFixed(5)}</span>
+          </div>
+        </div>
+      `,
+    })
+
+    marker.addListener("click", () => {
+      infoWindow.open(googleMapRef.current, marker)
+    })
+
+    markersRef.current.set(selectedDev.id, marker)
+  }, [devices, mapsLoaded, selectedTractor, isSocketConnected])
+
+  // Draw Route History Polyline directly on the Main Map for selected tractor
+  useEffect(() => {
+    if (!googleMapRef.current || !mapsLoaded || !window.google) return
+
+    // Clear previous route polyline and markers
+    if (historyPolylineRef.current) {
+      historyPolylineRef.current.setMap(null)
+      historyPolylineRef.current = null
+    }
+    if (startMarkerRef.current) {
+      startMarkerRef.current.setMap(null)
+      startMarkerRef.current = null
+    }
+    waypointMarkersRef.current.forEach((m) => m.setMap(null))
+    waypointMarkersRef.current = []
+
+    if (!selectedTractor) return
+
+    const selectedDev = devices.find((d) => d.id === selectedTractor)
+
+    if (!showRoutePath || historyLocations.length === 0) {
+      // If no route points for this filter, focus on device current position
+      if (selectedDev && selectedDev.lat !== 0 && selectedDev.lng !== 0) {
+        googleMapRef.current.panTo({ lat: selectedDev.lat, lng: selectedDev.lng })
+        googleMapRef.current.setZoom(16)
+      }
+      return
+    }
+
+    const path = historyLocations.map((loc) => ({ lat: loc.lat, lng: loc.lon }))
+
+    if (path.length > 0) {
+      // Draw smooth blue route polyline
+      historyPolylineRef.current = new window.google.maps.Polyline({
+        path,
+        geodesic: true,
+        strokeColor: "#3B82F6",
+        strokeOpacity: 0.85,
+        strokeWeight: 4,
+        map: googleMapRef.current,
+      })
+
+      // Add Start Point Marker (oldest point at path.length - 1)
+      if (path.length > 1) {
+        const startPoint = path[path.length - 1]
+        const startLoc = historyLocations[historyLocations.length - 1]
+        startMarkerRef.current = new window.google.maps.Marker({
+          position: startPoint,
+          map: googleMapRef.current,
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: "#10B981",
+            fillOpacity: 1,
+            strokeColor: "#FFFFFF",
+            strokeWeight: 2,
+          },
+          title: `Start Point (${new Date(startLoc.timestamp).toLocaleTimeString()})`,
+          zIndex: 50,
+        })
+      }
+
+      // Add small waypoint dots for intermediate locations
+      if (path.length > 2) {
+        const step = Math.max(1, Math.floor(path.length / 25))
+        for (let i = 1; i < path.length - 1; i += step) {
+          const pt = path[i]
+          const loc = historyLocations[i]
+          const wpMarker = new window.google.maps.Marker({
+            position: pt,
+            map: googleMapRef.current,
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              scale: 3.5,
+              fillColor: "#60A5FA",
+              fillOpacity: 0.9,
+              strokeColor: "#FFFFFF",
+              strokeWeight: 1,
+            },
+            title: `Waypoint #${i + 1} • ${(loc.speed || 0).toFixed(1)} km/h • ${new Date(loc.timestamp).toLocaleTimeString()}`,
+            zIndex: 30,
+          })
+          waypointMarkersRef.current.push(wpMarker)
+        }
+      }
+
+      // Fit map bounds to show complete tractor route and adjust zoom dynamically
+      const bounds = new window.google.maps.LatLngBounds()
+      path.forEach((p) => bounds.extend(p))
+
+      const ne = bounds.getNorthEast()
+      const sw = bounds.getSouthWest()
+      const latDiff = Math.abs(ne.lat() - sw.lat())
+      const lngDiff = Math.abs(ne.lng() - sw.lng())
+
+      if (path.length > 1 && (latDiff > 0.0003 || lngDiff > 0.0003)) {
+        googleMapRef.current.fitBounds(bounds, { top: 80, right: 60, bottom: 90, left: 60 })
+      } else {
+        googleMapRef.current.panTo(path[0])
+        googleMapRef.current.setZoom(16)
+      }
+    }
+  }, [historyLocations, showRoutePath, selectedTractor, mapsLoaded, devices])
+
+  // Draw real-time motion trail for the selected device
+  useEffect(() => {
+    if (!googleMapRef.current || !window.google || !selectedTractor) return
+
+    const trail = liveTrails[selectedTractor] || []
+    if (livePolylineRef.current) {
+      livePolylineRef.current.setMap(null)
+      livePolylineRef.current = null
+    }
+
+    if (trail.length > 1) {
+      livePolylineRef.current = new window.google.maps.Polyline({
+        path: trail,
+        geodesic: true,
+        strokeColor: "#10B981",
+        strokeOpacity: 0.85,
+        strokeWeight: 4,
+        map: googleMapRef.current,
+      })
+    }
+  }, [liveTrails, selectedTractor])
 
   const selectedDevice = getSelectedDevice()
 
@@ -1022,7 +1189,7 @@ export default function DeviceSection() {
       <div className="min-h-screen bg-gradient-to-br from-red-950 via-red-900 to-black flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-white text-lg">Loading devices...</p>
+          <p className="text-white text-lg">Loading Fleet Telemetry...</p>
         </div>
       </div>
     )
@@ -1069,35 +1236,251 @@ export default function DeviceSection() {
   return (
     <>
       <div className="min-h-screen bg-gradient-to-br from-red-950 via-red-900 to-black flex flex-col md:flex-row relative overflow-hidden">
-        {/* MAP SECTION */}
+        {/* MAIN MAP SECTION WITH INLINE GPS TRACKING & ROUTE HISTORY */}
         <div
           className={`relative transition-all duration-500 ${
             isFullscreen ? "w-full h-screen" : "w-full md:flex-1 h-[60vh] md:h-screen"
           }`}
         >
+          {/* FLOATING TOP CONTROL BAR: Selected Tractor, History Filter Tabs & Live Stream */}
+          <div className="absolute top-3 left-3 right-14 z-[1000] flex items-center justify-between gap-2 pointer-events-none flex-wrap">
+            {/* Left: Active Tractor Badge & Live Stream Status */}
+            <div className="flex items-center gap-2 pointer-events-auto flex-wrap">
+              {selectedDevice && (
+                <div className="px-3 py-1.5 rounded-xl bg-slate-900/90 text-white text-xs font-bold backdrop-blur-md border border-slate-700/80 shadow-xl flex items-center gap-2">
+                  <div
+                    className={`w-2 h-2 rounded-full ${
+                      selectedDevice.hasGps || selectedDevice.status === "Active" ? "bg-emerald-400" : "bg-rose-500"
+                    }`}
+                  ></div>
+                  <span className="text-blue-300 font-semibold">{selectedDevice.name}</span>
+                  <span className="text-[11px] text-slate-400 font-mono">IMEI: {selectedDevice.id}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                      selectedDevice.hasGps || selectedDevice.status === "Active"
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                        : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                    }`}
+                  >
+                    {selectedDevice.hasGps || selectedDevice.status === "Active" ? "Connected" : "Not Connected"}
+                  </span>
+                </div>
+              )}
+
+              <div
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold backdrop-blur-md border shadow-xl flex items-center gap-2 ${
+                  isSocketConnected
+                    ? "bg-emerald-950/90 text-emerald-300 border-emerald-500/40"
+                    : "bg-slate-900/90 text-slate-400 border-slate-700/60"
+                }`}
+              >
+                <div className={`w-2.5 h-2.5 rounded-full ${isSocketConnected ? "bg-emerald-400 animate-ping" : "bg-emerald-500"}`}></div>
+                <span>{isSocketConnected ? "Live Motion Stream" : "Live GPS Active"}</span>
+                {livePacketCount > 0 && (
+                  <span className="bg-emerald-500/20 px-1.5 py-0.5 rounded text-[10px] text-emerald-200">
+                    {livePacketCount} updates
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Right: History Time Filter Tabs & Map Style Switcher */}
+            <div className="flex items-center gap-1.5 pointer-events-auto bg-slate-900/90 p-1 rounded-xl backdrop-blur-md border border-slate-700/80 shadow-xl flex-wrap">
+              {/* Map Type Switcher */}
+              <div className="flex items-center gap-1 border-r border-slate-700/80 pr-1.5 mr-0.5">
+                <button
+                  onClick={() => setMapType("hybrid")}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                    mapType === "hybrid" || mapType === "satellite"
+                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
+                      : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  }`}
+                  title="Satellite View with Road Overlays"
+                >
+                  🛰️ Satellite
+                </button>
+                <button
+                  onClick={() => setMapType("roadmap")}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                    mapType === "roadmap"
+                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
+                      : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  }`}
+                  title="Standard Street Map"
+                >
+                  🗺️ Map
+                </button>
+              </div>
+
+              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1.5 flex items-center gap-1">
+                <History className="w-3 h-3 text-blue-400" /> Route
+              </span>
+
+              {[
+                { label: "All", value: "all" },
+                { label: "Today", value: "today" },
+                { label: "Yesterday", value: "yesterday" },
+                { label: "7D", value: "week" },
+                { label: "30D", value: "month" },
+              ].map((f) => (
+                <button
+                  key={f.value}
+                  onClick={() => setSelectedFilter(f.value)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                    selectedFilter === f.value
+                      ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
+                      : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+
+              <button
+                onClick={() => setShowRoutePath(!showRoutePath)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all border ${
+                  showRoutePath
+                    ? "bg-emerald-600/30 text-emerald-300 border-emerald-500/40"
+                    : "bg-slate-800 text-slate-400 border-slate-700"
+                }`}
+                title="Toggle route polyline"
+              >
+                {showRoutePath ? "Path ON" : "Path OFF"}
+              </button>
+
+              <button
+                onClick={handlePingSelectedDevice}
+                disabled={pinging || !selectedDevice}
+                className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white flex items-center gap-1 shadow-md shadow-emerald-600/20"
+                title="Ping latest GPS coordinate from server"
+              >
+                <Radio className={`w-3 h-3 ${pinging ? "animate-spin" : ""}`} />
+                <span>{pinging ? "Ping..." : "Ping"}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Device Not Connected Alert Banner */}
+          {selectedDevice && !selectedDevice.hasGps && selectedDevice.status === "Not Connected" && (
+            <div className="absolute top-16 left-3 right-3 md:right-14 z-[999] bg-rose-950/90 border border-rose-500/50 rounded-2xl p-3 backdrop-blur-md text-white flex items-center justify-between shadow-2xl gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center flex-shrink-0 border border-rose-500/40">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h5 className="text-xs font-bold text-rose-300 flex items-center gap-1.5">
+                    Device is Not Connected
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/30 text-rose-200 border border-rose-500/40 font-mono">No Telemetry Signal</span>
+                  </h5>
+                  <p className="text-[11px] text-slate-300 mt-0.5">
+                    No GPS data packet received from IMEI <span className="font-mono text-white font-semibold">{selectedDevice.id}</span> ({selectedDevice.name}). Device may be unpowered, offline, or SIM disconnected.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handlePingSelectedDevice}
+                disabled={pinging}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white flex items-center gap-1.5 shadow-lg shadow-rose-600/30 transition-all flex-shrink-0"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${pinging ? "animate-spin" : ""}`} />
+                <span>{pinging ? "Pinging..." : "Check Signal"}</span>
+              </button>
+            </div>
+          )}
+
           {/* Fullscreen Toggle */}
           <button
             onClick={toggleFullscreen}
-            className="absolute top-3 right-3 z-[1000] bg-black/30 backdrop-blur-md border border-white/20 hover:bg-black/50 text-white p-2 rounded-lg transition-all duration-300 shadow-lg"
+            className="absolute top-3 right-3 z-[1000] bg-slate-900/90 backdrop-blur-md border border-slate-700/80 hover:bg-slate-800 text-white p-2 rounded-xl transition-all shadow-xl"
+            title="Toggle Fullscreen"
           >
-            {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+            {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
           </button>
 
+          {/* FLOATING BOTTOM TELEMETRY HUD BAR FOR SELECTED TRACTOR */}
+          {selectedDevice && (
+            <div className="absolute bottom-4 left-4 right-4 z-[1000] pointer-events-none">
+              <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl p-3.5 shadow-2xl pointer-events-auto flex items-center justify-between gap-4 flex-wrap">
+                {/* Tractor Info & Status */}
+                <div className="flex items-center gap-3 min-w-[200px]">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-400 border border-blue-500/30 flex items-center justify-center flex-shrink-0">
+                    <Truck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-white text-sm font-bold truncate">{selectedDevice.name}</h4>
+                    <p className="text-slate-400 text-xs truncate">{selectedDevice.model} • Store: {selectedDevice.field}</p>
+                  </div>
+                </div>
+
+                {/* Telemetry Metrics */}
+                <div className="flex items-center gap-6 flex-wrap">
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Status</span>
+                    <span
+                      className={`text-xs font-bold px-2 py-0.5 rounded block ${
+                        selectedDevice.hasGps || selectedDevice.status === "Active"
+                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                          : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                      }`}
+                    >
+                      {selectedDevice.hasGps || selectedDevice.status === "Active" ? "GPS Active" : "Not Connected"}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Speed</span>
+                    <span className={`text-sm font-bold font-mono ${
+                      (selectedDevice.speed || 0) > 0 ? "text-emerald-400" : "text-white"
+                    }`}>
+                      {(selectedDevice.speed || 0).toFixed(1)} km/h
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Heading</span>
+                    <span className="text-sm font-bold text-white font-mono">{selectedDevice.course || 0}°</span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Battery</span>
+                    <span className="text-sm font-bold text-emerald-400 font-mono">{selectedDevice.battery || 85}%</span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Route Path</span>
+                    <span className="text-sm font-bold text-blue-400 font-mono">
+                      {historyLoading ? "Loading..." : `${historyLocations.length} Waypoints`}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Region</span>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">
+                      {selectedDevice.region} {selectedDevice.region === "SW" ? "(- coords)" : "(+ coords)"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Map Container */}
-          <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
+          <div ref={mapRef} style={{ width: "100%", height: "100%" }} />
         </div>
 
-        {/* CONTROL PANEL */}
+        {/* SIDEBAR CONTROL PANEL */}
         {!isFullscreen && (
           <div className="w-full md:w-80 flex-shrink-0 bg-white/5 md:bg-transparent backdrop-blur-xl border-t md:border-t-0 md:border-l border-white/10 relative z-10">
             <div className="flex flex-col h-full max-h-[80vh] md:max-h-screen overflow-y-auto p-4 sm:p-6 space-y-6">
               {/* Header */}
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Tractor Control</h2>
+                  <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Tractor Fleet</h2>
                   <div className="flex items-center space-x-2 mt-0.5">
-                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                    <span className="text-emerald-400 text-xs font-semibold uppercase tracking-wider">LIVE TELEMETRY</span>
+                    <div className={`w-2 h-2 rounded-full ${isSocketConnected ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`}></div>
+                    <span className="text-emerald-400 text-xs font-semibold uppercase tracking-wider">
+                      {isSocketConnected ? "LIVE TELEMETRY STREAM" : "GPS TELEMETRY"}
+                    </span>
                   </div>
                 </div>
                 <button
@@ -1112,51 +1495,58 @@ export default function DeviceSection() {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-white font-semibold flex items-center text-sm">
-                    <Truck className="w-4 h-4 mr-2 text-emerald-400" /> Active Devices ({devices.length})
+                    <Truck className="w-4 h-4 mr-2 text-emerald-400" /> Active Fleet ({devices.length})
                   </h3>
                   <button onClick={fetchDevices} className="text-xs text-slate-400 hover:text-white flex items-center transition-colors">
                     <RefreshCw className="w-3 h-3 mr-1" /> Refresh
                   </button>
                 </div>
                 <div className="space-y-2">
-                  {devices.map((device) => (
-                    <div
-                      key={device.id}
-                      onClick={() => handleMarkerClick(device.id)}
-                      className={`p-3 rounded-xl cursor-pointer transition-all duration-300 ${
-                        selectedTractor === device.id
-                          ? "bg-gradient-to-r from-emerald-500/30 to-emerald-400/10 border-2 border-emerald-400/60"
-                          : "bg-white/10 hover:bg-white/20 border border-white/10"
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        {device.tractorImage && (
-                          <img
-                            src={device.tractorImage}
-                            alt={device.name}
-                            className="w-12 h-12 rounded-full object-cover border-2 border-white/20"
-                          />
-                        )}
-                        <div className="flex-1">
-                          <p className="text-white text-sm font-medium">{device.name}</p>
-                          <p className="text-gray-300 text-xs">{device.field}</p>
-                          <p className="text-gray-400 text-xs mt-1">IMEI: {device.id}</p>
-                        </div>
-                        <div className="text-right">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium block mb-1 ${
-                              device.status === "Active"
-                                ? "bg-green-400/20 text-green-300"
-                                : "bg-yellow-400/20 text-yellow-300"
-                            }`}
-                          >
-                            {device.status}
-                          </span>
-                          <span className="text-xs text-gray-400">{device.region}</span>
+                  {devices.map((device) => {
+                    const isSelected = selectedTractor === device.id
+                    return (
+                      <div
+                        key={device.id}
+                        onClick={() => handleMarkerClick(device.id)}
+                        className={`p-3 rounded-xl cursor-pointer transition-all duration-300 ${
+                          isSelected
+                            ? "bg-gradient-to-r from-blue-600/30 to-blue-500/10 border-2 border-blue-500/70 shadow-lg shadow-blue-500/10"
+                            : "bg-white/10 hover:bg-white/20 border border-white/10"
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="w-11 h-11 rounded-lg bg-black/40 border border-white/20 flex items-center justify-center overflow-hidden flex-shrink-0">
+                            {device.tractorImage ? (
+                              <img
+                                src={device.tractorImage}
+                                alt={device.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Truck className="w-6 h-6 text-emerald-400" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white text-sm font-medium truncate">{device.name}</p>
+                            <p className="text-gray-300 text-xs truncate">{device.field}</p>
+                            <p className="text-gray-400 text-[11px] font-mono mt-0.5 truncate">IMEI: {device.id}</p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-semibold block mb-1 ${
+                                device.status === "Active" || device.hasGps
+                                  ? "bg-emerald-400/20 text-emerald-300 border border-emerald-400/30"
+                                  : "bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                              }`}
+                            >
+                              {device.status === "Active" || device.hasGps ? "Connected" : "Not Connected"}
+                            </span>
+                            <span className="text-[10px] text-gray-400 uppercase font-mono">{device.region}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
 
@@ -1168,10 +1558,15 @@ export default function DeviceSection() {
                       <img
                         src={selectedDevice.tractorImage}
                         alt={selectedDevice.name}
-                        className="rounded-lg mb-3 w-full object-cover"
+                        className="rounded-lg mb-3 w-full h-32 object-cover"
                       />
                     )}
-                    <h4 className="text-white font-semibold mb-2">Device Details</h4>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-white font-semibold">Device Telemetry</h4>
+                      <span className="text-[11px] text-emerald-400 font-mono">
+                        {isSocketConnected ? "🟢 Streaming" : "⚪ Standby"}
+                      </span>
+                    </div>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-300">Model:</span>
@@ -1179,22 +1574,28 @@ export default function DeviceSection() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-300">Hourly Price:</span>
-                        <span className="text-white">${selectedDevice.hourlyPrice}</span>
+                        <span className="text-white">${selectedDevice.hourlyPrice}/hr</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-300">Region:</span>
-                        <span className="text-white">{selectedDevice.region}</span>
+                        <span className="text-white">{selectedDevice.region} ({selectedDevice.region === "SW" ? "Negative coords" : "Positive coords"})</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-300">Owner:</span>
-                        <span className="text-white">{selectedDevice.ownerName}</span>
+                        <span className="text-white truncate max-w-[140px] text-right">{selectedDevice.ownerName}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-300">Location:</span>
-                        <span className="text-white text-xs">
-                          {selectedDevice.lat.toFixed(4)}, {selectedDevice.lng.toFixed(4)}
+                        <span className="text-gray-300">GPS Location:</span>
+                        <span className="text-white text-xs font-mono">
+                          {selectedDevice.lat.toFixed(5)}, {selectedDevice.lng.toFixed(5)}
                         </span>
                       </div>
+                      {selectedDevice.course !== undefined && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-300">Heading:</span>
+                          <span className="text-white font-mono">{selectedDevice.course}°</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1202,36 +1603,38 @@ export default function DeviceSection() {
                   <div className="space-y-3">
                     <div className="bg-white/10 p-4 rounded-xl border border-white/20">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-gray-300 text-sm">Fuel Level</span>
-                        <Fuel className="w-4 h-4 text-blue-400" />
+                        <span className="text-gray-300 text-sm">Battery / Power</span>
+                        <Zap className="w-4 h-4 text-emerald-400" />
                       </div>
                       <div className="flex items-center space-x-2">
                         <div className="flex-1 bg-white/10 rounded-full h-2">
-                          <div className="bg-blue-400 h-2 rounded-full w-3/4"></div>
+                          <div
+                            className="bg-emerald-400 h-2 rounded-full transition-all duration-500"
+                            style={{ width: `${selectedDevice.battery || 85}%` }}
+                          ></div>
                         </div>
-                        <span className="text-white text-sm font-medium">75%</span>
+                        <span className="text-white text-sm font-medium">{selectedDevice.battery || 85}%</span>
                       </div>
                     </div>
 
                     <div className="bg-white/10 p-4 rounded-xl border border-white/20">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-gray-300 text-sm">Engine Temp</span>
-                        <Thermometer className="w-4 h-4 text-orange-400" />
+                        <span className="text-gray-300 text-sm">Real-time Motion Speed</span>
+                        <Gauge className="w-4 h-4 text-emerald-400" />
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-white text-lg font-bold">89°C</span>
-                        <span className="text-green-400 text-sm">Normal</span>
-                      </div>
-                    </div>
-
-                    <div className="bg-white/10 p-4 rounded-xl border border-white/20">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-gray-300 text-sm">Speed</span>
-                        <Gauge className="w-4 h-4 text-green-400" />
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-white text-lg font-bold">12 km/h</span>
-                        <span className="text-green-400 text-sm">Active</span>
+                      <div className="flex items-center justify-between">
+                        <span className={`text-xl font-bold font-mono ${
+                          (selectedDevice.speed || 0) > 0 ? "text-emerald-400 animate-pulse" : "text-white"
+                        }`}>
+                          {(selectedDevice.speed || 0).toFixed(1)} km/h
+                        </span>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          (selectedDevice.speed || 0) > 0
+                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                            : "bg-slate-700 text-slate-300"
+                        }`}>
+                          {(selectedDevice.speed || 0) > 0 ? "In Motion" : "Stationary"}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -1241,13 +1644,19 @@ export default function DeviceSection() {
               {/* ACTION BUTTONS */}
               <div className="space-y-3">
                 <button
-                  onClick={handleShowHistory}
-                  className="w-full bg-gradient-to-r from-blue-500/80 to-blue-600/70 hover:from-blue-500 hover:to-blue-500 text-white font-medium py-3 px-4 rounded-xl flex items-center justify-center"
+                  onClick={handlePingSelectedDevice}
+                  disabled={pinging || !selectedDevice}
+                  className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 disabled:opacity-50 text-white font-medium py-3 px-4 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-700/20 transition-all active:scale-[0.98]"
                 >
-                  <History className="w-5 h-5 mr-2" /> View GPS History
+                  <Radio className={`w-5 h-5 mr-2 ${pinging ? "animate-spin" : "animate-pulse"}`} />
+                  {pinging ? "Querying device.holatractor.com..." : "Live Tracker Ping"}
                 </button>
-                <button className="w-full bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-medium py-3 px-4 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-700/20">
-                  <Radio className="w-5 h-5 mr-2" /> Live Tracker Ping
+                <button
+                  onClick={() => setShowRoutePath(!showRoutePath)}
+                  disabled={!selectedDevice}
+                  className="w-full bg-gradient-to-r from-blue-500/80 to-blue-600/70 hover:from-blue-500 hover:to-blue-500 disabled:opacity-50 text-white font-medium py-3 px-4 rounded-xl flex items-center justify-center"
+                >
+                  <History className="w-5 h-5 mr-2" /> {showRoutePath ? "Hide Route on Map" : "Show Route on Map"}
                 </button>
                 <button
                   onClick={handleOpenAddDevice}
@@ -1260,94 +1669,6 @@ export default function DeviceSection() {
           </div>
         )}
       </div>
-
-      {/* GPS HISTORY MODAL */}
-      {showHistoryModal && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
-          <div className="bg-slate-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-slate-700/60 overflow-hidden">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-950/50">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
-                  <History className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white tracking-tight">GPS Telemetry History</h3>
-                  <p className="text-xs text-slate-400 font-mono mt-0.5">{selectedDevice?.name || "Active Tracking Device"}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowHistoryModal(false)}
-                className="text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl p-2 transition-all"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div className="flex-1 overflow-auto p-6" style={{ scrollbarWidth: "none" }}>
-              {historyLoading ? (
-                <div className="flex items-center justify-center h-64">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-10 w-10 border-2 border-emerald-500 border-t-transparent mx-auto mb-4"></div>
-                    <p className="text-slate-300 text-sm font-medium">Fetching real-time GPS telemetry...</p>
-                  </div>
-                </div>
-              ) : historyError ? (
-                <div className="flex items-center justify-center h-64">
-                  <div className="text-center">
-                    <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
-                    <p className="text-slate-200 text-sm mb-4">{historyError}</p>
-                    <button
-                      onClick={() => selectedTractor && fetchGPSHistory(selectedTractor)}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-md active:scale-[0.98]"
-                    >
-                      Retry Connection
-                    </button>
-                  </div>
-                </div>
-              ) : gpsHistory.length === 0 ? (
-                <div className="flex items-center justify-center h-64">
-                  <p className="text-slate-400 text-sm">No GPS historical coordinates found for this device</p>
-                </div>
-              ) : (
-                <>
-                  <div className="mb-6 pb-6 border-b border-slate-800">
-                    <h4 className="text-xs uppercase tracking-wider font-semibold text-slate-400 mb-3">Time Range Filter</h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                      {[
-                        { label: "Today", value: "today" },
-                        { label: "Yesterday", value: "yesterday" },
-                        { label: "Last 7 Days", value: "week" },
-                        { label: "Last 30 Days", value: "month" },
-                      ].map((filter) => (
-                        <button
-                          key={filter.value}
-                          onClick={() => setSelectedFilter(filter.value)}
-                          className={`px-4 py-2.5 rounded-xl font-semibold text-xs transition-all duration-200 ${
-                            selectedFilter === filter.value
-                              ? "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20 border border-emerald-500"
-                              : "bg-slate-800/80 text-slate-300 border border-slate-700/60 hover:bg-slate-800 hover:text-white"
-                          }`}
-                        >
-                          {filter.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <HistoryModalContent
-                    gpsHistory={gpsHistory}
-                    selectedDevice={selectedDevice}
-                    mapCenter={mapCenter}
-                    selectedFilter={selectedFilter}
-                  />
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* STEPPED ADD DEVICE MODAL */}
       {showAddDeviceModal && (

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 
+export const dynamic = "force-dynamic";
+
 const FastApiBaseURL =
   process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "https://tractorai.sinsignal.com/";
 const NestJsBaseURL =
@@ -14,14 +16,13 @@ export async function GET(request: NextRequest) {
       `Bearer ${request.cookies.get("access_token")?.value || ""}`;
     const headers = authHeader ? { Authorization: authHeader } : {};
 
-    // 1. Primary: NestJS /store/getalluniversaldevices (proven endpoint)
+    // 1. Primary: NestJS /store/getalluniversaldevices or /store/getalltractordevices
     try {
       const nestRes = await axios.get(
         `${NestJsBaseURL.replace(/\/$/, "")}/store/getalluniversaldevices`,
-        { headers, timeout: 12000 }
+        { headers, timeout: 10000 }
       );
       const d = nestRes.data;
-      // NestJS returns { success, data: [...] } or plain array
       if (d && Array.isArray(d.data) && d.data.length > 0) {
         return NextResponse.json(d);
       }
@@ -29,7 +30,23 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: true, data: d });
       }
     } catch (e: any) {
-      console.warn("NestJS getalluniversaldevices failed:", e?.message);
+      console.warn("NestJS getalluniversaldevices failed, trying /store/getalltractordevices:", e?.message);
+    }
+
+    try {
+      const tractorDevRes = await axios.get(
+        `${NestJsBaseURL.replace(/\/$/, "")}/store/getalltractordevices`,
+        { headers, timeout: 10000 }
+      );
+      const d = tractorDevRes.data;
+      if (d && Array.isArray(d.data) && d.data.length > 0) {
+        return NextResponse.json(d);
+      }
+      if (Array.isArray(d) && d.length > 0) {
+        return NextResponse.json({ success: true, data: d });
+      }
+    } catch (e: any) {
+      console.warn("NestJS getalltractordevices failed:", e?.message);
     }
 
     // 2. FastAPI /api/v1/admin/devices (optional — only if available)
@@ -101,7 +118,46 @@ export async function GET(request: NextRequest) {
       console.warn("Store fallback failed:", e?.message);
     }
 
-    // No devices found — return empty success so UI shows empty state (not error)
+    // 4. Ultimate Fallback: Query live device list directly from device.holatractor.com/api/devices
+    try {
+      const devRes = await axios.get("https://device.holatractor.com/api/devices", { timeout: 10000 });
+      if (Array.isArray(devRes.data) && devRes.data.length > 0) {
+        const liveDevices = devRes.data.map((d: any, idx: number) => ({
+          id: d.imei,
+          device_imei: d.imei,
+          device_region: "SW",
+          base: { status: d.online ? 1 : 0 },
+          tractorInStore: {
+            hourly_price: 35.0,
+            baseTractor: {
+              name: `GPS Tracker Tractor #${idx + 1}`,
+              model: `IMEI: ${d.imei}`,
+              images: [],
+            },
+            store: {
+              name: "Active Fleet Telemetry",
+              image: "",
+              location: {
+                lat: d.lat ? String(d.lat) : "-17.8230",
+                lan: d.lon ? String(d.lon) : "-63.2026",
+              },
+              owner: {
+                user: {
+                  first_name: "Fleet",
+                  last_name: "Operations",
+                },
+              },
+            },
+          },
+        }));
+
+        return NextResponse.json({ success: true, data: liveDevices });
+      }
+    } catch (e: any) {
+      console.warn("Direct device.holatractor.com/api/devices fallback error:", e?.message);
+    }
+
+    // No devices found — return empty success
     return NextResponse.json({ success: true, data: [] });
   } catch (error: any) {
     return NextResponse.json(
