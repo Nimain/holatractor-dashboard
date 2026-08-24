@@ -6,7 +6,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 
 const GOOGLE_CLIENT_ID =
   process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
-  "476382375684-u81f43j8r31gbm0df8q982pbuibg7t5i.apps.googleusercontent.com";
+  "581201961876-qoqrkg8a61lb740u8rgd5es02df8m7i6.apps.googleusercontent.com";
 
 const AuthenticationLayout = ({ children }: { children: ReactNode }) => {
   return (
