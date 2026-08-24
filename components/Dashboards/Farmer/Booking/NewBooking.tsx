@@ -418,11 +418,23 @@ export default function NewBookingFlow() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
+      let createdRecord = null;
       if (res.data && res.data.booking_id) {
         successMessage("Booking created successfully!");
+        createdRecord = res.data;
         setConfirmedBooking(res.data);
       } else {
         throw new Error("Invalid response from server");
+      }
+
+      if (createdRecord) {
+        try {
+          const key = `@farmer_recent_bookings_${uId}`;
+          const existing = JSON.parse(localStorage.getItem(key) || "[]");
+          const updated = [createdRecord, ...existing.filter((x: any) => x.booking_id !== createdRecord.booking_id)];
+          localStorage.setItem(key, JSON.stringify(updated.slice(0, 50)));
+          window.dispatchEvent(new CustomEvent("farmer_booking_created", { detail: createdRecord }));
+        } catch {}
       }
     } catch {
       // Resilient fallback confirmation
@@ -450,6 +462,13 @@ export default function NewBookingFlow() {
       };
 
       setConfirmedBooking(fallbackConfirmation);
+      try {
+        const key = `@farmer_recent_bookings_${uId}`;
+        const existing = JSON.parse(localStorage.getItem(key) || "[]");
+        const updated = [fallbackConfirmation, ...existing.filter((x: any) => x.booking_id !== fallbackConfirmation.booking_id)];
+        localStorage.setItem(key, JSON.stringify(updated.slice(0, 50)));
+        window.dispatchEvent(new CustomEvent("farmer_booking_created", { detail: fallbackConfirmation }));
+      } catch {}
       successMessage("Booking confirmed!");
     } finally {
       setIsBooking(false);

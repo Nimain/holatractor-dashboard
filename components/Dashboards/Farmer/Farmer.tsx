@@ -161,6 +161,11 @@ export default function FarmerDashboard() {
   useEffect(() => {
     fetchFarmerData();
 
+    const handleCreated = () => {
+      fetchFarmerData();
+    };
+    window.addEventListener("farmer_booking_created", handleCreated);
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -172,6 +177,10 @@ export default function FarmerDashboard() {
         () => {}
       );
     }
+
+    return () => {
+      window.removeEventListener("farmer_booking_created", handleCreated);
+    };
   }, [userId]);
 
   const formatDate = (date: string | Date | undefined): string => {
