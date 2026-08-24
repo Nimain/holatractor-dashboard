@@ -3,29 +3,8 @@ import { type NextRequest, NextResponse } from "next/server"
 export function middleware(req: NextRequest) {
   // Get cookies from the request
   const token = req.cookies.get("access_token")
+  const authHeader = req.headers.get("authorization")
 
-  // Debug all cookies with more detailed information
-  const allCookies = req.cookies.getAll()
-  console.log(
-    "All cookies in middleware:",
-    allCookies.map((c) => ({ name: c.name, value: c.value })),
-  )
-
-  // Parse role cookies - ensure we're comparing with string "true"
-  const isFarmer = req.cookies.get("isFarmer")?.value === "true"
-  const isOwner = req.cookies.get("isOwner")?.value === "true"
-  const isOperator = req.cookies.get("isOperator")?.value === "true"
-  const isDealer = req.cookies.get("isDealer")?.value === "true"
-  const isAgent = req.cookies.get("isAgent")?.value === "true"
-
-  // Add more detailed debugging for the isAgent cookie specifically
-  console.log("isAgent cookie details:", {
-    exists: req.cookies.has("isAgent"),
-    rawValue: req.cookies.get("isAgent")?.value,
-    parsedValue: isAgent,
-  })
-
-  // Get the current pathname
   const { pathname } = req.nextUrl
 
   // Allow all API routes to pass through without redirecting to login pages
@@ -34,54 +13,87 @@ export function middleware(req: NextRequest) {
   }
 
   // If there is no access_token and no authorization header, redirect to the login page
-  const authHeader = req.headers.get("authorization")
   if (!token && !authHeader) {
     console.log("No access token, redirecting to login")
     return NextResponse.redirect(new URL(`/login`, req.url))
   }
 
-  // Check each role and redirect if not on the correct path
-  // Process only one role at a time, with priority order
+  // Parse role cookies - ensure we're comparing with string "true"
+  const isOwner = req.cookies.get("isOwner")?.value === "true"
+  const isDealer = req.cookies.get("isDealer")?.value === "true"
+  const isAgent = req.cookies.get("isAgent")?.value === "true"
+  const isOperator = req.cookies.get("isOperator")?.value === "true"
+  const isFarmer = req.cookies.get("isFarmer")?.value === "true"
 
-  // Check agent role first (assuming this is the one having issues)
-  if (isAgent && !pathname.startsWith("/agent")) {
-    console.log("Agent detected, redirecting to /agent")
-    return NextResponse.redirect(new URL(`/agent`, req.url))
+  // 1. If user is currently visiting a path that matches one of their active roles, ALLOW IT!
+  if (pathname.startsWith("/owner") && isOwner) {
+    return NextResponse.next()
   }
-
-  // Then check other roles
-  if (isFarmer && !pathname.startsWith("/farmer")) {
-    console.log("Farmer detected, redirecting to /farmer")
-    return NextResponse.redirect(new URL(`/farmer`, req.url))
+  if (pathname.startsWith("/dealer") && isDealer) {
+    return NextResponse.next()
   }
-
-  if (isOwner && !pathname.startsWith("/owner")) {
-    console.log("Owner detected, redirecting to /owner")
-    return NextResponse.redirect(new URL(`/owner`, req.url))
+  if (pathname.startsWith("/agent") && isAgent) {
+    return NextResponse.next()
   }
-
-  if (isOperator && !pathname.startsWith("/operator")) {
-    console.log("Operator detected, redirecting to /operator")
-    return NextResponse.redirect(new URL(`/operator`, req.url))
+  if (pathname.startsWith("/operator") && isOperator) {
+    return NextResponse.next()
   }
-
-  if (isDealer && !pathname.startsWith("/dealer")) {
-    console.log("Dealer detected, redirecting to /dealer")
-    return NextResponse.redirect(new URL(`/dealer`, req.url))
-  }
-
-  // If none of the roles are true, allow access to all routes
-  if (!isFarmer && !isOwner && !isOperator && !isDealer && !isAgent) {
-    console.log("No specific role detected, allowing access")
+  if (pathname.startsWith("/farmer") && isFarmer) {
     return NextResponse.next()
   }
 
-  // If there is an access_token and user is on the correct path, continue with the request
-  console.log("Access token exists, continuing with request")
+  // 2. If user is on the root path `/` or generic common pages, redirect to their primary role (Owner highest priority)
+  if (pathname === "/" || pathname === "") {
+    if (isOwner) {
+      console.log("Owner detected, redirecting to /owner")
+      return NextResponse.redirect(new URL(`/owner`, req.url))
+    }
+    if (isDealer) {
+      console.log("Dealer detected, redirecting to /dealer")
+      return NextResponse.redirect(new URL(`/dealer`, req.url))
+    }
+    if (isAgent) {
+      console.log("Agent detected, redirecting to /agent")
+      return NextResponse.redirect(new URL(`/agent`, req.url))
+    }
+    if (isOperator) {
+      console.log("Operator detected, redirecting to /operator")
+      return NextResponse.redirect(new URL(`/operator`, req.url))
+    }
+    if (isFarmer) {
+      console.log("Farmer detected, redirecting to /farmer")
+      return NextResponse.redirect(new URL(`/farmer`, req.url))
+    }
+    return NextResponse.next()
+  }
+
+  // 3. If accessing a role-specific dashboard for which they do NOT have permission:
+  if (pathname.startsWith("/owner") && !isOwner) {
+    const target = isDealer ? "/dealer" : isAgent ? "/agent" : isOperator ? "/operator" : isFarmer ? "/farmer" : "/"
+    return NextResponse.redirect(new URL(target, req.url))
+  }
+  if (pathname.startsWith("/dealer") && !isDealer) {
+    const target = isOwner ? "/owner" : isAgent ? "/agent" : isOperator ? "/operator" : isFarmer ? "/farmer" : "/"
+    return NextResponse.redirect(new URL(target, req.url))
+  }
+  if (pathname.startsWith("/agent") && !isAgent) {
+    const target = isOwner ? "/owner" : isDealer ? "/dealer" : isOperator ? "/operator" : isFarmer ? "/farmer" : "/"
+    return NextResponse.redirect(new URL(target, req.url))
+  }
+  if (pathname.startsWith("/operator") && !isOperator) {
+    const target = isOwner ? "/owner" : isDealer ? "/dealer" : isAgent ? "/agent" : isFarmer ? "/farmer" : "/"
+    return NextResponse.redirect(new URL(target, req.url))
+  }
+  if (pathname.startsWith("/farmer") && !isFarmer) {
+    const target = isOwner ? "/owner" : isDealer ? "/dealer" : isAgent ? "/agent" : isOperator ? "/operator" : "/"
+    return NextResponse.redirect(new URL(target, req.url))
+  }
+
+  // Allow general administrative pages (e.g. /Devices, /Store, etc.) if authenticated
   return NextResponse.next()
 }
 
 // Define which paths should use this middleware
 export const config = {
-  matcher: ["/((?!login|register|create_admin|_next|static|favicon.ico).*)"], // Exclude login, register, and static paths
+  matcher: ["/((?!login|register|farmer_login|create_admin|_next|static|favicon.ico).*)"],
 }

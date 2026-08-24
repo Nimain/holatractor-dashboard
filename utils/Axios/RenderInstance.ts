@@ -301,6 +301,51 @@ renderInstance.interceptors.response.use(
       }
     }
 
+    // If backend returns 500 or 404 on /owner/${userId} or /owner
+    if (url.includes("/owner") || url.startsWith("owner")) {
+      try {
+        const token = getCookie("access_token");
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const urlParts = url.split("/").filter(Boolean);
+        const ownerIdOrUserId = urlParts[urlParts.length - 1] || "";
+
+        // 1. Try tractorai.sinsignal.com owner endpoints
+        try {
+          const fastApiBase = TractorAIBaseURL.replace(/\/$/, "");
+          const [storesRes, tractorsRes, profileRes] = await Promise.all([
+            axios.get(`${fastApiBase}/owner/owner/stores/${ownerIdOrUserId}`, { headers, timeout: 5000 }).catch(() => null),
+            axios.get(`${fastApiBase}/owner/owner/tractors/${ownerIdOrUserId}`, { headers, timeout: 5000 }).catch(() => null),
+            axios.get(`${fastApiBase}/owner/owner-profile/${ownerIdOrUserId}`, { headers, timeout: 5000 }).catch(() => null),
+          ]);
+
+          const stores = Array.isArray(storesRes?.data) ? storesRes.data : Array.isArray(storesRes?.data?.data) ? storesRes.data.data : [];
+          const tractors = Array.isArray(tractorsRes?.data) ? tractorsRes.data : Array.isArray(tractorsRes?.data?.data) ? tractorsRes.data.data : [];
+          
+          if (stores.length > 0 || tractors.length > 0 || profileRes?.data) {
+            return {
+              ...error.response,
+              data: {
+                stores,
+                tractors,
+                operators: profileRes?.data?.operators || [],
+                bookings: profileRes?.data?.bookings || [],
+                attachments: profileRes?.data?.attachments || [],
+                tractorsInuse: 0,
+                attachmentsInuse: 0,
+                ...(profileRes?.data || {}),
+              },
+              status: 200,
+              statusText: "OK",
+              headers: {},
+              config: error.config,
+            } as AxiosResponse;
+          }
+        } catch {}
+      } catch (ownerFallbackErr) {
+        console.error("Owner fallback error:", ownerFallbackErr);
+      }
+    }
+
     return Promise.reject(error);
   }
 );

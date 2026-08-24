@@ -61,16 +61,16 @@ const AuthHandler = () => {
           cookie.set("isAgent", isAgent || "false", cookieOptions)
 
           // Redirect based on user role using the new router
-          if (isFarmer === "true") {
-            router.push("/farmer")
-          } else if (isOperator === "true") {
-            router.push("/operator")
-          } else if (isOwner === "true") {
+          if (isOwner === "true") {
             router.push("/owner")
           } else if (isDealer === "true") {
             router.push("/dealer")
           } else if (isAgent === "true") {
             router.push("/agent")
+          } else if (isOperator === "true") {
+            router.push("/operator")
+          } else if (isFarmer === "true") {
+            router.push("/farmer")
           } else {
             router.push("/")
           }

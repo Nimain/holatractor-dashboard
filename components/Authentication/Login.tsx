@@ -54,37 +54,66 @@ const LogInPage = () => {
   };
 
   const setCookiesAndRedirect = (data: any) => {
-    const rawUser: any = decode(data.access_token) || {};
+    const payload = data?.data && typeof data.data === "object" ? { ...data.data, ...data } : data;
+    const token = payload?.access_token || payload?.accessToken || payload?.token;
+
+    if (!token) {
+      errorMessage("Authentication token missing in response");
+      return;
+    }
+
+    const rawUser: any = decode(token) || {};
     const user = {
       ...rawUser,
-      userId: rawUser?.userId || rawUser?.id || rawUser?.sub || rawUser?._id || data?.user?.id || data?.user?.userId || "",
-      name: rawUser?.name || `${rawUser?.first_name || ""} ${rawUser?.last_name || ""}`.trim() || data?.user?.name || "User",
-      email: rawUser?.email || data?.user?.email || "",
-      email_varified: rawUser?.email_varified ?? rawUser?.emailVerified ?? false,
-      image: rawUser?.image || data?.user?.image || "",
+      userId:
+        rawUser?.userId ||
+        rawUser?.id ||
+        rawUser?.sub ||
+        rawUser?._id ||
+        payload?.user?.id ||
+        payload?.user?.userId ||
+        payload?.userId ||
+        payload?.id ||
+        "",
+      name:
+        rawUser?.name ||
+        `${rawUser?.first_name || ""} ${rawUser?.last_name || ""}`.trim() ||
+        payload?.user?.name ||
+        payload?.name ||
+        "User",
+      email: rawUser?.email || payload?.user?.email || payload?.email || "",
+      email_varified: rawUser?.email_varified ?? rawUser?.emailVerified ?? true,
+      image: rawUser?.image || payload?.user?.image || payload?.image || "",
     };
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + 1);
 
-    const isFarmer = data.isFarmer === true || (Array.isArray(data.role) && data.role.includes("farmer"));
-    const isOperator = data.isOperator === true || (Array.isArray(data.role) && data.role.includes("operator"));
-    const isOwner = data.isOwner === true || (Array.isArray(data.role) && data.role.includes("owner"));
-    const isDealer = data.isDealer === true || (Array.isArray(data.role) && data.role.includes("dealer"));
-    const isAgent = data.isAgent === true || (Array.isArray(data.role) && data.role.includes("agent"));
+    const isOwner =
+      payload.isOwner === true ||
+      (Array.isArray(payload.role) && payload.role.includes("owner")) ||
+      (Array.isArray(rawUser?.role) && rawUser.role.includes("owner"));
+    const isDealer =
+      payload.isDealer === true ||
+      (Array.isArray(payload.role) && payload.role.includes("dealer")) ||
+      (Array.isArray(rawUser?.role) && rawUser.role.includes("dealer"));
+    const isAgent =
+      payload.isAgent === true ||
+      (Array.isArray(payload.role) && payload.role.includes("agent")) ||
+      (Array.isArray(rawUser?.role) && rawUser.role.includes("agent"));
+    const isOperator =
+      payload.isOperator === true ||
+      (Array.isArray(payload.role) && payload.role.includes("operator")) ||
+      (Array.isArray(rawUser?.role) && rawUser.role.includes("operator"));
+    const isFarmer =
+      payload.isFarmer === true ||
+      (Array.isArray(payload.role) && payload.role.includes("farmer")) ||
+      (Array.isArray(rawUser?.role) && rawUser.role.includes("farmer"));
 
-    cookie.set("access_token", data.access_token, {
+    cookie.set("access_token", token, {
       path: "/",
       expires: expiryDate,
     });
     cookie.set("user", JSON.stringify(user), {
-      path: "/",
-      expires: expiryDate,
-    });
-    cookie.set("isFarmer", isFarmer ? "true" : "false", {
-      path: "/",
-      expires: expiryDate,
-    });
-    cookie.set("isOperator", isOperator ? "true" : "false", {
       path: "/",
       expires: expiryDate,
     });
@@ -100,19 +129,35 @@ const LogInPage = () => {
       path: "/",
       expires: expiryDate,
     });
+    cookie.set("isOperator", isOperator ? "true" : "false", {
+      path: "/",
+      expires: expiryDate,
+    });
+    cookie.set("isFarmer", isFarmer ? "true" : "false", {
+      path: "/",
+      expires: expiryDate,
+    });
+
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("user", JSON.stringify(user));
+        localStorage.setItem("access_token", token);
+      } catch {}
+    }
 
     successMessage("Log in successful");
 
-    const redirectPath = isFarmer
-      ? "/farmer"
-      : isOperator
-      ? "/operator"
-      : isOwner
+    // Owner gets highest redirect priority
+    const redirectPath = isOwner
       ? "/owner"
       : isDealer
       ? "/dealer"
       : isAgent
       ? "/agent"
+      : isOperator
+      ? "/operator"
+      : isFarmer
+      ? "/farmer"
       : "/";
 
     if (typeof window !== "undefined") {
@@ -132,48 +177,54 @@ const LogInPage = () => {
     ).toString();
 
     try {
-      const res = await renderInstance.post("/user/login", {
-        email: email.trim(),
-        password: encryptedPassword,
-        authType: "EMAIL",
-      });
+      let resData: any = null;
 
-      // Log API response to localStorage
-      const apiLog = {
-        type: "Email Login API Response",
-        status: res.status,
-        data: res.data,
-        allRoles: {
-          isFarmer: res.data.isFarmer,
-          isOperator: res.data.isOperator,
-          isOwner: res.data.isOwner,
-          isDealer: res.data.isDealer,
-          isAgent: res.data.isAgent,
-        },
-        timestamp: new Date().toISOString(),
-      };
-      localStorage.setItem("loginDebugLog", JSON.stringify(apiLog));
+      // 1. Primary: Try NestJS login
+      try {
+        const res = await renderInstance.post("/user/login", {
+          email: email.trim(),
+          password: encryptedPassword,
+          authType: "EMAIL",
+        });
 
-      if ((res.status === 200 || res.status === 201) && res.data.access_token) {
-        setCookiesAndRedirect(res.data);
+        if ((res.status === 200 || res.status === 201) && (res.data?.access_token || res.data?.data?.access_token)) {
+          resData = res.data;
+        } else if (res.data === "Email verification link sent successfully") {
+          successMessage("Email verification link sent successfully");
+          return;
+        }
+      } catch (nestErr: any) {
+        console.warn("NestJS login notice, trying fallback:", nestErr?.message);
+      }
+
+      // 2. Fallback: Try FastAPI tractorai.sinsignal.com
+      if (!resData) {
+        try {
+          const fastApiUrl = "https://tractorai.sinsignal.com/user/login";
+          const fastApiRes = await axios.post(
+            fastApiUrl,
+            { email: email.trim(), password: passwrd, authType: "EMAIL" },
+            { timeout: 10000 }
+          );
+          if (
+            (fastApiRes.status === 200 || fastApiRes.status === 201) &&
+            (fastApiRes.data?.access_token || fastApiRes.data?.data?.access_token)
+          ) {
+            resData = fastApiRes.data;
+          }
+        } catch (fastErr: any) {
+          console.warn("FastAPI login notice:", fastErr?.message);
+        }
+      }
+
+      if (resData && (resData.access_token || resData.data?.access_token)) {
+        setCookiesAndRedirect(resData);
         setEmail("");
         setPassword("");
-      } else if (res.data === "Email verification link sent successfully") {
-        successMessage("Email verification link sent successfully");
       } else {
-        errorMessage("Try again");
+        errorMessage("Invalid email or password. Please try again.");
       }
     } catch (err: any) {
-      // console.error("Email Login Error:", err); // Commented out
-      localStorage.setItem(
-        "errorDebugLog",
-        JSON.stringify({
-          type: "Email Login Error",
-          error: err.message,
-          response: err.response?.data,
-          timestamp: new Date().toISOString(),
-        })
-      );
       const apiMsg = err?.response?.data?.message || err?.message || "Some error occurred";
       const displayMsg = Array.isArray(apiMsg) ? apiMsg.join(", ") : apiMsg;
       errorMessage(displayMsg);
@@ -289,42 +340,57 @@ const GoogleSignIn = ({
 
         setLoading(true);
 
-        const loginRes = await renderInstance.post("/user/login", {
-          email: res.data.email,
-          authType: "GOOGLE",
-        });
+        let loginResData: any = null;
 
-        // Log API response to localStorage
-        const apiLog = {
-          type: "Google Login API Response",
-          status: loginRes.status,
-          data: loginRes.data,
-          isAgent: loginRes.data.isAgent,
-          allRoles: {
-            isFarmer: loginRes.data.isFarmer,
-            isOperator: loginRes.data.isOperator,
-            isOwner: loginRes.data.isOwner,
-            isDealer: loginRes.data.isDealer,
-            isAgent: loginRes.data.isAgent,
-          },
-          timestamp: new Date().toISOString(),
-        };
-        localStorage.setItem("googleLoginDebugLog", JSON.stringify(apiLog));
+        // 1. Primary: NestJS
+        try {
+          const loginRes = await renderInstance.post("/user/login", {
+            email: res.data.email,
+            authType: "GOOGLE",
+          });
+          if (
+            (loginRes.status === 200 || loginRes.status === 201) &&
+            (loginRes.data?.access_token || loginRes.data?.data?.access_token)
+          ) {
+            loginResData = loginRes.data;
+          }
+        } catch (nestErr) {
+          console.warn("NestJS Google login notice, trying fallback:", nestErr);
+        }
 
-        if ((loginRes.status === 200 || loginRes.status === 201) && loginRes.data.access_token) {
-          setCookiesAndRedirect(loginRes.data);
+        // 2. Fallback: FastAPI tractorai.sinsignal.com
+        if (!loginResData) {
+          try {
+            const fastApiUrl = "https://tractorai.sinsignal.com/user/google-login";
+            const fastApiRes = await axios.post(
+              fastApiUrl,
+              {
+                email: res.data.email,
+                name: res.data.name || `${res.data.given_name || ""} ${res.data.family_name || ""}`.trim(),
+                first_name: res.data.given_name || "Owner",
+                last_name: res.data.family_name || "",
+                image: res.data.picture || "",
+                authType: "GOOGLE",
+              },
+              { timeout: 10000 }
+            );
+            if (
+              (fastApiRes.status === 200 || fastApiRes.status === 201) &&
+              (fastApiRes.data?.access_token || fastApiRes.data?.data?.access_token)
+            ) {
+              loginResData = fastApiRes.data;
+            }
+          } catch (fastErr) {
+            console.warn("FastAPI Google login notice:", fastErr);
+          }
+        }
+
+        if (loginResData) {
+          setCookiesAndRedirect(loginResData);
+        } else {
+          errorMessage("Google Login Failed. Please try again.");
         }
       } catch (err: any) {
-        // console.error("Google Login Error:", err); // Commented out
-        localStorage.setItem(
-          "googleErrorDebugLog",
-          JSON.stringify({
-            type: "Google Login Error",
-            error: err.message,
-            response: err.response?.data,
-            timestamp: new Date().toISOString(),
-          })
-        );
         if (
           err.response?.status === 409 &&
           err.response.data.message === "User not found"
