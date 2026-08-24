@@ -32,10 +32,13 @@ import {
   CheckCircle2,
   XCircle,
   Tractor,
+  UserCheck,
 } from "lucide-react";
+import SwitchAccountModal from "@/components/wrappers/SwitchAccountModal";
 
 const ProfileComponent = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [switchModalOpen, setSwitchModalOpen] = useState(false);
   const [emailVerification, setEmailVerification] = useState(false);
   const [copiedRef, setCopiedRef] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -322,6 +325,17 @@ const ProfileComponent = () => {
             </div>
           </div>
 
+          {/* ─── SWITCH ACCOUNT / ROLE ─── */}
+          <div className="px-6 pb-2">
+            <button
+              onClick={() => setSwitchModalOpen(true)}
+              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-950/40 to-slate-800/60 hover:from-emerald-900/60 hover:to-slate-700/60 border border-emerald-700/40 hover:border-emerald-500/60 text-emerald-300 text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]"
+            >
+              <UserCheck className="w-4 h-4 text-emerald-400" />
+              Switch Account / Role Dashboard
+            </button>
+          </div>
+
           {/* ─── DIVIDER ─── */}
           <div className="border-t border-slate-800/80 mx-6" />
 
@@ -351,6 +365,11 @@ const ProfileComponent = () => {
 
         </div>
       </DialogContent>
+
+      <SwitchAccountModal
+        isOpen={switchModalOpen}
+        onClose={() => setSwitchModalOpen(false)}
+      />
     </Dialog>
   );
 };

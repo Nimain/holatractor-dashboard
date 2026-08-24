@@ -14,6 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { OwnerNotification } from '@/utils/Types/types';
 import UpgradePlanModal from './UpgradePlanModal';
+import SwitchAccountModal from '@/components/wrappers/SwitchAccountModal';
+import { UserCheck } from 'lucide-react';
 
 interface user {
   userId: string;
@@ -26,6 +28,7 @@ const Header = () => {
   const [notifications, setNotifications] = useState<OwnerNotification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [isSwitchAccountOpen, setIsSwitchAccountOpen] = useState(false);
 
   const { cookie } = useCookie();
   const user: user = cookie.get("user");
@@ -77,6 +80,21 @@ const Header = () => {
             className="pl-9 pr-4 py-2 text-xs rounded-full bg-slate-50 border border-slate-200 focus:border-[#800000] focus:ring-1 focus:ring-[#800000] w-full text-slate-800 shadow-inner"
           />
         </div>
+
+        {/* Switch Account / Role Button */}
+        <Button
+          onClick={() => setIsSwitchAccountOpen(true)}
+          variant="outline"
+          className="border-slate-300 hover:border-slate-400 bg-white/80 hover:bg-slate-50 text-slate-700 font-bold py-2 px-4 rounded-full text-xs transition-all shadow-sm flex items-center gap-1.5"
+        >
+          <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+          Switch Account
+        </Button>
+
+        <SwitchAccountModal
+          isOpen={isSwitchAccountOpen}
+          onClose={() => setIsSwitchAccountOpen(false)}
+        />
 
         {/* Upgrade Plan Button */}
         <Button

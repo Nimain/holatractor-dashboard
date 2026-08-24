@@ -42,29 +42,42 @@ export function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  // 2. If user is on the root path `/` or generic common pages, redirect to their primary role (Owner highest priority)
+  // 2. If user is on the root path `/` or generic common pages, redirect based on active_role or primary role
   if (pathname === "/" || pathname === "") {
+    const activeRole = req.cookies.get("active_role")?.value;
+
+    if (activeRole === "owner" && isOwner) {
+      return NextResponse.redirect(new URL(`/owner`, req.url));
+    }
+    if (activeRole === "farmer" && isFarmer) {
+      return NextResponse.redirect(new URL(`/farmer`, req.url));
+    }
+    if (activeRole === "dealer" && isDealer) {
+      return NextResponse.redirect(new URL(`/dealer`, req.url));
+    }
+    if (activeRole === "agent" && isAgent) {
+      return NextResponse.redirect(new URL(`/agent`, req.url));
+    }
+    if (activeRole === "operator" && isOperator) {
+      return NextResponse.redirect(new URL(`/operator`, req.url));
+    }
+
     if (isOwner) {
-      console.log("Owner detected, redirecting to /owner")
-      return NextResponse.redirect(new URL(`/owner`, req.url))
+      return NextResponse.redirect(new URL(`/owner`, req.url));
     }
     if (isDealer) {
-      console.log("Dealer detected, redirecting to /dealer")
-      return NextResponse.redirect(new URL(`/dealer`, req.url))
+      return NextResponse.redirect(new URL(`/dealer`, req.url));
     }
     if (isAgent) {
-      console.log("Agent detected, redirecting to /agent")
-      return NextResponse.redirect(new URL(`/agent`, req.url))
+      return NextResponse.redirect(new URL(`/agent`, req.url));
     }
     if (isOperator) {
-      console.log("Operator detected, redirecting to /operator")
-      return NextResponse.redirect(new URL(`/operator`, req.url))
+      return NextResponse.redirect(new URL(`/operator`, req.url));
     }
     if (isFarmer) {
-      console.log("Farmer detected, redirecting to /farmer")
-      return NextResponse.redirect(new URL(`/farmer`, req.url))
+      return NextResponse.redirect(new URL(`/farmer`, req.url));
     }
-    return NextResponse.next()
+    return NextResponse.next();
   }
 
   // 3. If accessing a role-specific dashboard for which they do NOT have permission:

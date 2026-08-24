@@ -17,11 +17,13 @@ import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { CircularProgress } from "@mui/material";
 import { useLoading } from "../wrappers/LoaderWrappers";
+import SwitchAccountModal from "../wrappers/SwitchAccountModal";
 
 const LogInPage = () => {
   const [email, setEmail] = useState("");
   const [passwrd, setPassword] = useState("");
   const [passwrdShow, setPasswordShow] = useState(false);
+  const [showRoleSelector, setShowRoleSelector] = useState(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -147,18 +149,38 @@ const LogInPage = () => {
 
     successMessage("Log in successful");
 
-    // Owner gets highest redirect priority
-    const redirectPath = isOwner
-      ? "/owner"
+    const activeRolesCount = [isOwner, isDealer, isAgent, isOperator, isFarmer].filter(Boolean).length;
+
+    // If user has multiple roles (e.g. Owner AND Farmer), open switch account modal immediately
+    if (activeRolesCount > 1) {
+      setShowRoleSelector(true);
+      return;
+    }
+
+    // Single role detected: set active_role cookie and navigate
+    const singleRole = isOwner
+      ? "owner"
       : isDealer
-      ? "/dealer"
+      ? "dealer"
       : isAgent
-      ? "/agent"
+      ? "agent"
       : isOperator
-      ? "/operator"
+      ? "operator"
       : isFarmer
-      ? "/farmer"
-      : "/";
+      ? "farmer"
+      : "";
+
+    if (singleRole) {
+      cookie.set("active_role", singleRole, { path: "/", expires: expiryDate });
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("active_role", singleRole);
+          document.cookie = `active_role=${singleRole}; path=/; expires=${expiryDate.toUTCString()};`;
+        } catch {}
+      }
+    }
+
+    const redirectPath = singleRole ? `/${singleRole}` : "/";
 
     if (typeof window !== "undefined") {
       window.location.href = redirectPath;
@@ -314,6 +336,14 @@ const LogInPage = () => {
           </p>
         </div>
       </div>
+
+      <SwitchAccountModal
+        isOpen={showRoleSelector}
+        isMandatorySelection={true}
+        onClose={() => setShowRoleSelector(false)}
+        title="Choose Your Dashboard"
+        description="You have access to multiple roles on HolaTractor. Select which account dashboard you want to open:"
+      />
     </div>
   );
 };
