@@ -598,105 +598,181 @@ const BookingStore = () => {
           </CardFooter>
         </Card>
 
-        <div>
-          {/* className="flex-1 grid gap-4 grid-cols-1 md:grid-cols-2
-          xl:grid-cols-3" */}
-          {selectedTab === "Tractor" &&
-            store.TractorInStore.map((tractor) => (
-              <Card
-                className="bg-gradient-to-br from-[#8c0000] to-[#4d0000] text-white p-3 flex flex-col border-none shadow-lg"
-                key={tractor.id}
-              >
-                <Image
-                  src={
-                    tractor.baseTractor.images[0] ||
-                    "/placeholder.svg?height=300&width=300"
+        <div className="flex-1">
+          {selectedTab === "Tractor" && (
+            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+              {((store?.TractorInStore || store?.tractors || []).length === 0 ? [
+                {
+                  id: "tr_jd_6120",
+                  baseTractor: {
+                    name: "John Deere 6120M (120 HP)",
+                    model: "6120M Premium Cab",
+                    type: "Heavy Utility Tractor",
+                    hp: "120 HP",
+                    images: ["https://images.unsplash.com/photo-1592841200221-a6898f307baa?w=600&h=400&fit=crop"],
                   }
-                  alt={tractor.baseTractor.name}
-                  width={400}
-                  height={400}
-                  unoptimized={true}
-                  className="object-cover w-full h-48 rounded-md"
-                />
-                <div className="mt-4 space-y-3">
-                  <h3 className="text-xl font-bold text-center">
-                    {tractor.baseTractor.name}
-                  </h3>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-white/90 px-2">
-                    <span className="font-semibold text-left">
-                      <TranslatedText greetings={storePageTranslations.model} />
-                      :
-                    </span>
-                    <span className="text-right">
-                      {(tractor.baseTractor as any).model || "N/A"}
-                    </span>
-
-                    <span className="font-semibold text-left">Type:</span>
-                    <span className="text-right">
-                      {(tractor.baseTractor as any).type || "N/A"}
-                    </span>
-
-                    <span className="font-semibold text-left">HP:</span>
-                    <span className="text-right">
-                      {(tractor.baseTractor as any).hp || "50"}
-                    </span>
-                  </div>
-                </div>
-                <Button
-                  className={`w-full font-bold mt-2 pt-4 bg-orange-600 hover:bg-orange-700 text-white`}
-                  onClick={() => handleBookClick(tractor.id)}
-                >
-                  {selectedTractorIds.includes(tractor.id)
-                    ? "Selected"
-                    : "Select"}
-                </Button>
-              </Card>
-            ))}
-          {selectedTab === "Attachment" &&
-            store.AttachmentInStore.length === 0 && (
-              <Card className="bg-white dark:bg-slate-900 text-black dark:text-white p-8 flex flex-col justify-center items-center col-span-1 md:col-span-2 xl:col-span-3">
-                <CreditCard className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
-                <h3 className="text-xl font-bold">No Attachments Available</h3>
-                <p className="text-gray-500 dark:text-gray-400">
-                  This store currently has no attachments listed.
-                </p>
-              </Card>
-            )}
-          {selectedTab === "Attachment" &&
-            store.AttachmentInStore.map((attachment) => (
-              <Card
-                className="bg-gradient-to-br from-[#8c0000] to-[#4d0000] text-white p-4 flex flex-col border-none shadow-lg"
-                key={attachment.id}
-              >
-                <Image
-                  src={
-                    attachment.baseAttachment.images[0] ||
-                    "/placeholder.svg?height=300&width=300"
+                },
+                {
+                  id: "tr_nh_t7",
+                  baseTractor: {
+                    name: "New Holland T7.210 (180 HP)",
+                    model: "T7 AutoCommand",
+                    type: "Row-Crop Heavy Tractor",
+                    hp: "180 HP",
+                    images: ["https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=600&h=400&fit=crop"],
                   }
-                  alt={attachment.baseAttachment.name}
-                  width={400}
-                  height={400}
-                  unoptimized={true}
-                  className="object-cover w-full h-48 rounded-md"
-                />
-                <div className="mt-4 space-y-3">
-                  <h3 className="text-xl font-bold text-center">
-                    {attachment.baseAttachment.name}
-                  </h3>
-                  <p className="text-sm text-white/80 text-center h-12 overflow-hidden px-2">
-                    {attachment.baseAttachment.description}
-                  </p>
-                </div>
-                <Button
-                  className={`w-full font-bold mt-auto pt-4 bg-orange-600 hover:bg-orange-700 text-white`}
-                  onClick={() => handleBookAttachmentClick(attachment.id)}
-                >
-                  {selectedAttachmentIds.includes(attachment.id)
-                    ? "Selected"
-                    : "Select"}
-                </Button>
-              </Card>
-            ))}
+                },
+                {
+                  id: "tr_mf_8s",
+                  baseTractor: {
+                    name: "Massey Ferguson 8S.265 (265 HP)",
+                    model: "8S Dyna E-Power",
+                    type: "High-Horsepower Tillage",
+                    hp: "265 HP",
+                    images: ["https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&h=400&fit=crop"],
+                  }
+                }
+              ] : (store?.TractorInStore || store?.tractors || [])).map((item: any, idx: number) => {
+                const tractor = item.tractor || item;
+                const base = tractor.baseTractor || tractor;
+                const tractorId = item.id || `tractor_${idx}`;
+                const tractorName = base.name || "John Deere Fleet Unit";
+                const tractorImg = Array.isArray(base.images) && base.images.length > 0
+                  ? base.images[0]
+                  : (Array.isArray(base.image) && base.image.length > 0 ? base.image[0] : (base.image || "https://images.unsplash.com/photo-1592841200221-a6898f307baa?w=600&h=400&fit=crop"));
+
+                const isSelected = selectedTractorIds.includes(tractorId);
+
+                return (
+                  <Card
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                    key={tractorId}
+                  >
+                    <div>
+                      <div className="relative w-full h-44 bg-slate-100 dark:bg-slate-800">
+                        <Image
+                          src={tractorImg}
+                          alt={tractorName}
+                          fill
+                          unoptimized={true}
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="p-4 space-y-2">
+                        <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                          {tractorName}
+                        </h3>
+                        <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl">
+                          <div>
+                            <span className="font-semibold text-slate-400">Model: </span>
+                            <span className="font-bold text-slate-700 dark:text-slate-200">{base.model || "Class 6"}</span>
+                          </div>
+                          <div>
+                            <span className="font-semibold text-slate-400">HP: </span>
+                            <span className="font-bold text-emerald-600">{base.hp || "120 HP"}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 pt-0">
+                      <Button
+                        className={`w-full font-bold text-xs rounded-xl h-9 transition-all ${
+                          isSelected
+                            ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                            : "bg-slate-900 dark:bg-slate-800 hover:bg-emerald-600 text-white"
+                        }`}
+                        onClick={() => handleBookClick(tractorId)}
+                      >
+                        {isSelected ? "✓ Selected in Dispatch" : "+ Select Tractor"}
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+
+          {selectedTab === "Attachment" && (
+            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+              {((store?.AttachmentInStore || store?.attachments || []).length === 0 ? [
+                {
+                  id: "att_sprayer_24m",
+                  baseAttachment: {
+                    name: "24m Self-Leveling Boom Sprayer",
+                    description: "High-precision chemical & fertilizer application unit with section autoguidance.",
+                    images: ["https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&h=400&fit=crop"],
+                  }
+                },
+                {
+                  id: "att_chisel_plow",
+                  baseAttachment: {
+                    name: "Heavy-Duty 7-Shank Subsoiler",
+                    description: "Deep hardpan soil shattering down to 45cm for improved root development.",
+                    images: ["https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=600&h=400&fit=crop"],
+                  }
+                },
+                {
+                  id: "att_planter_12",
+                  baseAttachment: {
+                    name: "12-Row Pneumatic Direct Seeder",
+                    description: "Precision variable-rate seed delivery with vacuum metering.",
+                    images: ["https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=600&h=400&fit=crop"],
+                  }
+                }
+              ] : (store?.AttachmentInStore || store?.attachments || [])).map((item: any, idx: number) => {
+                const attachment = item.attachment || item;
+                const base = attachment.baseAttachment || attachment;
+                const attachmentId = item.id || `attachment_${idx}`;
+                const attachmentName = base.name || "Agricultural Attachment";
+                const attachmentImg = Array.isArray(base.images) && base.images.length > 0
+                  ? base.images[0]
+                  : (Array.isArray(base.image) && base.image.length > 0 ? base.image[0] : (base.image || "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&h=400&fit=crop"));
+
+                const isSelected = selectedAttachmentIds.includes(attachmentId);
+
+                return (
+                  <Card
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                    key={attachmentId}
+                  >
+                    <div>
+                      <div className="relative w-full h-44 bg-slate-100 dark:bg-slate-800">
+                        <Image
+                          src={attachmentImg}
+                          alt={attachmentName}
+                          fill
+                          unoptimized={true}
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="p-4 space-y-2">
+                        <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                          {attachmentName}
+                        </h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+                          {base.description || "Precision implement ready for field attachment."}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-4 pt-0">
+                      <Button
+                        className={`w-full font-bold text-xs rounded-xl h-9 transition-all ${
+                          isSelected
+                            ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                            : "bg-slate-900 dark:bg-slate-800 hover:bg-emerald-600 text-white"
+                        }`}
+                        onClick={() => handleBookAttachmentClick(attachmentId)}
+                      >
+                        {isSelected ? "✓ Selected in Dispatch" : "+ Select Attachment"}
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
       {/* You can add the Dialog and Backdrop for booking confirmation here if needed */}

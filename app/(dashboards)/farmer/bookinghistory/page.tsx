@@ -1,7 +1,7 @@
 import dynamic from 'next/dynamic'
 
 const BookingHistory = dynamic(
-    ()=> import('@/components/Dashboards/Farmer/Booking/NewBookingHistory'),
+    ()=> import('@/components/Dashboards/Farmer/BookingHistory'),
     {
         ssr: false,
         loading: () => (

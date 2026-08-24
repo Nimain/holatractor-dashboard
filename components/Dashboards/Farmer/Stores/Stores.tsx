@@ -286,6 +286,7 @@ export default function FarmerStores() {
                     src={store.image || FALLBACK_STORES[0].image!}
                     alt={store.name}
                     fill
+                    unoptimized
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
