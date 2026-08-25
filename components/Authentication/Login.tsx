@@ -301,9 +301,9 @@ const LogInPage = () => {
   }, [searchParams]);
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 dark:bg-[#0C0505] flex items-stretch text-slate-900 dark:text-slate-100 selection:bg-[#AB0F0C] selection:text-white font-sans">
+    <div className="w-full min-h-screen bg-slate-50 dark:bg-[#0C0505] flex items-stretch text-slate-900 dark:text-slate-100 selection:bg-[#E31B23] selection:text-white font-sans">
       {/* ── LEFT HERO: BRANDING & REAL-TIME PLATFORM SHOWCASE (DESKTOP) ── */}
-      <div className="relative hidden lg:flex lg:w-[48%] xl:w-[52%] flex-col justify-between p-12 overflow-hidden bg-[#0F0404] text-white border-r border-red-950/60 shadow-2xl">
+      <div className="relative hidden lg:flex lg:w-[48%] xl:w-[52%] flex-col justify-between p-12 overflow-hidden bg-[#0F0304] text-white border-r border-red-950/60 shadow-2xl">
         {/* Background photo & rich atmospheric overlay */}
         <div
           className="absolute inset-0 bg-cover bg-center opacity-25 mix-blend-luminosity scale-105 transition-transform duration-1000 ease-out"
@@ -311,18 +311,18 @@ const LogInPage = () => {
             backgroundImage: `url("https://holadashboard.s3.us-west-2.amazonaws.com/tract.webp")`,
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-tr from-[#080202] via-[#160505]/95 to-red-950/40" />
-        <div className="absolute -top-32 -left-32 w-96 h-96 bg-red-600/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-rose-600/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-[#0A0203] via-[#160405]/95 to-red-950/40" />
+        <div className="absolute -top-32 -left-32 w-96 h-96 bg-[#E31B23]/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-[#C9141B]/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Top Branding Header */}
         <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <FarmerBrandIcon size={44} className="rounded-2xl shadow-xl border border-red-500/30" />
+            <FarmerBrandIcon size={46} className="rounded-2xl shadow-xl border border-red-500/30" />
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-lg font-black tracking-tight text-white">HolaTractor</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/30">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#E31B23]/20 text-red-300 border border-red-500/30">
                   Fleet OS
                 </span>
               </div>
@@ -333,7 +333,7 @@ const LogInPage = () => {
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 border border-red-500/30 backdrop-blur-md">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#E31B23]" />
             </span>
             <span className="text-[11px] font-semibold text-red-200">TractorAI Live</span>
           </div>
@@ -341,8 +341,8 @@ const LogInPage = () => {
 
         {/* Center Hero Value Proposition & Floating Feature Chips */}
         <div className="relative z-10 my-auto space-y-6 max-w-xl">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-gradient-to-r from-red-500/15 to-rose-500/10 border border-red-500/30 text-red-300 text-xs font-bold shadow-inner">
-            <Sparkles className="w-3.5 h-3.5 text-red-400" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-gradient-to-r from-[#E31B23]/15 to-rose-500/10 border border-red-500/30 text-red-300 text-xs font-bold shadow-inner">
+            <Sparkles className="w-3.5 h-3.5 text-[#E31B23]" />
             <span>Next-Generation Autonomous Fleet & Farm Hub</span>
           </div>
 
@@ -388,10 +388,10 @@ const LogInPage = () => {
         {/* Top Mobile Brand Header (Visible only on <lg) */}
         <div className="flex lg:hidden items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-2.5">
-            <FarmerBrandIcon size={36} className="rounded-xl shadow-md border border-red-500/30" />
+            <FarmerBrandIcon size={38} className="rounded-xl shadow-md border border-red-500/30" />
             <span className="text-base font-black tracking-tight text-slate-900 dark:text-white">HolaTractor</span>
           </div>
-          <Badge variant="outline" className="text-[10px] font-bold text-[#AB0F0C] border-red-500/30">
+          <Badge variant="outline" className="text-[10px] font-bold text-[#E31B23] border-red-500/30">
             Fleet OS
           </Badge>
         </div>
@@ -415,13 +415,13 @@ const LogInPage = () => {
               onClick={() => setAuthMethod("push")}
               className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
                 authMethod === "push"
-                  ? "bg-white dark:bg-slate-800 text-[#AB0F0C] dark:text-red-400 shadow-md border border-slate-200/50 dark:border-slate-700/60"
+                  ? "bg-white dark:bg-slate-800 text-[#E31B23] dark:text-red-400 shadow-md border border-slate-200/50 dark:border-slate-700/60"
                   : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               <Smartphone className="w-4 h-4" />
               <span>Mobile Push</span>
-              <span className="text-[9px] bg-red-500/15 text-red-700 dark:text-red-300 px-1.5 py-0.2 rounded-full font-black uppercase">
+              <span className="text-[9px] bg-[#E31B23]/15 text-[#E31B23] dark:text-red-300 px-1.5 py-0.2 rounded-full font-black uppercase">
                 Fast
               </span>
             </button>
@@ -462,7 +462,7 @@ const LogInPage = () => {
                     placeholder="e.g. farmer@holatractor.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="rounded-xl border-slate-200 dark:border-slate-800 text-xs h-11 pr-4 bg-white dark:bg-slate-900/50 focus-visible:ring-2 focus-visible:ring-red-500/30"
+                    className="rounded-xl border-slate-200 dark:border-slate-800 text-xs h-11 pr-4 bg-white dark:bg-slate-900/50 focus-visible:ring-2 focus-visible:ring-[#E31B23]/30"
                     required
                   />
                 </div>
@@ -475,7 +475,7 @@ const LogInPage = () => {
                   </Label>
                   <Link
                     href="/forgot_password"
-                    className="text-[11px] font-bold text-[#AB0F0C] dark:text-red-400 hover:underline"
+                    className="text-[11px] font-bold text-[#E31B23] dark:text-red-400 hover:underline"
                   >
                     Forgot password?
                   </Link>
@@ -487,7 +487,7 @@ const LogInPage = () => {
                     placeholder="Enter your account password"
                     value={passwrd}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="rounded-xl border-slate-200 dark:border-slate-800 text-xs h-11 pr-10 bg-white dark:bg-slate-900/50 focus-visible:ring-2 focus-visible:ring-red-500/30"
+                    className="rounded-xl border-slate-200 dark:border-slate-800 text-xs h-11 pr-10 bg-white dark:bg-slate-900/50 focus-visible:ring-2 focus-visible:ring-[#E31B23]/30"
                     required
                   />
                   <button
@@ -503,7 +503,7 @@ const LogInPage = () => {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-11 rounded-xl bg-[#AB0F0C] hover:bg-[#8F0D0A] text-white font-bold text-xs shadow-lg shadow-red-700/25 flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
+                className="w-full h-11 rounded-xl bg-[#E31B23] hover:bg-[#C9141B] text-white font-bold text-xs shadow-lg shadow-[#E31B23]/25 flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
               >
                 {isLoading ? (
                   <CircularProgress size={18} className="text-white" />
@@ -530,7 +530,7 @@ const LogInPage = () => {
           <div className="pt-2 text-center">
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Don't have a HolaTractor account?{" "}
-              <Link href={"/register"} className="text-[#AB0F0C] dark:text-red-400 font-bold hover:underline">
+              <Link href={"/register"} className="text-[#E31B23] dark:text-red-400 font-bold hover:underline">
                 Create an account
               </Link>
             </p>

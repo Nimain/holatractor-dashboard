@@ -5,12 +5,12 @@ import React from "react";
 interface FarmerBrandIconProps {
   className?: string;
   size?: number | string;
-  variant?: "rounded-square" | "transparent" | "pill";
+  variant?: "rounded-square" | "transparent" | "pill" | "image";
 }
 
 /**
- * HolaTractor Official Farmer Brand Icon
- * Modern Emerald & Forest Green agronomic theme featuring the tractor + wireless dispatch signal.
+ * HolaTractor Official Brand Logo Icon
+ * Signature Electric Red (#E31B23) with white IoT connected tractor silhouette.
  */
 export default function FarmerBrandIcon({
   className = "",
@@ -29,21 +29,17 @@ export default function FarmerBrandIcon({
       className={className}
     >
       <defs>
-        {/* Farmer Dashboard Signature Emerald Agronomic Gradients */}
-        <linearGradient id="farmerBgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#10b981" />
-          <stop offset="50%" stopColor="#059669" />
-          <stop offset="100%" stopColor="#047857" />
+        {/* Official HolaTractor Electric Red Gradient */}
+        <linearGradient id="holaRedBgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#EB2028" />
+          <stop offset="50%" stopColor="#E31B23" />
+          <stop offset="100%" stopColor="#C9141B" />
         </linearGradient>
 
-        <linearGradient id="farmerGlowGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.25" />
+        <linearGradient id="holaGlowHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.2" />
           <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
         </linearGradient>
-
-        <filter id="farmerShadow" x="-10%" y="-10%" width="120%" height="120%">
-          <feDropShadow dx="0" dy="8" stdDeviation="12" floodColor="#047857" floodOpacity="0.35" />
-        </filter>
       </defs>
 
       {/* ── BACKGROUND CONTAINER ── */}
@@ -52,68 +48,61 @@ export default function FarmerBrandIcon({
           <rect
             width="512"
             height="512"
-            rx="115"
-            fill="url(#farmerBgGradient)"
+            rx="110"
+            fill="url(#holaRedBgGradient)"
           />
-          {/* Subtle upper glass highlight */}
           <rect
             width="512"
             height="256"
-            rx="115"
-            fill="url(#farmerGlowGradient)"
+            rx="110"
+            fill="url(#holaGlowHighlight)"
           />
         </>
       )}
 
-      {/* ── WHITE TRACTOR + PHONE WIRELESS DISPATCH ICON ── */}
-      <g transform="translate(42, 42) scale(0.835)">
-        {/* 1. Wireless Signal Waves above Phone Handset */}
+      {/* ── WHITE CONNECTED IoT TRACTOR ── */}
+      <g transform="translate(32, 28) scale(0.88)">
+        {/* 1. IoT Wi-Fi / Radio Waves & Connected Beacon */}
         <path
-          d="M260 52 C285 52, 308 63, 324 81"
+          d="M260 115 C215 115 182 145 168 180"
           stroke="#ffffff"
-          strokeWidth="22"
+          strokeWidth="24"
           strokeLinecap="round"
           fill="none"
         />
         <path
-          d="M245 88 C262 88, 278 96, 290 110"
+          d="M255 160 C230 160 210 178 198 202"
           stroke="#ffffff"
-          strokeWidth="20"
+          strokeWidth="24"
           strokeLinecap="round"
           fill="none"
         />
-        {/* Handset Signal Center Dot */}
-        <circle cx="260" cy="142" r="16" fill="#ffffff" />
-
-        {/* Phone Handset */}
-        <path
-          d="M210 105 C202 96 188 94 178 102 L150 125 C142 132 140 144 146 153 C166 184 195 212 227 232 C236 238 248 236 255 228 L278 200 C286 190 284 176 275 168 L245 142 C237 135 225 137 218 145 L210 155 C190 145 175 130 165 110 L175 102 Z"
-          fill="#ffffff"
-        />
+        {/* Beacon Signal Center Dot */}
+        <circle cx="235" cy="225" r="16" fill="#ffffff" />
 
         {/* 2. Tractor Steering Column & Wheel */}
         <line
-          x1="125"
-          y1="165"
-          x2="85"
-          y2="215"
+          x1="145"
+          y1="228"
+          x2="115"
+          y2="265"
           stroke="#ffffff"
           strokeWidth="24"
           strokeLinecap="round"
         />
         <line
-          x1="70"
-          y1="200"
-          x2="105"
-          y2="235"
+          x1="102"
+          y1="254"
+          x2="135"
+          y2="284"
           stroke="#ffffff"
           strokeWidth="22"
           strokeLinecap="round"
         />
 
-        {/* 3. Tractor Body, Seat & Hood Outline */}
+        {/* 3. Tractor Body, Driver Seat & Engine Hood */}
         <path
-          d="M130 215 L130 250 L345 250 C385 250 415 280 415 320 L415 345 L385 345"
+          d="M142 272 L142 305 L310 305 C345 305 375 330 375 365 L375 390"
           stroke="#ffffff"
           strokeWidth="22"
           strokeLinecap="round"
@@ -121,32 +110,32 @@ export default function FarmerBrandIcon({
           fill="none"
         />
 
-        {/* Front Grille Slots */}
+        {/* Front Engine Grille Louvers */}
         <line
-          x1="285"
-          y1="275"
-          x2="390"
-          y2="275"
+          x1="245"
+          y1="328"
+          x2="348"
+          y2="328"
           stroke="#ffffff"
           strokeWidth="20"
           strokeLinecap="round"
         />
         <line
-          x1="345"
-          y1="305"
-          x2="390"
-          y2="305"
+          x1="290"
+          y1="356"
+          x2="348"
+          y2="356"
           stroke="#ffffff"
           strokeWidth="20"
           strokeLinecap="round"
         />
 
-        {/* 4. Chassis connecting back and front */}
+        {/* 4. Chassis Rail between Wheels */}
         <line
-          x1="220"
-          y1="375"
-          x2="320"
-          y2="375"
+          x1="228"
+          y1="432"
+          x2="305"
+          y2="432"
           stroke="#ffffff"
           strokeWidth="22"
           strokeLinecap="round"
@@ -154,8 +143,8 @@ export default function FarmerBrandIcon({
 
         {/* 5. Big Rear Wheel */}
         <circle
-          cx="150"
-          cy="365"
+          cx="145"
+          cy="428"
           r="86"
           stroke="#ffffff"
           strokeWidth="24"
@@ -164,29 +153,29 @@ export default function FarmerBrandIcon({
 
         {/* 6. Front Wheel */}
         <circle
-          cx="375"
-          cy="385"
+          cx="345"
+          cy="445"
           r="66"
           stroke="#ffffff"
           strokeWidth="24"
           fill="none"
         />
 
-        {/* 7. Bottom Motion / Ground Speed Lines */}
+        {/* 7. Motion & Ground Tracking Lines */}
         <line
-          x1="30"
-          y1="452"
-          x2="150"
-          y2="452"
+          x1="65"
+          y1="514"
+          x2="145"
+          y2="514"
           stroke="#ffffff"
           strokeWidth="22"
           strokeLinecap="round"
         />
         <line
-          x1="275"
-          y1="452"
-          x2="410"
-          y2="452"
+          x1="240"
+          y1="514"
+          x2="345"
+          y2="514"
           stroke="#ffffff"
           strokeWidth="22"
           strokeLinecap="round"
@@ -195,3 +184,4 @@ export default function FarmerBrandIcon({
     </svg>
   );
 }
+
