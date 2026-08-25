@@ -1,14 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import axios from "axios";
+import pool from "@/utils/Database/db";
 
 export const dynamic = "force-dynamic";
 
-const NestJsBaseURL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://holatractor-backend-render.onrender.com/";
-const FastApiBaseURL =
-  process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "https://tractorai.sinsignal.com/";
 const JWT_SECRET = process.env.JWT_SECRET || "holatractor_secure_jwt_secret_2026";
 
 export async function POST(request: NextRequest) {
@@ -24,107 +19,108 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const challengeStore = global.__pushChallenges;
-    if (!challengeStore || !challengeStore.has(challengeId)) {
-      return NextResponse.json(
-        { error: "Challenge not found or expired" },
-        { status: 404 }
+    const now = Date.now();
+    const client = await pool.connect();
+
+    try {
+      const result = await client.query(
+        `SELECT challenge_id, email, match_number, options, status, expires_at FROM _push_challenges WHERE challenge_id = $1 LIMIT 1`,
+        [challengeId]
       );
-    }
 
-    const challenge = challengeStore.get(challengeId)!;
+      if (result.rows.length === 0) {
+        return NextResponse.json(
+          { error: "Challenge not found or expired" },
+          { status: 404 }
+        );
+      }
 
-    if (Date.now() > challenge.expires_at) {
-      challenge.status = "EXPIRED";
-      return NextResponse.json(
-        { error: "Challenge has expired. Please initiate a new login request." },
-        { status: 400 }
-      );
-    }
+      const challenge = result.rows[0];
+      const expiresAt = Number(challenge.expires_at);
 
-    // Validate matching number
-    if (selectedNumber !== challenge.match_number) {
-      challenge.status = "REJECTED";
-      return NextResponse.json(
-        { error: "Incorrect matching number selected. Login request rejected for security." },
-        { status: 403 }
-      );
-    }
+      if (now > expiresAt) {
+        await client.query(
+          `UPDATE _push_challenges SET status = 'EXPIRED' WHERE challenge_id = $1`,
+          [challengeId]
+        );
+        return NextResponse.json(
+          { error: "Challenge has expired. Please initiate a new login request." },
+          { status: 400 }
+        );
+      }
 
-    // Build or query user details
-    const email = challenge.email;
-    let userPayload: any = null;
+      // Validate matching number
+      if (selectedNumber !== challenge.match_number) {
+        await client.query(
+          `UPDATE _push_challenges SET status = 'REJECTED' WHERE challenge_id = $1`,
+          [challengeId]
+        );
+        return NextResponse.json(
+          { error: "Incorrect matching number selected. Login request rejected for security." },
+          { status: 403 }
+        );
+      }
 
-    // 1. Try to fetch user from FastAPI endpoints (where first_name/last_name are stored)
-    const fastApiEndpoints = [
-      `http://localhost:8000/api/v1/auth/user-by-email?email=${encodeURIComponent(email)}`,
-      `http://127.0.0.1:8000/api/v1/auth/user-by-email?email=${encodeURIComponent(email)}`,
-      `${FastApiBaseURL.replace(/\/$/, "")}/api/v1/auth/user-by-email?email=${encodeURIComponent(email)}`,
-    ];
+      // Build or query user details from PostgreSQL User table
+      const email = challenge.email;
+      let userRow: any = null;
 
-    for (const ep of fastApiEndpoints) {
       try {
-        const res = await axios.get(ep, { timeout: 2000 });
-        if (res.data?.name || res.data?.id) {
-          userPayload = res.data;
-          break;
+        const userRes = await client.query(
+          `SELECT id, name, "isFarmer", "isOwner", "isDealer", "isOperator", "isAgent", image FROM "User" WHERE LOWER(email) = LOWER($1) LIMIT 1`,
+          [email]
+        );
+        if (userRes.rows.length > 0) {
+          userRow = userRes.rows[0];
         }
-      } catch (e) {}
+      } catch (uErr: any) {
+        console.warn("[push-challenge/approve] User DB query notice:", uErr?.message);
+      }
+
+      const userId = userRow?.id || `user_${email.split("@")[0]}`;
+      const name = userRow?.name || email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1);
+      const isFarmer = userRow?.isFarmer ?? true;
+      const isOwner = userRow?.isOwner ?? false;
+      const isDealer = userRow?.isDealer ?? false;
+      const isOperator = userRow?.isOperator ?? false;
+      const isAgent = userRow?.isAgent ?? false;
+
+      const tokenPayload = {
+        userId,
+        id: userId,
+        sub: userId,
+        email,
+        name,
+        image: userRow?.image || "",
+        isFarmer,
+        isOwner,
+        isDealer,
+        isOperator,
+        isAgent,
+        role: isFarmer ? ["farmer"] : ["user"],
+        authType: "MOBILE_PUSH_PASSWORDLESS",
+      };
+
+      const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "7d" });
+
+      // Update challenge as APPROVED in database
+      await client.query(
+        `UPDATE _push_challenges SET status = 'APPROVED', token = $1, user_data = $2 WHERE challenge_id = $3`,
+        [token, JSON.stringify(tokenPayload), challengeId]
+      );
+
+      return NextResponse.json({
+        success: true,
+        status: "APPROVED",
+        access_token: token,
+        user: tokenPayload,
+        message: "Mobile biometric & number verification approved successfully.",
+      });
+    } finally {
+      client.release();
     }
-
-    // 2. Fallback to NestJS
-    if (!userPayload) {
-      try {
-        const res = await axios.get(`${NestJsBaseURL}user?email=${encodeURIComponent(email)}`, {
-          timeout: 3000,
-        });
-        if (res.data) {
-          userPayload = res.data;
-        }
-      } catch {}
-    }
-
-    // Fallback user object
-    const userId = userPayload?.userId || userPayload?.id || `user_${email.split("@")[0]}`;
-    const userFullName = userPayload?.name || (userPayload?.first_name ? `${userPayload.first_name} ${userPayload.last_name || ""}`.trim() : "");
-    const name = userFullName || email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1);
-    const isFarmer = userPayload?.isFarmer ?? true;
-    const isOwner = userPayload?.isOwner ?? false;
-    const isDealer = userPayload?.isDealer ?? false;
-    const isOperator = userPayload?.isOperator ?? false;
-    const isAgent = userPayload?.isAgent ?? false;
-
-    const tokenPayload = {
-      userId,
-      id: userId,
-      sub: userId,
-      email,
-      name,
-      image: userPayload?.image || "",
-      isFarmer,
-      isOwner,
-      isDealer,
-      isOperator,
-      isAgent,
-      role: isFarmer ? ["farmer"] : ["user"],
-      authType: "MOBILE_PUSH_PASSWORDLESS",
-    };
-
-    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "7d" });
-
-    // Mark challenge as APPROVED
-    challenge.status = "APPROVED";
-    challenge.token = token;
-    challenge.user = tokenPayload;
-
-    return NextResponse.json({
-      success: true,
-      status: "APPROVED",
-      access_token: token,
-      user: tokenPayload,
-      message: "Mobile biometric & number verification approved successfully.",
-    });
   } catch (error: any) {
+    console.error("Approve push challenge error:", error);
     return NextResponse.json(
       { error: error?.message || "Failed to approve push challenge" },
       { status: 500 }

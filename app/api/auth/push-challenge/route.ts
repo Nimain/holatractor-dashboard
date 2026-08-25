@@ -1,53 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import pool from "@/utils/Database/db";
 import axios from "axios";
-import jwt from "jsonwebtoken";
 
 export const dynamic = "force-dynamic";
 
 const FastApiBaseURL =
   process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "https://tractorai.sinsignal.com/";
-const NestJsBaseURL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://holatractor-backend-render.onrender.com/";
-
-// In-memory challenge store (shared across serverless runtime in dev/node instances)
-declare global {
-  var __pushChallenges: Map<
-    string,
-    {
-      challenge_id: string;
-      email: string;
-      match_number: number;
-      options: number[];
-      status: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED";
-      token?: string;
-      user?: any;
-      device_info: string;
-      created_at: number;
-      expires_at: number;
-    }
-  > | undefined;
-}
-
-if (!global.__pushChallenges) {
-  global.__pushChallenges = new Map();
-}
-
-const challengeStore = global.__pushChallenges;
-
-// Helper to clean expired challenges
-const cleanupExpired = () => {
-  const now = Date.now();
-  for (const [id, c] of challengeStore.entries()) {
-    if (c.expires_at < now) {
-      challengeStore.delete(id);
-    }
-  }
-};
 
 export async function POST(request: NextRequest) {
   try {
-    cleanupExpired();
     const body = await request.json();
     const email = body?.email?.trim()?.toLowerCase();
     const deviceInfo = body?.device_info || "Chrome on Desktop";
@@ -81,10 +42,35 @@ export async function POST(request: NextRequest) {
     const options = [matchNumber, decoy1, decoy2].sort(() => Math.random() - 0.5);
 
     const now = Date.now();
-    const expiresInSeconds = 120;
+    const expiresInSeconds = 180; // 3 minutes for comfortable mobile interaction
     const expiresAt = now + expiresInSeconds * 1000;
 
-    // 1. Attempt to dispatch push notification via backend
+    // 1. Save challenge directly to PostgreSQL database
+    try {
+      const client = await pool.connect();
+      try {
+        await client.query(
+          `
+          INSERT INTO _push_challenges (
+            challenge_id, email, match_number, options, status, device_info, created_at, expires_at
+          ) VALUES ($1, $2, $3, $4, 'PENDING', $5, $6, $7)
+          ON CONFLICT (challenge_id) DO UPDATE SET
+            email = EXCLUDED.email,
+            match_number = EXCLUDED.match_number,
+            options = EXCLUDED.options,
+            status = 'PENDING',
+            expires_at = EXCLUDED.expires_at;
+        `,
+          [challengeId, email, matchNumber, options, deviceInfo, now, expiresAt]
+        );
+      } finally {
+        client.release();
+      }
+    } catch (dbErr: any) {
+      console.warn("[push-challenge] PostgreSQL challenge save notice:", dbErr?.message);
+    }
+
+    // 2. Also notify backend to dispatch FCM push notification
     let pushDispatched = false;
     const candidateEndpoints = [
       "http://localhost:8000/api/v1/auth/push-challenge/create",
@@ -103,40 +89,26 @@ export async function POST(request: NextRequest) {
             options,
             device_info: deviceInfo,
           },
-          { timeout: 3000 }
+          { timeout: 2500 }
         );
         if (resFast.data?.success || resFast.data?.challenge_id) {
           pushDispatched = true;
-          console.log(`[push-challenge] Successfully dispatched via ${endpoint}`);
           break;
         }
-      } catch (e: any) {
-        // Try next endpoint
-      }
+      } catch (e: any) {}
     }
-
-    // Save challenge record
-    challengeStore.set(challengeId, {
-      challenge_id: challengeId,
-      email,
-      match_number: matchNumber,
-      options,
-      status: "PENDING",
-      device_info: deviceInfo,
-      created_at: now,
-      expires_at: expiresAt,
-    });
 
     return NextResponse.json({
       success: true,
       challenge_id: challengeId,
       match_number: matchNumber,
-      options, // available for mobile/simulator
+      options,
       expires_in: expiresInSeconds,
       push_dispatched: pushDispatched,
       message: `Sign-in challenge created. Select ${matchNumber} in your HolaTractor mobile app.`,
     });
   } catch (error: any) {
+    console.error("Create push challenge error:", error);
     return NextResponse.json(
       { error: error?.message || "Failed to create push authentication challenge" },
       { status: 500 }
