@@ -294,15 +294,44 @@ const LogInPage = () => {
     }
 
     const activeRoles: string[] = [];
-    if (isAdmin) activeRoles.push("admin");
     if (isOwner) activeRoles.push("owner");
+    if (isFarmer) activeRoles.push("farmer");
     if (isDealer) activeRoles.push("dealer");
     if (isOperator) activeRoles.push("operator");
     if (isAgent) activeRoles.push("agent");
-    if (isFarmer) activeRoles.push("farmer");
 
-    // Always display Account Selection Modal so user can choose their authorized dashboard
-    setShowRoleSelector(true);
+    // If account has only 1 role (or admin), direct move to related account
+    if (activeRoles.length === 1 || isAdmin) {
+      const singleRole = isAdmin ? "admin" : activeRoles[0] || "farmer";
+      setCookieValue("active_role", singleRole);
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("active_role", singleRole);
+        } catch {}
+      }
+
+      const redirectPath = isAdmin
+        ? "/City"
+        : singleRole === "dealer"
+        ? "/dealer/customer"
+        : singleRole === "operator"
+        ? "/operator/bookings"
+        : singleRole === "owner"
+        ? "/owner"
+        : `/${singleRole}`;
+
+      router.push(redirectPath);
+      return;
+    }
+
+    // If account has multiple roles (> 1), show role selector option modal
+    if (activeRoles.length > 1) {
+      setShowRoleSelector(true);
+      return;
+    }
+
+    // Default fallback
+    router.push("/farmer");
   };
 
   const handleLogin = async (e: React.FormEvent) => {

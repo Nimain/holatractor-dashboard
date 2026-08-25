@@ -145,11 +145,7 @@ export default function SwitchAccountModal({
       return false;
     });
 
-    if (roles.length === 0 && isOpen) {
-      setAvailableRoles(ALL_ROLES.filter((r) => r.id === "owner" || r.id === "farmer"));
-    } else {
-      setAvailableRoles(roles);
-    }
+    setAvailableRoles(roles);
 
     // Detect current role based on path or cookie
     const activeCookie = cookie.get("active_role");
@@ -162,8 +158,8 @@ export default function SwitchAccountModal({
     else if (activeCookie) setCurrentRole(activeCookie);
   }, [pathname, isOpen]);
 
-  // If user has 0 roles and modal is not open, do not display
-  if (availableRoles.length === 0 && !isOpen) {
+  // If user has 1 or 0 roles, do not display switching modal
+  if (availableRoles.length <= 1) {
     return null;
   }
 
