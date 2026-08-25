@@ -206,6 +206,103 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// PUT /api/admin/stores - Update store details
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const storeId = body.id;
+
+    if (!storeId) {
+      return NextResponse.json({ error: "Store ID is required" }, { status: 400 });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      const updates: string[] = ['"updatedAt" = NOW()'];
+      const values: any[] = [storeId];
+      let paramIdx = 2;
+
+      if (body.name !== undefined) {
+        updates.push(`name = $${paramIdx}`);
+        values.push(body.name);
+        paramIdx++;
+      }
+
+      if (body.description !== undefined) {
+        updates.push(`description = $${paramIdx}`);
+        values.push(body.description);
+        paramIdx++;
+      }
+
+      if (body.image !== undefined) {
+        updates.push(`image = $${paramIdx}`);
+        values.push(body.image);
+        paramIdx++;
+      }
+
+      if (body.opening_time !== undefined) {
+        updates.push(`opening_time = $${paramIdx}`);
+        values.push(body.opening_time);
+        paramIdx++;
+      }
+
+      if (body.closing_time !== undefined) {
+        updates.push(`closing_time = $${paramIdx}`);
+        values.push(body.closing_time);
+        paramIdx++;
+      }
+
+      if (body.closing_days !== undefined) {
+        updates.push(`closing_days = $${paramIdx}`);
+        values.push(body.closing_days);
+        paramIdx++;
+      }
+
+      if (updates.length > 1) {
+        const storeSql = `UPDATE "Store" SET ${updates.join(", ")} WHERE id = $1 RETURNING *`;
+        await client.query(storeSql, values);
+      }
+
+      // Update location if fields provided
+      if (body.location_address || body.location_city || body.location_country) {
+        const storeRow = await client.query('SELECT location_id FROM "Store" WHERE id = $1', [storeId]);
+        const locId = storeRow.rows[0]?.location_id;
+        if (locId) {
+          await client.query(
+            `UPDATE "Location" SET 
+              address = COALESCE($1, address),
+              city = COALESCE($2, city),
+              state = COALESCE($3, state),
+              country = COALESCE($4, country),
+              "updatedAt" = NOW()
+            WHERE id = $5`,
+            [
+              body.location_address || null,
+              body.location_city || null,
+              body.location_state || null,
+              body.location_country || null,
+              locId,
+            ]
+          );
+        }
+      }
+
+      await client.query("COMMIT");
+      return NextResponse.json({ success: true, message: "Store updated successfully" });
+    } catch (dbErr: any) {
+      await client.query("ROLLBACK");
+      console.error("[PUT /api/admin/stores] DB error:", dbErr?.message);
+      return NextResponse.json({ error: dbErr?.message || "Failed to update store" }, { status: 500 });
+    } finally {
+      client.release();
+    }
+  } catch (err: any) {
+    return NextResponse.json({ error: err?.message || "Internal server error" }, { status: 500 });
+  }
+}
+
 // DELETE /api/admin/stores - Delete a store by ID
 export async function DELETE(request: NextRequest) {
   try {
@@ -241,3 +338,5 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: err?.message || "Internal server error" }, { status: 500 });
   }
 }
+
+

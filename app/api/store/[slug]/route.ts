@@ -97,10 +97,10 @@ export async function GET(
           (SELECT json_build_object(
             'id', a.id,
             'name', a.name,
-            'type', a.type,
             'images', a.images,
-            'description', a.description
-          ) FROM "Attachment" a WHERE a.id = ais.attachment_id) as attachment
+            'description', a.description,
+            'fixedPrice', a."fixedPrice"
+          ) FROM "Attachment" a WHERE a.id = ais."baseAttachmentId") as attachment
         FROM "AttachmentInStore" ais
         WHERE ais.store_id = $1
         ORDER BY ais."createdAt" DESC;
@@ -113,6 +113,11 @@ export async function GET(
         `
         SELECT 
           ois.id,
+          ois.status,
+          ois.cost_per_hour,
+          ois.cost_per_job,
+          ois.cost_per_month,
+          ois.note,
           ois."createdAt",
           (SELECT json_build_object(
             'id', u.id,

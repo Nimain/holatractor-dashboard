@@ -10,6 +10,7 @@ import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -42,6 +43,8 @@ import {
   Info,
   Edit3,
   Trash2,
+  Store as StoreIcon,
+  Navigation,
 } from "lucide-react";
 
 export interface SingleStoreTractor {
@@ -66,14 +69,19 @@ export interface SingleStoreAttachment {
   attachment?: {
     id: string;
     name: string;
-    type?: string;
     description?: string;
     images?: string[];
+    fixedPrice?: number;
   };
 }
 
 export interface SingleStoreOperator {
   id: string;
+  status?: string;
+  cost_per_hour?: number;
+  cost_per_job?: number;
+  cost_per_month?: number;
+  note?: string;
   createdAt: string;
   operator?: {
     id: string;
@@ -125,10 +133,15 @@ const SingleStore = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"tractors" | "attachments" | "operators" | "details">("tractors");
 
-  // Tractor Pagination
+  // Tractor Search & Pagination
   const [tractorPage, setTractorPage] = useState(1);
-  const [tractorPageSize] = useState(6);
+  const [tractorPageSize, setTractorPageSize] = useState(6);
   const [tractorSearch, setTractorSearch] = useState("");
+
+  // Edit Tractor Rate Modal
+  const [editTractorItem, setEditTractorItem] = useState<SingleStoreTractor | null>(null);
+  const [editPrice, setEditPrice] = useState("20");
+  const [isUpdatingPrice, setIsUpdatingPrice] = useState(false);
 
   // Add Tractor Modal State
   const [addTractorOpen, setAddTractorOpen] = useState(false);
@@ -136,6 +149,18 @@ const SingleStore = () => {
   const [selectedCatalogId, setSelectedCatalogId] = useState("");
   const [newHourlyPrice, setNewHourlyPrice] = useState("25");
   const [isAddingTractor, setIsAddingTractor] = useState(false);
+
+  // Edit Store Profile Modal State
+  const [editStoreOpen, setEditStoreOpen] = useState(false);
+  const [editStoreName, setEditStoreName] = useState("");
+  const [editStoreDesc, setEditStoreDesc] = useState("");
+  const [editStoreAddress, setEditStoreAddress] = useState("");
+  const [editStoreCity, setEditStoreCity] = useState("");
+  const [editStoreCountry, setEditStoreCountry] = useState("");
+  const [editStoreOpenTime, setEditStoreOpenTime] = useState("08:00");
+  const [editStoreCloseTime, setEditStoreCloseTime] = useState("20:00");
+  const [editStoreClosingDays, setEditStoreClosingDays] = useState<string[]>(["Sunday"]);
+  const [isSavingStore, setIsSavingStore] = useState(false);
 
   // Time formatter
   const formatTime = (timeStr?: string) => {
@@ -162,6 +187,12 @@ const SingleStore = () => {
       const res = await axios.get(`/api/store/${slug}`, { timeout: 6000 });
       if (res.data && res.data.id) {
         setStoreData(res.data);
+        setEditStoreName(res.data.name || "");
+        setEditStoreDesc(res.data.description || "");
+        setEditStoreAddress(res.data.location?.address || "");
+        setEditStoreCity(res.data.location?.city || "");
+        setEditStoreCountry(res.data.location?.country || "");
+        setEditStoreClosingDays(res.data.closing_days || []);
         loaded = true;
       }
     } catch (e) {
@@ -247,6 +278,32 @@ const SingleStore = () => {
     }
   };
 
+  // Update Tractor Hourly Rate
+  const handleUpdateTractorPrice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTractorItem) return;
+
+    setIsUpdatingPrice(true);
+    try {
+      const res = await axios.put("/api/admin/store-tractors", {
+        id: editTractorItem.id,
+        hourly_price: Number(editPrice),
+      });
+
+      if (res.data?.success) {
+        successMessage("Hourly rental price updated!");
+        setEditTractorItem(null);
+        fetchStore();
+      } else {
+        errorMessage(res.data?.error || "Failed to update price");
+      }
+    } catch (err: any) {
+      errorMessage(err?.response?.data?.error || "Error updating price");
+    } finally {
+      setIsUpdatingPrice(false);
+    }
+  };
+
   // Remove Tractor from this store
   const handleRemoveTractor = async (tractorInStoreId: string, tractorName: string) => {
     if (!window.confirm(`Are you sure you want to remove ${tractorName} from this store?`)) {
@@ -263,6 +320,39 @@ const SingleStore = () => {
       }
     } catch (err: any) {
       errorMessage(err?.response?.data?.error || "Error removing tractor");
+    }
+  };
+
+  // Save Store Profile Edits
+  const handleSaveStoreProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!slug) return;
+
+    setIsSavingStore(true);
+    try {
+      const res = await axios.put("/api/admin/stores", {
+        id: String(slug),
+        name: editStoreName,
+        description: editStoreDesc,
+        location_address: editStoreAddress,
+        location_city: editStoreCity,
+        location_country: editStoreCountry,
+        opening_time: editStoreOpenTime,
+        closing_time: editStoreCloseTime,
+        closing_days: editStoreClosingDays,
+      });
+
+      if (res.data?.success) {
+        successMessage("Store hub profile updated successfully!");
+        setEditStoreOpen(false);
+        fetchStore();
+      } else {
+        errorMessage(res.data?.error || "Failed to update store");
+      }
+    } catch (err: any) {
+      errorMessage(err?.response?.data?.error || "Error saving store profile");
+    } finally {
+      setIsSavingStore(false);
     }
   };
 
@@ -289,22 +379,30 @@ const SingleStore = () => {
 
   if (loading) {
     return (
-      <div className="w-full py-12 flex flex-col items-center justify-center space-y-4">
-        <RefreshCw className="w-8 h-8 animate-spin text-emerald-600" />
-        <p className="text-sm font-medium text-slate-500">Loading store details and inventory...</p>
+      <div className="w-full min-h-[60vh] flex flex-col items-center justify-center space-y-4">
+        <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center animate-bounce shadow-lg shadow-emerald-500/10">
+          <Building2 className="w-7 h-7" />
+        </div>
+        <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">Loading store machinery hub...</p>
       </div>
     );
   }
 
   if (!storeData) {
     return (
-      <div className="w-full py-12 max-w-4xl mx-auto text-center space-y-4">
-        <Building2 className="w-12 h-12 text-slate-400 mx-auto" />
-        <h2 className="text-xl font-bold text-slate-900">Store Not Found</h2>
-        <p className="text-sm text-slate-500">The requested store hub could not be located or has been archived.</p>
+      <div className="w-full py-16 max-w-2xl mx-auto text-center space-y-5 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 p-8 shadow-sm">
+        <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 mx-auto flex items-center justify-center">
+          <Building2 className="w-8 h-8" />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Store Hub Not Found</h2>
+          <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+            The store hub record could not be loaded from database.
+          </p>
+        </div>
         <Link href="/Store">
-          <Button variant="outline" className="rounded-xl">
-            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Stores
+          <Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
+            <ArrowLeft className="w-4 h-4 mr-2" /> Return to Store Directory
           </Button>
         </Link>
       </div>
@@ -315,26 +413,116 @@ const SingleStore = () => {
   const attachmentsCount = storeData.attachment_in_store?.length || 0;
   const operatorsCount = storeData.operator_in_store?.length || 0;
 
+  const bannerImg =
+    storeData.image && !storeData.image.includes("default")
+      ? storeData.image
+      : "https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=1200&q=80";
+
   return (
-    <div className="w-full py-6 space-y-6 max-w-7xl mx-auto">
-      {/* 1. Navigation & Quick Back */}
-      <div className="flex items-center justify-between">
-        <Link
-          href="/Store"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-600 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to Store Directory
-        </Link>
+    <div className="w-full py-2 space-y-6 max-w-7xl mx-auto">
+      {/* 1. Header Navigation Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+          <Link href="/Store" className="hover:text-emerald-600 transition-colors flex items-center gap-1">
+            <ArrowLeft className="w-3.5 h-3.5" /> Stores Hub
+          </Link>
+          <span>/</span>
+          <span className="text-slate-900 dark:text-white truncate max-w-xs">{storeData.name}</span>
+        </div>
 
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
             size="sm"
             onClick={fetchStore}
-            className="rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 gap-1.5 h-9"
+            className="rounded-xl border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 gap-1.5 h-9"
           >
-            <RefreshCw className="w-3.5 h-3.5" /> Refresh
+            <RefreshCw className="w-3.5 h-3.5 text-slate-500" /> Refresh
           </Button>
+
+          {/* Edit Store Profile Dialog */}
+          <Dialog open={editStoreOpen} onOpenChange={setEditStoreOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-xl border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 gap-1.5 h-9"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-emerald-600" /> Edit Store Profile
+              </Button>
+            </DialogTrigger>
+
+            <DialogContent className="max-w-xl p-6 rounded-2xl">
+              <DialogHeader>
+                <DialogTitle className="text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-white">
+                  <Building2 className="w-5 h-5 text-emerald-600" />
+                  Edit Store Hub Details
+                </DialogTitle>
+              </DialogHeader>
+
+              <form onSubmit={handleSaveStoreProfile} className="space-y-4 pt-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase text-slate-600">Store Name *</Label>
+                  <Input
+                    value={editStoreName}
+                    onChange={(e) => setEditStoreName(e.target.value)}
+                    required
+                    className="rounded-xl"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase text-slate-600">Description</Label>
+                  <Textarea
+                    value={editStoreDesc}
+                    onChange={(e) => setEditStoreDesc(e.target.value)}
+                    className="rounded-xl resize-none h-20"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold uppercase text-slate-600">Address</Label>
+                    <Input
+                      value={editStoreAddress}
+                      onChange={(e) => setEditStoreAddress(e.target.value)}
+                      placeholder="e.g. Route 9, Km 120"
+                      className="rounded-xl"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold uppercase text-slate-600">City / State</Label>
+                    <Input
+                      value={editStoreCity}
+                      onChange={(e) => setEditStoreCity(e.target.value)}
+                      placeholder="e.g. Cordoba"
+                      className="rounded-xl"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setEditStoreOpen(false)}
+                    className="rounded-xl"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isSavingStore}
+                    className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 gap-2"
+                  >
+                    {isSavingStore ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
           <Link href={`/Store/${slug}/booking`}>
             <Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold h-9 px-4 gap-1.5 shadow-md shadow-emerald-600/20">
               <Sparkles className="w-3.5 h-3.5" /> Store Bookings
@@ -343,49 +531,48 @@ const SingleStore = () => {
         </div>
       </div>
 
-      {/* 2. Hero Store Header */}
+      {/* 2. Premium Hero Store Banner */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-sm">
-        {/* Banner with Gradient Overlay */}
+        {/* Cover Photo */}
         <div className="relative h-64 md:h-80 w-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-          {storeData.image ? (
-            <img
-              src={storeData.image}
-              alt={storeData.name}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-tr from-emerald-800 to-teal-600 text-white/50">
-              <Building2 className="w-20 h-20 opacity-40" />
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent" />
+          <img
+            src={bannerImg}
+            alt={storeData.name}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/45 to-transparent" />
 
-          {/* Location & Status Badges */}
+          {/* Top Badges */}
           <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
             <span className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-black/60 backdrop-blur-md text-white border border-white/15 flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-emerald-400" />
-              {storeData.location?.city || storeData.location?.name || "Regional Hub"}
+              {storeData.location?.city || storeData.location?.name || "Regional Agricultural Hub"}
               {storeData.location?.country ? `, ${storeData.location.country}` : ""}
             </span>
 
             <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-500 text-white shadow-lg flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Operational Hub
+              <CheckCircle2 className="w-3.5 h-3.5" /> Verified Hub
             </span>
           </div>
 
-          {/* Store Title & Quick Info */}
+          {/* Bottom Title & Details on Cover */}
           <div className="absolute bottom-6 left-6 right-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono font-semibold px-2.5 py-0.5 rounded-md bg-white/20 backdrop-blur-md text-white">
+                  ID: {storeData.id.slice(0, 16)}...
+                </span>
+              </div>
               <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
                 {storeData.name}
               </h1>
-              <p className="text-sm text-slate-200/90 max-w-2xl line-clamp-2">
+              <p className="text-sm text-slate-200/90 max-w-2xl line-clamp-2 leading-relaxed">
                 {storeData.description || "Primary agricultural hub for machinery leasing, implements, and certified operators."}
               </p>
             </div>
 
-            {/* Quick Timing Pill */}
-            <div className="flex items-center gap-3 bg-black/50 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/10 text-white text-xs">
+            {/* Operating Window Badge */}
+            <div className="flex items-center gap-3 bg-black/50 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10 text-white text-xs shrink-0">
               <Clock className="w-4 h-4 text-emerald-400" />
               <div>
                 <p className="font-semibold">{formatTime(storeData.opening_time)} - {formatTime(storeData.closing_time)}</p>
@@ -397,10 +584,10 @@ const SingleStore = () => {
           </div>
         </div>
 
-        {/* Owner & Hub Contact Bar */}
+        {/* Owner & Facility Contact Bar */}
         <div className="p-4 md:p-6 bg-slate-50/70 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4 text-xs">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm">
               {storeData.owner?.first_name?.charAt(0) || "H"}
             </div>
             <div>
@@ -426,7 +613,7 @@ const SingleStore = () => {
         </div>
       </div>
 
-      {/* 3. KPI Metrics Cards */}
+      {/* 3. Core KPI Analytics Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center font-bold">
@@ -469,7 +656,7 @@ const SingleStore = () => {
         </div>
       </div>
 
-      {/* 4. Tabbed Content Header */}
+      {/* 4. Tab Navigation Header */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-3">
         <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl">
           <button
@@ -517,7 +704,7 @@ const SingleStore = () => {
             }`}
           >
             <Info className="w-4 h-4" />
-            Hub Info & Timings
+            Hub Profile & Timings
           </button>
         </div>
 
@@ -526,7 +713,7 @@ const SingleStore = () => {
           <Dialog open={addTractorOpen} onOpenChange={setAddTractorOpen}>
             <DialogTrigger asChild>
               <Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold gap-1.5 h-10 px-4 shadow-md shadow-emerald-600/20">
-                <Plus className="w-4 h-4" /> Add Tractor to Store
+                <Plus className="w-4 h-4" /> Assign Tractor to Store
               </Button>
             </DialogTrigger>
 
@@ -599,7 +786,7 @@ const SingleStore = () => {
         )}
       </div>
 
-      {/* 5. TAB: TRACTORS IN STORE */}
+      {/* 5. TAB 1: TRACTORS IN STORE */}
       {activeTab === "tractors" && (
         <div className="space-y-5">
           {/* Tractor Search Bar */}
@@ -612,28 +799,32 @@ const SingleStore = () => {
                   setTractorSearch(e.target.value);
                   setTractorPage(1);
                 }}
-                className="rounded-xl h-10 pl-4"
+                className="rounded-xl h-10 pl-4 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800"
               />
             </div>
           )}
 
           {tractorsCount === 0 ? (
-            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 p-12 text-center space-y-4">
-              <Tractor className="w-12 h-12 text-slate-400 mx-auto" />
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Tractors in this Store</h3>
-              <p className="text-sm text-slate-500 max-w-md mx-auto">
-                No tractors are currently assigned to this store hub. Assign machinery using the button above.
-              </p>
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 p-12 text-center space-y-4 shadow-sm">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 mx-auto flex items-center justify-center">
+                <Tractor className="w-8 h-8" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Tractors in this Store Hub</h3>
+                <p className="text-sm text-slate-500 max-w-md mx-auto mt-1">
+                  No machinery is currently assigned to this store facility. Click &apos;Assign Tractor&apos; to link machines.
+                </p>
+              </div>
               <Button
                 onClick={() => setAddTractorOpen(true)}
                 className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
               >
-                <Plus className="w-4 h-4 mr-2" /> Add First Tractor
+                <Plus className="w-4 h-4 mr-2" /> Assign First Tractor
               </Button>
             </div>
           ) : (
             <>
-              {/* Tractors Grid */}
+              {/* Machinery Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {paginatedTractors.map((item) => {
                   const bt = item.baseTractor;
@@ -664,26 +855,49 @@ const SingleStore = () => {
                             {bt?.name || "Tractor Unit"}
                           </h3>
                           <p className="text-xs text-slate-200/80 truncate">
-                            Model: {bt?.model || "Standard"} • {bt?.type || "Medium"}
+                            Model: {bt?.model || "Standard"} • Category: {bt?.type || "Medium"}
                           </p>
                         </div>
                       </div>
 
                       <div className="p-5 space-y-4">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-500">Hourly Rate:</span>
-                          <span className="font-bold text-emerald-600 text-sm">
-                            ${item.hourly_price}.00/hr
-                          </span>
+                        <div className="space-y-2 text-xs">
+                          <div className="flex items-center justify-between text-slate-500">
+                            <span>Base Machine ID:</span>
+                            <span className="font-mono text-slate-700 dark:text-slate-300">
+                              {(bt?.id || item.id).slice(0, 14)}...
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500">Hourly Rental Rate:</span>
+                            <span className="font-bold text-emerald-600 text-sm">
+                              ${item.hourly_price}.00/hr
+                            </span>
+                          </div>
                         </div>
 
                         <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                           <Link
                             href={`/Inventory/${bt?.id || item.id}`}
-                            className="flex-1 text-center py-2 rounded-xl bg-slate-100 hover:bg-emerald-600 hover:text-white font-medium text-xs transition-colors"
+                            className="flex-1 text-center py-2 rounded-xl bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-700 font-semibold text-xs transition-colors flex items-center justify-center gap-1"
                           >
-                            View Specs
+                            <ExternalLink className="w-3.5 h-3.5" /> View Specs
                           </Link>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEditTractorItem(item);
+                              setEditPrice(String(item.hourly_price || 20));
+                            }}
+                            className="h-8 px-2.5 text-xs font-semibold text-amber-600 hover:bg-amber-50 border-slate-200 rounded-xl"
+                            title="Edit Rate"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </Button>
+
                           <Button
                             variant="ghost"
                             size="sm"
@@ -726,7 +940,7 @@ const SingleStore = () => {
                         size="sm"
                         onClick={() => setTractorPage(p)}
                         className={`rounded-xl h-8 w-8 p-0 ${
-                          tractorPage === p ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""
+                          tractorPage === p ? "bg-emerald-600 hover:bg-emerald-700 text-white font-semibold" : ""
                         }`}
                       >
                         {p}
@@ -749,16 +963,20 @@ const SingleStore = () => {
         </div>
       )}
 
-      {/* 6. TAB: ATTACHMENTS */}
+      {/* 6. TAB 2: ATTACHMENTS */}
       {activeTab === "attachments" && (
         <div className="space-y-5">
           {attachmentsCount === 0 ? (
-            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 p-12 text-center space-y-4">
-              <Layers className="w-12 h-12 text-slate-400 mx-auto" />
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Attachments Assigned</h3>
-              <p className="text-sm text-slate-500 max-w-md mx-auto">
-                No agricultural implements or attachments are currently stored in this hub.
-              </p>
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 p-12 text-center space-y-4 shadow-sm">
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 mx-auto flex items-center justify-center">
+                <Layers className="w-8 h-8" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Attachments Assigned</h3>
+                <p className="text-sm text-slate-500 max-w-md mx-auto mt-1">
+                  No agricultural implements or attachments are currently stored in this hub.
+                </p>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -779,11 +997,11 @@ const SingleStore = () => {
                     </div>
                     <div>
                       <h4 className="font-bold text-slate-900 dark:text-white text-base">{att?.name || "Implement"}</h4>
-                      <p className="text-xs text-slate-500 capitalize">{att?.type || "Standard Equipment"}</p>
+                      <p className="text-xs text-slate-500 line-clamp-2 mt-1">{att?.description || "Heavy duty soil implement"}</p>
                     </div>
                     <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100 dark:border-slate-800">
                       <span className="text-slate-500">Rental Rate:</span>
-                      <span className="font-bold text-blue-600 text-sm">${item.hourly_price}/hr</span>
+                      <span className="font-bold text-blue-600 text-sm">${item.hourly_price || att?.fixedPrice || 15}/hr</span>
                     </div>
                   </div>
                 );
@@ -793,16 +1011,20 @@ const SingleStore = () => {
         </div>
       )}
 
-      {/* 7. TAB: OPERATORS */}
+      {/* 7. TAB 3: OPERATORS */}
       {activeTab === "operators" && (
         <div className="space-y-5">
           {operatorsCount === 0 ? (
-            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 p-12 text-center space-y-4">
-              <Users className="w-12 h-12 text-slate-400 mx-auto" />
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Certified Drivers Assigned</h3>
-              <p className="text-sm text-slate-500 max-w-md mx-auto">
-                No certified tractor drivers are currently stationed at this hub.
-              </p>
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 p-12 text-center space-y-4 shadow-sm">
+              <div className="w-16 h-16 rounded-2xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 mx-auto flex items-center justify-center">
+                <Users className="w-8 h-8" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Certified Drivers Assigned</h3>
+                <p className="text-sm text-slate-500 max-w-md mx-auto mt-1">
+                  No certified tractor drivers are currently stationed at this hub.
+                </p>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -816,11 +1038,11 @@ const SingleStore = () => {
                     <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-lg shrink-0">
                       {op?.first_name?.charAt(0) || "D"}
                     </div>
-                    <div className="space-y-0.5">
+                    <div className="space-y-0.5 flex-1">
                       <h4 className="font-bold text-slate-900 dark:text-white text-sm">
-                        {op?.first_name} {op?.last_name}
+                        {op?.first_name} {op?.last_name || ""}
                       </h4>
-                      <p className="text-xs text-slate-500">{op?.email}</p>
+                      <p className="text-xs text-slate-500 truncate">{op?.email}</p>
                       {op?.mobile && <p className="text-xs text-purple-600 font-medium">{op?.mobile}</p>}
                     </div>
                   </div>
@@ -831,7 +1053,7 @@ const SingleStore = () => {
         </div>
       )}
 
-      {/* 8. TAB: STORE DETAILS & TIMINGS */}
+      {/* 8. TAB 4: STORE PROFILE & TIMINGS */}
       {activeTab === "details" && (
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 md:p-8 space-y-6 shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -852,7 +1074,7 @@ const SingleStore = () => {
                 <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
                   <span className="text-slate-500">Hub Location:</span>
                   <span className="font-medium">
-                    {storeData.location?.address}, {storeData.location?.city}, {storeData.location?.country}
+                    {storeData.location?.address || "Regional Address"}, {storeData.location?.city || "Regional Hub"}, {storeData.location?.country || "Argentina"}
                   </span>
                 </div>
               </div>
@@ -882,6 +1104,67 @@ const SingleStore = () => {
           </div>
         </div>
       )}
+
+      {/* EDIT TRACTOR HOURLY PRICE MODAL */}
+      <Dialog open={!!editTractorItem} onOpenChange={(open) => !open && setEditTractorItem(null)}>
+        <DialogContent className="max-w-md p-6 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2 text-slate-900">
+              <Edit3 className="w-5 h-5 text-emerald-600" />
+              Edit Tractor Rental Rate
+            </DialogTitle>
+          </DialogHeader>
+
+          {editTractorItem && (
+            <form onSubmit={handleUpdateTractorPrice} className="space-y-4 pt-2">
+              <div>
+                <p className="text-sm font-semibold text-slate-800">
+                  {editTractorItem.baseTractor?.name} ({editTractorItem.baseTractor?.model})
+                </p>
+                <p className="text-xs text-slate-500">
+                  Store: {storeData.name}
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase text-slate-600">
+                  Hourly Rate ($/hr) *
+                </Label>
+                <div className="relative">
+                  <DollarSign className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Input
+                    type="number"
+                    step="0.5"
+                    min="1"
+                    value={editPrice}
+                    onChange={(e) => setEditPrice(e.target.value)}
+                    required
+                    className="pl-9 rounded-xl font-bold text-lg"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setEditTractorItem(null)}
+                  className="rounded-xl"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isUpdatingPrice}
+                  className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 gap-2"
+                >
+                  {isUpdatingPrice ? "Saving..." : "Save Rate"}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
