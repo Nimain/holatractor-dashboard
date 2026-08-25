@@ -36,6 +36,8 @@ import {
   CheckCircle2,
   Sparkles,
   Info,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 export interface StoreTractorItem {
@@ -267,6 +269,20 @@ const StoreTractors = () => {
       return matchesSearch && matchesStore;
     });
   }, [storeTractors, searchQuery, selectedStoreFilter]);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(9);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedStoreFilter, pageSize]);
+
+  const totalPages = Math.ceil(filteredTractors.length / pageSize) || 1;
+  const paginatedTractors = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredTractors.slice(start, start + pageSize);
+  }, [filteredTractors, currentPage, pageSize]);
 
   // Statistics
   const stats = useMemo(() => {
@@ -554,7 +570,7 @@ const StoreTractors = () => {
       ) : viewMode === "grid" ? (
         /* GRID VIEW */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredTractors.map((item) => {
+          {paginatedTractors.map((item) => {
             const bt = item.baseTractor;
             const img =
               bt?.images && bt.images.length > 0
@@ -690,7 +706,7 @@ const StoreTractors = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-                {filteredTractors.map((item) => {
+                {paginatedTractors.map((item) => {
                   const bt = item.baseTractor;
                   const img =
                     bt?.images && bt.images.length > 0
@@ -786,6 +802,75 @@ const StoreTractors = () => {
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Pagination Controller Footer */}
+      {filteredTractors.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm text-xs">
+          <div className="flex items-center gap-3 text-slate-500">
+            <span>
+              Showing <span className="font-semibold text-slate-800 dark:text-slate-200">{(currentPage - 1) * pageSize + 1}</span> to{" "}
+              <span className="font-semibold text-slate-800 dark:text-slate-200">{Math.min(currentPage * pageSize, filteredTractors.length)}</span> of{" "}
+              <span className="font-semibold text-slate-800 dark:text-slate-200">{filteredTractors.length}</span> store tractors
+            </span>
+
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              className="h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-medium focus:outline-none"
+            >
+              <option value={9}>9 / page</option>
+              <option value={18}>18 / page</option>
+              <option value={36}>36 / page</option>
+              <option value={72}>72 / page</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              disabled={currentPage === 1}
+              className="rounded-xl h-8 px-3 gap-1"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" /> Prev
+            </Button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
+              .map((p, idx, arr) => {
+                const prev = arr[idx - 1];
+                return (
+                  <span key={p} className="flex items-center">
+                    {prev && p - prev > 1 && <span className="px-1 text-slate-400">...</span>}
+                    <Button
+                      variant={currentPage === p ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(p)}
+                      className={`rounded-xl h-8 w-8 p-0 text-xs font-semibold ${
+                        currentPage === p
+                          ? "bg-amber-600 hover:bg-amber-700 text-white shadow-sm"
+                          : "border-slate-200 text-slate-700"
+                      }`}
+                    >
+                      {p}
+                    </Button>
+                  </span>
+                );
+              })}
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="rounded-xl h-8 px-3 gap-1"
+            >
+              Next <ChevronRight className="w-3.5 h-3.5" />
+            </Button>
           </div>
         </div>
       )}

@@ -1,954 +1,887 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Pagination, Autoplay } from "swiper/modules";
-import { Swiper, SwiperSlide } from "swiper/react";
-import "swiper/css";
-import "swiper/css/autoplay";
-import "swiper/css/navigation";
-import "swiper/css/pagination";
-import "swiper/css/scrollbar";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useCookie } from "next-cookie";
-import { Inventory, Store } from "@/utils/Types/types";
+import axios from "axios";
+import Link from "next/link";
+import Image from "next/image";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
-import Image from "next/image";
-import AddAttachment from "./AddAttachment";
-import { uploadFileToS3 } from "@/utils/AWS/FileUpload";
-import { format, setYear } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
+  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import AddIcon from "@mui/icons-material/Add";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { CalendarIcon } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import { Backdrop } from "@mui/material";
-import AddService from "./AddService";
+  Building2,
+  Tractor,
+  Layers,
+  Users,
+  MapPin,
+  Clock,
+  Calendar,
+  Phone,
+  Mail,
+  ArrowLeft,
+  RefreshCw,
+  Plus,
+  DollarSign,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  ShieldCheck,
+  CheckCircle2,
+  AlertCircle,
+  Sparkles,
+  Info,
+  Edit3,
+  Trash2,
+} from "lucide-react";
 
-// Category type for dropdown
-interface ServiceCategory {
+export interface SingleStoreTractor {
+  id: string;
+  hourly_price: number;
+  createdAt: string;
+  baseTractor?: {
+    id: string;
+    name: string;
+    model?: string;
+    type?: string;
+    description?: string;
+    year?: string | null;
+    images?: string[];
+  };
+}
+
+export interface SingleStoreAttachment {
+  id: string;
+  hourly_price: number;
+  createdAt: string;
+  attachment?: {
+    id: string;
+    name: string;
+    type?: string;
+    description?: string;
+    images?: string[];
+  };
+}
+
+export interface SingleStoreOperator {
+  id: string;
+  createdAt: string;
+  operator?: {
+    id: string;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    mobile?: string;
+    image?: string;
+  };
+}
+
+export interface StoreFullData {
   id: string;
   name: string;
+  description: string;
+  image?: string;
+  opening_time?: string;
+  closing_time?: string;
+  closing_days?: string[];
+  location?: {
+    id?: string;
+    name?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    zip_code?: string;
+    country?: string;
+  };
+  owner?: {
+    id?: string;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    mobile?: string;
+    image?: string;
+  };
+  tractor_in_store?: SingleStoreTractor[];
+  attachment_in_store?: SingleStoreAttachment[];
+  operator_in_store?: SingleStoreOperator[];
 }
 
 const SingleStore = () => {
-  const [fetchingStoreDetails, setFetchingStoreDetails] = useState(false);
-  const [storeDetails, setStoreDetails] = useState<Store | undefined>(undefined);
-
-  // ---- Category & services states (NEW) ----
-  const [allCategories, setAllCategories] = useState<ServiceCategory[]>([]);
-  const [allServices, setAllServices] = useState<any[]>([]); // raw from /store/get_all_services
-  const [storeServices, setStoreServices] = useState<any[]>([]); // services for this store
-  const [filteredServices, setFilteredServices] = useState<any[]>([]); // what we render
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [loadingCategories, setLoadingCategories] = useState(false);
-  const [loadingServices, setLoadingServices] = useState(false);
-  // -------------------------------------------
-
-  // Add tractor states
-  const [open, setOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [selectedTractorId, setSelectedTractorId] = useState("");
-  const [allTractors, setAllTractors] = useState<Inventory[]>([]);
-  const [fetchingRoles, setFetchingRoles] = useState(false);
-  const [hourlyPrice, setHourlyPrice] = useState<number | undefined>(undefined);
-  const [minPrice, setHMinPrice] = useState<number>(0);
-  const [maxPrice, setMaxPrice] = useState<number>(0);
-  const [document_number, set_document_number] = useState("");
-  const [expiry_date, set_expiry_date] = useState<Date | undefined>(undefined);
-  const [expiry_date_false, set_expiry_date_false] = useState(false);
-  const [expiry_date_year, set_expiry_date_year] = useState<number>(
-    new Date().getFullYear()
-  );
-  const [attachment, setattachment] = useState<File | null>(null);
-  const [inventory_id, set_inventoey_id] = useState("");
-
-  const { refresh } = useRouter();
-
   const { slug } = useParams();
-
+  const router = useRouter();
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
 
-  // --------------------------- Existing: fetchStoreDetails ---------------------------
-  function fetchStoreDetails() {
-    if (slug) {
-      setFetchingStoreDetails(true);
-      renderInstance
-        .get(`/store/${slug}`, {
-          headers: {
-            Authorization: `Bearer ${access_token}`,
-          },
-        })
-        .then((res) => {
-          setStoreDetails(res.data);
+  const [storeData, setStoreData] = useState<StoreFullData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"tractors" | "attachments" | "operators" | "details">("tractors");
 
-          // If storeDetails includes ServiceInStore, preliminarily set filteredServices
-          if (res.data && res.data.ServiceInStore) {
-            // keep fallback (in case allServices hasn't loaded yet)
-            setFilteredServices(res.data.ServiceInStore);
-          }
-        })
-        .catch((err) => {
-          errorMessage("Error fetching store details");
-          console.error("fetchStoreDetails error:", err);
-        })
-        .finally(() => {
-          setFetchingStoreDetails(false);
-        });
-    }
-  }
-  // -------------------------------------------------------------------------------
+  // Tractor Pagination
+  const [tractorPage, setTractorPage] = useState(1);
+  const [tractorPageSize] = useState(6);
+  const [tractorSearch, setTractorSearch] = useState("");
 
-  // --------------------------- NEW: fetch categories from /servicecategory ---------------------------
-  async function fetchCategories() {
-    setLoadingCategories(true);
+  // Add Tractor Modal State
+  const [addTractorOpen, setAddTractorOpen] = useState(false);
+  const [catalogTractors, setCatalogTractors] = useState<{ id: string; name: string; model: string }[]>([]);
+  const [selectedCatalogId, setSelectedCatalogId] = useState("");
+  const [newHourlyPrice, setNewHourlyPrice] = useState("25");
+  const [isAddingTractor, setIsAddingTractor] = useState(false);
+
+  // Time formatter
+  const formatTime = (timeStr?: string) => {
+    if (!timeStr) return "08:00 AM";
     try {
-      // include Authorization header if token is present (Categories API may require auth)
-      const headers = access_token ? { Authorization: `Bearer ${access_token}` } : {};
-      const res = await renderInstance.get("/servicecategory", { headers });
-      if (Array.isArray(res.data)) {
-        // Map to { id, name } only
-        const names = res.data.map((c: any) => ({ id: c.id, name: c.name }));
-        setAllCategories(names);
-      } else {
-        console.warn("Unexpected categories response:", res.data);
+      const d = new Date(timeStr);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       }
-    } catch (err) {
-      console.error("Error fetching categories:", err);
-      // Not fatal — categories list may be empty
-      errorMessage("Failed to load categories");
-    } finally {
-      setLoadingCategories(false);
-    }
-  }
-  // -----------------------------------------------------------------------------------------------
-
-  // --------------------------- NEW: fetch all services from /store/get_all_services ---------------------------
-  async function fetchAllServices() {
-    setLoadingServices(true);
-    try {
-      const headers = access_token ? { Authorization: `Bearer ${access_token}` } : {};
-      const res = await renderInstance.get("/store/get_all_services", { headers });
-      if (Array.isArray(res.data)) {
-        setAllServices(res.data);
-      } else {
-        console.warn("Unexpected get_all_services response:", res.data);
-      }
-    } catch (err) {
-      console.error("Error fetching all services:", err);
-      errorMessage("Failed to load services");
-    } finally {
-      setLoadingServices(false);
-    }
-  }
-  // -----------------------------------------------------------------------------------------------
-
-  // When storeDetails or allServices changes, compute services that belong to this store
-  useEffect(() => {
-    if (!storeDetails) {
-      setStoreServices([]);
-      setFilteredServices([]);
-      return;
-    }
-
-    // prefer allServices if present (filtered by store id), else fallback to storeDetails.ServiceInStore
-    if (allServices && allServices.length > 0) {
-      const sid = storeDetails.id;
-      const sServices = allServices.filter((item) => {
-        // many backends may have store under `store` object or `store_id`
-        const storeIdFromItem =
-          (item.store && item.store.id) || item.store_id || item.storeId || null;
-        return storeIdFromItem === sid;
-      });
-
-      setStoreServices(sServices);
-
-      // apply category filter
-      if (selectedCategory === "all") {
-        setFilteredServices(sServices);
-      } else {
-        const filtered = sServices.filter((srv) => {
-          return srv?.service?.category?.id === selectedCategory;
-        });
-        setFilteredServices(filtered);
-      }
-    } else {
-      // fallback to storeDetails.ServiceInStore if available
-      if (storeDetails.ServiceInStore) {
-        setStoreServices(storeDetails.ServiceInStore);
-        if (selectedCategory === "all") {
-          setFilteredServices(storeDetails.ServiceInStore);
-        } else {
-          const filtered = storeDetails.ServiceInStore.filter(
-            (srv: any) => srv?.service?.category?.id === selectedCategory
-          );
-          setFilteredServices(filtered);
-        }
-      } else {
-        setStoreServices([]);
-        setFilteredServices([]);
-      }
-    }
-  }, [storeDetails, allServices, selectedCategory]);
-  // -----------------------------------------------------------------------------------------------
-
-  // Add tractor to store functions (existing)
-  function fetchAllTractors() {
-    if (access_token) {
-      setFetchingRoles(true);
-      renderInstance
-        .get("/inventory")
-        .then((res) => {
-          if (res.status === 200) {
-            const availableTractors = res.data.filter(
-              (tractor: Inventory) =>
-                !storeDetails?.TractorInStore.some(
-                  (existingTractor) =>
-                    existingTractor.baseTractorId === tractor.tractor.id
-                )
-            );
-            setAllTractors(availableTractors);
-          }
-        })
-        .catch((err) => {
-          errorMessage("Error in fetching inventory lists");
-          console.error("fetchAllTractors error:", err);
-        })
-        .finally(() => {
-          setFetchingRoles(false);
-        });
-    } else errorMessage("Admin not logged in");
-  }
-
-  const handleExpiryDateChange = (newDate: Date | undefined) => {
-    if (newDate) {
-      const updatedDate = setYear(newDate, expiry_date_year);
-      set_expiry_date(updatedDate);
-      set_expiry_date_false(false);
+      return String(timeStr);
+    } catch {
+      return "08:00 AM";
     }
   };
 
-  useEffect(() => {
-    fetchAllTractors();
-  }, []); // run once
+  // Fetch Store Details
+  const fetchStore = useCallback(async () => {
+    if (!slug) return;
+    setLoading(true);
+    let loaded = false;
 
-  async function saveTractor() {
-    if (!hourlyPrice) {
-      errorMessage("Hourly price is needed");
-      return;
+    // 1. Try Next.js API / PostgreSQL first
+    try {
+      const res = await axios.get(`/api/store/${slug}`, { timeout: 6000 });
+      if (res.data && res.data.id) {
+        setStoreData(res.data);
+        loaded = true;
+      }
+    } catch (e) {
+      console.warn("Direct /api/store/[slug] notice:", e);
     }
 
-    if (!attachment) {
-      errorMessage("Give your tractor number plate photo");
-      return;
+    // 2. Fallback to /api/admin/stores/${slug}
+    if (!loaded) {
+      try {
+        const res = await axios.get(`/api/admin/stores/${slug}`, { timeout: 6000 });
+        if (res.data && res.data.id) {
+          setStoreData(res.data);
+          loaded = true;
+        }
+      } catch (_) {}
     }
 
-    if (!document_number) {
-      errorMessage("Manually enter the number plate details");
-      return;
-    }
-
-    if (hourlyPrice > maxPrice || hourlyPrice < minPrice) {
-      errorMessage(`Price should be between ${minPrice} and ${maxPrice}`);
-      return;
-    }
-
-    setCreating(true);
-
-    let attachmentLink = "";
-    if (attachment) {
-      const buffer = Buffer.from(await attachment.arrayBuffer());
-      attachmentLink = await uploadFileToS3(buffer, attachment.name);
-
-      if (!attachmentLink) {
-        errorMessage("Something went wrong in uploading the attachment");
-        setCreating(false);
-        return;
+    // 3. Fallback to renderInstance (NestJS)
+    if (!loaded) {
+      try {
+        const res = await renderInstance.get(`/store/${slug}`, {
+          headers: access_token ? { Authorization: `Bearer ${access_token}` } : {},
+        });
+        if (res.data) {
+          setStoreData(res.data);
+          loaded = true;
+        }
+      } catch (err) {
+        console.warn("RenderInstance fallback notice:", err);
       }
     }
 
-    const addTractorDto = {
-      tractor_ids: [selectedTractorId],
-      hourly_price: `${hourlyPrice}`,
-      store_id: slug,
-      inventory_id: inventory_id,
-      document_number,
-      attachment: attachmentLink,
-      expiry_date,
-    };
+    setLoading(false);
+  }, [slug, access_token]);
 
-    renderInstance
-      .post("/store/addTractors", addTractorDto, {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      })
-      .then((res) => {
-        successMessage("Successful");
-        setOpen(false);
-        fetchStoreDetails();
-        refresh();
-      })
-      .catch((err) => {
-        console.error("saveTractor error:", err);
-        errorMessage("Some error occurred");
-      })
-      .finally(() => {
-        setCreating(false);
-      });
-  }
+  // Fetch base catalog tractors for Quick Add Modal
+  const fetchCatalogTractors = useCallback(async () => {
+    try {
+      const res = await axios.get("/api/inventory");
+      if (Array.isArray(res.data)) {
+        const list = res.data.map((inv: any) => ({
+          id: inv.tractor?.id || inv.id,
+          name: inv.tractor?.name || "Tractor",
+          model: inv.tractor?.model || "Standard",
+        }));
+        setCatalogTractors(list);
+        if (list.length > 0) setSelectedCatalogId(list[0].id);
+      }
+    } catch (e) {
+      console.warn("Catalog fetch error:", e);
+    }
+  }, []);
 
   useEffect(() => {
-    // Run initial fetches whenever slug changes
-    fetchStoreDetails();
-    fetchCategories();
-    fetchAllServices();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
+    fetchStore();
+    fetchCatalogTractors();
+  }, [fetchStore, fetchCatalogTractors]);
 
-  function formatTimeOnly(dateTimeStr: string | number | Date) {
-    const date = new Date(dateTimeStr);
-    const hours = date.getUTCHours().toString().padStart(2, "0");
-    const minutes = date.getUTCMinutes().toString().padStart(2, "0");
-    const seconds = date.getUTCSeconds().toString().padStart(2, "0");
-    return `${hours}:${minutes}:${seconds}`;
+  // Quick Add Tractor to this store
+  const handleAddTractor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!slug || !selectedCatalogId) return;
+
+    setIsAddingTractor(true);
+    try {
+      const res = await axios.post("/api/admin/store-tractors", {
+        store_id: String(slug),
+        base_tractor_id: selectedCatalogId,
+        hourly_price: Number(newHourlyPrice) || 20.0,
+      });
+
+      if (res.data?.success) {
+        successMessage("Tractor added to this store successfully!");
+        setAddTractorOpen(false);
+        fetchStore();
+      } else {
+        errorMessage(res.data?.error || "Failed to add tractor");
+      }
+    } catch (err: any) {
+      errorMessage(err?.response?.data?.error || "Error adding tractor to store");
+    } finally {
+      setIsAddingTractor(false);
+    }
+  };
+
+  // Remove Tractor from this store
+  const handleRemoveTractor = async (tractorInStoreId: string, tractorName: string) => {
+    if (!window.confirm(`Are you sure you want to remove ${tractorName} from this store?`)) {
+      return;
+    }
+
+    try {
+      const res = await axios.delete(`/api/admin/store-tractors?id=${tractorInStoreId}`);
+      if (res.data?.success) {
+        successMessage(`${tractorName} removed from store.`);
+        fetchStore();
+      } else {
+        errorMessage(res.data?.error || "Failed to remove tractor");
+      }
+    } catch (err: any) {
+      errorMessage(err?.response?.data?.error || "Error removing tractor");
+    }
+  };
+
+  // Filtered & Paginated Tractors
+  const filteredTractors = useMemo(() => {
+    if (!storeData?.tractor_in_store) return [];
+    return storeData.tractor_in_store.filter((item) => {
+      const q = tractorSearch.toLowerCase();
+      const bt = item.baseTractor;
+      return (
+        q === "" ||
+        bt?.name?.toLowerCase().includes(q) ||
+        bt?.model?.toLowerCase().includes(q) ||
+        bt?.type?.toLowerCase().includes(q)
+      );
+    });
+  }, [storeData?.tractor_in_store, tractorSearch]);
+
+  const totalTractorPages = Math.ceil(filteredTractors.length / tractorPageSize) || 1;
+  const paginatedTractors = useMemo(() => {
+    const start = (tractorPage - 1) * tractorPageSize;
+    return filteredTractors.slice(start, start + tractorPageSize);
+  }, [filteredTractors, tractorPage, tractorPageSize]);
+
+  if (loading) {
+    return (
+      <div className="w-full py-12 flex flex-col items-center justify-center space-y-4">
+        <RefreshCw className="w-8 h-8 animate-spin text-emerald-600" />
+        <p className="text-sm font-medium text-slate-500">Loading store details and inventory...</p>
+      </div>
+    );
   }
 
-  function formatDateOnly(dateTimeStr: string | number | Date) {
-    const date = new Date(dateTimeStr);
-    const year = date.getUTCFullYear().toString();
-    const month = (date.getUTCMonth() + 1).toString().padStart(2, "0"); // Months are zero-based
-    const day = date.getUTCDate().toString().padStart(2, "0");
-    return `${year}-${month}-${day}`;
+  if (!storeData) {
+    return (
+      <div className="w-full py-12 max-w-4xl mx-auto text-center space-y-4">
+        <Building2 className="w-12 h-12 text-slate-400 mx-auto" />
+        <h2 className="text-xl font-bold text-slate-900">Store Not Found</h2>
+        <p className="text-sm text-slate-500">The requested store hub could not be located or has been archived.</p>
+        <Link href="/Store">
+          <Button variant="outline" className="rounded-xl">
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Stores
+          </Button>
+        </Link>
+      </div>
+    );
   }
 
-  function formatAddress(address: {
-    address: string;
-    city: string;
-    state: string;
-    country: string;
-    zip_code: string;
-  }) {
-    const { address: street, city, state, country, zip_code } = address;
-
-    return `${street}, ${city}, ${state}, ${zip_code}, ${country}`;
-  }
-
-  if (fetchingStoreDetails) {
-    return <div>Loading...</div>;
-  }
-
-  if (!storeDetails) {
-    return <div>No store details details available.</div>;
-  }
+  const tractorsCount = storeData.tractor_in_store?.length || 0;
+  const attachmentsCount = storeData.attachment_in_store?.length || 0;
+  const operatorsCount = storeData.operator_in_store?.length || 0;
 
   return (
-    <div className="py-[30px] w-full flex flex-col gap-[30px]">
-      <div className="w-full grid grid-cols-3 gap-[20px]">
-        <div className="px-[20px] py-[20px] rounded-md bg-white flex flex-col gap-[10px]">
-          <p className="text-[16px] text-gray-600">Store name</p>
+    <div className="w-full py-6 space-y-6 max-w-7xl mx-auto">
+      {/* 1. Navigation & Quick Back */}
+      <div className="flex items-center justify-between">
+        <Link
+          href="/Store"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-emerald-600 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to Store Directory
+        </Link>
 
-          <p className="text-[20px] font-[600]">{storeDetails.name}</p>
-        </div>
-
-        <div className="px-[20px] py-[20px] rounded-md bg-white flex flex-col gap-[10px]">
-          <p className="text-[16px] text-gray-600">Store owner</p>
-
-          <p className="text-[20px] font-[600]">
-            {storeDetails.agentOwner
-              ? `${storeDetails.agentOwner.user.first_name} ${
-                  storeDetails.agentOwner.user.middle_name ?? ""
-                } ${storeDetails.agentOwner.user.last_name}`
-              : `${storeDetails.owner.user.first_name} ${
-                  storeDetails.owner.user.middle_name ?? ""
-                } ${storeDetails.owner.user.last_name}`}
-          </p>
-        </div>
-
-        <div className="px-[20px] py-[20px] rounded-md bg-white flex flex-col gap-[10px]">
-          <p className="text-[16px] text-gray-600">Opening time</p>
-
-          <p className="text-[20px] font-[600]">
-            {formatTimeOnly(storeDetails.opening_time)}
-          </p>
-        </div>
-
-        <div className="px-[20px] py-[20px] rounded-md bg-white flex flex-col gap-[10px]">
-          <p className="text-[16px] text-gray-600">Closing time</p>
-
-          <p className="text-[20px] font-[600]">
-            {formatTimeOnly(storeDetails.closing_time)}
-          </p>
-        </div>
-
-        <div className="px-[20px] py-[20px] rounded-md bg-white flex flex-col gap-[10px]">
-          <p className="text-[16px] text-gray-600">Closed days</p>
-
-          <p className="text-[20px] font-[600]">
-            {storeDetails.closing_days.map((day) => {
-              return <li key={day}>{day}</li>;
-            })}
-          </p>
-        </div>
-
-        <div className="px-[20px] py-[20px] rounded-md bg-white flex flex-col gap-[10px] col-span-2">
-          <p className="text-[16px] text-gray-600">Description</p>
-
-          <p className="text-[20px] font-[600]">{storeDetails.description}</p>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchStore}
+            className="rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 gap-1.5 h-9"
+          >
+            <RefreshCw className="w-3.5 h-3.5" /> Refresh
+          </Button>
+          <Link href={`/Store/${slug}/booking`}>
+            <Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold h-9 px-4 gap-1.5 shadow-md shadow-emerald-600/20">
+              <Sparkles className="w-3.5 h-3.5" /> Store Bookings
+            </Button>
+          </Link>
         </div>
       </div>
 
-      <div className="w-full grid grid-cols-2 gap-[20px]">
-        {storeDetails.image && (
-          <div className="w-full h-[400px] flex items-center justify-center">
-            <Image
-              src={storeDetails.image}
-              alt="tractor_image"
-              className="w-full h-full object-cover rounded-xl"
-              width={300}
-              height={400}
-              unoptimized={true}
+      {/* 2. Hero Store Header */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-sm">
+        {/* Banner with Gradient Overlay */}
+        <div className="relative h-64 md:h-80 w-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+          {storeData.image ? (
+            <img
+              src={storeData.image}
+              alt={storeData.name}
+              className="w-full h-full object-cover"
             />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-tr from-emerald-800 to-teal-600 text-white/50">
+              <Building2 className="w-20 h-20 opacity-40" />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent" />
+
+          {/* Location & Status Badges */}
+          <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+            <span className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-black/60 backdrop-blur-md text-white border border-white/15 flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+              {storeData.location?.city || storeData.location?.name || "Regional Hub"}
+              {storeData.location?.country ? `, ${storeData.location.country}` : ""}
+            </span>
+
+            <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-500 text-white shadow-lg flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Operational Hub
+            </span>
           </div>
+
+          {/* Store Title & Quick Info */}
+          <div className="absolute bottom-6 left-6 right-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div className="space-y-2">
+              <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+                {storeData.name}
+              </h1>
+              <p className="text-sm text-slate-200/90 max-w-2xl line-clamp-2">
+                {storeData.description || "Primary agricultural hub for machinery leasing, implements, and certified operators."}
+              </p>
+            </div>
+
+            {/* Quick Timing Pill */}
+            <div className="flex items-center gap-3 bg-black/50 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/10 text-white text-xs">
+              <Clock className="w-4 h-4 text-emerald-400" />
+              <div>
+                <p className="font-semibold">{formatTime(storeData.opening_time)} - {formatTime(storeData.closing_time)}</p>
+                <p className="text-slate-300 text-[11px]">
+                  {storeData.closing_days?.length ? `Closed: ${storeData.closing_days.join(", ")}` : "Open 7 Days"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Owner & Hub Contact Bar */}
+        <div className="p-4 md:p-6 bg-slate-50/70 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4 text-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm">
+              {storeData.owner?.first_name?.charAt(0) || "H"}
+            </div>
+            <div>
+              <p className="font-bold text-slate-900 dark:text-white text-sm">
+                {storeData.owner?.first_name ? `${storeData.owner.first_name} ${storeData.owner.last_name || ""}` : "System Admin / Dealer"}
+              </p>
+              <p className="text-slate-500">{storeData.owner?.email || "hub@holatractor.com"}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6 text-slate-600 dark:text-slate-300">
+            {storeData.owner?.mobile && (
+              <div className="flex items-center gap-1.5">
+                <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="font-medium">{storeData.owner.mobile}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+              <span>{storeData.location?.address || "Hub Facilities, Central Sector"}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. KPI Metrics Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center font-bold">
+            <Tractor className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 font-medium">Tractors Fleet</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{tractorsCount}</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 flex items-center justify-center font-bold">
+            <Layers className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 font-medium">Attachments</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{attachmentsCount}</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 flex items-center justify-center font-bold">
+            <Users className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 font-medium">Certified Drivers</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{operatorsCount}</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center font-bold">
+            <Sparkles className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 font-medium">Hub Status</p>
+            <p className="text-lg font-bold text-emerald-600">Active / Verified</p>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Tabbed Content Header */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl">
+          <button
+            onClick={() => setActiveTab("tractors")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              activeTab === "tractors"
+                ? "bg-white dark:bg-slate-700 text-emerald-600 shadow-sm"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Tractor className="w-4 h-4" />
+            Tractors ({tractorsCount})
+          </button>
+
+          <button
+            onClick={() => setActiveTab("attachments")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              activeTab === "attachments"
+                ? "bg-white dark:bg-slate-700 text-emerald-600 shadow-sm"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            Attachments ({attachmentsCount})
+          </button>
+
+          <button
+            onClick={() => setActiveTab("operators")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              activeTab === "operators"
+                ? "bg-white dark:bg-slate-700 text-emerald-600 shadow-sm"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            Operators ({operatorsCount})
+          </button>
+
+          <button
+            onClick={() => setActiveTab("details")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              activeTab === "details"
+                ? "bg-white dark:bg-slate-700 text-emerald-600 shadow-sm"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <Info className="w-4 h-4" />
+            Hub Info & Timings
+          </button>
+        </div>
+
+        {/* Action Button for Current Tab */}
+        {activeTab === "tractors" && (
+          <Dialog open={addTractorOpen} onOpenChange={setAddTractorOpen}>
+            <DialogTrigger asChild>
+              <Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold gap-1.5 h-10 px-4 shadow-md shadow-emerald-600/20">
+                <Plus className="w-4 h-4" /> Add Tractor to Store
+              </Button>
+            </DialogTrigger>
+
+            <DialogContent className="max-w-md p-6 rounded-2xl">
+              <DialogHeader>
+                <DialogTitle className="text-lg font-bold flex items-center gap-2 text-slate-900">
+                  <Tractor className="w-5 h-5 text-emerald-600" />
+                  Assign Tractor to {storeData.name}
+                </DialogTitle>
+              </DialogHeader>
+
+              <form onSubmit={handleAddTractor} className="space-y-4 pt-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase text-slate-600">
+                    Select Tractor Model *
+                  </Label>
+                  <select
+                    value={selectedCatalogId}
+                    onChange={(e) => setSelectedCatalogId(e.target.value)}
+                    required
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    {catalogTractors.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({t.model})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase text-slate-600">
+                    Hourly Rental Rate ($/hr) *
+                  </Label>
+                  <div className="relative">
+                    <DollarSign className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Input
+                      type="number"
+                      step="0.5"
+                      min="1"
+                      placeholder="25.00"
+                      value={newHourlyPrice}
+                      onChange={(e) => setNewHourlyPrice(e.target.value)}
+                      required
+                      className="pl-9 rounded-xl"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setAddTractorOpen(false)}
+                    className="rounded-xl"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isAddingTractor}
+                    className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 gap-2"
+                  >
+                    {isAddingTractor ? "Assigning..." : "Assign Tractor"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         )}
       </div>
 
-      <div className="w-full space-y-2">
-        <div className="w-full flex items-center justify-between gap-5 flex-wrap">
-          <p className="text-xl font-medium">
-            Total tractors: {storeDetails.TractorInStore.length}
-          </p>
-
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <button
-                name="new_tractor_add"
-                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto"
-                onClick={() => {
-                  setOpen(true);
+      {/* 5. TAB: TRACTORS IN STORE */}
+      {activeTab === "tractors" && (
+        <div className="space-y-5">
+          {/* Tractor Search Bar */}
+          {tractorsCount > 0 && (
+            <div className="relative max-w-sm">
+              <Input
+                placeholder="Search tractors in this store..."
+                value={tractorSearch}
+                onChange={(e) => {
+                  setTractorSearch(e.target.value);
+                  setTractorPage(1);
                 }}
+                className="rounded-xl h-10 pl-4"
+              />
+            </div>
+          )}
+
+          {tractorsCount === 0 ? (
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 p-12 text-center space-y-4">
+              <Tractor className="w-12 h-12 text-slate-400 mx-auto" />
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Tractors in this Store</h3>
+              <p className="text-sm text-slate-500 max-w-md mx-auto">
+                No tractors are currently assigned to this store hub. Assign machinery using the button above.
+              </p>
+              <Button
+                onClick={() => setAddTractorOpen(true)}
+                className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
               >
-                <AddIcon />
-                <span>Add tractor</span>
-              </button>
-            </DialogTrigger>
+                <Plus className="w-4 h-4 mr-2" /> Add First Tractor
+              </Button>
+            </div>
+          ) : (
+            <>
+              {/* Tractors Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {paginatedTractors.map((item) => {
+                  const bt = item.baseTractor;
+                  const img =
+                    bt?.images && bt.images.length > 0
+                      ? bt.images[0]
+                      : "https://images.unsplash.com/photo-1592878904946-b3cd8ae243d0?w=800&q=80";
 
-            <DialogContent
-              className="bg-white max-h-[90vh] w-[90vw] max-w-[900px] overflow-auto"
-              style={{ scrollbarWidth: "none" }}
-            >
-              <DialogHeader>
-                <p className="text-2xl font-bold text-center">
-                  {selectedTractorId
-                    ? "Give the following details"
-                    : "Select a tractor"}
-                </p>
-              </DialogHeader>
-
-              <div
-                className={`bg-white rounded-xl p-[30px] ${
-                  !selectedTractorId && "grid grid-cols-4"
-                } gap-5 relative overflow-auto`}
-                style={{ scrollbarWidth: "none" }}
-              >
-                {fetchingRoles ? (
-                  "Wait a minute. Loading..."
-                ) : allTractors.length === 0 ? (
-                  "No tractors available to show"
-                ) : selectedTractorId ? (
-                  <div className="w-full h-full flex flex-col items-center justify-center gap-5">
-                    <div className="flex flex-col gap-[4px] w-full">
-                      <Label>Hourly price</Label>
-                      <Input
-                        type="number"
-                        placeholder="Give hourly price"
-                        value={hourlyPrice}
-                        onChange={(e) => {
-                          setHourlyPrice(Number(e.target.value));
-                        }}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-center w-full">
-                      {attachment ? (
-                        <Image
-                          src={URL.createObjectURL(attachment)}
-                          alt={attachment.name}
-                          unoptimized={true}
-                          className="w-52 aspect-square rounded-md object-cover"
-                          width={200}
-                          height={200}
+                  return (
+                    <div
+                      key={item.id}
+                      className="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 transition-all overflow-hidden flex flex-col justify-between"
+                    >
+                      <div className="relative h-44 w-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                        <img
+                          src={img}
+                          alt={bt?.name || "Tractor"}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
-                      ) : (
-                        <label
-                          htmlFor="dropzone-file"
-                          className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50"
-                        >
-                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                            <svg
-                              className="w-8 h-8 mb-4 text-gray-500 dark:text-gray-400"
-                              aria-hidden="true"
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 20 16"
-                            >
-                              <path
-                                stroke="currentColor"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
-                              />
-                            </svg>
-                            <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                              <span className="font-semibold">
-                                Click to upload
-                              </span>{" "}
-                              or drag and drop
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              SVG, PNG, JPG or GIF (MAX. 800x400px)
-                            </p>
-                          </div>
-                          <input
-                            id="dropzone-file"
-                            type="file"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files
-                                ? e.target.files[0]
-                                : null;
-                              if (file) {
-                                setattachment(file);
-                              }
-                            }}
-                          />
-                        </label>
-                      )}
-                    </div>
-                    <div className="space-y-1 w-full">
-                      <Label htmlFor="liscenceNumber">
-                        Tractor number plate
-                      </Label>
-                      <Input
-                        id="liscenceNumber"
-                        placeholder="e.g - es0012390"
-                        value={document_number}
-                        onChange={(e) => {
-                          set_document_number(e.target.value);
-                        }}
-                      />
-                    </div>
-                    <Popover
-                      open={expiry_date_false}
-                      onOpenChange={set_expiry_date_false}
-                    >
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !expiry_date && "text-muted-foreground"
-                          )}
-                          onClick={() => {
-                            set_expiry_date_false(true);
-                          }}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {expiry_date ? (
-                            format(expiry_date, "PPP")
-                          ) : (
-                            <span>Expiry date</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="flex w-full flex-col space-y-2 p-2">
-                        <Select
-                          onValueChange={(value) =>
-                            set_expiry_date_year(parseInt(value))
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Year" />
-                          </SelectTrigger>
-                          <SelectContent position="popper">
-                            {[...Array(30)].map((_, index) => {
-                              const yearValue =
-                                new Date().getFullYear() + index;
-                              return (
-                                <SelectItem
-                                  key={yearValue}
-                                  value={yearValue.toString()}
-                                >
-                                  {yearValue}
-                                </SelectItem>
-                              );
-                            })}
-                          </SelectContent>
-                        </Select>
-                        <div className="rounded-md border">
-                          <Calendar
-                            mode="single"
-                            selected={expiry_date}
-                            onSelect={handleExpiryDateChange}
-                          />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                        <div className="absolute top-3 right-3">
+                          <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-500 text-white shadow-sm">
+                            ${item.hourly_price}/hr
+                          </span>
                         </div>
-                      </PopoverContent>
-                    </Popover>
-
-                    <button
-                      className="px-5 py-2 bg-black text-white rounded-md mx-auto"
-                      name="save tractor button"
-                      onClick={() => {
-                        saveTractor();
-                      }}
-                    >
-                      Save
-                    </button>
-                  </div>
-                ) : (
-                  allTractors.map((details, index) => {
-                    return (
-                      <div
-                        key={index}
-                        className={`border-2 rounded-xl flex flex-col gap-5 p-2`}
-                      >
-                        {details.tractor.images.length === 0 ? (
-                          <Image
-                            src={"https://wallpapercave.com/wp/wp13088808.jpg"}
-                            alt="tractor_image"
-                            className="w-full h-32 object-cover rounded-xl"
-                            width={300}
-                            height={400}
-                            unoptimized={true}
-                          />
-                        ) : (
-                          <Swiper
-                            modules={[Autoplay, Pagination]}
-                            spaceBetween={0}
-                            slidesPerView={1}
-                            loop={true}
-                            pagination={true}
-                            autoplay={true}
-                            className="w-full h-full"
-                          >
-                            {details.tractor.images.map((image, i) => {
-                              return (
-                                <SwiperSlide key={i}>
-                                  <Image
-                                    src={image}
-                                    alt="tractor_image"
-                                    className="w-full h-full object-cover rounded-xl"
-                                    width={300}
-                                    height={400}
-                                    unoptimized={true}
-                                  />
-                                </SwiperSlide>
-                              );
-                            })}
-                          </Swiper>
-                        )}
-
-                        <div>
-                          <strong>{details.tractor.name}</strong>
-                          <p>
-                            <strong>Model:</strong>
-                            <span>{details.tractor.model}</span>
+                        <div className="absolute bottom-3 left-3 right-3">
+                          <h3 className="text-lg font-bold text-white tracking-tight truncate">
+                            {bt?.name || "Tractor Unit"}
+                          </h3>
+                          <p className="text-xs text-slate-200/80 truncate">
+                            Model: {bt?.model || "Standard"} • {bt?.type || "Medium"}
                           </p>
                         </div>
-
-                        <button
-                          name="select button"
-                          className="px-4 py-2 bg-black text-white rounded-md mx-auto w-full"
-                          onClick={() => {
-                            setSelectedTractorId(details.tractor_id);
-                            setHMinPrice(Number(details.min_price));
-                            setMaxPrice(Number(details.max_price));
-                            set_inventoey_id(details.id);
-                          }}
-                        >
-                          Select
-                        </button>
                       </div>
-                    );
-                  })
-                )}
+
+                      <div className="p-5 space-y-4">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-500">Hourly Rate:</span>
+                          <span className="font-bold text-emerald-600 text-sm">
+                            ${item.hourly_price}.00/hr
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                          <Link
+                            href={`/Inventory/${bt?.id || item.id}`}
+                            className="flex-1 text-center py-2 rounded-xl bg-slate-100 hover:bg-emerald-600 hover:text-white font-medium text-xs transition-colors"
+                          >
+                            View Specs
+                          </Link>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveTractor(item.id, bt?.name || "Tractor")}
+                            className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl"
+                            title="Remove from Store"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
-              <Backdrop
-                sx={{
-                  color: "#fff",
-                  zIndex: (theme) => theme.zIndex.drawer + 1,
-                }}
-                open={creating}
-              >
-                {creating && <p>Adding to store</p>}
-              </Backdrop>
-            </DialogContent>
-          </Dialog>
-        </div>
+              {/* Tractors Pagination Bar */}
+              {totalTractorPages > 1 && (
+                <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm text-xs">
+                  <span className="text-slate-500">
+                    Showing {(tractorPage - 1) * tractorPageSize + 1} to{" "}
+                    {Math.min(tractorPage * tractorPageSize, filteredTractors.length)} of{" "}
+                    {filteredTractors.length} tractors
+                  </span>
 
-        <div className="w-full grid grid-cols-3 gap-[20px]">
-          {storeDetails.TractorInStore.length === 0 ? (
-            <p>You have not added any inventory</p>
-          ) : (
-            storeDetails.TractorInStore.map((stock, i) => {
-              return (
-                <div
-                  key={i}
-                  className={`border-2 rounded-xl w-full flex flex-col gap-5 p-2`}
-                >
-                  {stock.baseTractor.images.length === 0 ? (
-                    <Image
-                      src={"https://wallpapercave.com/wp/wp13088808.jpg"}
-                      alt="tractor_image"
-                      className="w-full h-32 object-cover rounded-xl"
-                      width={300}
-                      height={400}
-                      unoptimized={true}
-                    />
-                  ) : (
-                    <Swiper
-                      modules={[Autoplay, Pagination]}
-                      spaceBetween={0}
-                      slidesPerView={1}
-                      loop={true}
-                      pagination={true}
-                      autoplay={true}
-                      className="w-full h-full"
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTractorPage((p) => Math.max(p - 1, 1))}
+                      disabled={tractorPage === 1}
+                      className="rounded-xl h-8 px-2.5"
                     >
-                      {stock.baseTractor.images.map((image, i) => {
-                        return (
-                          <SwiperSlide key={i}>
-                            <Image
-                              src={image}
-                              alt="tractor_image"
-                              className="w-full h-full object-cover rounded-xl"
-                              width={300}
-                              height={400}
-                              unoptimized={true}
-                            />
-                          </SwiperSlide>
-                        );
-                      })}
-                    </Swiper>
-                  )}
-
-                  <div>
-                    <strong>{stock.baseTractor.name}</strong>
-                    <p>
-                      <strong>Model:</strong>
-                      <span>{stock.baseTractor.model}</span>
-                    </p>
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </Button>
+                    {Array.from({ length: totalTractorPages }, (_, i) => i + 1).map((p) => (
+                      <Button
+                        key={p}
+                        variant={tractorPage === p ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setTractorPage(p)}
+                        className={`rounded-xl h-8 w-8 p-0 ${
+                          tractorPage === p ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""
+                        }`}
+                      >
+                        {p}
+                      </Button>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTractorPage((p) => Math.min(p + 1, totalTractorPages))}
+                      disabled={tractorPage === totalTractorPages}
+                      className="rounded-xl h-8 px-2.5"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </Button>
                   </div>
                 </div>
-              );
-            })
+              )}
+            </>
           )}
         </div>
-      </div>
-      {/* Attachment */}
-      <div className="w-full space-y-2">
-        <div className="w-full flex items-center justify-between gap-5 flex-wrap">
-          <p className="text-xl font-medium">
-            Total attachment: {storeDetails.AttachmentInStore.length}
-          </p>
+      )}
 
-          <AddAttachment alreadyTractors={storeDetails.AttachmentInStore} />
-        </div>
-
-        <div className="w-full grid grid-cols-3 gap-[20px]">
-          {storeDetails.AttachmentInStore.length === 0 ? (
-            <p>You have not added any inventory</p>
+      {/* 6. TAB: ATTACHMENTS */}
+      {activeTab === "attachments" && (
+        <div className="space-y-5">
+          {attachmentsCount === 0 ? (
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 p-12 text-center space-y-4">
+              <Layers className="w-12 h-12 text-slate-400 mx-auto" />
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Attachments Assigned</h3>
+              <p className="text-sm text-slate-500 max-w-md mx-auto">
+                No agricultural implements or attachments are currently stored in this hub.
+              </p>
+            </div>
           ) : (
-            storeDetails.AttachmentInStore.map((stock, i) => {
-              return (
-                <div
-                  key={i}
-                  className={`border-2 rounded-xl w-full flex flex-col gap-5 p-2`}
-                >
-                  {stock.baseAttachment.images.length === 0 ? (
-                    <Image
-                      src={"https://wallpapercave.com/wp/wp13088808.jpg"}
-                      alt="tractor_image"
-                      className="w-full h-32 object-cover rounded-xl"
-                      width={300}
-                      height={400}
-                      unoptimized={true}
-                    />
-                  ) : (
-                    <Swiper
-                      modules={[Autoplay, Pagination]}
-                      spaceBetween={0}
-                      slidesPerView={1}
-                      loop={true}
-                      pagination={true}
-                      autoplay={true}
-                      className="w-full h-full"
-                    >
-                      {stock.baseAttachment.images.map((image, i) => {
-                        return (
-                          <SwiperSlide key={i}>
-                            <Image
-                              src={image}
-                              alt="tractor_image"
-                              className="w-full h-full object-cover rounded-xl"
-                              width={300}
-                              height={400}
-                              unoptimized={true}
-                            />
-                          </SwiperSlide>
-                        );
-                      })}
-                    </Swiper>
-                  )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {storeData.attachment_in_store?.map((item) => {
+                const att = item.attachment;
+                const img =
+                  att?.images && att.images.length > 0
+                    ? att.images[0]
+                    : "https://images.unsplash.com/photo-1595878715977-2e8f8df18ea8?w=800&q=80";
 
-                  <div>
-                    <strong>{stock.baseAttachment.name}</strong>
-                    <p>
-                      <strong>Model:</strong>
-                      <span>{stock.baseAttachment.description}</span>
-                    </p>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
-
-      {/* Services */}
-      <div className="w-full space-y-2">
-        <div className="w-full flex items-center justify-between gap-5 flex-wrap">
-          <p className="text-xl font-medium">
-            Total services: {filteredServices.length}
-          </p>
-          <div>
-            <AddService
-              storeId={storeDetails.id}
-              alreadyServices={storeDetails.ServiceInStore ?? []}
-            />
-          </div>
-        </div>
-
-        {/* Category Filter */}
-        <div className="flex items-center gap-3">
-          <p className="text-sm font-medium">Category:</p>
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="all">All Categories</option>
-            {allCategories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Service cards grid */}
-        <div className="w-full grid grid-cols-3 gap-[20px]">
-          {filteredServices.length > 0 ? (
-            filteredServices.map((srv: any, i: number) => {
-              const service = srv.service; // base service info
-
-              if (!service) {
                 return (
                   <div
-                    key={i}
-                    className="border-2 rounded-xl w-full flex flex-col gap-3 p-3"
+                    key={item.id}
+                    className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 space-y-4 shadow-sm"
                   >
-                    <Image
-                      src="https://wallpapercave.com/wp/wp13088808.jpg"
-                      alt="no_service_image"
-                      className="w-full h-[250px] object-cover rounded-xl"
-                      width={300}
-                      height={400}
-                      unoptimized={true}
-                    />
-                    <div className="overflow-hidden">
-                      <strong className="block truncate text-sm">
-                        Unknown Service
-                      </strong>
-                      <p className="text-xs text-gray-600 line-clamp-2 h-10 overflow-hidden">
-                        No description available
-                      </p>
-                      <p className="text-sm font-medium mt-1">
-                        <strong>Price:</strong>{" "}
-                        <span>{srv.hourly_price || "N/A"}</span>
-                      </p>
+                    <div className="h-40 w-full rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800">
+                      <img src={img} alt={att?.name || "Attachment"} className="w-full h-full object-cover" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 dark:text-white text-base">{att?.name || "Implement"}</h4>
+                      <p className="text-xs text-slate-500 capitalize">{att?.type || "Standard Equipment"}</p>
+                    </div>
+                    <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-100 dark:border-slate-800">
+                      <span className="text-slate-500">Rental Rate:</span>
+                      <span className="font-bold text-blue-600 text-sm">${item.hourly_price}/hr</span>
                     </div>
                   </div>
                 );
-              }
-
-              const serviceImage =
-                service.image && service.image.length > 0
-                  ? service.image
-                  : "https://wallpapercave.com/wp/wp13088808.jpg";
-
-              return (
-                <div
-                  key={i}
-                  className="border-2 rounded-xl w-full flex flex-col gap-3 p-3"
-                >
-                  <Image
-                    src={serviceImage}
-                    alt={service.name || "service_image"}
-                    className="w-full h-[300px] object-cover rounded-xl"
-                    width={300}
-                    height={400}
-                    unoptimized={true}
-                  />
-
-                  <div className="overflow-hidden">
-                    <strong className="block truncate text-sm">
-                      {service.name || "Unnamed Service"}
-                    </strong>
-                    <p className="text-xs text-gray-600 line-clamp-2 h-10 overflow-hidden">
-                      {service.description || "No description available"}
-                    </p>
-                    <p className="text-sm font-medium mt-1">
-                      <strong>Price:</strong>{" "}
-                      <span>{srv.hourly_price || "N/A"}</span>
-                    </p>
-                    {service.category && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        Category: {service.category.name}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <p className="col-span-3">No services available for the selected category.</p>
+              })}
+            </div>
           )}
         </div>
-      </div>
+      )}
+
+      {/* 7. TAB: OPERATORS */}
+      {activeTab === "operators" && (
+        <div className="space-y-5">
+          {operatorsCount === 0 ? (
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 p-12 text-center space-y-4">
+              <Users className="w-12 h-12 text-slate-400 mx-auto" />
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Certified Drivers Assigned</h3>
+              <p className="text-sm text-slate-500 max-w-md mx-auto">
+                No certified tractor drivers are currently stationed at this hub.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {storeData.operator_in_store?.map((item) => {
+                const op = item.operator;
+                return (
+                  <div
+                    key={item.id}
+                    className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 space-y-3 shadow-sm flex items-center gap-4"
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-lg shrink-0">
+                      {op?.first_name?.charAt(0) || "D"}
+                    </div>
+                    <div className="space-y-0.5">
+                      <h4 className="font-bold text-slate-900 dark:text-white text-sm">
+                        {op?.first_name} {op?.last_name}
+                      </h4>
+                      <p className="text-xs text-slate-500">{op?.email}</p>
+                      {op?.mobile && <p className="text-xs text-purple-600 font-medium">{op?.mobile}</p>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 8. TAB: STORE DETAILS & TIMINGS */}
+      {activeTab === "details" && (
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 md:p-8 space-y-6 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-emerald-600" />
+                Store Facility Overview
+              </h3>
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                {storeData.description || "Certified agricultural logistics hub offering tractor rentals, attachments, and certified drivers."}
+              </p>
+
+              <div className="space-y-2 pt-2 text-xs">
+                <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                  <span className="text-slate-500">Hub ID:</span>
+                  <span className="font-mono font-medium">{storeData.id}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                  <span className="text-slate-500">Hub Location:</span>
+                  <span className="font-medium">
+                    {storeData.location?.address}, {storeData.location?.city}, {storeData.location?.country}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Clock className="w-5 h-5 text-emerald-600" />
+                Operating Hours & Availability
+              </h3>
+
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 space-y-3 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Daily Operating Window:</span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {formatTime(storeData.opening_time)} - {formatTime(storeData.closing_time)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Scheduled Closing Days:</span>
+                  <span className="font-semibold text-rose-600">
+                    {storeData.closing_days?.length ? storeData.closing_days.join(", ") : "None (Open 7 Days)"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
