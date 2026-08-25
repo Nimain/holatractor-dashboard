@@ -23,8 +23,76 @@ import SwitchAccountModal from "../wrappers/SwitchAccountModal";
 import PasswordlessPushLogin from "./PasswordlessPushLogin";
 import FarmerBrandIcon from "@/components/Common/FarmerBrandIcon";
 
+const loginTranslations = {
+  es: {
+    fleetOS: "Sistema de Flota",
+    networkSubtitle: "Red de Maquinaria Agrícola",
+    tractorAILive: "TractorAI En Vivo",
+    heroBadge: "Centro de Flota y Gestión Agrícola de Última Generación",
+    heroHeading: "Despacho continuo de maquinaria, agricultura de precisión y telemetría en un solo espacio.",
+    heroDescription: "Administra los límites de tus terrenos, asignación de tractores, facturación y horarios de operadores con seguridad biométrica en tiempo real.",
+    zeroPasswordPush: "Push Sin Contraseña",
+    zeroPasswordDesc: "Verificación biométrica en 1 toque en tu teléfono",
+    protection256: "Protección de 256 Bits",
+    protection256Desc: "Gestión de sesiones empresariales de confianza cero",
+    soc2Encrypted: "🔒 Encriptación SOC-2",
+    welcomeBack: "Bienvenido de nuevo",
+    welcomeSubtitle: "Inicia sesión para gestionar tus operaciones de maquinaria, parcelas y telemetría de flota.",
+    tabMobilePush: "Push Móvil",
+    tabPassword: "🔑 Contraseña",
+    fastBadge: "Rápido",
+    emailLabel: "Correo Electrónico",
+    emailPlaceholder: "ej. agricultor@holatractor.com",
+    passwordLabel: "Contraseña",
+    passwordPlaceholder: "Introduce tu contraseña",
+    forgotPassword: "¿Olvidaste tu contraseña?",
+    signInPasswordBtn: "Iniciar Sesión con Contraseña",
+    orContinueWith: "O continúa con",
+    noAccount: "¿No tienes una cuenta en HolaTractor?",
+    createAccount: "Crear una cuenta",
+    securityFooter: "Protegido por HolaTractor con protocolos biométricos y seguridad TLS de 256 bits",
+    allFieldsRequired: "Por favor completa todos los campos",
+    loginSuccess: "¡Inicio de sesión exitoso!",
+    invalidCredentials: "Correo o contraseña inválidos. Inténtalo de nuevo.",
+    secureAccess: "Acceso Seguro",
+  },
+  en: {
+    fleetOS: "Fleet OS",
+    networkSubtitle: "Agricultural Machinery Network",
+    tractorAILive: "TractorAI Live",
+    heroBadge: "Next-Generation Autonomous Fleet & Farm Hub",
+    heroHeading: "Seamless machinery dispatching, precision farming & telemetry in one unified workspace.",
+    heroDescription: "Manage your land boundaries, tractor allocations, billing, and operator schedules with real-time biometric push security.",
+    zeroPasswordPush: "Zero-Password Push",
+    zeroPasswordDesc: "1-Tap number match biometric verification on phone",
+    protection256: "256-Bit Protection",
+    protection256Desc: "Enterprise zero-trust session management",
+    soc2Encrypted: "🔒 SOC-2 Encrypted",
+    welcomeBack: "Welcome back",
+    welcomeSubtitle: "Sign in to manage your machinery operations, land parcels, and fleet telemetry.",
+    tabMobilePush: "Mobile Push",
+    tabPassword: "🔑 Password",
+    fastBadge: "Fast",
+    emailLabel: "Email Address",
+    emailPlaceholder: "e.g. farmer@holatractor.com",
+    passwordLabel: "Password",
+    passwordPlaceholder: "Enter your account password",
+    forgotPassword: "Forgot password?",
+    signInPasswordBtn: "Sign In with Password",
+    orContinueWith: "Or continue with",
+    noAccount: "Don't have a HolaTractor account?",
+    createAccount: "Create an account",
+    securityFooter: "Protected by HolaTractor Biometric & 256-Bit TLS Security Protocols",
+    allFieldsRequired: "Please enter all fields",
+    loginSuccess: "Login successful!",
+    invalidCredentials: "Invalid email or password. Please try again.",
+    secureAccess: "Secure Access",
+  },
+};
+
 const LogInPage = () => {
   const [authMethod, setAuthMethod] = useState<"push" | "password">("push");
+  const [lang, setLang] = useState<"es" | "en">("es");
   const [email, setEmail] = useState("");
   const [passwrd, setPassword] = useState("");
   const [passwrdShow, setPasswordShow] = useState(false);
@@ -34,6 +102,25 @@ const LogInPage = () => {
   const searchParams = useSearchParams();
   const { cookie } = useCookie();
   const { setLoading, isLoading } = useLoading();
+
+  useEffect(() => {
+    try {
+      const savedLang = localStorage.getItem("hola_lang") as "es" | "en";
+      if (savedLang === "es" || savedLang === "en") {
+        setLang(savedLang);
+      }
+    } catch (e) {}
+  }, []);
+
+  const handleLanguageChange = (newLang: "es" | "en") => {
+    setLang(newLang);
+    try {
+      localStorage.setItem("hola_lang", newLang);
+      document.cookie = `hola_lang=${newLang}; path=/; max-age=31536000; SameSite=Lax`;
+    } catch (e) {}
+  };
+
+  const t = loginTranslations[lang] || loginTranslations.es;
 
   const verifyToken = async (token: string) => {
     setLoading(true);
@@ -53,7 +140,6 @@ const LogInPage = () => {
         successMessage("Email verified successfully");
       }
     } catch (err: any) {
-      // console.error("Email verification error:", err); // Commented out
       errorMessage(err.response?.data?.message || "Failed to verify email");
     } finally {
       setLoading(false);
@@ -118,50 +204,61 @@ const LogInPage = () => {
       payload?.user?.isOwner === true ||
       rawUser?.isOwner === true ||
       (Array.isArray(payload.role) && payload.role.includes("owner")) ||
-      (Array.isArray(payload?.user?.role) && payload.user.role.includes("owner")) ||
+      (typeof payload.role === "string" && payload.role.toLowerCase() === "owner") ||
       (Array.isArray(rawUser?.role) && rawUser.role.includes("owner")) ||
-      payload.role === "owner" ||
-      rawUser?.role === "owner";
+      (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "owner");
+
+    const isFarmer =
+      payload.isFarmer === true ||
+      payload?.user?.isFarmer === true ||
+      rawUser?.isFarmer === true ||
+      (Array.isArray(payload.role) && payload.role.includes("farmer")) ||
+      (typeof payload.role === "string" && payload.role.toLowerCase() === "farmer") ||
+      (Array.isArray(rawUser?.role) && rawUser.role.includes("farmer")) ||
+      (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "farmer");
+
     const isDealer =
       payload.isDealer === true ||
       payload?.user?.isDealer === true ||
       rawUser?.isDealer === true ||
       (Array.isArray(payload.role) && payload.role.includes("dealer")) ||
-      (Array.isArray(payload?.user?.role) && payload.user.role.includes("dealer")) ||
+      (typeof payload.role === "string" && payload.role.toLowerCase() === "dealer") ||
       (Array.isArray(rawUser?.role) && rawUser.role.includes("dealer")) ||
-      payload.role === "dealer" ||
-      rawUser?.role === "dealer";
-    const isAgent =
-      payload.isAgent === true ||
-      payload?.user?.isAgent === true ||
-      rawUser?.isAgent === true ||
-      (Array.isArray(payload.role) && payload.role.includes("agent")) ||
-      (Array.isArray(payload?.user?.role) && payload.user.role.includes("agent")) ||
-      (Array.isArray(rawUser?.role) && rawUser.role.includes("agent")) ||
-      payload.role === "agent" ||
-      rawUser?.role === "agent";
+      (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "dealer");
+
     const isOperator =
       payload.isOperator === true ||
       payload?.user?.isOperator === true ||
       rawUser?.isOperator === true ||
       (Array.isArray(payload.role) && payload.role.includes("operator")) ||
-      (Array.isArray(payload?.user?.role) && payload.user.role.includes("operator")) ||
+      (typeof payload.role === "string" && payload.role.toLowerCase() === "operator") ||
       (Array.isArray(rawUser?.role) && rawUser.role.includes("operator")) ||
-      payload.role === "operator" ||
-      rawUser?.role === "operator";
-    let isFarmer =
-      payload.isFarmer === true ||
-      payload?.user?.isFarmer === true ||
-      rawUser?.isFarmer === true ||
-      (Array.isArray(payload.role) && payload.role.includes("farmer")) ||
-      (Array.isArray(payload?.user?.role) && payload.user.role.includes("farmer")) ||
-      (Array.isArray(rawUser?.role) && rawUser.role.includes("farmer")) ||
-      payload.role === "farmer" ||
-      rawUser?.role === "farmer";
+      (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "operator");
 
-    if (!isOwner && !isDealer && !isAgent && !isOperator && !isFarmer) {
-      isFarmer = true;
-    }
+    const isAgent =
+      payload.isAgent === true ||
+      payload?.user?.isAgent === true ||
+      rawUser?.isAgent === true ||
+      (Array.isArray(payload.role) && payload.role.includes("agent")) ||
+      (typeof payload.role === "string" && payload.role.toLowerCase() === "agent") ||
+      (Array.isArray(rawUser?.role) && rawUser.role.includes("agent")) ||
+      (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "agent");
+
+    const isAdmin =
+      payload.isAdmin === true ||
+      payload.isSuperAdmin === true ||
+      payload?.user?.isAdmin === true ||
+      payload?.user?.isSuperAdmin === true ||
+      rawUser?.isAdmin === true ||
+      rawUser?.isSuperAdmin === true ||
+      (Array.isArray(payload.role) &&
+        (payload.role.includes("admin") || payload.role.includes("superAdmin"))) ||
+      (typeof payload.role === "string" &&
+        (payload.role.toLowerCase() === "admin" || payload.role.toLowerCase() === "superadmin")) ||
+      (Array.isArray(rawUser?.role) &&
+        (rawUser.role.includes("admin") || rawUser.role.includes("superAdmin"))) ||
+      (typeof rawUser?.role === "string" &&
+        (rawUser.role.toLowerCase() === "admin" || rawUser.role.toLowerCase() === "superadmin"));
 
     const setCookieValue = (name: string, val: string) => {
       cookie.set(name, val, { path: "/", expires: expiryDate });
@@ -173,11 +270,12 @@ const LogInPage = () => {
     setCookieValue("access_token", token);
     setCookieValue("token", token);
     setCookieValue("user", JSON.stringify(user));
-    setCookieValue("isOwner", isOwner ? "true" : "false");
-    setCookieValue("isDealer", isDealer ? "true" : "false");
-    setCookieValue("isAgent", isAgent ? "true" : "false");
-    setCookieValue("isOperator", isOperator ? "true" : "false");
-    setCookieValue("isFarmer", isFarmer ? "true" : "false");
+    setCookieValue("isOwner", JSON.stringify(isOwner));
+    setCookieValue("isFarmer", JSON.stringify(isFarmer));
+    setCookieValue("isDealer", JSON.stringify(isDealer));
+    setCookieValue("isOperator", JSON.stringify(isOperator));
+    setCookieValue("isAgent", JSON.stringify(isAgent));
+    setCookieValue("isAdmin", JSON.stringify(isAdmin));
 
     if (typeof window !== "undefined") {
       try {
@@ -187,29 +285,20 @@ const LogInPage = () => {
       } catch {}
     }
 
-    successMessage("Log in successful");
+    const activeRoles: string[] = [];
+    if (isOwner) activeRoles.push("owner");
+    if (isFarmer) activeRoles.push("farmer");
+    if (isDealer) activeRoles.push("dealer");
+    if (isOperator) activeRoles.push("operator");
+    if (isAgent) activeRoles.push("agent");
+    if (isAdmin) activeRoles.push("admin");
 
-    const activeRolesCount = [isOwner, isDealer, isAgent, isOperator, isFarmer].filter(Boolean).length;
-
-    // If user has multiple roles, open switch account modal
-    if (activeRolesCount > 1) {
+    if (activeRoles.length > 1) {
       setShowRoleSelector(true);
       return;
     }
 
-    // Single role detected: set active_role cookie and navigate
-    const singleRole = isFarmer
-      ? "farmer"
-      : isOwner
-      ? "owner"
-      : isDealer
-      ? "dealer"
-      : isAgent
-      ? "agent"
-      : isOperator
-      ? "operator"
-      : "farmer";
-
+    const singleRole = activeRoles[0] || "farmer";
     setCookieValue("active_role", singleRole);
     if (typeof window !== "undefined") {
       try {
@@ -217,8 +306,7 @@ const LogInPage = () => {
       } catch {}
     }
 
-    const redirectPath = `/${singleRole}`;
-
+    const redirectPath = isAdmin ? "/City" : isDealer ? "/dealer/customer" : isOperator ? "/operator/bookings" : `/${singleRole}`;
     if (typeof window !== "undefined") {
       window.location.href = redirectPath;
     } else {
@@ -228,8 +316,12 @@ const LogInPage = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    if (!email.trim() || !passwrd.trim()) {
+      errorMessage(t.allFieldsRequired);
+      return;
+    }
 
+    setLoading(true);
     const encryptedPassword = CryptoJS.AES.encrypt(
       passwrd,
       "m4AfXfQ&1brl3LjQFYO"
@@ -238,7 +330,6 @@ const LogInPage = () => {
     try {
       let resData: any = null;
 
-      // 1. Primary: Try NestJS login
       try {
         const res = await renderInstance.post("/user/login", {
           email: email.trim(),
@@ -256,7 +347,6 @@ const LogInPage = () => {
         console.warn("NestJS login notice, trying fallback:", nestErr?.message);
       }
 
-      // 2. Fallback: Try FastAPI tractorai.sinsignal.com
       if (!resData) {
         try {
           const fastApiUrl = "https://tractorai.sinsignal.com/user/login";
@@ -277,14 +367,15 @@ const LogInPage = () => {
       }
 
       if (resData && (resData.access_token || resData.data?.access_token)) {
+        successMessage(t.loginSuccess);
         setCookiesAndRedirect(resData);
         setEmail("");
         setPassword("");
       } else {
-        errorMessage("Invalid email or password. Please try again.");
+        errorMessage(t.invalidCredentials);
       }
     } catch (err: any) {
-      const apiMsg = err?.response?.data?.message || err?.message || "Some error occurred";
+      const apiMsg = err?.response?.data?.message || err?.message || (lang === "es" ? "Ocurrió un error" : "Some error occurred");
       const displayMsg = Array.isArray(apiMsg) ? apiMsg.join(", ") : apiMsg;
       errorMessage(displayMsg);
       setPassword("");
@@ -304,7 +395,6 @@ const LogInPage = () => {
     <div className="w-full min-h-screen bg-slate-50 dark:bg-[#0C0505] flex items-stretch text-slate-900 dark:text-slate-100 selection:bg-[#E31B23] selection:text-white font-sans">
       {/* ── LEFT HERO: BRANDING & REAL-TIME PLATFORM SHOWCASE (DESKTOP) ── */}
       <div className="relative hidden lg:flex lg:w-[48%] xl:w-[52%] flex-col justify-between p-12 overflow-hidden bg-[#0F0304] text-white border-r border-red-950/60 shadow-2xl">
-        {/* Background photo & rich atmospheric overlay */}
         <div
           className="absolute inset-0 bg-cover bg-center opacity-25 mix-blend-luminosity scale-105 transition-transform duration-1000 ease-out"
           style={{
@@ -315,7 +405,6 @@ const LogInPage = () => {
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-[#E31B23]/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-[#C9141B]/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Top Branding Header */}
         <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <FarmerBrandIcon size={46} className="rounded-2xl shadow-xl border border-red-500/30" />
@@ -323,10 +412,10 @@ const LogInPage = () => {
               <div className="flex items-center gap-2">
                 <span className="text-lg font-black tracking-tight text-white">HolaTractor</span>
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#E31B23]/20 text-red-300 border border-red-500/30">
-                  Fleet OS
+                  {t.fleetOS}
                 </span>
               </div>
-              <p className="text-[11px] text-red-300/70 font-medium">Agricultural Machinery Network</p>
+              <p className="text-[11px] text-red-300/70 font-medium">{t.networkSubtitle}</p>
             </div>
           </div>
 
@@ -335,49 +424,46 @@ const LogInPage = () => {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[#E31B23]" />
             </span>
-            <span className="text-[11px] font-semibold text-red-200">TractorAI Live</span>
+            <span className="text-[11px] font-semibold text-red-200">{t.tractorAILive}</span>
           </div>
         </div>
 
-        {/* Center Hero Value Proposition & Floating Feature Chips */}
         <div className="relative z-10 my-auto space-y-6 max-w-xl">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-gradient-to-r from-[#E31B23]/15 to-rose-500/10 border border-red-500/30 text-red-300 text-xs font-bold shadow-inner">
             <Sparkles className="w-3.5 h-3.5 text-[#E31B23]" />
-            <span>Next-Generation Autonomous Fleet & Farm Hub</span>
+            <span>{t.heroBadge}</span>
           </div>
 
           <h1 className="text-3xl xl:text-4xl font-black tracking-tight text-white leading-tight">
-            Seamless machinery dispatching, precision farming & telemetry in one unified workspace.
+            {t.heroHeading}
           </h1>
 
           <p className="text-sm text-slate-300/90 leading-relaxed max-w-lg">
-            Manage your land boundaries, tractor allocations, billing, and operator schedules with real-time biometric push security.
+            {t.heroDescription}
           </p>
 
-          {/* Floating Metric Badges */}
           <div className="grid grid-cols-2 gap-3 pt-2">
             <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md space-y-1">
               <div className="flex items-center gap-2 text-red-400 text-xs font-black">
                 <Smartphone className="w-4 h-4" />
-                <span>Zero-Password Push</span>
+                <span>{t.zeroPasswordPush}</span>
               </div>
-              <p className="text-[11px] text-slate-300">1-Tap number match biometric verification on phone</p>
+              <p className="text-[11px] text-slate-300">{t.zeroPasswordDesc}</p>
             </div>
 
             <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md space-y-1">
               <div className="flex items-center gap-2 text-rose-400 text-xs font-black">
                 <ShieldCheck className="w-4 h-4" />
-                <span>256-Bit Protection</span>
+                <span>{t.protection256}</span>
               </div>
-              <p className="text-[11px] text-slate-300">Enterprise zero-trust session management</p>
+              <p className="text-[11px] text-slate-300">{t.protection256Desc}</p>
             </div>
           </div>
         </div>
 
-        {/* Bottom Platform Guarantee & Status Footer */}
         <div className="relative z-10 pt-6 border-t border-red-950/60 flex items-center justify-between text-xs text-slate-400">
           <div className="flex items-center gap-2">
-            <span>🔒 SOC-2 Encrypted</span>
+            <span>{t.soc2Encrypted}</span>
           </div>
           <span className="text-[11px] text-red-400/80 font-medium">© 2026 Holatractor LTDA</span>
         </div>
@@ -385,30 +471,54 @@ const LogInPage = () => {
 
       {/* ── RIGHT AUTH FORM: ULTRA CLEAN & PROFESSIONAL ── */}
       <div className="flex-1 flex flex-col justify-between p-6 sm:p-10 lg:p-14 overflow-y-auto">
-        {/* Top Mobile Brand Header (Visible only on <lg) */}
-        <div className="flex lg:hidden items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-2.5">
+        {/* Top Header with Language Switcher */}
+        <div className="flex items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800">
+          <div className="flex lg:hidden items-center gap-2.5">
             <FarmerBrandIcon size={38} className="rounded-xl shadow-md border border-red-500/30" />
             <span className="text-base font-black tracking-tight text-slate-900 dark:text-white">HolaTractor</span>
           </div>
-          <Badge variant="outline" className="text-[10px] font-bold text-[#E31B23] border-red-500/30">
-            Fleet OS
-          </Badge>
+          <div className="hidden lg:block">
+            <span className="text-xs text-slate-400 font-medium">{t.secureAccess}</span>
+          </div>
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-inner">
+            <button
+              type="button"
+              onClick={() => handleLanguageChange("es")}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                lang === "es"
+                  ? "bg-white dark:bg-slate-800 text-[#E31B23] shadow-sm"
+                  : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              <span>🇪🇸</span>
+              <span>ES</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleLanguageChange("en")}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                lang === "en"
+                  ? "bg-white dark:bg-slate-800 text-[#E31B23] shadow-sm"
+                  : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              <span>🇺🇸</span>
+              <span>EN</span>
+            </button>
+          </div>
         </div>
 
         {/* Center Login Container */}
         <div className="w-full max-w-[430px] mx-auto my-auto py-8 space-y-6">
-          {/* Header Title */}
           <div className="space-y-2 text-left">
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-              Welcome back
+              {t.welcomeBack}
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-              Sign in to manage your machinery operations, land parcels, and fleet telemetry.
+              {t.welcomeSubtitle}
             </p>
           </div>
 
-          {/* ── AUTH METHOD SELECTOR PILL ── */}
           <div className="p-1 rounded-2xl bg-slate-100 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 flex items-center gap-1 shadow-inner">
             <button
               type="button"
@@ -420,12 +530,11 @@ const LogInPage = () => {
               }`}
             >
               <Smartphone className="w-4 h-4" />
-              <span>Mobile Push</span>
+              <span>{t.tabMobilePush}</span>
               <span className="text-[9px] bg-[#E31B23]/15 text-[#E31B23] dark:text-red-300 px-1.5 py-0.2 rounded-full font-black uppercase">
-                Fast
+                {t.fastBadge}
               </span>
             </button>
-
             <button
               type="button"
               onClick={() => setAuthMethod("password")}
@@ -436,30 +545,29 @@ const LogInPage = () => {
               }`}
             >
               <Lock className="w-3.5 h-3.5" />
-              <span>Password</span>
+              <span>{t.tabPassword}</span>
             </button>
           </div>
 
-          {/* ── 1. PASSWORDLESS PUSH LOGIN ── */}
           {authMethod === "push" ? (
             <PasswordlessPushLogin
               defaultEmail={email}
+              lang={lang}
               onSuccess={setCookiesAndRedirect}
               onFallbackToPassword={() => setAuthMethod("password")}
             />
           ) : (
-            /* ── 2. STANDARD PASSWORD LOGIN ── */
             <form onSubmit={handleLogin} className="w-full space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="log_in_email" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Email Address
+                  {t.emailLabel}
                 </Label>
                 <div className="relative">
                   <Input
                     type="email"
                     name="log_in_email"
                     id="log_in_email"
-                    placeholder="e.g. farmer@holatractor.com"
+                    placeholder={t.emailPlaceholder}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="rounded-xl border-slate-200 dark:border-slate-800 text-xs h-11 pr-4 bg-white dark:bg-slate-900/50 focus-visible:ring-2 focus-visible:ring-[#E31B23]/30"
@@ -471,20 +579,20 @@ const LogInPage = () => {
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password" className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Password
+                    {t.passwordLabel}
                   </Label>
                   <Link
                     href="/forgot_password"
                     className="text-[11px] font-bold text-[#E31B23] dark:text-red-400 hover:underline"
                   >
-                    Forgot password?
+                    {t.forgotPassword}
                   </Link>
                 </div>
                 <div className="relative">
                   <Input
                     id="password"
                     type={passwrdShow ? "text" : "password"}
-                    placeholder="Enter your account password"
+                    placeholder={t.passwordPlaceholder}
                     value={passwrd}
                     onChange={(e) => setPassword(e.target.value)}
                     className="rounded-xl border-slate-200 dark:border-slate-800 text-xs h-11 pr-10 bg-white dark:bg-slate-900/50 focus-visible:ring-2 focus-visible:ring-[#E31B23]/30"
@@ -508,38 +616,35 @@ const LogInPage = () => {
                 {isLoading ? (
                   <CircularProgress size={18} className="text-white" />
                 ) : (
-                  <span>Sign In with Password</span>
+                  <span>{t.signInPasswordBtn}</span>
                 )}
               </Button>
             </form>
           )}
 
-          {/* Social Divider */}
           <div className="relative my-4 flex items-center justify-center">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-200 dark:border-slate-800" />
             </div>
             <span className="relative bg-slate-50 dark:bg-[#0C0505] px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              Or continue with
+              {t.orContinueWith}
             </span>
           </div>
 
           <GoogleSignIn setCookiesAndRedirect={setCookiesAndRedirect} />
 
-          {/* Footer Registration Link */}
           <div className="pt-2 text-center">
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Don't have a HolaTractor account?{" "}
+              {t.noAccount}{" "}
               <Link href={"/register"} className="text-[#E31B23] dark:text-red-400 font-bold hover:underline">
-                Create an account
+                {t.createAccount}
               </Link>
             </p>
           </div>
         </div>
 
-        {/* Bottom Security Footer */}
         <div className="text-center text-[11px] text-slate-400 pt-4 border-t border-slate-100 dark:border-slate-900/60">
-          <span>Protected by HolaTractor Biometric & 256-Bit TLS Security Protocols</span>
+          <span>{t.securityFooter}</span>
         </div>
       </div>
 
