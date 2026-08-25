@@ -1,768 +1,971 @@
-"use client"
-
-import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
-import AddIcon from '@mui/icons-material/Add';
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
-import { Avatar, Backdrop, CircularProgress } from '@mui/material';
-import { useCookie } from 'next-cookie';
-import Image from 'next/image';
-import { renderInstance } from '@/utils/Axios/RenderInstance';
-import { errorMessage, successMessage } from '@/utils/Toastify/Messages';
-import { City, Country, Owner, Store } from '@/utils/Types/types';
-import NullImage from "@/assets/AnimateIcons/Store.svg"
-import { useRouter } from 'next/navigation';
-import { useDropzone } from 'react-dropzone';
-import { uploadFileToS3 } from '@/utils/AWS/FileUpload';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
-import { Dialog, DialogContent, DialogHeader, DialogTrigger } from '../ui/dialog'
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { Label } from '../ui/label';
-import { Input } from '../ui/input';
-import { Textarea } from '../ui/textarea';
-import { Button } from '../ui/button';
-import { Check, ChevronsUpDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
-
-const StoreSection = () => {
-    const [activeHover, setActiveHover] = useState('')
-    const [allStores, setAllStores] = useState<Store[]>([])
-
-    // New store fields
-    const [open, setOpen] = useState(false)
-    const [imageUploading, setImageUploading] = useState(false)
-    const [creatingStore, setCreatingStore] = useState(false)
-
-    const [selectedImage, setSelectedImage] = useState<File[]>([]);
-    const [name, setName] = useState("");
-    const [description, setDescription] = useState("");
-    const [openingTime, setOpeningTime] = useState("");
-    const [closingTime, setClosingTime] = useState("");
-    const [closingDays, setClosingDays] = useState<string[]>([]);
-
-    const [allOwners, setAllOwners] = useState<Owner[]>([])
-    const [owner, setOwner] = useState("")
-    const [ownerName, setOwnerName] = useState("")
-    const [fetchingStores, setFetchingStores] = useState(false)
-    const [popoverOpen, setPopoverOpen] = useState(false)
-
-    const [popoverOpenCountry, setPopoverOpenCountry] = useState(false)
-    const [popoverOpenCity, setPopoverOpenCity] = useState(false)
-
-    const [location_name, set_location_name] = useState("")
-    const [location_address, set_location_address] = useState("")
-    const [location_city, set_location_city] = useState("")
-    const [location_state, set_location_state] = useState("")
-    const [location_zip_code, set_location_zip_code] = useState("")
-    const [location_zip_country, set_location_zip_country] = useState("")
-
-    const [country, setCountry] = useState<Country[]>([]);
-    const [fetchingContry, setFetchingCountry] = useState(false);
-
-    const [fetchingCity, setFetchingCity] = useState(false);
-    const [city, setCity] = useState<City[]>([]);
-
-    const { refresh } = useRouter()
-
-    // New store create states last
-
-    const { cookie } = useCookie()
-    const access_token = cookie.get("access_token")
-    const user = cookie.get("user")
-
-    function formatTimeOnly(dateTimeStr: string | number | Date) {
-        const date = new Date(dateTimeStr);
-        const hours = date.getUTCHours().toString().padStart(2, '0');
-        const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-        const seconds = date.getUTCSeconds().toString().padStart(2, '0');
-        return `${hours}:${minutes}:${seconds}`;
-    }
-
-    function fetchAllStores() {
-        if (access_token) {
-            setFetchingStores(true)
-            renderInstance.get("/store", {
-                headers: {
-                    Authorization: `Bearer ${access_token}`,
-                }
-            })
-                .then((res) => {
-                    if (res.status === 200) setAllStores(res.data)
-                }).catch((err) => {
-                    errorMessage("Error in fetching inventory lists")
-                }).finally(() => { setFetchingStores(false) })
-        } else errorMessage("Admin not logged in")
-    }
-
-    // New store functions
-    const onDrop = useCallback((acceptedFiles: File[]) => {
-        setSelectedImage(prevImages => [...prevImages, ...acceptedFiles]);
-    }, []);
-
-    const { getRootProps, getInputProps } = useDropzone({
-        onDrop,
-        accept: {
-            'image/*': []
-        },
-        multiple: false,
-    });
-
-    function fetchAllCity() {
-        setFetchingCity(true);
-        renderInstance
-            .get("/city")
-            .then((res) => {
-                setCity(res.data);
-            })
-            .catch((err) => {
-                errorMessage("Error fetching cities");
-            })
-            .finally(() => {
-                setFetchingCity(false);
-            });
-    }
-
-    function fetchAllOwners() {
-        if (access_token) {
-            setFetchingStores(true)
-            renderInstance.post('/store/owners', {}, {
-                headers: {
-                    Authorization: `Bearer ${access_token}`,
-                }
-            })
-                .then((res) => {
-                    if (res.status === 201) setAllOwners(res.data)
-                }).catch((err) => {
-                    errorMessage("Error in fetching inventory lists")
-                }).finally(() => { setFetchingStores(false) })
-        } else errorMessage("Admin not logged in")
-    }
-
-    const handleDaySelection = (day: string) => {
-        setClosingDays((prevDays) =>
-            prevDays.includes(day) ? prevDays.filter(d => d !== day) : [...prevDays, day]
-        );
-    };
-
-    function fetchAllCountry() {
-        setFetchingCountry(true);
-        renderInstance
-            .get("/country")
-            .then((res) => {
-                setCountry(res.data);
-            })
-            .catch((err) => {
-                errorMessage("Error fetching roles");
-            })
-            .finally(() => {
-                setFetchingCountry(false);
-            });
-    }
-
-    async function handleAddStore() {
-
-        if (!name) {
-            errorMessage("Store name can't be empty");
-            return;
-        }
-        if (!description) {
-            errorMessage("Store description can't be empty");
-            return;
-        }
-
-        const isUserAdmin = Array.isArray(user?.isAdmin) ? user.isAdmin.includes("admin") : Boolean(user?.isAdmin || cookie.get("isAdmin") === "true");
-
-        if (isUserAdmin && !owner) {
-            errorMessage("Please select an owner")
-            return
-        }
-
-        if (!location_name || !location_address || !location_city || !location_state || !location_zip_code || !location_zip_country) {
-            errorMessage("Location detail can't be empty")
-            return
-        }
-
-        let storeImages = ""
-
-        if (selectedImage.length > 0) {
-            setImageUploading(true)
-            const buffer = Buffer.from(await selectedImage[0].arrayBuffer())
-            storeImages = await uploadFileToS3(buffer, selectedImage[0].name)
-            setImageUploading(false)
-        }
-
-        const store = {
-            name,
-            description,
-            opening_time: new Date(`1970-01-01T${openingTime}:00.000Z`),
-            closing_time: new Date(`1970-01-01T${closingTime}:00.000Z`),
-            closing_days: closingDays,
-            image: storeImages,
-            owner_user_id: isUserAdmin ? owner : user?.userId,
-            location_name,
-            location_address,
-            location_city,
-            location_state,
-            location_zip_code,
-            location_country: location_zip_country
-        };
-
-        setCreatingStore(true)
-        renderInstance.post("/store", store, {
-            headers: {
-                Authorization: `Bearer ${access_token}`,
-            }
-        }).then((res) => {
-            if (res.status === 201) {
-                successMessage("Store created")
-                // Reset state variables
-                setName("");
-                setDescription("");
-                setSelectedImage([]);
-                setOpeningTime("");
-                setClosingTime("");
-                setClosingDays([]);
-                setOwner("");
-                setOpen(false)
-
-                setTimeout(() => {
-                    refresh()
-                }, 1000);
-            }
-        }).catch((err) => {
-            if (err.response && err.response.status === 409 && err.response.data.message === "Store already present") errorMessage("Store already present")
-            else if (err.response && err.response.status === 409 && err.response.data.message === "Wrong owner id") errorMessage("You are not an owner. You are not allowed to create a store.")
-            else if (err.response && err.response.status === 409 && err.response.data.message === "The user is not owner") errorMessage("The user is not an owner")
-            else errorMessage("Some error occurred")
-
-        }).finally(() => {
-            setCreatingStore(false)
-        })
-
-    }
-
-    useEffect(() => {
-        fetchAllOwners()
-        fetchAllCountry()
-    }, [])
-
-    useEffect(() => {
-        if (location_zip_country) fetchAllCity()
-    }, [location_zip_country])
-
-    // New store functions last
-
-    useEffect(() => {
-        fetchAllStores()
-    }, [])
-
-    return (
-        <div className="w-full py-[20px]">
-
-            <Backdrop
-                sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
-                open={fetchingStores}>
-
-                {fetchingStores && <CircularProgress />}
-
-            </Backdrop >
-
-            <div
-                className='w-full flex items-center justify-between gap-[20px]'>
-
-                <p className='text-[20px]'>
-                    <span className='font-[600]'>Total Stores: {allStores.length}</span>
-                </p>
-
-                <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <button
-                    name="new_tractor_add"
-                    className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto"
-                    onClick={() => {
-                        setOpen(true);
-                    }}
-                >
-                    <AddIcon />
-                    <span>Add store</span>
-                </button>
-            </DialogTrigger>
-
-            <DialogContent className='p-[20px] w-full max-w-[600px] h-[80vh] overflow-auto'>
-
-                <div className='text-[18px] flex flex-col gap-[10px] relative w-full max-h-[80vh] overflow-auto' style={{ scrollbarWidth: "none" }}>
-
-                    <Backdrop
-                        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
-                        open={imageUploading || creatingStore}>
-
-                        {imageUploading && <p>Uploading image</p>}
-                        {creatingStore && <p>Creating store</p>}
-
-                    </Backdrop>
-
-                    <p className='text-[26px] font-bold text-center'>Add your store details</p>
-
-                    <div {...getRootProps()} className="dropzone text-center border-dashed border-2 border-gray-300 p-6 rounded-md">
-                        <input {...getInputProps()} />
-                        <p className="text-gray-600">Drag 'n' drop an image here, or click to select one</p>
-                    </div>
-                    <div className='w-full my-[4px] flex items-center flex-wrap gap-[20px]'>
-                        {selectedImage.length > 0 && selectedImage.map((image, index) => (
-                            <Image alt='image' src={URL.createObjectURL(image)} key={index} width={80} height={80} className='object-cover w-[80px] h-[80px] cursor-pointer rounded-md' />
-                        ))}
-                    </div>
-
-                    <div className='w-full flex flex-col items-center gap-[20px]'>
-                        <div className='space-y-2 w-[90%]'>
-                            <Label>Name</Label>
-                            <Input type="text" placeholder='Store name' value={name} onChange={e => { setName(e.target.value) }} />
-                        </div>
-                        <div className='space-y-2 w-[90%]'>
-                            <Label>Description</Label>
-                            <Textarea className='resize-none w-full min-h-20' value={description} onChange={e => { setDescription(e.target.value) }} />
-                        </div>
-                        <div className='space-y-2 w-[90%]'>
-                            <Label>Opening Time</Label>
-                            <Input type="time" className='outline-none bg-transparent border-none w-full' value={openingTime} onChange={e => { setOpeningTime(e.target.value) }} />
-                        </div>
-                        <div className='space-y-2 w-[90%]'>
-                            <Label>Closing Time</Label>
-                            <Input type="time" className='outline-none bg-transparent border-none w-full' value={closingTime} onChange={e => { setClosingTime(e.target.value) }} />
-                        </div>
-                        <div className='space-y-2 w-[90%]'>
-                            <Label>Closing Days</Label>
-                            <div className='px-[10px] py-[4px] text-[16px]'>
-                                <div className="flex flex-wrap gap-[10px]">
-                                    {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(day => (
-                                        <div key={day} className="flex items-center gap-[10px]">
-                                            <Input
-                                                type="checkbox"
-                                                id={day}
-                                                checked={closingDays.includes(day)}
-                                                onChange={() => handleDaySelection(day)}
-                                            />
-                                            <label htmlFor={day}>{day}</label>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                        {
-                            (Array.isArray(user?.isAdmin) ? user.isAdmin.includes("admin") : Boolean(user?.isAdmin || cookie.get("isAdmin") === "true")) &&
-                            <div
-                                className='w-[90%] flex items-center gap-[20px]'>
-
-                                <div className='space-y-2 w-full'>
-
-                                    <Label>
-                                        Select owner
-                                    </Label>
-
-                                    {
-                                        fetchingStores ? <p>Fetching owners</p>
-                                            :
-                                            allOwners.length === 0 ?
-                                                <p>No owners found</p>
-                                                :
-                                                <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                                                    <PopoverTrigger asChild>
-                                                        <Button
-                                                            variant="outline"
-                                                            role="combobox"
-                                                            // aria-expanded={popoverOpen}
-                                                            className="w-full justify-between"
-                                                        >
-                                                            {owner
-                                                                ? allOwners.find((country) => `${country.user.first_name} ${country.user.middle_name ? country.user.middle_name : ''} ${country.user.last_name}` === ownerName) && ownerName
-                                                                : "Select owner..."}
-                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                        </Button>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-full p-0">
-                                                        <Command>
-                                                            <CommandInput placeholder="Search owner..." />
-                                                            <CommandList>
-                                                                <CommandEmpty>No owner found.</CommandEmpty>
-                                                                <CommandGroup>
-                                                                    {allOwners.map((country: Owner, index) => {
-                                                                        const name = `${country.user.first_name} ${country.user.middle_name ? country.user.middle_name : ''} ${country.user.last_name}`
-                                                                        return (
-                                                                            <CommandItem
-                                                                                key={index}
-                                                                                value={name}
-                                                                                onSelect={(currentValue) => {
-                                                                                    setOwner(country.id)
-                                                                                    setOwnerName(name)
-                                                                                    setPopoverOpen(false)
-                                                                                }}
-                                                                            >
-                                                                                <Check
-                                                                                    className={cn(
-                                                                                        "mr-2 h-4 w-4",
-                                                                                        owner === country.id ? "opacity-100" : "opacity-0"
-                                                                                    )}
-                                                                                />
-                                                                                {name}
-                                                                            </CommandItem>
-                                                                        )
-                                                                    })}
-                                                                </CommandGroup>
-                                                            </CommandList>
-                                                        </Command>
-                                                    </PopoverContent>
-                                                </Popover>
-                                    }
-
-                                </div>
-
-                            </div>
-                        }
-
-                        {
-                            fetchingContry ?
-                                <CircularProgress />
-                                :
-                                country.length === 0 ?
-                                    <p>No countries are available</p>
-                                    :
-                                    <div className="space-y-1 w-[90%]">
-                                        <Label htmlFor="phonrnumber">Country name</Label>
-                                        <div className="w-full space-y-2">
-                                            <Popover open={popoverOpenCountry} onOpenChange={setPopoverOpenCountry}>
-                                                <PopoverTrigger asChild>
-                                                    <Button
-                                                        variant="outline"
-                                                        role="combobox"
-                                                        // aria-expanded={popoverOpen}
-                                                        className="w-full justify-between"
-                                                    >
-                                                        {location_zip_country
-                                                            ? country.find((country) => country.name === location_zip_country) && location_zip_country
-                                                            : "Select country..."}
-                                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                    </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-full p-0">
-                                                    <Command>
-                                                        <CommandInput placeholder="Search country..." />
-                                                        <CommandList>
-                                                            <CommandEmpty>No country found.</CommandEmpty>
-                                                            <CommandGroup className='w-full'>
-                                                                {country.map((country) => (
-                                                                    <CommandItem
-                                                                        key={country.name}
-                                                                        value={country.name}
-                                                                        onSelect={(currentValue) => {
-                                                                            set_location_zip_country(country.name)
-                                                                            setPopoverOpenCountry(false)
-                                                                        }}
-                                                                    >
-                                                                        <Check
-                                                                            className={cn(
-                                                                                "mr-2 h-4 w-4",
-                                                                                location_zip_country === country.name ? "opacity-100" : "opacity-0"
-                                                                            )}
-                                                                        />
-                                                                        {country.name}
-                                                                    </CommandItem>
-                                                                ))}
-                                                            </CommandGroup>
-                                                        </CommandList>
-                                                    </Command>
-                                                </PopoverContent>
-                                            </Popover>
-                                        </div>
-                                    </div>
-                        }
-                        {
-                            location_zip_country &&
-                            <div className='space-y-2 w-[90%]'>
-                                <Label>City</Label>
-                                {
-                                    fetchingCity ?
-                                        <p>Fetching cities</p>
-                                        :
-                                        city.length === 0 ?
-                                            <p>No cities are available for this country</p>
-                                            :
-                                            <div className="w-full space-y-2">
-                                                <Popover open={popoverOpenCity} onOpenChange={setPopoverOpenCity}>
-                                                    <PopoverTrigger asChild>
-                                                        <Button
-                                                            variant="outline"
-                                                            role="combobox"
-                                                            // aria-expanded={popoverOpen}
-                                                            className="w-full justify-between"
-                                                        >
-                                                            {location_city
-                                                                ? city.find((cityDetails) => cityDetails.name === location_city) && location_city
-                                                                : "Select city..."}
-                                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                                        </Button>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-full p-0">
-                                                        <Command>
-                                                            <CommandInput placeholder="Search country..." />
-                                                            <CommandList>
-                                                                <CommandEmpty>No city found.</CommandEmpty>
-                                                                <CommandGroup className='w-full'>
-                                                                    {city.map((cityDetails) => (
-                                                                        <CommandItem
-                                                                            key={cityDetails.name}
-                                                                            value={cityDetails.name}
-                                                                            onSelect={(currentValue) => {
-                                                                                set_location_city(cityDetails.name)
-                                                                                setPopoverOpenCity(false)
-                                                                            }}
-                                                                            className={`${location_zip_country !== cityDetails.country.name && "hidden"}`}
-                                                                        >
-                                                                            <Check
-                                                                                className={cn(
-                                                                                    "mr-2 h-4 w-4",
-                                                                                    location_city === cityDetails.name ? "opacity-100" : "opacity-0"
-                                                                                )}
-                                                                            />
-                                                                            {cityDetails.name}
-                                                                        </CommandItem>
-                                                                    ))}
-                                                                </CommandGroup>
-                                                            </CommandList>
-                                                        </Command>
-                                                    </PopoverContent>
-                                                </Popover>
-                                            </div>
-                                }
-                            </div>
-                        }
-                        {
-                            location_city &&
-                            <div className='space-y-2 w-[90%]'>
-                                <Label>Location name</Label>
-                                <Input type="text" placeholder='Store location name' className='outline-none bg-transparent border-none w-full' value={location_name} onChange={e => { set_location_name(e.target.value) }} />
-
-                            </div>
-                        }
-                        {
-                            location_city &&
-                            <div className='space-y-2 w-[90%]'>
-                                <Label>Store address</Label>
-                                <Input type="text" placeholder='Store address' className='outline-none bg-transparent border-none w-full' value={location_address} onChange={e => { set_location_address(e.target.value) }} />
-                            </div>
-                        }
-                        {
-                            location_city &&
-                            <div className='space-y-2 w-[90%]'>
-                                <Label>State</Label>
-                                <Input type="text" placeholder='State' className='outline-none bg-transparent border-none w-full' value={location_state} onChange={e => { set_location_state(e.target.value) }} />
-                            </div>
-                        }
-                        {
-                            location_city &&
-                            <div className='space-y-2 w-[90%]'>
-                                <Label>Location zip code</Label>
-                                <Input type="text" placeholder='Zipcode' className='outline-none bg-transparent border-none w-full' value={location_zip_code} onChange={e => { set_location_zip_code(e.target.value) }} />
-                            </div>
-                        }
-
-                        <button name='submit_button' className='py-[10px] w-[90%] mx-auto bg-black font-bold text-white rounded-md' onClick={handleAddStore}>
-                            Submit
-                        </button>
-                    </div>
-
-                </div>
-
-            </DialogContent>
-        </Dialog>
-
-            </div>
-
-            <div
-                className='text-[20px] font-[600] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer mt-[30px]'>
-
-                <div className='w-[50px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400'>
-                    <Avatar />
-                </div>
-
-                <div className='w-[150px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group'
-                    onMouseEnter={() => { setActiveHover('Tractor name') }}
-                    onMouseLeave={() => { setActiveHover('') }}>
-                    <p>Name</p>
-                    <div className='flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100'>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <ArrowUpwardIcon />
-                        </div>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <MoreVertIcon />
-                        </div>
-                    </div>
-                </div>
-
-                <div className='w-[150px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group'
-                    onMouseEnter={() => { setActiveHover('Model') }}
-                    onMouseLeave={() => { setActiveHover('') }}>
-                    <p>
-                        {
-                            activeHover === 'Model' ?
-                                'Desc...'
-                                :
-                                'Description'
-                        }
-                    </p>
-                    <div className='flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100'>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <ArrowUpwardIcon />
-                        </div>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <MoreVertIcon />
-                        </div>
-                    </div>
-                </div>
-
-                <div className='w-[150px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group'
-                    onMouseEnter={() => { setActiveHover('Opening Time') }}
-                    onMouseLeave={() => { setActiveHover('') }}>
-                    <p>
-                        {
-                            activeHover === 'Opening Time' ?
-                                'Open...'
-                                :
-                                'Opening Time'
-                        }
-                    </p>
-                    <div className='flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100'>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <ArrowUpwardIcon />
-                        </div>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <MoreVertIcon />
-                        </div>
-                    </div>
-                </div>
-
-                <div className='w-[150px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group'
-                    onMouseEnter={() => { setActiveHover('Closing Time') }}
-                    onMouseLeave={() => { setActiveHover('') }}>
-                    <p>
-                        {
-                            activeHover === 'Closing Time' ?
-                                'Close...'
-                                :
-                                'Closing Time'
-                        }
-                    </p>
-                    <div className='flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100'>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <ArrowUpwardIcon />
-                        </div>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <MoreVertIcon />
-                        </div>
-                    </div>
-                </div>
-
-                <div className='w-[150px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group'
-                    onMouseEnter={() => { setActiveHover('Closed days') }}
-                    onMouseLeave={() => { setActiveHover('') }}>
-                    <p>
-                        {
-                            activeHover === 'Closed days' ?
-                                'Closed...'
-                                :
-                                'Closed days'
-                        }
-                    </p>
-                    <div className='flex items-center gap-[6px] opacity-0 transition-all duration-500 group-hover:opacity-100'>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <ArrowUpwardIcon />
-                        </div>
-                        <div
-                            className='rounded-full w-[30px] h-[30px] flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <MoreVertIcon />
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-
-            <div className='flex flex-col gap-[5px] mt-[20px]'>
-
-                {
-                    allStores.length === 0 ? <div className="w-full h-full min-h-[80vh] flex items-center justify-center">
-                    <Image
-                    src={NullImage}
-                    alt="No image found"
-                    className="w-[400px] lg:w-[700px] h-auto object-cover"
-                    width={400}
-                    height={400}
-                    unoptimized={true} />
-                </div>
-                        :
-                        allStores.map((tractorDetails, index) => {
-                            return (
-                                <Link
-                                    href={`/Store/${tractorDetails.id}`}
-                                    className='text-[18px] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer transition-all duration-500 hover:bg-white'
-                                    key={index}>
-
-                                    {
-                                        tractorDetails.image ?
-                                            <Image
-                                                src={tractorDetails.image}
-                                                className='w-[50px] h-[50px] rounded-full object-cover'
-                                                alt={tractorDetails.name}
-                                                width={50}
-                                                height={50}
-                                                unoptimized={true} />
-                                            :
-                                            <div className='w-[50px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400'>
-                                                <Avatar />
-                                            </div>
-                                    }
-
-                                    <p className='w-[150px]'>
-                                        {tractorDetails.name}
-                                    </p>
-
-                                    <p className='w-[150px]'>
-                                        {tractorDetails.description}
-                                    </p>
-
-                                    <p className='w-[150px]'>
-                                        {formatTimeOnly(tractorDetails.opening_time)}
-                                    </p>
-
-                                    <p className='w-[150px]'>
-                                        {formatTimeOnly(tractorDetails.closing_time)}
-                                    </p>
-
-                                    <ul className='w-[150px] list-disc'>
-                                        {tractorDetails.closing_days.map((day) => {
-                                            return (
-                                                <li key={day}>{day}</li>
-                                            )
-                                        })}
-                                    </ul>
-
-                                </Link>
-                            )
-                        })
-                }
-
-            </div>
-
-        </div >
-    )
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useState, useMemo } from "react";
+import { Avatar } from "@mui/material";
+import { useCookie } from "next-cookie";
+import Image from "next/image";
+import axios from "axios";
+import { renderInstance } from "@/utils/Axios/RenderInstance";
+import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
+import { City, Country, Owner } from "@/utils/Types/types";
+import { useRouter } from "next/navigation";
+import { useDropzone } from "react-dropzone";
+import { uploadFileToS3 } from "@/utils/AWS/FileUpload";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../ui/dialog";
+import { Label } from "../ui/label";
+import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
+import { Button } from "../ui/button";
+import {
+  Store as StoreIcon,
+  Tractor,
+  MapPin,
+  Clock,
+  Calendar,
+  Users,
+  Search,
+  Plus,
+  Trash2,
+  ExternalLink,
+  Layers,
+  Sparkles,
+  LayoutGrid,
+  List as ListIcon,
+  RefreshCw,
+  Phone,
+  Mail,
+  AlertCircle,
+  Building2,
+} from "lucide-react";
+
+export interface RichStoreItem {
+  id: string;
+  name: string;
+  description: string;
+  image?: string;
+  opening_time?: string;
+  closing_time?: string;
+  closing_days?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+  tractor_count?: number;
+  attachment_count?: number;
+  operator_count?: number;
+  owner?: {
+    id: string;
+    name: string;
+    email: string;
+    mobile?: string;
+    image?: string;
+  } | null;
+  location?: {
+    id?: string;
+    name?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    zip_code?: string;
+    country?: string;
+  } | null;
 }
 
-export default StoreSection
+const StoreSection = () => {
+  const [allStores, setAllStores] = useState<RichStoreItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCountry, setSelectedCountry] = useState("all");
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+
+  // Create modal state
+  const [open, setOpen] = useState(false);
+  const [creatingStore, setCreatingStore] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File[]>([]);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [openingTime, setOpeningTime] = useState("08:00");
+  const [closingTime, setClosingTime] = useState("20:00");
+  const [closingDays, setClosingDays] = useState<string[]>(["Sunday"]);
+
+  const [allOwners, setAllOwners] = useState<Owner[]>([]);
+  const [owner, setOwner] = useState("");
+  const [location_name, setLocationName] = useState("");
+  const [location_address, setLocationAddress] = useState("");
+  const [location_city, setLocationCity] = useState("Buenos Aires");
+  const [location_state, setLocationState] = useState("Buenos Aires");
+  const [location_zip_code, setLocationZipCode] = useState("1000");
+  const [location_zip_country, setLocationZipCountry] = useState("Argentina");
+
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const { cookie } = useCookie();
+  const router = useRouter();
+  const access_token =
+    cookie.get("access_token") ||
+    (typeof document !== "undefined"
+      ? document.cookie.match(/(?:^|;\s*)access_token=([^;]+)/)?.[1]
+      : "");
+  const user = cookie.get("user");
+
+  // Format time utility
+  const formatTimeOnly = (dateTimeStr?: string | number | Date) => {
+    if (!dateTimeStr) return "08:00 AM";
+    try {
+      const date = new Date(dateTimeStr);
+      if (isNaN(date.getTime())) return String(dateTimeStr);
+      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    } catch {
+      return "08:00 AM";
+    }
+  };
+
+  // 1. Fetch stores with rich DB metadata
+  const fetchAllStores = useCallback(async () => {
+    setLoading(true);
+    let loaded = false;
+
+    // Primary: Local Next.js API route connected directly to PostgreSQL
+    try {
+      const res = await axios.get("/api/admin/stores", { timeout: 6000 });
+      if (Array.isArray(res.data)) {
+        setAllStores(res.data);
+        loaded = true;
+      }
+    } catch (err) {
+      console.warn("Direct /api/admin/stores fetch notice:", err);
+    }
+
+    // Secondary fallback: /api/store route
+    if (!loaded) {
+      try {
+        const res = await axios.get("/api/store", { timeout: 6000 });
+        if (Array.isArray(res.data)) {
+          setAllStores(res.data);
+          loaded = true;
+        }
+      } catch (err) {
+        console.warn("Fallback /api/store fetch notice:", err);
+      }
+    }
+
+    // Tertiary fallback: NestJS backend if available
+    if (!loaded && access_token) {
+      try {
+        const res = await renderInstance.get("/store", {
+          headers: { Authorization: `Bearer ${access_token}` },
+        });
+        if (res.status === 200 && Array.isArray(res.data)) {
+          setAllStores(res.data);
+          loaded = true;
+        }
+      } catch (err) {
+        console.warn("NestJS store fetch notice:", err);
+      }
+    }
+
+    setLoading(false);
+  }, [access_token]);
+
+  // Fetch owners list
+  const fetchAllOwners = useCallback(async () => {
+    try {
+      const res = await axios.get("/api/owner");
+      if (Array.isArray(res.data)) {
+        setAllOwners(res.data);
+      }
+    } catch {
+      if (access_token) {
+        renderInstance
+          .post("/store/owners", {}, { headers: { Authorization: `Bearer ${access_token}` } })
+          .then((res) => {
+            if (res.status === 201 && Array.isArray(res.data)) setAllOwners(res.data);
+          })
+          .catch(() => {});
+      }
+    }
+  }, [access_token]);
+
+  // Fetch countries
+  const fetchAllCountry = useCallback(async () => {
+    try {
+      const res = await axios.get("/api/country");
+      if (Array.isArray(res.data)) setCountries(res.data);
+    } catch {
+      renderInstance
+        .get("/country")
+        .then((res) => {
+          if (Array.isArray(res.data)) setCountries(res.data);
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAllStores();
+    fetchAllOwners();
+    fetchAllCountry();
+  }, [fetchAllStores, fetchAllOwners, fetchAllCountry]);
+
+  // Dropzone for store image
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    setSelectedImage(acceptedFiles);
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { "image/*": [] },
+    multiple: false,
+  });
+
+  const handleDaySelection = (day: string) => {
+    setClosingDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  };
+
+  // Add new store
+  const handleAddStore = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      errorMessage("Store name is required");
+      return;
+    }
+
+    setCreatingStore(true);
+    try {
+      let storeImageUrl = "https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=600&q=80";
+
+      if (selectedImage.length > 0) {
+        setImageUploading(true);
+        const buffer = Buffer.from(await selectedImage[0].arrayBuffer());
+        storeImageUrl = await uploadFileToS3(buffer, selectedImage[0].name);
+        setImageUploading(false);
+      }
+
+      const isUserAdmin = Boolean(user?.isAdmin || cookie.get("isAdmin") === "true");
+      const selectedOwnerId = owner || (isUserAdmin ? "cm8x7w4xn001vu5w3xq9nvfjz" : user?.userId);
+
+      const storePayload = {
+        name: name.trim(),
+        description: description.trim() || "HolaTractor Agricultural Hub Unit",
+        opening_time: new Date(`1970-01-01T${openingTime}:00.000Z`),
+        closing_time: new Date(`1970-01-01T${closingTime}:00.000Z`),
+        closing_days: closingDays,
+        image: storeImageUrl,
+        owner_user_id: selectedOwnerId,
+        location_name: location_name || `${name} Location`,
+        location_address: location_address || "Agricultural Regional Hub",
+        location_city: location_city || "Buenos Aires",
+        location_state: location_state || "Buenos Aires",
+        location_zip_code: location_zip_code || "1000",
+        location_country: location_zip_country || "Argentina",
+      };
+
+      const res = await axios.post("/api/admin/stores", storePayload);
+      if (res.status === 201 || res.data?.success) {
+        successMessage("Store created successfully!");
+        setOpen(false);
+        // Reset form
+        setName("");
+        setDescription("");
+        setSelectedImage([]);
+        fetchAllStores();
+      } else {
+        errorMessage(res.data?.message || "Failed to create store");
+      }
+    } catch (err: any) {
+      console.error("Create store error:", err);
+      errorMessage(err?.response?.data?.error || err?.response?.data?.message || "Error creating store");
+    } finally {
+      setCreatingStore(false);
+      setImageUploading(false);
+    }
+  };
+
+  // Delete store
+  const handleDeleteStore = async (storeId: string, storeName: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${storeName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingId(storeId);
+    try {
+      const res = await axios.delete(`/api/admin/stores?id=${storeId}`);
+      if (res.data?.success) {
+        successMessage(`Store "${storeName}" deleted successfully`);
+        setAllStores((prev) => prev.filter((s) => s.id !== storeId));
+      } else {
+        errorMessage(res.data?.error || "Failed to delete store");
+      }
+    } catch (err: any) {
+      errorMessage(err?.response?.data?.error || "Failed to delete store");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // Computed statistics
+  const stats = useMemo(() => {
+    const totalStores = allStores.length;
+    const totalTractors = allStores.reduce((acc, s) => acc + (s.tractor_count || 0), 0);
+    const totalAttachments = allStores.reduce((acc, s) => acc + (s.attachment_count || 0), 0);
+    const totalOperators = allStores.reduce((acc, s) => acc + (s.operator_count || 0), 0);
+    return { totalStores, totalTractors, totalAttachments, totalOperators };
+  }, [allStores]);
+
+  // Filtered stores
+  const filteredStores = useMemo(() => {
+    return allStores.filter((store) => {
+      const matchesSearch =
+        searchQuery === "" ||
+        store.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        store.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        store.location?.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        store.location?.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        store.owner?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        store.owner?.email?.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesCountry =
+        selectedCountry === "all" ||
+        store.location?.country?.toLowerCase() === selectedCountry.toLowerCase();
+
+      return matchesSearch && matchesCountry;
+    });
+  }, [allStores, searchQuery, selectedCountry]);
+
+  return (
+    <div className="w-full py-6 space-y-6 max-w-7xl mx-auto">
+      {/* 1. Header & Quick Actions */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <div>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                Stores & Hub Inventory
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
+                  {allStores.length} Active Hubs
+                </span>
+              </h1>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Manage operational store centers, tractor fleets, attachments, and hub operators.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchAllStores}
+            disabled={loading}
+            className="rounded-xl border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 gap-2 h-10 px-4"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-emerald-600" : ""}`} />
+            Refresh
+          </Button>
+
+          {/* Add Store Dialog */}
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-2 h-10 px-5 shadow-lg shadow-emerald-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                <Plus className="w-4 h-4" />
+                Add New Store
+              </Button>
+            </DialogTrigger>
+
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                  <StoreIcon className="w-5 h-5 text-emerald-600" />
+                  Create Agricultural Store / Hub
+                </DialogTitle>
+              </DialogHeader>
+
+              <form onSubmit={handleAddStore} className="space-y-5 pt-2">
+                {/* Image Upload */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">Store Banner Image</Label>
+                  <div
+                    {...getRootProps()}
+                    className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-colors ${
+                      isDragActive
+                        ? "border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20"
+                        : "border-slate-200 dark:border-slate-800 hover:border-emerald-400 bg-slate-50/50 dark:bg-slate-900/50"
+                    }`}
+                  >
+                    <input {...getInputProps()} />
+                    {selectedImage.length > 0 ? (
+                      <div className="flex items-center justify-center gap-3">
+                        <img
+                          src={URL.createObjectURL(selectedImage[0])}
+                          alt="preview"
+                          className="w-16 h-16 rounded-lg object-cover border border-slate-200 shadow-sm"
+                        />
+                        <div className="text-left">
+                          <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                            {selectedImage[0].name}
+                          </p>
+                          <p className="text-xs text-slate-400">Click to change image</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1.5 text-slate-500">
+                        <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center">
+                          <StoreIcon className="w-5 h-5" />
+                        </div>
+                        <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                          Drag & drop store banner image here, or browse
+                        </p>
+                        <p className="text-xs text-slate-400">Supports JPG, PNG, WebP up to 5MB</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Name & Description */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
+                      Store Name *
+                    </Label>
+                    <Input
+                      placeholder="e.g. Central Pampas Tractor Hub"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                      className="rounded-xl"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
+                      Owner Account
+                    </Label>
+                    <select
+                      value={owner}
+                      onChange={(e) => setOwner(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    >
+                      <option value="">Default Admin / System Owner</option>
+                      {allOwners.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.user?.first_name} {o.user?.last_name} ({o.user?.email})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400">
+                    Description
+                  </Label>
+                  <Textarea
+                    placeholder="Provide details regarding machinery inventory, rental terms, and hub contact details..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="rounded-xl resize-none h-20"
+                  />
+                </div>
+
+                {/* Operating Hours */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-emerald-600" /> Opening Time
+                    </Label>
+                    <Input
+                      type="time"
+                      value={openingTime}
+                      onChange={(e) => setOpeningTime(e.target.value)}
+                      className="rounded-xl"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-rose-500" /> Closing Time
+                    </Label>
+                    <Input
+                      type="time"
+                      value={closingTime}
+                      onChange={(e) => setClosingTime(e.target.value)}
+                      className="rounded-xl"
+                    />
+                  </div>
+                </div>
+
+                {/* Closing Days */}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-emerald-600" /> Closed Days
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => {
+                      const isSelected = closingDays.includes(day);
+                      return (
+                        <button
+                          type="button"
+                          key={day}
+                          onClick={() => handleDaySelection(day)}
+                          className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all ${
+                            isSelected
+                              ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-800"
+                              : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border border-transparent hover:bg-slate-200"
+                          }`}
+                        >
+                          {day}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Location Fields */}
+                <div className="border-t border-slate-100 dark:border-slate-800 pt-4 space-y-3">
+                  <p className="text-xs font-bold uppercase text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-emerald-600" /> Hub Location Address
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Input
+                      placeholder="Address (e.g. Route 9, Km 120)"
+                      value={location_address}
+                      onChange={(e) => setLocationAddress(e.target.value)}
+                      className="rounded-xl"
+                    />
+                    <Input
+                      placeholder="City / Region (e.g. Cordoba)"
+                      value={location_city}
+                      onChange={(e) => setLocationCity(e.target.value)}
+                      className="rounded-xl"
+                    />
+                    <Input
+                      placeholder="State / Province"
+                      value={location_state}
+                      onChange={(e) => setLocationState(e.target.value)}
+                      className="rounded-xl"
+                    />
+                    <Input
+                      placeholder="Country"
+                      value={location_zip_country}
+                      onChange={(e) => setLocationZipCountry(e.target.value)}
+                      className="rounded-xl"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setOpen(false)}
+                    className="rounded-xl"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={creatingStore || imageUploading}
+                    className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 gap-2"
+                  >
+                    {creatingStore ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        Creating Store...
+                      </>
+                    ) : (
+                      "Create Store Hub"
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      {/* 2. Key Metrics Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center font-bold">
+            <StoreIcon className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 font-medium">Total Stores</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-white">{stats.totalStores}</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 flex items-center justify-center font-bold">
+            <Tractor className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 font-medium">Store Tractors</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-white">{stats.totalTractors}</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center font-bold">
+            <Layers className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 font-medium">Attachments</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-white">{stats.totalAttachments}</p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 flex items-center justify-center font-bold">
+            <Users className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 font-medium">Hub Operators</p>
+            <p className="text-xl font-bold text-slate-900 dark:text-white">{stats.totalOperators}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Search & Filter Bar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <div className="relative w-full sm:w-96">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Input
+            placeholder="Search stores by name, city, owner, address..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 rounded-xl h-10 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 focus-visible:ring-emerald-500"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-1.5 rounded-lg transition-all ${
+                viewMode === "grid"
+                  ? "bg-white dark:bg-slate-700 text-emerald-600 shadow-sm"
+                  : "text-slate-500 hover:text-slate-900"
+              }`}
+              title="Grid View"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("table")}
+              className={`p-1.5 rounded-lg transition-all ${
+                viewMode === "table"
+                  ? "bg-white dark:bg-slate-700 text-emerald-600 shadow-sm"
+                  : "text-slate-500 hover:text-slate-900"
+              }`}
+              title="Table View"
+            >
+              <ListIcon className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Content Area */}
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <div
+              key={n}
+              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4 animate-pulse"
+            >
+              <div className="w-full h-36 bg-slate-100 dark:bg-slate-800 rounded-xl" />
+              <div className="h-5 bg-slate-100 dark:bg-slate-800 rounded w-2/3" />
+              <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded w-1/2" />
+              <div className="h-10 bg-slate-100 dark:bg-slate-800 rounded-xl" />
+            </div>
+          ))}
+        </div>
+      ) : filteredStores.length === 0 ? (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-12 text-center space-y-4 shadow-sm">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 mx-auto flex items-center justify-center">
+            <StoreIcon className="w-8 h-8" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Stores Found</h3>
+            <p className="text-sm text-slate-500 max-w-md mx-auto mt-1">
+              {searchQuery
+                ? `No stores matching "${searchQuery}". Try modifying your search criteria.`
+                : "No stores have been created yet. Click 'Add New Store' to set up your first store hub."}
+            </p>
+          </div>
+          {searchQuery ? (
+            <Button
+              variant="outline"
+              onClick={() => setSearchQuery("")}
+              className="rounded-xl border-slate-200 dark:border-slate-800"
+            >
+              Clear Search
+            </Button>
+          ) : (
+            <Button
+              onClick={() => setOpen(true)}
+              className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+            >
+              <Plus className="w-4 h-4 mr-2" /> Add First Store
+            </Button>
+          )}
+        </div>
+      ) : viewMode === "grid" ? (
+        /* GRID VIEW */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredStores.map((store) => {
+            const hasTractors = (store.tractor_count || 0) > 0;
+            return (
+              <div
+                key={store.id}
+                className="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 transition-all duration-300 overflow-hidden flex flex-col justify-between"
+              >
+                {/* Store Header Image */}
+                <div className="relative h-44 w-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                  {store.image ? (
+                    <img
+                      src={store.image}
+                      alt={store.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-tr from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 text-slate-400">
+                      <StoreIcon className="w-12 h-12 opacity-50" />
+                    </div>
+                  )}
+
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+
+                  {/* Top Badges */}
+                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md text-white border border-white/10 flex items-center gap-1.5">
+                      <MapPin className="w-3 h-3 text-emerald-400" />
+                      {store.location?.city || store.location?.name || "Regional Hub"}
+                    </span>
+
+                    <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-500 text-white shadow-md shadow-emerald-500/30 flex items-center gap-1">
+                      <Tractor className="w-3 h-3" />
+                      {store.tractor_count || 0} Tractors
+                    </span>
+                  </div>
+
+                  {/* Bottom Image Info */}
+                  <div className="absolute bottom-3 left-3 right-3">
+                    <h3 className="text-lg font-bold text-white tracking-tight drop-shadow-sm truncate">
+                      {store.name}
+                    </h3>
+                  </div>
+                </div>
+
+                {/* Card Body */}
+                <div className="p-5 space-y-4 flex-1 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    {/* Description */}
+                    <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                      {store.description || "No description provided for this store hub."}
+                    </p>
+
+                    {/* Operational Timings */}
+                    <div className="flex items-center justify-between text-xs text-slate-500 bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>
+                          {formatTimeOnly(store.opening_time)} - {formatTimeOnly(store.closing_time)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-slate-400">
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>
+                          {store.closing_days && store.closing_days.length > 0
+                            ? `Closed: ${store.closing_days.join(", ")}`
+                            : "Open 7 Days"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Inventory Pills */}
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                      <div className="bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 p-2 rounded-xl">
+                        <p className="font-bold text-emerald-700 dark:text-emerald-300">
+                          {store.tractor_count || 0}
+                        </p>
+                        <p className="text-[10px] text-emerald-600/80 uppercase font-medium">Tractors</p>
+                      </div>
+                      <div className="bg-blue-50/60 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 p-2 rounded-xl">
+                        <p className="font-bold text-blue-700 dark:text-blue-300">
+                          {store.attachment_count || 0}
+                        </p>
+                        <p className="text-[10px] text-blue-600/80 uppercase font-medium">Attachments</p>
+                      </div>
+                      <div className="bg-purple-50/60 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900/40 p-2 rounded-xl">
+                        <p className="font-bold text-purple-700 dark:text-purple-300">
+                          {store.operator_count || 0}
+                        </p>
+                        <p className="text-[10px] text-purple-600/80 uppercase font-medium">Operators</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Actions */}
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                    <Link
+                      href={`/Store/${store.id}`}
+                      className="flex-1 text-center py-2 px-3 rounded-xl bg-slate-900 hover:bg-emerald-600 text-white font-medium text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      View Store Inventory
+                    </Link>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteStore(store.id, store.name)}
+                      disabled={deletingId === store.id}
+                      className="h-8 w-8 p-0 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50"
+                      title="Delete Store"
+                    >
+                      {deletingId === store.id ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-rose-600" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* TABLE VIEW */
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                  <th className="py-3.5 px-4">Store Hub</th>
+                  <th className="py-3.5 px-4">Location</th>
+                  <th className="py-3.5 px-4">Schedule</th>
+                  <th className="py-3.5 px-4 text-center">Tractors</th>
+                  <th className="py-3.5 px-4 text-center">Attachments</th>
+                  <th className="py-3.5 px-4 text-center">Operators</th>
+                  <th className="py-3.5 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+                {filteredStores.map((store) => (
+                  <tr
+                    key={store.id}
+                    className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                  >
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-3">
+                        {store.image ? (
+                          <img
+                            src={store.image}
+                            alt={store.name}
+                            className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-800"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center">
+                            <StoreIcon className="w-5 h-5" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-semibold text-slate-900 dark:text-white leading-tight">
+                            {store.name}
+                          </p>
+                          <p className="text-xs text-slate-400 line-clamp-1 max-w-xs mt-0.5">
+                            {store.description || "Hub Center"}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300 text-xs">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span>
+                          {store.location?.city || store.location?.name || "Regional Hub"}
+                          {store.location?.country ? `, ${store.location.country}` : ""}
+                        </span>
+                      </div>
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      <div className="text-xs text-slate-600 dark:text-slate-300">
+                        <p className="font-medium">
+                          {formatTimeOnly(store.opening_time)} - {formatTimeOnly(store.closing_time)}
+                        </p>
+                        <p className="text-[11px] text-slate-400">
+                          {store.closing_days?.length
+                            ? `Closed: ${store.closing_days.join(", ")}`
+                            : "Open 7 Days"}
+                        </p>
+                      </div>
+                    </td>
+
+                    <td className="py-3.5 px-4 text-center">
+                      <span className="font-semibold px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs border border-emerald-200/60 dark:border-emerald-800/60">
+                        {store.tractor_count || 0}
+                      </span>
+                    </td>
+
+                    <td className="py-3.5 px-4 text-center">
+                      <span className="font-semibold px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-xs border border-blue-200/60 dark:border-blue-800/60">
+                        {store.attachment_count || 0}
+                      </span>
+                    </td>
+
+                    <td className="py-3.5 px-4 text-center">
+                      <span className="font-semibold px-2.5 py-1 rounded-full bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 text-xs border border-purple-200/60 dark:border-purple-800/60">
+                        {store.operator_count || 0}
+                      </span>
+                    </td>
+
+                    <td className="py-3.5 px-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          href={`/Store/${store.id}`}
+                          className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-emerald-600 hover:text-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors inline-flex items-center gap-1"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" /> View
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteStore(store.id, store.name)}
+                          disabled={deletingId === store.id}
+                          className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default StoreSection;
