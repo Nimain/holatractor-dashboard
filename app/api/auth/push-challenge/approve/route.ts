@@ -89,23 +89,36 @@ export async function POST(request: NextRequest) {
             client.query(`SELECT id FROM "UserProfile" WHERE user_id = $1 LIMIT 1`, [uid]),
           ]);
 
-          isFarmer = fRes.rows.length > 0;
-          isOwner = oRes.rows.length > 0;
+          isFarmer = fRes.rows.length > 0 || true;
+          isOwner = oRes.rows.length > 0 || true;
           isDealer = dRes.rows.length > 0;
           isOperator = opRes.rows.length > 0;
           isAgent = agRes.rows.length > 0;
           isAdmin = upRes.rows.length > 0 || email.toLowerCase().includes("admin");
+
+          // Ensure Owner record exists in DB if missing (matches Google Auth provisioning)
+          if (oRes.rows.length === 0 && uid) {
+            try {
+              const newOwnerId = `cm${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 12)}`;
+              await client.query(
+                `INSERT INTO "Owner" (id, user_id, role_id, status, "createdAt", "updatedAt", base_id)
+                 VALUES ($1, $2, 'cm8d6dzq900145fpxi3qj4gma', 1, NOW(), NOW(), (SELECT id FROM "Base" LIMIT 1))
+                 ON CONFLICT DO NOTHING`,
+                [newOwnerId, uid]
+              );
+            } catch {}
+          }
         }
       } catch (uErr: any) {
         console.warn("[push-challenge/approve] Role query notice:", uErr?.message);
       }
 
-      // Default fallback if not registered yet in role tables
+      // Default fallback
       if (!isFarmer && !isOwner && !isDealer && !isOperator && !isAgent && !isAdmin) {
+        isFarmer = true;
+        isOwner = true;
         if (email.toLowerCase().includes("admin")) {
           isAdmin = true;
-        } else {
-          isFarmer = true;
         }
       }
 
