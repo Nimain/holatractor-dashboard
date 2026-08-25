@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 import jwt from "jsonwebtoken";
 
+export const dynamic = "force-dynamic";
+
 const FastApiBaseURL =
   process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "https://tractorai.sinsignal.com/";
 const NestJsBaseURL =
@@ -84,24 +86,33 @@ export async function POST(request: NextRequest) {
 
     // 1. Attempt to dispatch push notification via backend
     let pushDispatched = false;
-    try {
-      const fastApiUrl = `${FastApiBaseURL.replace(/\/$/, "")}/api/v1/auth/push-challenge/create`;
-      const resFast = await axios.post(
-        fastApiUrl,
-        {
-          email,
-          challenge_id: challengeId,
-          match_number: matchNumber,
-          options,
-          device_info: deviceInfo,
-        },
-        { timeout: 4000 }
-      );
-      if (resFast.data) {
-        pushDispatched = true;
+    const candidateEndpoints = [
+      "http://localhost:8000/api/v1/auth/push-challenge/create",
+      "http://127.0.0.1:8000/api/v1/auth/push-challenge/create",
+      `${FastApiBaseURL.replace(/\/$/, "")}/api/v1/auth/push-challenge/create`,
+    ];
+
+    for (const endpoint of candidateEndpoints) {
+      try {
+        const resFast = await axios.post(
+          endpoint,
+          {
+            email,
+            challenge_id: challengeId,
+            match_number: matchNumber,
+            options,
+            device_info: deviceInfo,
+          },
+          { timeout: 3000 }
+        );
+        if (resFast.data?.success || resFast.data?.challenge_id) {
+          pushDispatched = true;
+          console.log(`[push-challenge] Successfully dispatched via ${endpoint}`);
+          break;
+        }
+      } catch (e: any) {
+        // Try next endpoint
       }
-    } catch (e) {
-      // Graceful fallback to local push management
     }
 
     // Save challenge record

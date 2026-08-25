@@ -12,13 +12,16 @@ import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
-import { Eye, EyeOff } from "lucide-react";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
+import { Eye, EyeOff, Smartphone, ShieldCheck, Sparkles, Lock } from "lucide-react";
 import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import { CircularProgress } from "@mui/material";
 import { useLoading } from "../wrappers/LoaderWrappers";
 import SwitchAccountModal from "../wrappers/SwitchAccountModal";
 import PasswordlessPushLogin from "./PasswordlessPushLogin";
+import FarmerBrandIcon from "@/components/Common/FarmerBrandIcon";
 
 const LogInPage = () => {
   const [authMethod, setAuthMethod] = useState<"push" | "password">("push");
@@ -66,7 +69,25 @@ const LogInPage = () => {
       return;
     }
 
-    const rawUser: any = decode(token) || {};
+    let rawUser: any = {};
+    try {
+      if (token && typeof token === "string" && token.includes(".")) {
+        const base64Url = token.split(".")[1];
+        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split("")
+            .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+            .join("")
+        );
+        rawUser = JSON.parse(jsonPayload);
+      }
+    } catch (e) {
+      try {
+        rawUser = decode(token) || {};
+      } catch (_) {}
+    }
+
     const user = {
       ...rawUser,
       userId:
@@ -90,62 +111,79 @@ const LogInPage = () => {
       image: rawUser?.image || payload?.user?.image || payload?.image || "",
     };
     const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + 1);
+    expiryDate.setDate(expiryDate.getDate() + 7);
 
     const isOwner =
       payload.isOwner === true ||
+      payload?.user?.isOwner === true ||
+      rawUser?.isOwner === true ||
       (Array.isArray(payload.role) && payload.role.includes("owner")) ||
-      (Array.isArray(rawUser?.role) && rawUser.role.includes("owner"));
+      (Array.isArray(payload?.user?.role) && payload.user.role.includes("owner")) ||
+      (Array.isArray(rawUser?.role) && rawUser.role.includes("owner")) ||
+      payload.role === "owner" ||
+      rawUser?.role === "owner";
     const isDealer =
       payload.isDealer === true ||
+      payload?.user?.isDealer === true ||
+      rawUser?.isDealer === true ||
       (Array.isArray(payload.role) && payload.role.includes("dealer")) ||
-      (Array.isArray(rawUser?.role) && rawUser.role.includes("dealer"));
+      (Array.isArray(payload?.user?.role) && payload.user.role.includes("dealer")) ||
+      (Array.isArray(rawUser?.role) && rawUser.role.includes("dealer")) ||
+      payload.role === "dealer" ||
+      rawUser?.role === "dealer";
     const isAgent =
       payload.isAgent === true ||
+      payload?.user?.isAgent === true ||
+      rawUser?.isAgent === true ||
       (Array.isArray(payload.role) && payload.role.includes("agent")) ||
-      (Array.isArray(rawUser?.role) && rawUser.role.includes("agent"));
+      (Array.isArray(payload?.user?.role) && payload.user.role.includes("agent")) ||
+      (Array.isArray(rawUser?.role) && rawUser.role.includes("agent")) ||
+      payload.role === "agent" ||
+      rawUser?.role === "agent";
     const isOperator =
       payload.isOperator === true ||
+      payload?.user?.isOperator === true ||
+      rawUser?.isOperator === true ||
       (Array.isArray(payload.role) && payload.role.includes("operator")) ||
-      (Array.isArray(rawUser?.role) && rawUser.role.includes("operator"));
-    const isFarmer =
+      (Array.isArray(payload?.user?.role) && payload.user.role.includes("operator")) ||
+      (Array.isArray(rawUser?.role) && rawUser.role.includes("operator")) ||
+      payload.role === "operator" ||
+      rawUser?.role === "operator";
+    let isFarmer =
       payload.isFarmer === true ||
+      payload?.user?.isFarmer === true ||
+      rawUser?.isFarmer === true ||
       (Array.isArray(payload.role) && payload.role.includes("farmer")) ||
-      (Array.isArray(rawUser?.role) && rawUser.role.includes("farmer"));
+      (Array.isArray(payload?.user?.role) && payload.user.role.includes("farmer")) ||
+      (Array.isArray(rawUser?.role) && rawUser.role.includes("farmer")) ||
+      payload.role === "farmer" ||
+      rawUser?.role === "farmer";
 
-    cookie.set("access_token", token, {
-      path: "/",
-      expires: expiryDate,
-    });
-    cookie.set("user", JSON.stringify(user), {
-      path: "/",
-      expires: expiryDate,
-    });
-    cookie.set("isOwner", isOwner ? "true" : "false", {
-      path: "/",
-      expires: expiryDate,
-    });
-    cookie.set("isDealer", isDealer ? "true" : "false", {
-      path: "/",
-      expires: expiryDate,
-    });
-    cookie.set("isAgent", isAgent ? "true" : "false", {
-      path: "/",
-      expires: expiryDate,
-    });
-    cookie.set("isOperator", isOperator ? "true" : "false", {
-      path: "/",
-      expires: expiryDate,
-    });
-    cookie.set("isFarmer", isFarmer ? "true" : "false", {
-      path: "/",
-      expires: expiryDate,
-    });
+    if (!isOwner && !isDealer && !isAgent && !isOperator && !isFarmer) {
+      isFarmer = true;
+    }
+
+    const setCookieValue = (name: string, val: string) => {
+      cookie.set(name, val, { path: "/", expires: expiryDate });
+      if (typeof document !== "undefined") {
+        document.cookie = `${name}=${val}; path=/; expires=${expiryDate.toUTCString()}; SameSite=Lax;`;
+      }
+    };
+
+    setCookieValue("access_token", token);
+    setCookieValue("token", token);
+    setCookieValue("user", JSON.stringify(user));
+    setCookieValue("isOwner", isOwner ? "true" : "false");
+    setCookieValue("isDealer", isDealer ? "true" : "false");
+    setCookieValue("isAgent", isAgent ? "true" : "false");
+    setCookieValue("isOperator", isOperator ? "true" : "false");
+    setCookieValue("isFarmer", isFarmer ? "true" : "false");
 
     if (typeof window !== "undefined") {
       try {
         localStorage.setItem("user", JSON.stringify(user));
         localStorage.setItem("access_token", token);
+        localStorage.setItem("token", token);
       } catch {}
     }
 
@@ -153,14 +191,16 @@ const LogInPage = () => {
 
     const activeRolesCount = [isOwner, isDealer, isAgent, isOperator, isFarmer].filter(Boolean).length;
 
-    // If user has multiple roles (e.g. Owner AND Farmer), open switch account modal immediately
+    // If user has multiple roles, open switch account modal
     if (activeRolesCount > 1) {
       setShowRoleSelector(true);
       return;
     }
 
     // Single role detected: set active_role cookie and navigate
-    const singleRole = isOwner
+    const singleRole = isFarmer
+      ? "farmer"
+      : isOwner
       ? "owner"
       : isDealer
       ? "dealer"
@@ -168,21 +208,16 @@ const LogInPage = () => {
       ? "agent"
       : isOperator
       ? "operator"
-      : isFarmer
-      ? "farmer"
-      : "";
+      : "farmer";
 
-    if (singleRole) {
-      cookie.set("active_role", singleRole, { path: "/", expires: expiryDate });
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem("active_role", singleRole);
-          document.cookie = `active_role=${singleRole}; path=/; expires=${expiryDate.toUTCString()};`;
-        } catch {}
-      }
+    setCookieValue("active_role", singleRole);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("active_role", singleRole);
+      } catch {}
     }
 
-    const redirectPath = singleRole ? `/${singleRole}` : "/";
+    const redirectPath = `/${singleRole}`;
 
     if (typeof window !== "undefined") {
       window.location.href = redirectPath;
@@ -266,52 +301,144 @@ const LogInPage = () => {
   }, [searchParams]);
 
   return (
-    <div className="w-full min-h-[100vh] max-h-fit flex items-center justify-center text-[18px]">
-      <Image
-        src={"https://holadashboard.s3.us-west-2.amazonaws.com/tract.webp"}
-        alt="Sign_In_page_right_image"
-        className="w-1/2 min-h-[100vh] object-cover hidden 900px:block"
-        width={400}
-        height={400}
-        unoptimized={true}
-      />
+    <div className="w-full min-h-screen bg-slate-50 dark:bg-[#070D0B] flex items-stretch text-slate-900 dark:text-slate-100 selection:bg-emerald-500 selection:text-white font-sans">
+      {/* ── LEFT HERO: BRANDING & REAL-TIME PLATFORM SHOWCASE (DESKTOP) ── */}
+      <div className="relative hidden lg:flex lg:w-[48%] xl:w-[52%] flex-col justify-between p-12 overflow-hidden bg-[#06100D] text-white border-r border-emerald-950/60 shadow-2xl">
+        {/* Background photo & rich atmospheric overlay */}
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-30 mix-blend-luminosity scale-105 transition-transform duration-1000 ease-out"
+          style={{
+            backgroundImage: `url("https://holadashboard.s3.us-west-2.amazonaws.com/tract.webp")`,
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-tr from-[#040A08] via-[#081814]/90 to-emerald-950/40" />
+        <div className="absolute -top-32 -left-32 w-96 h-96 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="w-[80vw] 768px:w-1/2 h-full flex items-center justify-center">
-        <div className="flex flex-col gap-[20px] items-center justify-center w-[360px]">
-          <p className="text-[26px] w-fit font-[600] relative before:absolute before:left-0 before:bottom-[-4px] before:w-[75%] before:h-[3px] before:rounded-full before:bg-[#AB0F0C]">
-            Welcome back
+        {/* Top Branding Header */}
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <FarmerBrandIcon size={44} className="rounded-2xl shadow-xl border border-emerald-400/30" />
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-black tracking-tight text-white">HolaTractor</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                  Fleet OS
+                </span>
+              </div>
+              <p className="text-[11px] text-emerald-300/70 font-medium">Agricultural Machinery Network</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 border border-emerald-500/30 backdrop-blur-md">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            <span className="text-[11px] font-semibold text-emerald-200">TractorAI Live</span>
+          </div>
+        </div>
+
+        {/* Center Hero Value Proposition & Floating Feature Chips */}
+        <div className="relative z-10 my-auto space-y-6 max-w-xl">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-gradient-to-r from-emerald-500/15 to-teal-500/10 border border-emerald-400/30 text-emerald-300 text-xs font-bold shadow-inner">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Next-Generation Autonomous Fleet & Farm Hub</span>
+          </div>
+
+          <h1 className="text-3xl xl:text-4xl font-black tracking-tight text-white leading-tight">
+            Seamless machinery dispatching, precision farming & telemetry in one unified workspace.
+          </h1>
+
+          <p className="text-sm text-slate-300/90 leading-relaxed max-w-lg">
+            Manage your land boundaries, tractor allocations, billing, and operator schedules with real-time biometric push security.
           </p>
 
-          <p className="text-[14px] font-[500]">
-            Please sign in to enter the dashboard
-          </p>
+          {/* Floating Metric Badges */}
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md space-y-1">
+              <div className="flex items-center gap-2 text-emerald-400 text-xs font-black">
+                <Smartphone className="w-4 h-4" />
+                <span>Zero-Password Push</span>
+              </div>
+              <p className="text-[11px] text-slate-300">1-Tap number match biometric verification on phone</p>
+            </div>
 
-          {/* ── AUTH METHOD TOGGLE TABS ── */}
-          <div className="w-full flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl gap-1">
+            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md space-y-1">
+              <div className="flex items-center gap-2 text-teal-400 text-xs font-black">
+                <ShieldCheck className="w-4 h-4" />
+                <span>256-Bit Protection</span>
+              </div>
+              <p className="text-[11px] text-slate-300">Enterprise zero-trust session management</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Platform Guarantee & Status Footer */}
+        <div className="relative z-10 pt-6 border-t border-emerald-900/50 flex items-center justify-between text-xs text-slate-400">
+          <div className="flex items-center gap-4">
+            <span className="font-semibold text-slate-300">⚡ 15,000+ Active Hectares</span>
+            <span>•</span>
+            <span>🔒 SOC-2 Encrypted</span>
+          </div>
+          <span className="text-[11px] text-emerald-400/80 font-medium">© 2026 HolaTractor Inc.</span>
+        </div>
+      </div>
+
+      {/* ── RIGHT AUTH FORM: ULTRA CLEAN & PROFESSIONAL ── */}
+      <div className="flex-1 flex flex-col justify-between p-6 sm:p-10 lg:p-14 overflow-y-auto">
+        {/* Top Mobile Brand Header (Visible only on <lg) */}
+        <div className="flex lg:hidden items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <FarmerBrandIcon size={36} className="rounded-xl shadow-md border border-emerald-500/30" />
+            <span className="text-base font-black tracking-tight text-slate-900 dark:text-white">HolaTractor</span>
+          </div>
+          <Badge variant="outline" className="text-[10px] font-bold text-emerald-600 border-emerald-500/30">
+            Fleet OS
+          </Badge>
+        </div>
+
+        {/* Center Login Container */}
+        <div className="w-full max-w-[430px] mx-auto my-auto py-8 space-y-6">
+          {/* Header Title */}
+          <div className="space-y-2 text-left">
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+              Welcome back
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+              Sign in to manage your machinery operations, land parcels, and fleet telemetry.
+            </p>
+          </div>
+
+          {/* ── AUTH METHOD SELECTOR PILL ── */}
+          <div className="p-1 rounded-2xl bg-slate-100 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 flex items-center gap-1 shadow-inner">
             <button
               type="button"
               onClick={() => setAuthMethod("push")}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
                 authMethod === "push"
-                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-900"
+                  ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-md border border-slate-200/50 dark:border-slate-700/60"
+                  : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
-              <span>📱 Mobile App</span>
-              <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-black">
-                No Password
+              <Smartphone className="w-4 h-4" />
+              <span>Mobile Push</span>
+              <span className="text-[9px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.2 rounded-full font-black uppercase">
+                Fast
               </span>
             </button>
+
             <button
               type="button"
               onClick={() => setAuthMethod("password")}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
                 authMethod === "password"
-                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-900"
+                  ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-md border border-slate-200/50 dark:border-slate-700/60"
+                  : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
-              🔑 Password
+              <Lock className="w-3.5 h-3.5" />
+              <span>Password</span>
             </button>
           </div>
 
@@ -325,66 +452,96 @@ const LogInPage = () => {
           ) : (
             /* ── 2. STANDARD PASSWORD LOGIN ── */
             <form onSubmit={handleLogin} className="w-full space-y-4">
-              <div className="w-full">
-                <Label htmlFor="log_in_email" className="text-xs font-bold">Email</Label>
-                <Input
-                  type="email"
-                  name="log_in_email"
-                  id="log_in_email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="rounded-xl"
-                  required
-                />
-              </div>
-
-              <div className="w-full">
-                <Label className="text-xs font-bold">Password</Label>
-                <div className="flex items-center gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="log_in_email" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Email Address
+                </Label>
+                <div className="relative">
                   <Input
-                    id="password"
-                    type={passwrdShow ? "text" : "password"}
-                    placeholder="********"
-                    value={passwrd}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="rounded-xl"
+                    type="email"
+                    name="log_in_email"
+                    id="log_in_email"
+                    placeholder="e.g. farmer@holatractor.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="rounded-xl border-slate-200 dark:border-slate-800 text-xs h-11 pr-4 bg-white dark:bg-slate-900/50 focus-visible:ring-2 focus-visible:ring-emerald-500/30"
                     required
                   />
-                  <div onClick={() => setPasswordShow((prev) => !prev)} className="cursor-pointer">
-                    {passwrdShow ? <EyeOff className="w-4 h-4 text-slate-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
-                  </div>
                 </div>
               </div>
 
-              <button
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Password
+                  </Label>
+                  <Link
+                    href="/forgot_password"
+                    className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={passwrdShow ? "text" : "password"}
+                    placeholder="Enter your account password"
+                    value={passwrd}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="rounded-xl border-slate-200 dark:border-slate-800 text-xs h-11 pr-10 bg-white dark:bg-slate-900/50 focus-visible:ring-2 focus-visible:ring-emerald-500/30"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setPasswordShow((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                  >
+                    {passwrdShow ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <Button
                 type="submit"
-                name="add_role_submit_button"
-                className="px-[20px] py-[10px] bg-black hover:bg-slate-800 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-[10px] w-full mx-auto h-11 transition-all"
+                disabled={isLoading}
+                className="w-full h-11 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white font-bold text-xs shadow-lg shadow-slate-900/10 dark:shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
               >
                 {isLoading ? (
-                  <CircularProgress size={20} className="text-white" />
+                  <CircularProgress size={18} className="text-white" />
                 ) : (
-                  "Log in with Password"
+                  <span>Sign In with Password</span>
                 )}
-              </button>
+              </Button>
             </form>
           )}
 
-          <div className="w-full flex items-center gap-2 text-slate-400 text-xs">
-            <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
-            <span>OR</span>
-            <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+          {/* Social Divider */}
+          <div className="relative my-4 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-200 dark:border-slate-800" />
+            </div>
+            <span className="relative bg-slate-50 dark:bg-[#070D0B] px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              Or continue with
+            </span>
           </div>
 
           <GoogleSignIn setCookiesAndRedirect={setCookiesAndRedirect} />
 
-          <p>
-            Don't have an account?{" "}
-            <Link href={"/register"} className="text-emerald-600 font-bold hover:underline">
-              Sign up
-            </Link>
-          </p>
+          {/* Footer Registration Link */}
+          <div className="pt-2 text-center">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Don't have a HolaTractor account?{" "}
+              <Link href={"/register"} className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">
+                Create an account
+              </Link>
+            </p>
+          </div>
+        </div>
+
+        {/* Bottom Security Footer */}
+        <div className="text-center text-[11px] text-slate-400 pt-4 border-t border-slate-100 dark:border-slate-900/60">
+          <span>Protected by HolaTractor Biometric & 256-Bit TLS Security Protocols</span>
         </div>
       </div>
 

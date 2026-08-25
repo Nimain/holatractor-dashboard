@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import axios from "axios";
 
+export const dynamic = "force-dynamic";
+
 const NestJsBaseURL =
   process.env.NEXT_PUBLIC_API_URL ||
   "https://holatractor-backend-render.onrender.com/";
@@ -53,20 +55,40 @@ export async function POST(request: NextRequest) {
     const email = challenge.email;
     let userPayload: any = null;
 
-    // 1. Try to fetch user from NestJS /farmer or /user
-    try {
-      const res = await axios.get(`${NestJsBaseURL}user?email=${encodeURIComponent(email)}`, {
-        timeout: 4000,
-      });
-      if (res.data) {
-        userPayload = res.data;
-      }
-    } catch {}
+    // 1. Try to fetch user from FastAPI endpoints (where first_name/last_name are stored)
+    const fastApiEndpoints = [
+      `http://localhost:8000/api/v1/auth/user-by-email?email=${encodeURIComponent(email)}`,
+      `http://127.0.0.1:8000/api/v1/auth/user-by-email?email=${encodeURIComponent(email)}`,
+      `${FastApiBaseURL.replace(/\/$/, "")}/api/v1/auth/user-by-email?email=${encodeURIComponent(email)}`,
+    ];
+
+    for (const ep of fastApiEndpoints) {
+      try {
+        const res = await axios.get(ep, { timeout: 2000 });
+        if (res.data?.name || res.data?.id) {
+          userPayload = res.data;
+          break;
+        }
+      } catch (e) {}
+    }
+
+    // 2. Fallback to NestJS
+    if (!userPayload) {
+      try {
+        const res = await axios.get(`${NestJsBaseURL}user?email=${encodeURIComponent(email)}`, {
+          timeout: 3000,
+        });
+        if (res.data) {
+          userPayload = res.data;
+        }
+      } catch {}
+    }
 
     // Fallback user object
     const userId = userPayload?.userId || userPayload?.id || `user_${email.split("@")[0]}`;
-    const name = userPayload?.name || email.split("@")[0].toUpperCase();
-    const isFarmer = true;
+    const userFullName = userPayload?.name || (userPayload?.first_name ? `${userPayload.first_name} ${userPayload.last_name || ""}`.trim() : "");
+    const name = userFullName || email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1);
+    const isFarmer = userPayload?.isFarmer ?? true;
     const isOwner = userPayload?.isOwner ?? false;
     const isDealer = userPayload?.isDealer ?? false;
     const isOperator = userPayload?.isOperator ?? false;

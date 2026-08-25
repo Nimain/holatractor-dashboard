@@ -204,6 +204,18 @@ export default function FarmerDashboard() {
     return acc + (isNaN(areaVal) ? 0 : areaVal);
   }, 0);
 
+  const farmerFullName = (farmer?.first_name || farmer?.last_name)
+    ? `${farmer.first_name || ""} ${farmer.last_name || ""}`.trim()
+    : (farmer as any)?.name || "";
+
+  const greetingName =
+    farmerFullName ||
+    (user.name && !user.name.includes("@") && user.name !== user.name.toUpperCase()
+      ? user.name
+      : user.name && user.name !== user.name.toUpperCase()
+      ? user.name
+      : user.name || "Farmer");
+
   return (
     <div className="w-full space-y-6 pb-12">
       {/* ── HERO GREETING & 3-TAP BOOKING ACTION RIBBON ─────────────────────── */}
@@ -225,7 +237,7 @@ export default function FarmerDashboard() {
                 </span>
               </div>
               <h1 className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tight text-white">
-                Welcome Back, {user.name || "Farmer"}!
+                Welcome Back, {greetingName}!
               </h1>
               <p className="text-xs md:text-sm text-emerald-100/80 leading-relaxed">
                 Schedule tractors, tillage machinery, precision seeding, and harvesting services with real-time TractorAI fleet dispatching.
