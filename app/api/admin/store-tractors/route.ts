@@ -1,96 +1,259 @@
 import { NextRequest, NextResponse } from "next/server";
+import pool from "@/utils/Database/db";
 import axios from "axios";
+
+export const dynamic = "force-dynamic";
+
+function generateCuid(): string {
+  const timestamp = Date.now().toString(36);
+  const randChars =
+    Math.random().toString(36).substring(2, 10) +
+    Math.random().toString(36).substring(2, 10);
+  return `c${timestamp}${randChars}`.slice(0, 25);
+}
 
 const FastApiBaseURL =
   process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "https://tractorai.sinsignal.com/";
-const NestJsBaseURL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://holatractor-backend-render.onrender.com/";
 
+// GET /api/admin/store-tractors - List all tractors assigned to stores
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const searchQuery = searchParams.get("q")?.trim()?.toLowerCase() || "";
+    const storeIdFilter = searchParams.get("store_id")?.trim() || "";
+
+    const client = await pool.connect();
+    try {
+      const sqlQuery = `
+        SELECT 
+          tis.id,
+          tis."baseTractorId" as base_tractor_id,
+          tis.store_id,
+          tis.hourly_price,
+          tis.lat,
+          tis.lan,
+          tis.document_id,
+          tis."createdAt",
+          tis."updatedAt",
+          (SELECT json_build_object(
+            'id', t.id, 
+            'name', t.name, 
+            'model', t.model, 
+            'type', t.type, 
+            'images', t.images, 
+            'description', t.description,
+            'year', t.year
+          ) FROM "Tractor" t WHERE t.id = tis."baseTractorId") as tractor,
+          (SELECT json_build_object(
+            'id', s.id, 
+            'name', s.name, 
+            'description', s.description,
+            'image', s.image,
+            'location_id', s.location_id
+          ) FROM "Store" s WHERE s.id = tis.store_id) as store
+        FROM "TractorInStore" tis
+        ORDER BY tis."createdAt" DESC;
+      `;
+
+      const result = await client.query(sqlQuery);
+      let list = result.rows.map((row) => {
+        let parsedImages = row.tractor?.images;
+        if (!Array.isArray(parsedImages)) {
+          parsedImages = parsedImages
+            ? [parsedImages]
+            : ["https://images.unsplash.com/photo-1592878904946-b3cd8ae243d0?w=800&q=80"];
+        }
+
+        return {
+          id: row.id,
+          hourly_price: Number(row.hourly_price) || 20,
+          store_id: row.store_id,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
+          lat: row.lat,
+          lan: row.lan,
+          baseTractor: {
+            id: row.tractor?.id || row.base_tractor_id,
+            name: row.tractor?.name || "Standard Tractor",
+            model: row.tractor?.model || "Universal",
+            type: row.tractor?.type || "medium",
+            description: row.tractor?.description || "",
+            year: row.tractor?.year || null,
+            images: parsedImages,
+          },
+          store: row.store || {
+            id: row.store_id,
+            name: "HolaTractor Store Hub",
+            description: "",
+            image: "",
+          },
+        };
+      });
+
+      if (storeIdFilter) {
+        list = list.filter((item) => item.store_id === storeIdFilter);
+      }
+
+      if (searchQuery) {
+        list = list.filter((item) => {
+          const tName = item.baseTractor?.name?.toLowerCase().includes(searchQuery);
+          const tModel = item.baseTractor?.model?.toLowerCase().includes(searchQuery);
+          const sName = item.store?.name?.toLowerCase().includes(searchQuery);
+          return tName || tModel || sName;
+        });
+      }
+
+      return NextResponse.json({ success: true, data: list, total: list.length });
+    } finally {
+      client.release();
+    }
+  } catch (error: any) {
+    console.error("[GET /api/admin/store-tractors] Direct DB error:", error?.message);
+
+    // Fallback to FastAPI endpoint
+    try {
+      const fastApiRes = await axios.get(
+        `${FastApiBaseURL.replace(/\/$/, "")}/api/v1/admin/store-tractors`,
+        { timeout: 5000 }
+      );
+      if (fastApiRes.data?.data) {
+        return NextResponse.json(fastApiRes.data);
+      }
+    } catch (_) {}
+
+    return NextResponse.json({ error: "Failed to fetch store tractors" }, { status: 500 });
+  }
+}
+
+// POST /api/admin/store-tractors - Add Tractor to Store
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const store_id = body.store_id?.trim();
+    const base_tractor_id = body.base_tractor_id || body.tractor_id;
+    const hourly_price = Number(body.hourly_price) || 20.0;
 
-    let token = "";
-    const rawAuth = request.headers.get("authorization");
-    if (rawAuth) {
-      token = rawAuth.replace(/^Bearer\s+/i, "").trim();
-    }
-    if (!token) {
-      token = request.cookies.get("access_token")?.value || "";
-    }
-    if (!token) {
-      const rawCookie = request.headers.get("cookie") || "";
-      const match = rawCookie.match(/(?:^|;\s*)access_token=([^;]+)/);
-      if (match) token = decodeURIComponent(match[1]);
+    if (!store_id || !base_tractor_id) {
+      return NextResponse.json(
+        { error: "store_id and base_tractor_id are required" },
+        { status: 400 }
+      );
     }
 
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
-    // 1. Try FastAPI admin store tractor assignment
+    const client = await pool.connect();
     try {
-      const base = (FastApiBaseURL || "https://tractorai.sinsignal.com/").replace(/\/$/, "");
-      const fastApiRes = await axios.post(
-        `${base}/api/v1/admin/store-tractors`,
-        body,
-        { headers, timeout: 15000 }
-      );
-      if (fastApiRes.data?.success) {
-        return NextResponse.json(fastApiRes.data, { status: 201 });
-      }
-    } catch (errFastApi: any) {
-      console.warn(
-        "FastAPI admin store-tractor error:",
-        errFastApi?.response?.status,
-        errFastApi?.response?.data || errFastApi?.message
-      );
-    }
+      const tis_id = generateCuid();
+      const base_id = generateCuid();
+      const doc_id = "cm8k5gx7n0007141wpl3o7ope";
 
-    // 2. Fallback to NestJS backend /store/tractor
-    try {
-      const nestRes = await axios.post(
-        `${NestJsBaseURL}store/tractor`,
-        {
-          store_id: body.store_id,
-          tractor_id: body.base_tractor_id,
-          hourly_price: body.hourly_price || 20.0,
-        },
-        { headers, timeout: 10000 }
+      await client.query(
+        `
+        INSERT INTO "TractorInStore" (
+          id, "baseTractorId", store_id, hourly_price, document_id, base_id, "createdAt", "updatedAt"
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, NOW(), NOW()
+        )
+      `,
+        [tis_id, base_tractor_id, store_id, hourly_price, doc_id, base_id]
       );
+
       return NextResponse.json(
         {
           success: true,
-          message: "Tractor added to store successfully via fallback",
-          data: nestRes.data,
+          message: "Tractor added to store successfully",
+          data: {
+            id: tis_id,
+            store_id,
+            base_tractor_id,
+            hourly_price,
+          },
         },
         { status: 201 }
       );
-    } catch (errNest: any) {
-      console.error(
-        "NestJS fallback add store tractor error:",
-        errNest?.response?.data || errNest?.message
-      );
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            errNest?.response?.data?.message ||
-            errNest?.message ||
-            "Failed to add tractor to store",
-        },
-        { status: errNest?.response?.status || 500 }
-      );
+    } catch (dbErr: any) {
+      console.error("[POST /api/admin/store-tractors] DB Error:", dbErr?.message);
+      return NextResponse.json({ error: dbErr?.message || "Failed to add tractor to store" }, { status: 500 });
+    } finally {
+      client.release();
     }
   } catch (err: any) {
-    console.error("Internal server error in POST /api/admin/store-tractors:", err);
-    return NextResponse.json(
-      { success: false, message: err?.message || "Internal Server Error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: err?.message || "Internal server error" }, { status: 500 });
+  }
+}
+
+// PUT /api/admin/store-tractors - Update store tractor details (e.g. hourly price)
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const id = body.id;
+    const hourly_price = Number(body.hourly_price);
+    const store_id = body.store_id;
+
+    if (!id) {
+      return NextResponse.json({ error: "ID is required" }, { status: 400 });
+    }
+
+    const client = await pool.connect();
+    try {
+      const updates: string[] = ['"updatedAt" = NOW()'];
+      const values: any[] = [id];
+      let paramIdx = 2;
+
+      if (!isNaN(hourly_price)) {
+        updates.push(`hourly_price = $${paramIdx}`);
+        values.push(hourly_price);
+        paramIdx++;
+      }
+
+      if (store_id) {
+        updates.push(`store_id = $${paramIdx}`);
+        values.push(store_id);
+        paramIdx++;
+      }
+
+      const sql = `UPDATE "TractorInStore" SET ${updates.join(", ")} WHERE id = $1 RETURNING *`;
+      const result = await client.query(sql, values);
+
+      if (result.rows.length === 0) {
+        return NextResponse.json({ error: "Store tractor not found" }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Store tractor updated successfully",
+        data: result.rows[0],
+      });
+    } finally {
+      client.release();
+    }
+  } catch (err: any) {
+    return NextResponse.json({ error: err?.message || "Internal server error" }, { status: 500 });
+  }
+}
+
+// DELETE /api/admin/store-tractors - Remove a tractor from store
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ error: "Tractor in store ID is required" }, { status: 400 });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query(`DELETE FROM "DeviceInTractor" WHERE "tractorInStoreId" = $1`, [id]).catch(() => {});
+      await client.query(`DELETE FROM "TractorInStore" WHERE id = $1`, [id]);
+
+      return NextResponse.json({
+        success: true,
+        message: "Tractor removed from store successfully",
+      });
+    } finally {
+      client.release();
+    }
+  } catch (err: any) {
+    return NextResponse.json({ error: err?.message || "Internal server error" }, { status: 500 });
   }
 }
