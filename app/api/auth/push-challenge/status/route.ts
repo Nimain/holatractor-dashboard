@@ -28,10 +28,23 @@ export async function GET(request: NextRequest) {
       const expiresAt = Number(row.expires_at);
 
       if (row.status === "APPROVED" && row.token) {
+        let userData = row.user_data;
+        if (typeof userData === "string") {
+          try {
+            userData = JSON.parse(userData);
+          } catch {}
+        }
         return NextResponse.json({
           status: "APPROVED",
           access_token: row.token,
-          user: row.user_data,
+          user: userData,
+          isFarmer: Boolean(userData?.isFarmer),
+          isOwner: Boolean(userData?.isOwner),
+          isDealer: Boolean(userData?.isDealer),
+          isOperator: Boolean(userData?.isOperator),
+          isAgent: Boolean(userData?.isAgent),
+          isAdmin: false,
+          role: userData?.role || [],
         });
       }
 

@@ -31,7 +31,27 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. If user is currently visiting a path that matches one of their active roles, ALLOW IT!
+  // 2. Protect Admin-only management routes from non-admin accounts
+  const adminOnlyRoutes = [
+    "/Admin",
+    "/City",
+    "/Country",
+    "/Currency",
+    "/Roles",
+    "/Permissions",
+    "/create_admin",
+    "/Subscriptions",
+    "/Package",
+    "/Coupon",
+    "/Purchase",
+    "/Logs",
+  ];
+  if (adminOnlyRoutes.some((route) => pathname.startsWith(route))) {
+    const fallbackTarget = isOwner ? "/owner" : isDealer ? "/dealer" : isOperator ? "/operator" : isAgent ? "/agent" : "/farmer";
+    return NextResponse.redirect(new URL(fallbackTarget, req.url));
+  }
+
+  // 3. If user is currently visiting a path that matches one of their active roles, ALLOW IT!
   if (pathname.startsWith("/owner") && isOwner) {
     return NextResponse.next();
   }
@@ -48,7 +68,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 3. If user is on the root path `/` or generic common pages, redirect based on active_role or primary role
+  // 4. If user is on the root path `/` or generic common pages, redirect non-admins to their operational dashboard
   if (pathname === "/" || pathname === "") {
     const activeRole = req.cookies.get("active_role")?.value;
 
@@ -83,10 +103,12 @@ export function middleware(req: NextRequest) {
     if (isFarmer) {
       return NextResponse.redirect(new URL(`/farmer`, req.url));
     }
-    return NextResponse.next();
+
+    // Default non-admin landing page
+    return NextResponse.redirect(new URL(`/farmer`, req.url));
   }
 
-  // 4. If accessing a role-specific dashboard for which they do NOT have permission:
+  // 5. If accessing a role-specific dashboard for which they do NOT have permission:
   if (pathname.startsWith("/owner") && !isOwner) {
     const target = isDealer ? "/dealer" : isAgent ? "/agent" : isOperator ? "/operator" : isFarmer ? "/farmer" : "/login";
     return NextResponse.redirect(new URL(target, req.url));
@@ -108,7 +130,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL(target, req.url));
   }
 
-  // Allow general administrative pages (e.g. /Devices, /Store, /Inventory, etc.) if authenticated
+  // Allow general operational pages (e.g. /Devices, /Store, /Inventory, etc.) if authenticated
   return NextResponse.next();
 }
 
