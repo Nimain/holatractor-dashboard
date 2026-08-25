@@ -94,14 +94,14 @@ export async function POST(request: NextRequest) {
           isDealer = dRes.rows.length > 0;
           isOperator = opRes.rows.length > 0;
           isAgent = agRes.rows.length > 0;
-          isAdmin = upRes.rows.length > 0 || email.toLowerCase().includes("admin");
+          isAdmin = false; // Biometric/push login is strictly for operational user dashboards (Farmer, Owner, Operator, Dealer, Agent). Admin requires password auth.
         }
       } catch (uErr: any) {
         console.warn("[push-challenge/approve] Role query notice:", uErr?.message);
       }
 
       // Default fallback if no roles exist in database
-      if (!isFarmer && !isOwner && !isDealer && !isOperator && !isAgent && !isAdmin) {
+      if (!isFarmer && !isOwner && !isDealer && !isOperator && !isAgent) {
         isFarmer = true;
       }
 
