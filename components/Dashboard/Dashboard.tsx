@@ -34,6 +34,52 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
 
+  // Security guard: Only verified administrators can view the Admin Dashboard.
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      const getCookie = (name: string) => {
+        const match = document.cookie.match(new RegExp("(^| )" + name + "=([^;]+)"));
+        return match ? match[2] : null;
+      };
+
+      const isAdmin = getCookie("isAdmin") === "true";
+      const isOwner = getCookie("isOwner") === "true";
+      const isFarmer = getCookie("isFarmer") === "true";
+      const isDealer = getCookie("isDealer") === "true";
+      const isOperator = getCookie("isOperator") === "true";
+      const isAgent = getCookie("isAgent") === "true";
+      const activeRole = getCookie("active_role");
+
+      if (!isAdmin) {
+        const target =
+          activeRole === "owner" && isOwner
+            ? "/owner"
+            : activeRole === "farmer" && isFarmer
+            ? "/farmer"
+            : activeRole === "dealer" && isDealer
+            ? "/dealer"
+            : activeRole === "operator" && isOperator
+            ? "/operator"
+            : activeRole === "agent" && isAgent
+            ? "/agent"
+            : isOwner
+            ? "/owner"
+            : isFarmer
+            ? "/farmer"
+            : isDealer
+            ? "/dealer"
+            : isOperator
+            ? "/operator"
+            : isAgent
+            ? "/agent"
+            : "/farmer";
+
+        window.location.replace(target);
+        return;
+      }
+    }
+  }, []);
+
   function fetchChartUserCounts() {
     setLoading(true)
     axios

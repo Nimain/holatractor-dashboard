@@ -70,18 +70,30 @@ export async function POST(request: NextRequest) {
       console.warn("[push-challenge] PostgreSQL challenge save notice:", dbErr?.message);
     }
 
-    // 2. Also notify backend to dispatch FCM push notification
+    // 2. Dispatch FCM push notification ONCE to the active FastAPI backend
     let pushDispatched = false;
-    const candidateEndpoints = [
-      "http://localhost:8000/api/v1/auth/push-challenge/create",
-      "http://127.0.0.1:8000/api/v1/auth/push-challenge/create",
-      `${FastApiBaseURL.replace(/\/$/, "")}/api/v1/auth/push-challenge/create`,
-    ];
+    const targetEndpoint = `${FastApiBaseURL.replace(/\/$/, "")}/api/v1/auth/push-challenge/create`;
 
-    for (const endpoint of candidateEndpoints) {
+    try {
+      const resFast = await axios.post(
+        targetEndpoint,
+        {
+          email,
+          challenge_id: challengeId,
+          match_number: matchNumber,
+          options,
+          device_info: deviceInfo,
+        },
+        { timeout: 4000 }
+      );
+      if (resFast.data?.success || resFast.data?.challenge_id) {
+        pushDispatched = true;
+      }
+    } catch (remoteErr: any) {
+      // Local fallback only if remote primary endpoint failed
       try {
-        const resFast = await axios.post(
-          endpoint,
+        const resLocal = await axios.post(
+          "http://localhost:8000/api/v1/auth/push-challenge/create",
           {
             email,
             challenge_id: challengeId,
@@ -89,13 +101,12 @@ export async function POST(request: NextRequest) {
             options,
             device_info: deviceInfo,
           },
-          { timeout: 2500 }
+          { timeout: 2000 }
         );
-        if (resFast.data?.success || resFast.data?.challenge_id) {
+        if (resLocal.data?.success || resLocal.data?.challenge_id) {
           pushDispatched = true;
-          break;
         }
-      } catch (e: any) {}
+      } catch (_) {}
     }
 
     return NextResponse.json({

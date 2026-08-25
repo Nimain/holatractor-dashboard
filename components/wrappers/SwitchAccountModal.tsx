@@ -186,8 +186,12 @@ export default function SwitchAccountModal({
       onClose();
     }
 
-    // Navigate smoothly to selected dashboard
-    router.push(role.path);
+    // Navigate smoothly to selected dashboard with fresh cookie context
+    if (typeof window !== "undefined") {
+      window.location.href = role.path;
+    } else {
+      router.push(role.path);
+    }
   };
 
   return (
