@@ -167,14 +167,25 @@ const filterGPSByTimeRange = (history: GPSLocation[], filterType: string): GPSLo
 
 // Load Google Maps Script
 const loadGoogleMapsScript = (callback: () => void) => {
-  if (typeof window !== 'undefined' && window.google) {
+  if (typeof window !== 'undefined' && window.google?.maps?.Map) {
     callback()
     return
   }
 
   const existingScript = document.getElementById('google-maps-script')
   if (existingScript) {
-    existingScript.addEventListener('load', callback)
+    const checkInterval = setInterval(() => {
+      if (typeof window !== 'undefined' && window.google?.maps?.Map) {
+        clearInterval(checkInterval)
+        callback()
+      }
+    }, 100)
+    existingScript.addEventListener('load', () => {
+      if (typeof window !== 'undefined' && window.google?.maps?.Map) {
+        clearInterval(checkInterval)
+        callback()
+      }
+    })
     return
   }
 
@@ -183,7 +194,11 @@ const loadGoogleMapsScript = (callback: () => void) => {
   script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry`
   script.async = true
   script.defer = true
-  script.addEventListener('load', callback)
+  script.addEventListener('load', () => {
+    if (typeof window !== 'undefined' && window.google?.maps?.Map) {
+      callback()
+    }
+  })
   document.head.appendChild(script)
 }
 
@@ -981,10 +996,10 @@ export default function DeviceSection() {
 
   // Initialize Google Map with selected map type (satellite/hybrid/roadmap)
   useEffect(() => {
-    if (!mapRef.current || !mapsLoaded || !window.google) return
+    if (!mapRef.current || !mapsLoaded || typeof window === "undefined" || !window.google?.maps?.Map) return
 
     if (!googleMapRef.current) {
-      googleMapRef.current = new google.maps.Map(mapRef.current, {
+      googleMapRef.current = new window.google.maps.Map(mapRef.current, {
         center: mapCenter,
         zoom: 14,
         mapTypeId: mapType,
@@ -1004,7 +1019,7 @@ export default function DeviceSection() {
 
   // Update marker for ONLY the selected tractor on the map
   useEffect(() => {
-    if (!googleMapRef.current || !mapsLoaded || !window.google) return
+    if (!googleMapRef.current || !mapsLoaded || typeof window === "undefined" || !window.google?.maps?.Marker) return
 
     // Clear existing markers
     markersRef.current.forEach((marker) => marker.setMap(null))
@@ -1013,7 +1028,7 @@ export default function DeviceSection() {
     const selectedDev = devices.find((d) => d.id === selectedTractor) || devices[0]
     if (!selectedDev) return
 
-    const marker = new google.maps.Marker({
+    const marker = new window.google.maps.Marker({
       position: { lat: selectedDev.lat, lng: selectedDev.lng },
       map: googleMapRef.current,
       icon: getGoogleMapsTractorIcon({
@@ -1028,7 +1043,7 @@ export default function DeviceSection() {
       zIndex: 100,
     })
 
-    const infoWindow = new google.maps.InfoWindow({
+    const infoWindow = new window.google.maps.InfoWindow({
       content: `
         <div style="color: #000; padding: 8px; font-family: system-ui, -apple-system, sans-serif; max-width: 220px;">
           ${selectedDev.tractorImage ? `<img src="${selectedDev.tractorImage}" style="width: 100%; height: 90px; object-fit: cover; border-radius: 6px; margin-bottom: 8px;" />` : ""}
