@@ -376,12 +376,10 @@ const LogInPage = () => {
 
         {/* Bottom Platform Guarantee & Status Footer */}
         <div className="relative z-10 pt-6 border-t border-red-950/60 flex items-center justify-between text-xs text-slate-400">
-          <div className="flex items-center gap-4">
-            <span className="font-semibold text-slate-300">⚡ 15,000+ Active Hectares</span>
-            <span>•</span>
+          <div className="flex items-center gap-2">
             <span>🔒 SOC-2 Encrypted</span>
           </div>
-          <span className="text-[11px] text-red-400/80 font-medium">© 2026 HolaTractor Inc.</span>
+          <span className="text-[11px] text-red-400/80 font-medium">© 2026 Holatractor LTDA</span>
         </div>
       </div>
 
