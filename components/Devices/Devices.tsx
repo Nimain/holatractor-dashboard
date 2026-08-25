@@ -279,10 +279,24 @@ export default function DeviceSection() {
 
   // Inline Quick Add Tractor states
   const [showAddTractorModal, setShowAddTractorModal] = useState<boolean>(false)
+  const [catalogTractorSearchTerm, setCatalogTractorSearchTerm] = useState<string>("")
   const [selectedBaseTractorId, setSelectedBaseTractorId] = useState<string>("")
   const [newTractorHourlyPrice, setNewTractorHourlyPrice] = useState<number>(20)
   const [creatingTractor, setCreatingTractor] = useState<boolean>(false)
   const [createTractorError, setCreateTractorError] = useState<string | null>(null)
+
+  // Filtered Catalog Base Tractors for the Add Tractor to Store modal
+  const filteredCatalogTractors = useMemo(() => {
+    if (!availableBaseTractors) return []
+    if (!catalogTractorSearchTerm.trim()) return availableBaseTractors
+    const term = catalogTractorSearchTerm.toLowerCase().trim()
+    return availableBaseTractors.filter((bt) =>
+      (bt.name && bt.name.toLowerCase().includes(term)) ||
+      (bt.model && bt.model.toLowerCase().includes(term)) ||
+      (bt.base_tractor_id && bt.base_tractor_id.toLowerCase().includes(term))
+    )
+  }, [availableBaseTractors, catalogTractorSearchTerm])
+
 
   const mapRef = useRef<HTMLDivElement>(null)
   const googleMapRef = useRef<google.maps.Map | null>(null)
@@ -2179,42 +2193,74 @@ export default function DeviceSection() {
 
                           <form onSubmit={handleAddTractorToStore} className="space-y-3">
                             <div>
-                              <label className="block text-[11px] font-bold uppercase text-slate-300 mb-1.5">
-                                Select Tractor Model from Catalog *
-                              </label>
+                              <div className="flex items-center justify-between mb-1.5">
+                                <label className="block text-[11px] font-bold uppercase text-slate-300">
+                                  Select Tractor Model from Catalog * ({filteredCatalogTractors.length}
+                                  {catalogTractorSearchTerm ? ` of ${availableBaseTractors.length}` : ""})
+                                </label>
+                              </div>
+
+                              {/* Search Catalog Tractors Input */}
+                              <div className="relative mb-2">
+                                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input
+                                  type="text"
+                                  value={catalogTractorSearchTerm}
+                                  onChange={(e) => setCatalogTractorSearchTerm(e.target.value)}
+                                  placeholder="Search catalog models by name or model..."
+                                  className="w-full bg-slate-800/90 border border-slate-700/80 rounded-xl pl-9 pr-8 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                                />
+                                {catalogTractorSearchTerm && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setCatalogTractorSearchTerm("")}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white p-0.5"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto p-1 bg-slate-900/80 rounded-xl border border-slate-800">
-                                {availableBaseTractors.map((bt) => {
-                                  const isChosen = selectedBaseTractorId === bt.base_tractor_id
-                                  return (
-                                    <div
-                                      key={bt.base_tractor_id}
-                                      onClick={() => setSelectedBaseTractorId(bt.base_tractor_id)}
-                                      className={`p-2 rounded-lg border cursor-pointer transition-all flex items-center space-x-2.5 ${
-                                        isChosen
-                                          ? "bg-emerald-950/60 border-emerald-500 ring-1 ring-emerald-500 text-white"
-                                          : "bg-slate-800/40 border-slate-700/50 text-slate-300 hover:bg-slate-800"
-                                      }`}
-                                    >
-                                      {bt.image ? (
-                                        <img
-                                          src={bt.image}
-                                          alt={bt.name}
-                                          className="w-8 h-8 rounded object-cover border border-slate-700 flex-shrink-0"
-                                        />
-                                      ) : (
-                                        <div className="w-8 h-8 rounded bg-emerald-500/10 text-emerald-400 flex items-center justify-center flex-shrink-0">
-                                          <Truck className="w-4 h-4" />
+                                {filteredCatalogTractors.length === 0 ? (
+                                  <div className="col-span-2 py-4 text-center text-xs text-slate-400">
+                                    No catalog models match &quot;{catalogTractorSearchTerm}&quot;
+                                  </div>
+                                ) : (
+                                  filteredCatalogTractors.map((bt) => {
+                                    const isChosen = selectedBaseTractorId === bt.base_tractor_id
+                                    return (
+                                      <div
+                                        key={bt.base_tractor_id}
+                                        onClick={() => setSelectedBaseTractorId(bt.base_tractor_id)}
+                                        className={`p-2 rounded-lg border cursor-pointer transition-all flex items-center space-x-2.5 ${
+                                          isChosen
+                                            ? "bg-emerald-950/60 border-emerald-500 ring-1 ring-emerald-500 text-white"
+                                            : "bg-slate-800/40 border-slate-700/50 text-slate-300 hover:bg-slate-800"
+                                        }`}
+                                      >
+                                        {bt.image ? (
+                                          <img
+                                            src={bt.image}
+                                            alt={bt.name}
+                                            className="w-8 h-8 rounded object-cover border border-slate-700 flex-shrink-0"
+                                          />
+                                        ) : (
+                                          <div className="w-8 h-8 rounded bg-emerald-500/10 text-emerald-400 flex items-center justify-center flex-shrink-0">
+                                            <Truck className="w-4 h-4" />
+                                          </div>
+                                        )}
+                                        <div className="truncate">
+                                          <h6 className="text-xs font-semibold truncate">{bt.name}</h6>
+                                          <p className="text-[10px] text-slate-400 truncate">{bt.model}</p>
                                         </div>
-                                      )}
-                                      <div className="truncate">
-                                        <h6 className="text-xs font-semibold truncate">{bt.name}</h6>
-                                        <p className="text-[10px] text-slate-400 truncate">{bt.model}</p>
                                       </div>
-                                    </div>
-                                  )
-                                })}
+                                    )
+                                  })
+                                )}
                               </div>
                             </div>
+
 
                             <div>
                               <label className="block text-[11px] font-bold uppercase text-slate-300 mb-1">
