@@ -311,7 +311,7 @@ const LogInPage = () => {
       }
 
       const redirectPath = isAdmin
-        ? "/City"
+        ? "/"
         : singleRole === "dealer"
         ? "/dealer/customer"
         : singleRole === "operator"

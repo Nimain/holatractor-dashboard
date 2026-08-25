@@ -26,11 +26,8 @@ export function middleware(req: NextRequest) {
   const isFarmer = req.cookies.get("isFarmer")?.value === "true"
   const isAdmin = req.cookies.get("isAdmin")?.value === "true"
 
-  // 1. Admin has unrestricted access to all dashboards and management pages
+  // 1. Admin has unrestricted access to all dashboards and management pages (direct access to Admin dashboard on /)
   if (isAdmin) {
-    if (pathname === "/" || pathname === "") {
-      return NextResponse.redirect(new URL(`/City`, req.url));
-    }
     return NextResponse.next();
   }
 
