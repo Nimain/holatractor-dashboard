@@ -25,7 +25,7 @@ import {
 import { motion } from "framer-motion";
 
 export interface RoleConfig {
-  id: "owner" | "farmer" | "dealer" | "agent" | "operator";
+  id: "owner" | "farmer" | "dealer" | "agent" | "operator" | "admin";
   title: string;
   subtitle: string;
   path: string;
@@ -37,6 +37,17 @@ export interface RoleConfig {
 }
 
 export const ALL_ROLES: RoleConfig[] = [
+  {
+    id: "admin",
+    title: "System Administrator",
+    subtitle: "Manage platform master settings, cities, devices, inventory, and stores",
+    path: "/City",
+    icon: ShieldCheck,
+    color: "text-red-700 dark:text-red-400",
+    badgeBg: "bg-red-50 dark:bg-red-950/40",
+    badgeBorder: "border-red-200 dark:border-red-800/60",
+    gradient: "from-red-500/10 to-rose-500/10 hover:border-red-400",
+  },
   {
     id: "owner",
     title: "Tractor Owner",
@@ -120,6 +131,7 @@ export default function SwitchAccountModal({
 
   useEffect(() => {
     // Detect available roles from cookies
+    const isAdmin = cookie.get("isAdmin") === "true";
     const isOwner = cookie.get("isOwner") === "true";
     const isFarmer = cookie.get("isFarmer") === "true";
     const isDealer = cookie.get("isDealer") === "true";
@@ -132,11 +144,14 @@ export default function SwitchAccountModal({
       try {
         const parsed = typeof userObjStr === "string" ? JSON.parse(userObjStr) : userObjStr;
         if (Array.isArray(parsed?.isAdmin)) jwtRoles = parsed.isAdmin.map((r: string) => r.toLowerCase());
+        if (parsed?.isAdmin === true) jwtRoles.push("admin");
         if (Array.isArray(parsed?.role)) jwtRoles = [...jwtRoles, ...parsed.role.map((r: string) => r.toLowerCase())];
+        if (typeof parsed?.role === "string") jwtRoles.push(parsed.role.toLowerCase());
       } catch {}
     }
 
     const roles = ALL_ROLES.filter((r) => {
+      if (r.id === "admin" && (isAdmin || jwtRoles.includes("admin") || jwtRoles.includes("superadmin"))) return true;
       if (r.id === "owner" && (isOwner || jwtRoles.includes("owner"))) return true;
       if (r.id === "farmer" && (isFarmer || jwtRoles.includes("farmer"))) return true;
       if (r.id === "dealer" && (isDealer || jwtRoles.includes("dealer"))) return true;
@@ -145,7 +160,11 @@ export default function SwitchAccountModal({
       return false;
     });
 
-    setAvailableRoles(roles);
+    if (roles.length === 0 && isOpen) {
+      setAvailableRoles(ALL_ROLES);
+    } else {
+      setAvailableRoles(roles);
+    }
 
     // Detect current role based on path or cookie
     const activeCookie = cookie.get("active_role");
@@ -154,11 +173,12 @@ export default function SwitchAccountModal({
     else if (pathname.startsWith("/dealer")) setCurrentRole("dealer");
     else if (pathname.startsWith("/agent")) setCurrentRole("agent");
     else if (pathname.startsWith("/operator")) setCurrentRole("operator");
+    else if (pathname.startsWith("/City") || pathname.startsWith("/Devices")) setCurrentRole("admin");
     else if (activeCookie) setCurrentRole(activeCookie);
   }, [pathname, isOpen]);
 
-  // If user has 1 or 0 roles, do not display switching modal
-  if (availableRoles.length <= 1 && !isOpen) {
+  // If user has 0 roles and modal is not open, do not display
+  if (availableRoles.length === 0 && !isOpen) {
     return null;
   }
 
@@ -168,10 +188,12 @@ export default function SwitchAccountModal({
 
     // Save active_role in cookies & localStorage
     cookie.set("active_role", role.id, { path: "/", expires: expiryDate });
+    if (typeof document !== "undefined") {
+      document.cookie = `active_role=${role.id}; path=/; max-age=604800; SameSite=Lax;`;
+    }
     if (typeof window !== "undefined") {
       try {
         localStorage.setItem("active_role", role.id);
-        document.cookie = `active_role=${role.id}; path=/; expires=${expiryDate.toUTCString()};`;
       } catch {}
     }
 
@@ -183,12 +205,8 @@ export default function SwitchAccountModal({
       onClose();
     }
 
-    // Navigate to selected dashboard
-    if (typeof window !== "undefined") {
-      window.location.href = role.path;
-    } else {
-      router.push(role.path);
-    }
+    // Navigate smoothly to selected dashboard
+    router.push(role.path);
   };
 
   return (

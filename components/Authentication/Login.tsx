@@ -301,27 +301,8 @@ const LogInPage = () => {
     if (isAgent) activeRoles.push("agent");
     if (isFarmer) activeRoles.push("farmer");
 
-    if (activeRoles.length > 1) {
-      setShowRoleSelector(true);
-      return;
-    }
-
-    const singleRole = activeRoles[0] || (isAdmin ? "admin" : isOperator ? "operator" : isOwner ? "owner" : isDealer ? "dealer" : "farmer");
-    setCookieValue("active_role", singleRole);
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("active_role", singleRole);
-      } catch {}
-    }
-
-    const redirectPath = isAdmin ? "/City" : isDealer ? "/dealer/customer" : isOperator ? "/operator/bookings" : isOwner ? "/owner" : `/${singleRole}`;
-    
-    // Immediate redirect to dashboard
-    if (typeof window !== "undefined") {
-      window.location.replace(redirectPath);
-    } else {
-      router.push(redirectPath);
-    }
+    // Always display Account Selection Modal so user can choose their authorized dashboard
+    setShowRoleSelector(true);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
