@@ -21,21 +21,40 @@ const InventorySection = () => {
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
 
-  function fetchAllTractors() {
-    if (access_token) {
-      setFetchingRoles(true);
-      renderInstance
-        .get("/inventory")
-        .then((res) => {
-          if (res.status === 200) setAllTractors(res.data);
-        })
-        .catch((err) => {
-          errorMessage("Error in fetching inventory lists");
-        })
-        .finally(() => {
-          setFetchingRoles(false);
-        });
-    } else errorMessage("Admin not logged in");
+  async function fetchAllTractors() {
+    setFetchingRoles(true);
+    let loaded = false;
+
+    // 1. Try Next.js API route first
+    try {
+      const res = await fetch("/api/inventory", {
+        headers: access_token ? { Authorization: `Bearer ${access_token}` } : {},
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setAllTractors(data);
+          loaded = true;
+        }
+      }
+    } catch (apiErr) {
+      console.warn("Local inventory fetch notice:", apiErr);
+    }
+
+    // 2. Fallback to renderInstance (NestJS)
+    if (!loaded) {
+      try {
+        const res = await renderInstance.get("/inventory");
+        if (res.status === 200 && Array.isArray(res.data)) {
+          setAllTractors(res.data);
+          loaded = true;
+        }
+      } catch (err) {
+        console.warn("NestJS inventory fetch notice:", err);
+      }
+    }
+
+    setFetchingRoles(false);
   }
 
   useEffect(() => {

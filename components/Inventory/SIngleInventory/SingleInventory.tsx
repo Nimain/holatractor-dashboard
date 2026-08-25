@@ -16,16 +16,39 @@ const SingleInventory = () => {
 
     const { slug } = useParams()
 
-    function fetchInventoryDetails() {
+    async function fetchInventoryDetails() {
         if (slug) {
-            setFetchingInventoryDetails(true)
-            renderInstance.get(`/inventory/${slug}`)
-                .then((res) => {
-                    setTractorDetails(res.data.tractor)
-                    setLocationDetails(res.data.city)
-                }).catch((err) => {
-                    errorMessage("Error fetching tractor details")
-                }).finally(() => { setFetchingInventoryDetails(false) })
+            setFetchingInventoryDetails(true);
+            let loaded = false;
+
+            try {
+                const localRes = await fetch(`/api/inventory/${slug}`);
+                if (localRes.ok) {
+                    const data = await localRes.json();
+                    if (data?.tractor) {
+                        setTractorDetails(data.tractor);
+                        setLocationDetails(data.city || "");
+                        loaded = true;
+                    }
+                }
+            } catch (localErr) {
+                console.warn("Local inventory single fetch notice:", localErr);
+            }
+
+            if (!loaded) {
+                try {
+                    const res = await renderInstance.get(`/inventory/${slug}`);
+                    if (res.data?.tractor) {
+                        setTractorDetails(res.data.tractor);
+                        setLocationDetails(res.data.city || "");
+                        loaded = true;
+                    }
+                } catch (err) {
+                    errorMessage("Error fetching tractor details");
+                }
+            }
+
+            setFetchingInventoryDetails(false);
         }
     }
 
