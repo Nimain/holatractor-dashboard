@@ -200,7 +200,7 @@ export default function PasswordlessPushLogin({
     return (
       <div className="w-full space-y-5 animate-in fade-in-50 duration-300">
         <div className="text-center space-y-1.5">
-          <div className="inline-flex p-3 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-inner">
+          <div className="inline-flex p-3 rounded-2xl bg-red-500/10 text-[#AB0F0C] dark:text-red-400 border border-red-500/20 shadow-inner">
             <Smartphone className="w-6 h-6 animate-pulse" />
           </div>
           <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">
@@ -213,33 +213,33 @@ export default function PasswordlessPushLogin({
         </div>
 
         {/* Big Number Match Card */}
-        <div className="relative p-6 rounded-3xl bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 border border-emerald-500/30 text-white shadow-2xl text-center space-y-4 overflow-hidden">
-          <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-600" />
-          <div className="absolute -top-12 -left-12 w-32 h-32 bg-emerald-500/15 rounded-full blur-2xl pointer-events-none" />
+        <div className="relative p-6 rounded-3xl bg-gradient-to-b from-[#180505] via-[#100303] to-[#180505] border border-red-500/40 text-white shadow-2xl text-center space-y-4 overflow-hidden">
+          <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-[#AB0F0C] via-rose-500 to-[#AB0F0C]" />
+          <div className="absolute -top-12 -left-12 w-32 h-32 bg-red-600/15 rounded-full blur-2xl pointer-events-none" />
 
-          <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">
+          <p className="text-[10px] font-black text-red-400 uppercase tracking-widest">
             Select this matching number on your phone
           </p>
 
           <div className="py-2">
-            <div className="inline-flex items-center justify-center w-28 h-28 rounded-3xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/30 border-2 border-emerald-500/60 shadow-xl shadow-emerald-500/30">
-              <span className="text-5xl font-black text-emerald-400 tracking-tighter drop-shadow-md">
+            <div className="inline-flex items-center justify-center w-28 h-28 rounded-3xl bg-gradient-to-br from-red-600/20 to-red-700/30 border-2 border-red-500/60 shadow-xl shadow-red-600/30">
+              <span className="text-5xl font-black text-red-400 tracking-tighter drop-shadow-md">
                 {matchNumber}
               </span>
             </div>
           </div>
 
           <div className="flex items-center justify-center gap-2 text-xs font-bold text-slate-300">
-            <Clock className="w-3.5 h-3.5 text-emerald-400" />
+            <Clock className="w-3.5 h-3.5 text-red-400" />
             <span>
               Expires in {minutes}:{seconds < 10 ? `0${seconds}` : seconds}
             </span>
           </div>
 
-          <div className="flex items-center justify-center gap-2 pt-2 border-t border-slate-800">
+          <div className="flex items-center justify-center gap-2 pt-2 border-t border-red-950/80">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
             </span>
             <span className="text-[11px] text-slate-400 font-medium">
               Waiting for biometric approval on phone...
@@ -251,10 +251,10 @@ export default function PasswordlessPushLogin({
         <div className="p-4 rounded-2xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2.5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-              <Fingerprint className="w-4 h-4 text-emerald-600" />
+              <Fingerprint className="w-4 h-4 text-[#AB0F0C]" />
               <span>Direct In-App Simulator</span>
             </span>
-            <Badge variant="outline" className="text-[10px] font-bold text-emerald-600 border-emerald-400/40">
+            <Badge variant="outline" className="text-[10px] font-bold text-[#AB0F0C] border-red-400/40">
               Tap #{matchNumber}
             </Badge>
           </div>
@@ -269,8 +269,8 @@ export default function PasswordlessPushLogin({
                 onClick={() => handleSimulateApprove(opt)}
                 className={`h-11 rounded-xl text-base font-black transition-all ${
                   opt === matchNumber
-                    ? "hover:bg-emerald-600 hover:text-white hover:border-emerald-600"
-                    : "hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300"
+                    ? "hover:bg-[#AB0F0C] hover:text-white hover:border-[#AB0F0C]"
+                    : "hover:bg-rose-50 hover:text-[#AB0F0C] hover:border-red-300"
                 }`}
               >
                 {opt}
@@ -285,7 +285,7 @@ export default function PasswordlessPushLogin({
             <Button
               type="button"
               onClick={handleInitiatePush}
-              className="w-full h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5"
+              className="w-full h-10 rounded-xl bg-[#AB0F0C] hover:bg-[#8F0D0A] text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-red-700/20"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Generate New Request</span>
@@ -313,7 +313,7 @@ export default function PasswordlessPushLogin({
           <Label htmlFor="passwordless_email" className="text-xs font-bold text-slate-700 dark:text-slate-300">
             Account Email
           </Label>
-          <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[9px] font-black uppercase px-2 py-0.5">
+          <Badge className="bg-red-500/15 text-[#AB0F0C] dark:text-red-300 border border-red-500/30 text-[9px] font-black uppercase px-2 py-0.5">
             Biometric Push
           </Badge>
         </div>
@@ -324,14 +324,14 @@ export default function PasswordlessPushLogin({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          className="rounded-xl border-slate-200 dark:border-slate-800 text-xs h-11 bg-white dark:bg-slate-900/50 focus-visible:ring-2 focus-visible:ring-emerald-500/30"
+          className="rounded-xl border-slate-200 dark:border-slate-800 text-xs h-11 bg-white dark:bg-slate-900/50 focus-visible:ring-2 focus-visible:ring-red-500/30"
         />
       </div>
 
       <Button
         type="submit"
         disabled={loading}
-        className="w-full h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 transition-all group active:scale-[0.99]"
+        className="w-full h-11 rounded-xl bg-[#AB0F0C] hover:bg-[#8F0D0A] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-red-700/25 transition-all group active:scale-[0.99]"
       >
         {loading ? (
           <>
@@ -348,7 +348,7 @@ export default function PasswordlessPushLogin({
       </Button>
 
       <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800 flex items-center gap-2.5 text-[11px] text-slate-500">
-        <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+        <ShieldCheck className="w-4 h-4 text-[#AB0F0C] shrink-0" />
         <span>Instantly approve with Face ID, Touch ID, or PIN in your mobile app.</span>
       </div>
     </form>

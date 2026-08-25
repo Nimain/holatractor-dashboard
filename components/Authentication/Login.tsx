@@ -301,48 +301,48 @@ const LogInPage = () => {
   }, [searchParams]);
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 dark:bg-[#070D0B] flex items-stretch text-slate-900 dark:text-slate-100 selection:bg-emerald-500 selection:text-white font-sans">
+    <div className="w-full min-h-screen bg-slate-50 dark:bg-[#0C0505] flex items-stretch text-slate-900 dark:text-slate-100 selection:bg-[#AB0F0C] selection:text-white font-sans">
       {/* ── LEFT HERO: BRANDING & REAL-TIME PLATFORM SHOWCASE (DESKTOP) ── */}
-      <div className="relative hidden lg:flex lg:w-[48%] xl:w-[52%] flex-col justify-between p-12 overflow-hidden bg-[#06100D] text-white border-r border-emerald-950/60 shadow-2xl">
+      <div className="relative hidden lg:flex lg:w-[48%] xl:w-[52%] flex-col justify-between p-12 overflow-hidden bg-[#0F0404] text-white border-r border-red-950/60 shadow-2xl">
         {/* Background photo & rich atmospheric overlay */}
         <div
-          className="absolute inset-0 bg-cover bg-center opacity-30 mix-blend-luminosity scale-105 transition-transform duration-1000 ease-out"
+          className="absolute inset-0 bg-cover bg-center opacity-25 mix-blend-luminosity scale-105 transition-transform duration-1000 ease-out"
           style={{
             backgroundImage: `url("https://holadashboard.s3.us-west-2.amazonaws.com/tract.webp")`,
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-tr from-[#040A08] via-[#081814]/90 to-emerald-950/40" />
-        <div className="absolute -top-32 -left-32 w-96 h-96 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-[#080202] via-[#160505]/95 to-red-950/40" />
+        <div className="absolute -top-32 -left-32 w-96 h-96 bg-red-600/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-rose-600/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Top Branding Header */}
         <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <FarmerBrandIcon size={44} className="rounded-2xl shadow-xl border border-emerald-400/30" />
+            <FarmerBrandIcon size={44} className="rounded-2xl shadow-xl border border-red-500/30" />
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-lg font-black tracking-tight text-white">HolaTractor</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/30">
                   Fleet OS
                 </span>
               </div>
-              <p className="text-[11px] text-emerald-300/70 font-medium">Agricultural Machinery Network</p>
+              <p className="text-[11px] text-red-300/70 font-medium">Agricultural Machinery Network</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 border border-emerald-500/30 backdrop-blur-md">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 border border-red-500/30 backdrop-blur-md">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
             </span>
-            <span className="text-[11px] font-semibold text-emerald-200">TractorAI Live</span>
+            <span className="text-[11px] font-semibold text-red-200">TractorAI Live</span>
           </div>
         </div>
 
         {/* Center Hero Value Proposition & Floating Feature Chips */}
         <div className="relative z-10 my-auto space-y-6 max-w-xl">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-gradient-to-r from-emerald-500/15 to-teal-500/10 border border-emerald-400/30 text-emerald-300 text-xs font-bold shadow-inner">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-gradient-to-r from-red-500/15 to-rose-500/10 border border-red-500/30 text-red-300 text-xs font-bold shadow-inner">
+            <Sparkles className="w-3.5 h-3.5 text-red-400" />
             <span>Next-Generation Autonomous Fleet & Farm Hub</span>
           </div>
 
@@ -357,7 +357,7 @@ const LogInPage = () => {
           {/* Floating Metric Badges */}
           <div className="grid grid-cols-2 gap-3 pt-2">
             <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md space-y-1">
-              <div className="flex items-center gap-2 text-emerald-400 text-xs font-black">
+              <div className="flex items-center gap-2 text-red-400 text-xs font-black">
                 <Smartphone className="w-4 h-4" />
                 <span>Zero-Password Push</span>
               </div>
@@ -365,7 +365,7 @@ const LogInPage = () => {
             </div>
 
             <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md space-y-1">
-              <div className="flex items-center gap-2 text-teal-400 text-xs font-black">
+              <div className="flex items-center gap-2 text-rose-400 text-xs font-black">
                 <ShieldCheck className="w-4 h-4" />
                 <span>256-Bit Protection</span>
               </div>
@@ -375,13 +375,13 @@ const LogInPage = () => {
         </div>
 
         {/* Bottom Platform Guarantee & Status Footer */}
-        <div className="relative z-10 pt-6 border-t border-emerald-900/50 flex items-center justify-between text-xs text-slate-400">
+        <div className="relative z-10 pt-6 border-t border-red-950/60 flex items-center justify-between text-xs text-slate-400">
           <div className="flex items-center gap-4">
             <span className="font-semibold text-slate-300">⚡ 15,000+ Active Hectares</span>
             <span>•</span>
             <span>🔒 SOC-2 Encrypted</span>
           </div>
-          <span className="text-[11px] text-emerald-400/80 font-medium">© 2026 HolaTractor Inc.</span>
+          <span className="text-[11px] text-red-400/80 font-medium">© 2026 HolaTractor Inc.</span>
         </div>
       </div>
 
@@ -390,10 +390,10 @@ const LogInPage = () => {
         {/* Top Mobile Brand Header (Visible only on <lg) */}
         <div className="flex lg:hidden items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-2.5">
-            <FarmerBrandIcon size={36} className="rounded-xl shadow-md border border-emerald-500/30" />
+            <FarmerBrandIcon size={36} className="rounded-xl shadow-md border border-red-500/30" />
             <span className="text-base font-black tracking-tight text-slate-900 dark:text-white">HolaTractor</span>
           </div>
-          <Badge variant="outline" className="text-[10px] font-bold text-emerald-600 border-emerald-500/30">
+          <Badge variant="outline" className="text-[10px] font-bold text-[#AB0F0C] border-red-500/30">
             Fleet OS
           </Badge>
         </div>
@@ -417,13 +417,13 @@ const LogInPage = () => {
               onClick={() => setAuthMethod("push")}
               className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
                 authMethod === "push"
-                  ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-md border border-slate-200/50 dark:border-slate-700/60"
+                  ? "bg-white dark:bg-slate-800 text-[#AB0F0C] dark:text-red-400 shadow-md border border-slate-200/50 dark:border-slate-700/60"
                   : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               <Smartphone className="w-4 h-4" />
               <span>Mobile Push</span>
-              <span className="text-[9px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.2 rounded-full font-black uppercase">
+              <span className="text-[9px] bg-red-500/15 text-red-700 dark:text-red-300 px-1.5 py-0.2 rounded-full font-black uppercase">
                 Fast
               </span>
             </button>
@@ -464,7 +464,7 @@ const LogInPage = () => {
                     placeholder="e.g. farmer@holatractor.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="rounded-xl border-slate-200 dark:border-slate-800 text-xs h-11 pr-4 bg-white dark:bg-slate-900/50 focus-visible:ring-2 focus-visible:ring-emerald-500/30"
+                    className="rounded-xl border-slate-200 dark:border-slate-800 text-xs h-11 pr-4 bg-white dark:bg-slate-900/50 focus-visible:ring-2 focus-visible:ring-red-500/30"
                     required
                   />
                 </div>
@@ -477,7 +477,7 @@ const LogInPage = () => {
                   </Label>
                   <Link
                     href="/forgot_password"
-                    className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+                    className="text-[11px] font-bold text-[#AB0F0C] dark:text-red-400 hover:underline"
                   >
                     Forgot password?
                   </Link>
@@ -489,7 +489,7 @@ const LogInPage = () => {
                     placeholder="Enter your account password"
                     value={passwrd}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="rounded-xl border-slate-200 dark:border-slate-800 text-xs h-11 pr-10 bg-white dark:bg-slate-900/50 focus-visible:ring-2 focus-visible:ring-emerald-500/30"
+                    className="rounded-xl border-slate-200 dark:border-slate-800 text-xs h-11 pr-10 bg-white dark:bg-slate-900/50 focus-visible:ring-2 focus-visible:ring-red-500/30"
                     required
                   />
                   <button
@@ -505,7 +505,7 @@ const LogInPage = () => {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-11 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white font-bold text-xs shadow-lg shadow-slate-900/10 dark:shadow-emerald-600/25 flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
+                className="w-full h-11 rounded-xl bg-[#AB0F0C] hover:bg-[#8F0D0A] text-white font-bold text-xs shadow-lg shadow-red-700/25 flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
               >
                 {isLoading ? (
                   <CircularProgress size={18} className="text-white" />
@@ -521,7 +521,7 @@ const LogInPage = () => {
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-200 dark:border-slate-800" />
             </div>
-            <span className="relative bg-slate-50 dark:bg-[#070D0B] px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+            <span className="relative bg-slate-50 dark:bg-[#0C0505] px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               Or continue with
             </span>
           </div>
@@ -532,7 +532,7 @@ const LogInPage = () => {
           <div className="pt-2 text-center">
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Don't have a HolaTractor account?{" "}
-              <Link href={"/register"} className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">
+              <Link href={"/register"} className="text-[#AB0F0C] dark:text-red-400 font-bold hover:underline">
                 Create an account
               </Link>
             </p>
