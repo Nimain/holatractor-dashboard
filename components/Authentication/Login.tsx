@@ -261,44 +261,52 @@ const LogInPage = () => {
         (rawUser.role.toLowerCase() === "admin" || rawUser.role.toLowerCase() === "superadmin"));
 
     const setCookieValue = (name: string, val: string) => {
-      cookie.set(name, val, { path: "/", expires: expiryDate });
+      try {
+        cookie.set(name, val, { path: "/", expires: expiryDate });
+      } catch {}
       if (typeof document !== "undefined") {
-        document.cookie = `${name}=${val}; path=/; expires=${expiryDate.toUTCString()}; SameSite=Lax;`;
+        document.cookie = `${name}=${val}; path=/; max-age=604800; SameSite=Lax;`;
       }
     };
 
     setCookieValue("access_token", token);
     setCookieValue("token", token);
     setCookieValue("user", JSON.stringify(user));
-    setCookieValue("isOwner", JSON.stringify(isOwner));
-    setCookieValue("isFarmer", JSON.stringify(isFarmer));
-    setCookieValue("isDealer", JSON.stringify(isDealer));
-    setCookieValue("isOperator", JSON.stringify(isOperator));
-    setCookieValue("isAgent", JSON.stringify(isAgent));
-    setCookieValue("isAdmin", JSON.stringify(isAdmin));
+    setCookieValue("isOwner", String(isOwner));
+    setCookieValue("isFarmer", String(isFarmer));
+    setCookieValue("isDealer", String(isDealer));
+    setCookieValue("isOperator", String(isOperator));
+    setCookieValue("isAgent", String(isAgent));
+    setCookieValue("isAdmin", String(isAdmin));
 
     if (typeof window !== "undefined") {
       try {
         localStorage.setItem("user", JSON.stringify(user));
         localStorage.setItem("access_token", token);
         localStorage.setItem("token", token);
+        localStorage.setItem("isOwner", String(isOwner));
+        localStorage.setItem("isFarmer", String(isFarmer));
+        localStorage.setItem("isDealer", String(isDealer));
+        localStorage.setItem("isOperator", String(isOperator));
+        localStorage.setItem("isAgent", String(isAgent));
+        localStorage.setItem("isAdmin", String(isAdmin));
       } catch {}
     }
 
     const activeRoles: string[] = [];
+    if (isAdmin) activeRoles.push("admin");
     if (isOwner) activeRoles.push("owner");
-    if (isFarmer) activeRoles.push("farmer");
     if (isDealer) activeRoles.push("dealer");
     if (isOperator) activeRoles.push("operator");
     if (isAgent) activeRoles.push("agent");
-    if (isAdmin) activeRoles.push("admin");
+    if (isFarmer) activeRoles.push("farmer");
 
     if (activeRoles.length > 1) {
       setShowRoleSelector(true);
       return;
     }
 
-    const singleRole = activeRoles[0] || "farmer";
+    const singleRole = activeRoles[0] || (isAdmin ? "admin" : isOperator ? "operator" : isOwner ? "owner" : isDealer ? "dealer" : "farmer");
     setCookieValue("active_role", singleRole);
     if (typeof window !== "undefined") {
       try {
@@ -306,9 +314,11 @@ const LogInPage = () => {
       } catch {}
     }
 
-    const redirectPath = isAdmin ? "/City" : isDealer ? "/dealer/customer" : isOperator ? "/operator/bookings" : `/${singleRole}`;
+    const redirectPath = isAdmin ? "/City" : isDealer ? "/dealer/customer" : isOperator ? "/operator/bookings" : isOwner ? "/owner" : `/${singleRole}`;
+    
+    // Immediate redirect to dashboard
     if (typeof window !== "undefined") {
-      window.location.href = redirectPath;
+      window.location.replace(redirectPath);
     } else {
       router.push(redirectPath);
     }

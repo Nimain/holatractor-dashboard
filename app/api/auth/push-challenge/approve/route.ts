@@ -61,29 +61,65 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Build or query user details from PostgreSQL User table
+      // Look up user details across tables
       const email = challenge.email;
       let userRow: any = null;
+      let isFarmer = false;
+      let isOwner = false;
+      let isDealer = false;
+      let isOperator = false;
+      let isAgent = false;
+      let isAdmin = false;
 
       try {
         const userRes = await client.query(
-          `SELECT id, name, "isFarmer", "isOwner", "isDealer", "isOperator", "isAgent", image FROM "User" WHERE LOWER(email) = LOWER($1) LIMIT 1`,
+          `SELECT id, first_name, last_name, email, image FROM "User" WHERE LOWER(email) = LOWER($1) LIMIT 1`,
           [email]
         );
         if (userRes.rows.length > 0) {
           userRow = userRes.rows[0];
+          const uid = userRow.id;
+
+          const [fRes, oRes, dRes, opRes, agRes, upRes] = await Promise.all([
+            client.query(`SELECT id FROM "Farmer" WHERE user_id = $1 LIMIT 1`, [uid]),
+            client.query(`SELECT id FROM "Owner" WHERE user_id = $1 LIMIT 1`, [uid]),
+            client.query(`SELECT id FROM "Dealer" WHERE user_id = $1 LIMIT 1`, [uid]),
+            client.query(`SELECT id FROM "Operator" WHERE user_id = $1 LIMIT 1`, [uid]),
+            client.query(`SELECT id FROM "Agent" WHERE user_id = $1 LIMIT 1`, [uid]),
+            client.query(`SELECT id FROM "UserProfile" WHERE user_id = $1 LIMIT 1`, [uid]),
+          ]);
+
+          isFarmer = fRes.rows.length > 0;
+          isOwner = oRes.rows.length > 0;
+          isDealer = dRes.rows.length > 0;
+          isOperator = opRes.rows.length > 0;
+          isAgent = agRes.rows.length > 0;
+          isAdmin = upRes.rows.length > 0 || email.toLowerCase().includes("admin");
         }
       } catch (uErr: any) {
-        console.warn("[push-challenge/approve] User DB query notice:", uErr?.message);
+        console.warn("[push-challenge/approve] Role query notice:", uErr?.message);
       }
 
+      // Default fallback if not registered yet in role tables
+      if (!isFarmer && !isOwner && !isDealer && !isOperator && !isAgent && !isAdmin) {
+        if (email.toLowerCase().includes("admin")) {
+          isAdmin = true;
+        } else {
+          isFarmer = true;
+        }
+      }
+
+      const roles: string[] = [];
+      if (isAdmin) roles.push("admin");
+      if (isOwner) roles.push("owner");
+      if (isDealer) roles.push("dealer");
+      if (isOperator) roles.push("operator");
+      if (isAgent) roles.push("agent");
+      if (isFarmer) roles.push("farmer");
+
       const userId = userRow?.id || `user_${email.split("@")[0]}`;
-      const name = userRow?.name || email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1);
-      const isFarmer = userRow?.isFarmer ?? true;
-      const isOwner = userRow?.isOwner ?? false;
-      const isDealer = userRow?.isDealer ?? false;
-      const isOperator = userRow?.isOperator ?? false;
-      const isAgent = userRow?.isAgent ?? false;
+      const fullName = `${userRow?.first_name || ""} ${userRow?.last_name || ""}`.trim();
+      const name = fullName || email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1);
 
       const tokenPayload = {
         userId,
@@ -97,7 +133,8 @@ export async function POST(request: NextRequest) {
         isDealer,
         isOperator,
         isAgent,
-        role: isFarmer ? ["farmer"] : ["user"],
+        isAdmin,
+        role: roles,
         authType: "MOBILE_PUSH_PASSWORDLESS",
       };
 
@@ -113,8 +150,16 @@ export async function POST(request: NextRequest) {
         success: true,
         status: "APPROVED",
         access_token: token,
+        token: token,
         user: tokenPayload,
-        message: "Mobile biometric & number verification approved successfully.",
+        roles,
+        isFarmer,
+        isOwner,
+        isDealer,
+        isOperator,
+        isAgent,
+        isAdmin,
+        message: "Mobile biometric verification approved successfully.",
       });
     } finally {
       client.release();
