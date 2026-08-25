@@ -1,18 +1,16 @@
-import React from 'react'
-import Menubar from '../Menubar/Menubar'
-import Roles from './Roles'
+import React from "react";
+import Menubar from "../Menubar/Menubar";
+import Roles from "./Roles";
 
 const RolesContainer = () => {
   return (
-    <div
-      className='w-full min-h-[100vh] p-[10px] 1050px:p-[30px] max-h-[1580px] bg-[#e5e5e5] relative overflow-auto'>
-
-      <Menubar pagename={'Roles'} />
-
-      <Roles />
-
+    <div className="w-full min-h-screen p-4 md:p-8 bg-[#F8FAFC] dark:bg-slate-950 relative overflow-auto">
+      <Menubar pagename={"Role Management"} />
+      <div className="mt-4">
+        <Roles />
+      </div>
     </div>
-  )
-}
+  );
+};
 
-export default RolesContainer
+export default RolesContainer;

@@ -1,18 +1,16 @@
-import React from 'react'
-import Menubar from '../Menubar/Menubar'
-import Permissions from './Permissions'
+import React from "react";
+import Menubar from "../Menubar/Menubar";
+import Permissions from "./Permissions";
 
 const PermissionsContainer = () => {
   return (
-    <div
-      className='w-full min-h-[100vh] p-[10px] 1050px:p-[30px] max-h-[1580px] bg-[#e5e5e5] relative overflow-auto'>
-
-      <Menubar pagename={'Permisions'} />
-
-      <Permissions />
-
+    <div className="w-full min-h-screen p-4 md:p-8 bg-[#F8FAFC] dark:bg-slate-950 relative overflow-auto">
+      <Menubar pagename={"Role Permissions Matrix"} />
+      <div className="mt-4">
+        <Permissions />
+      </div>
     </div>
-  )
-}
+  );
+};
 
-export default PermissionsContainer
+export default PermissionsContainer;

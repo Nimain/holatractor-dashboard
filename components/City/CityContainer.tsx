@@ -1,18 +1,16 @@
-import React from 'react'
-import Menubar from '../Menubar/Menubar'
-import City from './City'
+import React from "react";
+import Menubar from "../Menubar/Menubar";
+import CitySection from "./City";
 
 const CityContainer = () => {
   return (
-    <div
-      className='w-full min-h-[100vh] p-[10px] 1050px:p-[30px] max-h-[1580px] bg-[#e5e5e5] relative overflow-auto'>
-
-      <Menubar pagename={'City'} />
-
-      <City />
-
+    <div className="w-full min-h-screen p-4 md:p-8 bg-[#F8FAFC] dark:bg-slate-950 relative overflow-auto">
+      <Menubar pagename={"Municipalities & Cities"} />
+      <div className="mt-4">
+        <CitySection />
+      </div>
     </div>
-  )
-}
+  );
+};
 
-export default CityContainer
+export default CityContainer;

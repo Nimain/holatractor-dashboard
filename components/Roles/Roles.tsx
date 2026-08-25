@@ -1,563 +1,523 @@
-"use client"
+"use client";
 
+import { useState, useEffect, useMemo, useCallback } from "react";
+import axios from "axios";
+import Link from "next/link";
+import { Avatar } from "@mui/material";
+import { useCookie } from "next-cookie";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
-import { Role } from "@/utils/Types/types";
-import { Avatar, Backdrop, CircularProgress } from "@mui/material";
-import { MoreVerticalIcon } from "lucide-react";
-import { useCookie } from "next-cookie";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
-  DialogFooter,
   DialogHeader,
+  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import AddIcon from "@mui/icons-material/Add";
-import { uploadFileToS3 } from "@/utils/AWS/FileUpload";
+import {
+  Shield,
+  ShieldCheck,
+  Plus,
+  Search,
+  RefreshCw,
+  Users,
+  Edit3,
+  Trash2,
+  Lock,
+  KeyRound,
+  CheckCircle2,
+  Sparkles,
+  Layers,
+} from "lucide-react";
+
+export interface RoleData {
+  id: string;
+  name: string;
+  image?: string | null;
+  allowedModules?: any[];
+  user_count?: number;
+  createdAt?: string;
+}
 
 const Roles = () => {
-  const [open, setOpen] = useState(false);
-  const [addNewRole, setAddNewRole] = useState(false);
-  const [addNewRoleName, setAddNewRoleName] = useState("");
-  const [editOptionShow, setEditOptionShow] = useState(-1);
-  const [selectedModules] = useState([]);
-
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [fetchingRoles, setFetchingRoles] = useState(false);
-
-  const [loading, setLoading] = useState(false);
-  const [imageUploading, setImageUploading] = useState(false);
-  const [image, setImage] = useState<File | null>(null);
-
-  // Update role state variables
-  const [editARole, setEditARole] = useState(false);
-  const [editingARole, setEditingARole] = useState(false);
-  const [editRoleName, setEditRoleName] = useState("");
-  const [editRoleImage, setEditRoleImage] = useState<File | null | string>();
-  const [editRoleId, setEditRoleId] = useState("");
-
-  const [deleteRole, setDeleteRole] = useState(false)
-
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
 
-  const router = useRouter();
+  const [roles, setRoles] = useState<RoleData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  function fetchAllRoles() {
-    setFetchingRoles(true);
-    renderInstance
-      .get("/role", {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      })
-      .then((res) => {
+  // Create Role Modal
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newRoleName, setNewRoleName] = useState("");
+  const [newRoleImage, setNewRoleImage] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+
+  // Edit Role Modal
+  const [editingRole, setEditingRole] = useState<RoleData | null>(null);
+  const [editRoleName, setEditRoleName] = useState("");
+  const [editRoleImage, setEditRoleImage] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // Fetch all roles
+  const fetchRoles = useCallback(async () => {
+    setLoading(true);
+    let loaded = false;
+
+    // 1. Next.js PostgreSQL API
+    try {
+      const res = await axios.get("/api/role", { timeout: 6000 });
+      if (Array.isArray(res.data)) {
         setRoles(res.data);
-      })
-      .catch((err) => {
-        errorMessage("Error fetching roles");
-      })
-      .finally(() => {
-        setFetchingRoles(false);
-      });
-  }
-
-  async function handleCreateRole() {
-    if (!addNewRoleName) {
-      errorMessage("Please give a name");
-      return;
+        loaded = true;
+      }
+    } catch (e) {
+      console.warn("Direct /api/role notice:", e);
     }
 
-    let imageUrl = "";
-
-    if (image) {
-      setImageUploading(true);
-      const buffer = Buffer.from(await image.arrayBuffer());
-      imageUrl = await uploadFileToS3(buffer, image.name);
-      setImageUploading(false);
-      if (!imageUrl) {
-        errorMessage("Something went wrong in uploading the image");
-        return;
+    // 2. NestJS fallback
+    if (!loaded) {
+      try {
+        const res = await renderInstance.get("/role", {
+          headers: access_token ? { Authorization: `Bearer ${access_token}` } : {},
+        });
+        if (Array.isArray(res.data)) {
+          setRoles(res.data);
+        }
+      } catch (err) {
+        errorMessage("Error fetching roles");
       }
     }
 
-    const newRole = {
-      name: addNewRoleName.toLowerCase(),
-      image: imageUrl,
-      allowedModules: selectedModules,
-    };
+    setLoading(false);
+  }, [access_token]);
 
-    setLoading(true);
+  useEffect(() => {
+    fetchRoles();
+  }, [fetchRoles]);
 
-    renderInstance
-      .post("/role", newRole, {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      })
-      .then((res) => {
-        if (res.status === 201) {
-          successMessage("Role created successfully");
-          setTimeout(() => {
-            setOpen(false);
-            setEditARole(false);
-            setAddNewRole(false);
-            setEditRoleName("");
-            setImage(null);
-            fetchAllRoles();
-          }, 3000);
-        }
-      })
-      .catch((err) => {
-        if (
-          err.response &&
-          err.response.status === 409 &&
-          err.response.data.message === "Admin is already created"
-        ) {
-          errorMessage("Admin can't be created");
-          setAddNewRoleName("");
-        } else if (
-          err.response &&
-          err.response.status === 409 &&
-          err.response.data.message === "Role already present"
-        ) {
-          errorMessage("Role already present");
-          setAddNewRoleName("");
-        } else {
-          errorMessage("Something went wrong");
-        }
-      })
-      .finally(() => {
-        setLoading(false);
-        setTimeout(() => {
-          router.refresh();
-          setOpen(false);
-          setEditARole(false);
-          setAddNewRole(false);
-          setEditRoleName("");
-          setImage(null);
-        }, 3000);
+  // Create Role Handler
+  const handleCreateRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRoleName.trim()) {
+      errorMessage("Please provide a role name");
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const res = await axios.post("/api/role", {
+        name: newRoleName.trim().toLowerCase(),
+        image: newRoleImage.trim(),
+        allowedModules: [],
       });
-  }
 
-  function handleEditOptionShow(e: any, index_number: any) {
-    e.stopPropagation();
-    setEditOptionShow(index_number);
-  }
-
-  function handleEditRoleModalOpen(name: string, image: File | string, id: string) {
-    setEditRoleName(name);
-    setEditRoleImage(image);
-    setEditRoleId(id);
-    setEditARole(true);
-  }
-
-function handleEditRoleModalClose() {
-    setEditRoleName("")
-    setEditRoleImage(null)
-    setEditRoleId('')
-    setEditARole(false)
-}
-
-const handleEditRoleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setEditRoleImage(file);
+      if (res.data?.id) {
+        successMessage(`Role '${newRoleName}' created successfully!`);
+        setNewRoleName("");
+        setNewRoleImage("");
+        setCreateOpen(false);
+        fetchRoles();
+      } else {
+        errorMessage(res.data?.error || "Failed to create role");
+      }
+    } catch (err: any) {
+      errorMessage(err?.response?.data?.error || "Error creating role");
+    } finally {
+      setIsCreating(false);
     }
   };
 
-  async function handleEditRole() {
-        if (!editRoleName) {
-            errorMessage("Please enter the role new name")
-        }
+  // Edit Role Handler
+  const handleUpdateRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRole) return;
 
-        let imageUrl = ''
-        let isImageUploaded = false
+    setIsUpdating(true);
+    try {
+      const res = await axios.patch("/api/role", {
+        id: editingRole.id,
+        name: editRoleName.trim().toLowerCase(),
+        image: editRoleImage.trim(),
+      });
 
-        if (editRoleImage && typeof editRoleImage !== "string") {
-            setImageUploading(true)
-            const buffer = Buffer.from(await editRoleImage.arrayBuffer())
-            imageUrl = await uploadFileToS3(buffer, editRoleImage.name)
-            setImageUploading(false)
-            if (!imageUrl) {
-                errorMessage("Something went wrong in uploading the image")
-                return
-            } else isImageUploaded = true
-        }
+      if (res.data?.id) {
+        successMessage("Role updated successfully!");
+        setEditingRole(null);
+        fetchRoles();
+      } else {
+        errorMessage(res.data?.error || "Failed to update role");
+      }
+    } catch (err: any) {
+      errorMessage(err?.response?.data?.error || "Error updating role");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
-        const updatedRole = isImageUploaded ? {
-            name: editRoleName.toLowerCase(),
-            image: imageUrl,
-        } : {
-            name: editRoleName
-        }
-
-        setEditingARole(true)
-
-        renderInstance.patch(`/role/${editRoleId}`, updatedRole, {
-            headers: {
-                Authorization: `Bearer ${access_token}`,
-            }
-        }).then((res) => {
-            if (res.status === 200) {
-                successMessage("Role updated successfully")
-            }
-        }).catch((err) => {
-            if (err.response && err.response.status === 409 && err.response.data.message === "Wrong role id") {
-                errorMessage("Wrong role id")
-            } else if (err.response && err.response.status === 409 && err.response.data.message === "Admin is already created") {
-                errorMessage("Admin can't be created")
-            } else {
-                errorMessage("Something went wrong")
-            }
-        }).finally(() => {
-            setEditingARole(false)
-            setTimeout(() => {
-                router.refresh()
-                fetchAllRoles()
-                handleEditRoleModalClose()
-            }, 3000);
-        })
+  // Delete Role Handler
+  const handleDeleteRole = async (role: RoleData) => {
+    if (role.name === "admin") {
+      errorMessage("The primary 'admin' role cannot be deleted.");
+      return;
     }
 
-    function handleRemoveRoleSubmit(e: any, roleid: string) {
-        e.preventDefault()
-        setDeleteRole(true)
-        renderInstance.delete(`/role/${roleid}`, {
-            headers: {
-                Authorization: `Bearer ${access_token}`,
-            }
-        })
-            .then((res) => {
-                if (res.status === 200 && res.data === "Deleted") successMessage(res.data)
-                router.refresh()
-            }).catch((err) => {
-                if (err.response && err.response.status === 409 && err.response.data.message === "Wrong role id") {
-                    errorMessage("Wrong role id")
-                } else errorMessage("Some error occured while deleting the role")
-            })
-            .finally(() => { 
-              fetchAllRoles()
-              setDeleteRole(false)
-             })
+    if (!window.confirm(`Are you sure you want to delete role '${role.name}'?`)) {
+      return;
     }
 
-    useEffect(() => { fetchAllRoles() }, [])
+    try {
+      const res = await axios.delete(`/api/role?id=${role.id}`);
+      if (res.data?.success || res.status === 200) {
+        successMessage(`Role '${role.name}' deleted.`);
+        fetchRoles();
+      } else {
+        errorMessage(res.data?.error || "Failed to delete role");
+      }
+    } catch (err: any) {
+      errorMessage(err?.response?.data?.error || "Error deleting role");
+    }
+  };
+
+  // Filtered Roles
+  const filteredRoles = useMemo(() => {
+    if (!searchQuery.trim()) return roles;
+    const q = searchQuery.toLowerCase().trim();
+    return roles.filter((r) => r.name.toLowerCase().includes(q));
+  }, [roles, searchQuery]);
 
   return (
-    <div className="w-full">
-      <Backdrop
-        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}
-        open={imageUploading || loading || editingARole || deleteRole}
-      >
-        {imageUploading && <p>Image uploading</p>}
-        {editingARole && <p>Updating the role</p>}
-        {loading && <p>Creating the role</p>}
-        {deleteRole && <p>Deleting the role</p>}
-      </Backdrop>
+    <div className="w-full py-2 space-y-6 max-w-7xl mx-auto">
+      {/* 1. Header with Actions */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-slate-900 to-indigo-800 text-white flex items-center justify-center shadow-lg shadow-indigo-900/20">
+            <Shield className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
+              Access Roles & Authority
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60">
+                {roles.length} System Roles
+              </span>
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Manage system authorization personas, assign privilege scopes, and bind modular permissions.
+            </p>
+          </div>
+        </div>
 
-      <div className="w-full py-[40px] flex items-center justify-end gap-[40px]">
-        <Dialog open={addNewRole} onOpenChange={setAddNewRole}>
-          <DialogTrigger asChild>
-            <button
-              name="add__new_role"
-              className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium text-sm rounded-xl flex items-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
-              onClick={() => {
-                setAddNewRole(true);
-              }}
-            >
-              <AddIcon fontSize="small" />
-              Add new role
-            </button>
-          </DialogTrigger>
-
-          <DialogContent
-            className="bg-white max-w-[480px] p-0 rounded-2xl border border-gray-100 shadow-2xl overflow-hidden"
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchRoles}
+            disabled={loading}
+            className="rounded-xl border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 gap-2 h-9 px-3.5"
           >
-            <div className="bg-slate-900 p-6 text-white relative">
-              <p className="text-xs uppercase tracking-wider font-semibold text-emerald-400 mb-1">Access Control</p>
-              <h2 className="text-xl font-bold">Create New Role</h2>
-              <p className="text-xs text-slate-300 mt-1">Define permissions and access boundaries for this role.</p>
-            </div>
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-indigo-600" : "text-slate-500"}`} />
+            Refresh
+          </Button>
 
-            <div className="p-6 space-y-5">
-              <div>
-                <label htmlFor="new_role_name" className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                  Role Name *
-                </label>
-                <input
-                  type="text"
-                  name="new_role_name"
-                  id="new_role_name"
-                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
-                  placeholder="e.g. Supervisor, Inspector, Dispatcher"
-                  value={addNewRoleName}
-                  onChange={(e) => {
-                    setAddNewRoleName(e.target.value);
-                  }}
-                />
-              </div>
+          <Link href="/Permissions">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-xl border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 gap-1.5 h-9 px-3.5"
+            >
+              <KeyRound className="w-3.5 h-3.5 text-indigo-600" /> Permissions Matrix
+            </Button>
+          </Link>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                  Role Icon / Badge Image (Optional)
-                </label>
-                {image ? (
-                  <div className="relative w-full h-40 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center p-3">
-                    <Image
-                      src={URL.createObjectURL(image)}
-                      alt="Role Image"
-                      width={100}
-                      height={100}
-                      className="object-cover rounded-xl shadow-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setImage(null)}
-                      className="absolute top-3 right-3 text-xs bg-red-100 text-red-600 hover:bg-red-200 px-2.5 py-1 rounded-lg font-medium transition-all"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ) : (
-                  <label
-                    htmlFor="dropzone-file"
-                    className="flex flex-col items-center justify-center w-full h-36 border-2 border-slate-200 border-dashed rounded-xl cursor-pointer bg-slate-50/50 hover:bg-slate-50 hover:border-emerald-400 transition-all p-4 text-center"
+          {/* Create Role Modal */}
+          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+            <DialogTrigger asChild>
+              <Button className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold h-9 px-4 gap-1.5 shadow-md shadow-indigo-600/20">
+                <Plus className="w-4 h-4" /> Create New Role
+              </Button>
+            </DialogTrigger>
+
+            <DialogContent className="max-w-md p-6 rounded-2xl">
+              <DialogHeader>
+                <DialogTitle className="text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-white">
+                  <Shield className="w-5 h-5 text-indigo-600" />
+                  Create System Role
+                </DialogTitle>
+              </DialogHeader>
+
+              <form onSubmit={handleCreateRole} className="space-y-4 pt-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase text-slate-600">Role Identifier / Name *</Label>
+                  <Input
+                    placeholder="e.g. technician, agronomy_lead, supervisor"
+                    value={newRoleName}
+                    onChange={(e) => setNewRoleName(e.target.value)}
+                    required
+                    className="rounded-xl"
+                  />
+                  <p className="text-[11px] text-slate-400">Stored in lower case for permission matching.</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold uppercase text-slate-600">Role Avatar Image URL (Optional)</Label>
+                  <Input
+                    placeholder="https://images.unsplash.com/..."
+                    value={newRoleImage}
+                    onChange={(e) => setNewRoleImage(e.target.value)}
+                    className="rounded-xl"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setCreateOpen(false)}
+                    className="rounded-xl"
                   >
-                    <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2">
-                      <AddIcon />
-                    </div>
-                    <p className="text-xs font-medium text-slate-700">
-                      <span className="text-emerald-600 font-semibold">Click to upload</span> or drag and drop
-                    </p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">PNG, JPG, SVG up to 5MB</p>
-                    <input
-                      id="dropzone-file"
-                      type="file"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files ? e.target.files[0] : null;
-                        if (file) {
-                          setImage(file);
-                        }
-                      }}
-                    />
-                  </label>
-                )}
-              </div>
-            </div>
-
-            <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-              <button
-                name="add_task_cancel_button"
-                className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 rounded-xl transition-all"
-                onClick={() => {
-                  setAddNewRole(false);
-                }}
-              >
-                Cancel
-              </button>
-
-              <button
-                name="add_role_submit_button"
-                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
-                onClick={() => {
-                  handleCreateRole();
-                }}
-              >
-                Create Role
-              </button>
-            </div>
-          </DialogContent>
-        </Dialog>
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isCreating}
+                    className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 gap-2"
+                  >
+                    {isCreating ? "Creating..." : "Create Role"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-8 w-full">
-        {fetchingRoles ? (
-          <p>Fetching roles</p>
-        ) : (
-          roles.length === 1 && <p>No roles present</p>
-        )}
+      {/* 2. KPI Metrics Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 flex items-center justify-center font-bold">
+            <Shield className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 font-medium">Total Roles</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{roles.length}</p>
+          </div>
+        </div>
 
-        {roles.length !== 0 &&
-          roles.map((role, index) => {
-            if (loading) {
-              return (
-                <div
-                  className="bg-white flex-1 flex items-center justify-center px-2 w-full py-5 shadow-xl rounded-md"
-                  key={index}
-                >
-                  <CircularProgress />
-                </div>
-              );
-            }
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center font-bold">
+            <Users className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 font-medium">Mapped Users</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">
+              {roles.reduce((acc, r) => acc + (r.user_count || 0), 0)}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 flex items-center justify-center font-bold">
+            <Lock className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 font-medium">RBAC Security</p>
+            <p className="text-base font-bold text-emerald-600 flex items-center gap-1">
+              <CheckCircle2 className="w-4 h-4" /> Active
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Search Filter Bar */}
+      <div className="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <div className="relative max-w-md">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Input
+            placeholder="Search roles by persona name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 rounded-xl h-10 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50"
+          />
+        </div>
+      </div>
+
+      {/* 4. Roles Grid */}
+      {loading ? (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-12 text-center space-y-4 shadow-sm">
+          <RefreshCw className="w-8 h-8 animate-spin text-indigo-600 mx-auto" />
+          <p className="text-sm font-medium text-slate-500">Querying roles registry...</p>
+        </div>
+      ) : filteredRoles.length === 0 ? (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-12 text-center space-y-4 shadow-sm">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 mx-auto flex items-center justify-center">
+            <Shield className="w-8 h-8" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Roles Found</h3>
+            <p className="text-sm text-slate-500 max-w-md mx-auto mt-1">
+              {searchQuery ? `No roles match "${searchQuery}".` : "No authorization roles registered."}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredRoles.map((role) => {
+            const isAdmin = role.name === "admin";
+            const modCount = Array.isArray(role.allowedModules) ? role.allowedModules.length : 0;
+
             return (
               <div
-                className={`bg-white flex-1 flex items-center gap-2 px-2 w-full py-[20px] shadow-xl rounded-md text-[18px] cursor-pointer relative ${
-                  role.name === "admin" && "hidden"
-                }`}
-                key={index}
+                key={role.id}
+                className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 space-y-4 shadow-sm hover:border-indigo-500/50 hover:shadow-lg transition-all flex flex-col justify-between"
               >
-                <div
-                  className={`absolute right-[4px] top-1/2 -translate-y-1/2 w-[26px] h-[26px] rounded-full hover:bg-gray-200 flex items-center justify-center cursor-pointer transition-all duration-500`}
-                  onClick={(e) => {
-                    handleEditOptionShow(e, index);
-                  }}
-                >
-                  <MoreVerticalIcon />
-                </div>
-
-                {editOptionShow === index && (
-                  <div className="absolute top-0 right-[-20px] bg-white flex flex-col text-[14px] gap-[4px] p-[10px] shadow-md rounded-md z-10">
-                    <Dialog open={editARole} onOpenChange={setEditARole}>
-                      <DialogTrigger asChild>
-                        <button
-                          name="edit_specific_role"
-                          className="px-3 py-1.5 text-xs text-left hover:bg-slate-50 rounded font-medium text-slate-700"
-                          onClick={() => {
-                            handleEditRoleModalOpen(
-                              role.name,
-                              role.image as string,
-                              role.id
-                            );
-                          }}
-                        >
-                          Edit Role
-                        </button>
-                      </DialogTrigger>
-
-                      <DialogContent
-                        className="bg-white max-w-[480px] p-0 rounded-2xl border border-gray-100 shadow-2xl overflow-hidden"
-                      >
-                        <div className="bg-slate-900 p-6 text-white relative">
-                          <p className="text-xs uppercase tracking-wider font-semibold text-emerald-400 mb-1">Configuration</p>
-                          <h2 className="text-xl font-bold">Update Role Details</h2>
-                          <p className="text-xs text-slate-300 mt-1">Modify name and iconography for this role.</p>
-                        </div>
-
-                        <div className="p-6 space-y-5">
-                          <div>
-                            <label
-                              htmlFor="edit_role_name"
-                              className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2"
-                            >
-                              Role Name *
-                            </label>
-                            <input
-                              type="text"
-                              name="edit_role_name"
-                              id="edit_role_name"
-                              className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
-                              placeholder="Enter the role name"
-                              value={editRoleName}
-                              onChange={(e) => {
-                                setEditRoleName(e.target.value);
-                              }}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                              Role Badge Image
-                            </label>
-                            {editRoleImage ? (
-                              <div className="relative w-full h-40 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center p-3">
-                                <Image
-                                  src={
-                                    typeof editRoleImage === "string"
-                                      ? editRoleImage
-                                      : URL.createObjectURL(editRoleImage)
-                                  }
-                                  alt="Role Image"
-                                  width={100}
-                                  height={100}
-                                  className="object-cover rounded-xl shadow-sm"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => setEditRoleImage(null)}
-                                  className="absolute top-3 right-3 text-xs bg-red-100 text-red-600 hover:bg-red-200 px-2.5 py-1 rounded-lg font-medium transition-all"
-                                >
-                                  Change Image
-                                </button>
-                              </div>
-                            ) : (
-                              <label
-                                htmlFor="edit-dropzone-file"
-                                className="flex flex-col items-center justify-center w-full h-36 border-2 border-slate-200 border-dashed rounded-xl cursor-pointer bg-slate-50/50 hover:bg-slate-50 hover:border-emerald-400 transition-all p-4 text-center"
-                              >
-                                <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2">
-                                  <AddIcon />
-                                </div>
-                                <p className="text-xs font-medium text-slate-700">
-                                  <span className="text-emerald-600 font-semibold">Click to upload</span> or drag and drop
-                                </p>
-                                <p className="text-[11px] text-slate-400 mt-0.5">PNG, JPG, SVG up to 5MB</p>
-                                <input
-                                  id="edit-dropzone-file"
-                                  type="file"
-                                  className="hidden"
-                                  onChange={handleEditRoleImageChange}
-                                />
-                              </label>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-                          <button
-                            type="button"
-                            className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 rounded-xl transition-all"
-                            onClick={handleEditRoleModalClose}
-                          >
-                            Cancel
-                          </button>
-
-                          <button
-                            type="button"
-                            className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
-                            onClick={handleEditRole}
-                          >
-                            Save Changes
-                          </button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-
-                    <button
-                      name="remove_specific_role"
-                      onClick={(e) => {
-                        handleRemoveRoleSubmit(e, role.id);
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3.5">
+                    <Avatar
+                      src={role.image || undefined}
+                      alt={role.name}
+                      sx={{
+                        width: 48,
+                        height: 48,
+                        bgcolor: isAdmin ? "#4f46e5" : "#0284c7",
+                        fontWeight: "bold",
+                        fontSize: "1.1rem",
                       }}
                     >
-                      Remove
-                    </button>
+                      {role.name.charAt(0).toUpperCase()}
+                    </Avatar>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-base font-bold text-slate-900 dark:text-white capitalize">
+                          {role.name}
+                        </h3>
+                        {isAdmin && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                            Super Role
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs font-mono text-slate-400 mt-0.5">ID: {role.id.slice(0, 14)}...</p>
+                    </div>
                   </div>
-                )}
+                </div>
 
-                {role.image ? (
-                  <Image
-                    src={role.image}
-                    alt={role.name}
-                    width={80}
-                    height={80}
-                    unoptimized={true}
-                    className="w-12 h-auto aspect-square rounded-full object-cover"
-                  />
-                ) : (
-                  <Avatar />
-                )}
+                <div className="space-y-2 text-xs py-2 border-y border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
+                    <span className="flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-slate-400" /> Active Users:
+                    </span>
+                    <span className="font-bold text-slate-900 dark:text-white">
+                      {role.user_count || 0} accounts
+                    </span>
+                  </div>
 
-                {role.name}
+                  <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
+                    <span className="flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-slate-400" /> Configured Modules:
+                    </span>
+                    <span className="font-semibold text-indigo-600">
+                      {modCount} modules
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <Link
+                    href="/Permissions"
+                    className="flex-1 text-center py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-700 dark:text-slate-300 font-semibold text-xs transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <KeyRound className="w-3.5 h-3.5" /> Permissions
+                  </Link>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setEditingRole(role);
+                      setEditRoleName(role.name);
+                      setEditRoleImage(role.image || "");
+                    }}
+                    className="h-8 px-2.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 border-slate-200 rounded-xl"
+                    title="Edit Role"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </Button>
+
+                  {!isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteRole(role)}
+                      className="h-8 w-8 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl"
+                      title="Delete Role"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
             );
           })}
-      </div>
+        </div>
+      )}
+
+      {/* EDIT ROLE MODAL */}
+      <Dialog open={!!editingRole} onOpenChange={(open) => !open && setEditingRole(null)}>
+        <DialogContent className="max-w-md p-6 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-white">
+              <Edit3 className="w-5 h-5 text-indigo-600" />
+              Edit Role Details
+            </DialogTitle>
+          </DialogHeader>
+
+          {editingRole && (
+            <form onSubmit={handleUpdateRole} className="space-y-4 pt-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase text-slate-600">Role Name *</Label>
+                <Input
+                  value={editRoleName}
+                  onChange={(e) => setEditRoleName(e.target.value)}
+                  required
+                  disabled={editingRole.name === "admin"}
+                  className="rounded-xl"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase text-slate-600">Avatar Image URL</Label>
+                <Input
+                  value={editRoleImage}
+                  onChange={(e) => setEditRoleImage(e.target.value)}
+                  placeholder="https://..."
+                  className="rounded-xl"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setEditingRole(null)}
+                  className="rounded-xl"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isUpdating}
+                  className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 gap-2"
+                >
+                  {isUpdating ? "Saving..." : "Save Role"}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

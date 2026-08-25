@@ -1,18 +1,16 @@
-import React from 'react'
-import Menubar from '../Menubar/Menubar'
-import Country from './Country'
+import React from "react";
+import Menubar from "../Menubar/Menubar";
+import CountrySection from "./Country";
 
 const CountryContainer = () => {
   return (
-    <div
-      className='w-full min-h-[100vh] p-[10px] 1050px:p-[30px] max-h-[1580px] bg-[#e5e5e5] relative overflow-auto'>
-
-      <Menubar pagename={'Country'} />
-
-      <Country />
-
+    <div className="w-full min-h-screen p-4 md:p-8 bg-[#F8FAFC] dark:bg-slate-950 relative overflow-auto">
+      <Menubar pagename={"Territories & Countries"} />
+      <div className="mt-4">
+        <CountrySection />
+      </div>
     </div>
-  )
-}
+  );
+};
 
-export default CountryContainer
+export default CountryContainer;
