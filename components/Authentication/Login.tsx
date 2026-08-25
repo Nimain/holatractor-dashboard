@@ -18,8 +18,10 @@ import axios from "axios";
 import { CircularProgress } from "@mui/material";
 import { useLoading } from "../wrappers/LoaderWrappers";
 import SwitchAccountModal from "../wrappers/SwitchAccountModal";
+import PasswordlessPushLogin from "./PasswordlessPushLogin";
 
 const LogInPage = () => {
+  const [authMethod, setAuthMethod] = useState<"push" | "password">("push");
   const [email, setEmail] = useState("");
   const [passwrd, setPassword] = useState("");
   const [passwrdShow, setPasswordShow] = useState(false);
@@ -284,53 +286,102 @@ const LogInPage = () => {
             Please sign in to enter the dashboard
           </p>
 
-          <div className="w-full">
-            <Label htmlFor="log_in_email">Email</Label>
-            <Input
-              type="email"
-              name="log_in_email"
-              id="log_in_email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+          {/* ── AUTH METHOD TOGGLE TABS ── */}
+          <div className="w-full flex items-center p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl gap-1">
+            <button
+              type="button"
+              onClick={() => setAuthMethod("push")}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                authMethod === "push"
+                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              <span>📱 Mobile App</span>
+              <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-black">
+                No Password
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setAuthMethod("password")}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
+                authMethod === "password"
+                  ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm"
+                  : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              🔑 Password
+            </button>
+          </div>
+
+          {/* ── 1. PASSWORDLESS PUSH LOGIN ── */}
+          {authMethod === "push" ? (
+            <PasswordlessPushLogin
+              defaultEmail={email}
+              onSuccess={setCookiesAndRedirect}
+              onFallbackToPassword={() => setAuthMethod("password")}
             />
-          </div>
-
-          <div className="w-full">
-            <Label>Password</Label>
-            <div className="flex items-center gap-3">
-              <Input
-                id="password"
-                type={passwrdShow ? "text" : "password"}
-                placeholder="********"
-                value={passwrd}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <div onClick={() => setPasswordShow((prev) => !prev)}>
-                {passwrdShow ? <EyeOff /> : <Eye />}
+          ) : (
+            /* ── 2. STANDARD PASSWORD LOGIN ── */
+            <form onSubmit={handleLogin} className="w-full space-y-4">
+              <div className="w-full">
+                <Label htmlFor="log_in_email" className="text-xs font-bold">Email</Label>
+                <Input
+                  type="email"
+                  name="log_in_email"
+                  id="log_in_email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="rounded-xl"
+                  required
+                />
               </div>
-            </div>
-          </div>
 
-          <button
-            name="add_role_submit_button"
-            className="px-[20px] py-[10px] bg-black text-white text-[18px] rounded flex items-center justify-center gap-[10px] w-full mx-auto"
-            onClick={handleLogin}
-          >
-            {isLoading ? (
-              <CircularProgress className="text-primaryColor" />
-            ) : (
-              "Log in"
-            )}
-          </button>
+              <div className="w-full">
+                <Label className="text-xs font-bold">Password</Label>
+                <div className="flex items-center gap-3">
+                  <Input
+                    id="password"
+                    type={passwrdShow ? "text" : "password"}
+                    placeholder="********"
+                    value={passwrd}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="rounded-xl"
+                    required
+                  />
+                  <div onClick={() => setPasswordShow((prev) => !prev)} className="cursor-pointer">
+                    {passwrdShow ? <EyeOff className="w-4 h-4 text-slate-400" /> : <Eye className="w-4 h-4 text-slate-400" />}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                name="add_role_submit_button"
+                className="px-[20px] py-[10px] bg-black hover:bg-slate-800 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-[10px] w-full mx-auto h-11 transition-all"
+              >
+                {isLoading ? (
+                  <CircularProgress size={20} className="text-white" />
+                ) : (
+                  "Log in with Password"
+                )}
+              </button>
+            </form>
+          )}
+
+          <div className="w-full flex items-center gap-2 text-slate-400 text-xs">
+            <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+            <span>OR</span>
+            <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+          </div>
 
           <GoogleSignIn setCookiesAndRedirect={setCookiesAndRedirect} />
 
-          <p className="underline cursor-pointer">Forgot your password?</p>
-
           <p>
             Don't have an account?{" "}
-            <Link href={"/register"} className="text-primaryColor">
+            <Link href={"/register"} className="text-emerald-600 font-bold hover:underline">
               Sign up
             </Link>
           </p>
