@@ -690,7 +690,7 @@ const LogsSection = () => {
               </div>
 
               <div>
-                <Label className="text-xs font-semibold uppercase text-slate-600">Event Payload & Description</Label>
+                <label className="text-xs font-semibold uppercase text-slate-600 block">Event Payload & Description</label>
                 <div className="p-3.5 rounded-xl bg-slate-900 text-slate-100 font-mono text-xs mt-1.5 leading-relaxed break-words max-h-48 overflow-auto">
                   {selectedLog.details || "No additional payload message."}
                 </div>

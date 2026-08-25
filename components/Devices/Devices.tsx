@@ -246,11 +246,28 @@ export default function DeviceSection() {
   const [selectedStore, setSelectedStore] = useState<StoreOption | null>(null)
   const [selectedTractorForDevice, setSelectedTractorForDevice] = useState<TractorOption | null>(null)
   const [ownerSearchTerm, setOwnerSearchTerm] = useState<string>("")
+  const [tractorSearchTerm, setTractorSearchTerm] = useState<string>("")
   const [deviceImei, setDeviceImei] = useState<string>("")
   const [deviceName, setDeviceName] = useState<string>("")
   const [deviceRegion, setDeviceRegion] = useState<string>("SW")
   const [submittingDevice, setSubmittingDevice] = useState<boolean>(false)
   const [deviceSubmitError, setDeviceSubmitError] = useState<string | null>(null)
+
+  // Filtered Tractors in the selected store for Step 3 in Add Device Modal
+  const filteredStoreTractors = useMemo(() => {
+    if (!selectedStore?.tractors) return []
+    if (!tractorSearchTerm.trim()) return selectedStore.tractors
+    const term = tractorSearchTerm.toLowerCase().trim()
+    return selectedStore.tractors.filter((t) =>
+      (t.name && t.name.toLowerCase().includes(term)) ||
+      (t.model && t.model.toLowerCase().includes(term)) ||
+      (t.current_imei && t.current_imei.toLowerCase().includes(term)) ||
+      (t.base_tractor_id && t.base_tractor_id.toLowerCase().includes(term)) ||
+      (t.tractor_store_id && t.tractor_store_id.toLowerCase().includes(term)) ||
+      (t.hourly_price && String(t.hourly_price).includes(term))
+    )
+  }, [selectedStore?.tractors, tractorSearchTerm])
+
 
   // Inline Quick Store Creation states
   const [showCreateStoreModal, setShowCreateStoreModal] = useState<boolean>(false)
@@ -2111,6 +2128,29 @@ export default function DeviceSection() {
                         </button>
                       </div>
 
+                      {/* Search Tractors in Store Input */}
+                      {selectedStore.tractors.length > 0 && (
+                        <div className="relative">
+                          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <input
+                            type="text"
+                            value={tractorSearchTerm}
+                            onChange={(e) => setTractorSearchTerm(e.target.value)}
+                            placeholder={`Search ${selectedStore.tractors.length} tractors by name, model, IMEI, or rate...`}
+                            className="w-full bg-slate-800/80 border border-slate-700/80 rounded-xl pl-10 pr-10 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                          />
+                          {tractorSearchTerm && (
+                            <button
+                              type="button"
+                              onClick={() => setTractorSearchTerm("")}
+                              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white p-0.5"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      )}
+
                       {/* INLINE ADD TRACTOR FORM / MODAL */}
                       {showAddTractorModal && (
                         <div className="p-4 bg-slate-950/80 border border-emerald-500/50 rounded-2xl space-y-3 animate-in fade-in zoom-in-95">
@@ -2245,9 +2285,24 @@ export default function DeviceSection() {
                             <span>Add Tractor from Catalog</span>
                           </button>
                         </div>
+                      ) : filteredStoreTractors.length === 0 ? (
+                        <div className="py-10 px-6 text-center border border-dashed border-slate-700/80 rounded-2xl bg-slate-800/30 space-y-2">
+                          <Truck className="w-8 h-8 text-slate-500 mx-auto" />
+                          <h5 className="text-sm font-bold text-white">No Matching Tractors</h5>
+                          <p className="text-xs text-slate-400">
+                            No tractors match &quot;{tractorSearchTerm}&quot; in this store.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setTractorSearchTerm("")}
+                            className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold pt-1"
+                          >
+                            Clear Search
+                          </button>
+                        </div>
                       ) : (
                         <div className="space-y-2.5 max-h-[48vh] overflow-y-auto">
-                          {selectedStore.tractors.map((tractor) => {
+                          {filteredStoreTractors.map((tractor) => {
                             const isSelected = selectedTractorForDevice?.tractor_store_id === tractor.tractor_store_id
                             return (
                               <div
@@ -2299,6 +2354,7 @@ export default function DeviceSection() {
                           })}
                         </div>
                       )}
+
                     </div>
                   )}
 
