@@ -171,7 +171,9 @@ const StoreSection = () => {
             return;
         }
 
-        if (user.isAdmin.includes("admin") && !owner) {
+        const isUserAdmin = Array.isArray(user?.isAdmin) ? user.isAdmin.includes("admin") : Boolean(user?.isAdmin || cookie.get("isAdmin") === "true");
+
+        if (isUserAdmin && !owner) {
             errorMessage("Please select an owner")
             return
         }
@@ -197,7 +199,7 @@ const StoreSection = () => {
             closing_time: new Date(`1970-01-01T${closingTime}:00.000Z`),
             closing_days: closingDays,
             image: storeImages,
-            owner_user_id: user.isAdmin.includes("admin") ? owner : user.userId,
+            owner_user_id: isUserAdmin ? owner : user?.userId,
             location_name,
             location_address,
             location_city,
@@ -348,7 +350,7 @@ const StoreSection = () => {
                             </div>
                         </div>
                         {
-                            user.isAdmin.includes("admin") &&
+                            (Array.isArray(user?.isAdmin) ? user.isAdmin.includes("admin") : Boolean(user?.isAdmin || cookie.get("isAdmin") === "true")) &&
                             <div
                                 className='w-[90%] flex items-center gap-[20px]'>
 

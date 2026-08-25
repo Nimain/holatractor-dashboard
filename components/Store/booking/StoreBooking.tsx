@@ -96,10 +96,12 @@ const StoreBooking = () => {
     });
   }
 
+  const isFarmer = cookie.get("isFarmer") === "true" || (Array.isArray(user?.isAdmin) ? user.isAdmin.includes("farmer") : false);
+
   useEffect(() => {
     if (slug) {
       fetchAllCountry()
-      if (!user.isAdmin.includes("farmer")) fetchFarmer()
+      if (!isFarmer) fetchFarmer()
     }
   }, [slug]);
 
@@ -129,7 +131,7 @@ const StoreBooking = () => {
       return
     }
 
-    if (!user.isAdmin.includes("farmer") && !farmerId) {
+    if (!isFarmer && !farmerId) {
       errorMessage("You must select a farmer to book a plot");
       return
     }
@@ -142,7 +144,7 @@ const StoreBooking = () => {
       location_state: state,
       location_zip_code: zipCode,
       location_country: countryName,
-      user_id: user.isAdmin.includes("farmer") ? user.userId : farmerId,
+      user_id: isFarmer ? (user?.userId || user?.id) : farmerId,
       store_id: slug,
       start_date: new Date(startDate),
       end_date: BookingHours === "more" ? endDate : new Date(),
@@ -209,7 +211,7 @@ const StoreBooking = () => {
       }
     }
 
-    if (!user.isAdmin.includes("farmer") && !farmerId) {
+    if (!isFarmer && !farmerId) {
       errorMessage("You must select a farmer to book a plot");
       return
     }
@@ -449,7 +451,7 @@ const StoreBooking = () => {
           }
 
           {
-            !user.isAdmin.includes("farmer") && fetchingFarmers ?
+            !isFarmer && fetchingFarmers ?
               <p>Getting all farmers list</p>
               :
               allFarmers.length === 0 ?

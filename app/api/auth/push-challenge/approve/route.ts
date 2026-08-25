@@ -123,12 +123,11 @@ export async function POST(request: NextRequest) {
       }
 
       const roles: string[] = [];
-      if (isAdmin) roles.push("admin");
       if (isOwner) roles.push("owner");
+      if (isFarmer) roles.push("farmer");
       if (isDealer) roles.push("dealer");
       if (isOperator) roles.push("operator");
       if (isAgent) roles.push("agent");
-      if (isFarmer) roles.push("farmer");
 
       const userId = userRow?.id || `user_${email.split("@")[0]}`;
       const fullName = `${userRow?.first_name || ""} ${userRow?.last_name || ""}`.trim();

@@ -25,7 +25,7 @@ import {
 import { motion } from "framer-motion";
 
 export interface RoleConfig {
-  id: "owner" | "farmer" | "dealer" | "agent" | "operator" | "admin";
+  id: "owner" | "farmer" | "dealer" | "agent" | "operator";
   title: string;
   subtitle: string;
   path: string;
@@ -37,17 +37,6 @@ export interface RoleConfig {
 }
 
 export const ALL_ROLES: RoleConfig[] = [
-  {
-    id: "admin",
-    title: "System Administrator",
-    subtitle: "Manage platform master settings, cities, devices, inventory, and stores",
-    path: "/City",
-    icon: ShieldCheck,
-    color: "text-red-700 dark:text-red-400",
-    badgeBg: "bg-red-50 dark:bg-red-950/40",
-    badgeBorder: "border-red-200 dark:border-red-800/60",
-    gradient: "from-red-500/10 to-rose-500/10 hover:border-red-400",
-  },
   {
     id: "owner",
     title: "Tractor Owner",
@@ -131,7 +120,6 @@ export default function SwitchAccountModal({
 
   useEffect(() => {
     // Detect available roles from cookies
-    const isAdmin = cookie.get("isAdmin") === "true";
     const isOwner = cookie.get("isOwner") === "true";
     const isFarmer = cookie.get("isFarmer") === "true";
     const isDealer = cookie.get("isDealer") === "true";
@@ -143,15 +131,12 @@ export default function SwitchAccountModal({
     if (userObjStr) {
       try {
         const parsed = typeof userObjStr === "string" ? JSON.parse(userObjStr) : userObjStr;
-        if (Array.isArray(parsed?.isAdmin)) jwtRoles = parsed.isAdmin.map((r: string) => r.toLowerCase());
-        if (parsed?.isAdmin === true) jwtRoles.push("admin");
         if (Array.isArray(parsed?.role)) jwtRoles = [...jwtRoles, ...parsed.role.map((r: string) => r.toLowerCase())];
         if (typeof parsed?.role === "string") jwtRoles.push(parsed.role.toLowerCase());
       } catch {}
     }
 
     const roles = ALL_ROLES.filter((r) => {
-      if (r.id === "admin" && (isAdmin || jwtRoles.includes("admin") || jwtRoles.includes("superadmin"))) return true;
       if (r.id === "owner" && (isOwner || jwtRoles.includes("owner"))) return true;
       if (r.id === "farmer" && (isFarmer || jwtRoles.includes("farmer"))) return true;
       if (r.id === "dealer" && (isDealer || jwtRoles.includes("dealer"))) return true;
@@ -161,7 +146,7 @@ export default function SwitchAccountModal({
     });
 
     if (roles.length === 0 && isOpen) {
-      setAvailableRoles(ALL_ROLES);
+      setAvailableRoles(ALL_ROLES.filter((r) => r.id === "owner" || r.id === "farmer"));
     } else {
       setAvailableRoles(roles);
     }

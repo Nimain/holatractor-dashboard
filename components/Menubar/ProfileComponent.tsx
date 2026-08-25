@@ -213,7 +213,7 @@ const ProfileComponent = () => {
           <div className="px-6 pt-2 pb-1">
             <h2 className="text-lg font-bold text-white leading-tight">{displayName}</h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              {user?.isAdmin?.includes("admin") ? "System Administrator" : "HolaTractor User"}
+              {(Array.isArray(user?.isAdmin) ? user.isAdmin.includes("admin") : Boolean(user?.isAdmin)) ? "System Administrator" : "HolaTractor User"}
             </p>
           </div>
 
