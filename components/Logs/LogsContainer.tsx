@@ -1,18 +1,16 @@
-import React from 'react'
-import Menubar from '../Menubar/Menubar'
-import Logs from './Logs'
+import React from "react";
+import Menubar from "../Menubar/Menubar";
+import Logs from "./Logs";
 
 const LogsContainer = () => {
   return (
-    <div
-      className='w-full min-h-[100vh] p-[10px] 1050px:p-[30px] max-h-[1580px] bg-[#e5e5e5] relative overflow-auto'>
-
-      <Menubar pagename={'Logs'} />
-
-      <Logs />
-
+    <div className="w-full min-h-screen p-4 md:p-8 bg-[#F8FAFC] dark:bg-slate-950 relative overflow-auto">
+      <Menubar pagename={"System Activity & Audit Logs"} />
+      <div className="mt-4">
+        <Logs />
+      </div>
     </div>
-  )
-}
+  );
+};
 
-export default LogsContainer
+export default LogsContainer;
