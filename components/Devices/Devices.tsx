@@ -218,7 +218,11 @@ export default function DeviceSection() {
   const [pinging, setPinging] = useState<boolean>(false)
 
   // Route history, filter, and map style state on main map
-  const [selectedFilter, setSelectedFilter] = useState<string>("all")
+  const [selectedFilter, setSelectedFilter] = useState<string>("today")
+  const [customStartDate, setCustomStartDate] = useState<string>(DeviceLocationService.getTodayDate())
+  const [customEndDate, setCustomEndDate] = useState<string>(DeviceLocationService.getTodayDate())
+  const [motionFilter, setMotionFilter] = useState<"all" | "moving" | "stopped">("all")
+  const [showDatePicker, setShowDatePicker] = useState<boolean>(false)
   const [showRoutePath, setShowRoutePath] = useState<boolean>(true)
   const [mapType, setMapType] = useState<"roadmap" | "satellite" | "hybrid">("hybrid")
   const [historyLoading, setHistoryLoading] = useState<boolean>(false)
@@ -226,6 +230,68 @@ export default function DeviceSection() {
   const historyPolylineRef = useRef<google.maps.Polyline | null>(null)
   const startMarkerRef = useRef<google.maps.Marker | null>(null)
   const waypointMarkersRef = useRef<google.maps.Marker[]>([])
+
+  // Filter history points based on motion filter
+  const displayHistoryLocations = useMemo(() => {
+    if (!Array.isArray(historyLocations)) return []
+    if (motionFilter === "moving") {
+      return historyLocations.filter((p) => Number(p.speed || 0) > 0)
+    }
+    if (motionFilter === "stopped") {
+      return historyLocations.filter((p) => Number(p.speed || 0) === 0)
+    }
+    return historyLocations
+  }, [historyLocations, motionFilter])
+
+  // Calculate live route telemetry analytics for the filtered history
+  const routeStats = useMemo(() => {
+    if (!displayHistoryLocations || displayHistoryLocations.length === 0) {
+      return { distanceKm: 0, maxSpeed: 0, avgSpeed: 0, count: 0, movingPoints: 0, stoppedPoints: 0 }
+    }
+
+    let totalDist = 0
+    let maxSpeed = 0
+    let sumSpeed = 0
+    let moving = 0
+    let stopped = 0
+
+    for (let i = 0; i < displayHistoryLocations.length; i++) {
+      const pt = displayHistoryLocations[i]
+      const sp = Number(pt.speed || 0)
+      if (sp > maxSpeed) maxSpeed = sp
+      sumSpeed += sp
+      if (sp > 0) moving++
+      else stopped++
+
+      if (i > 0) {
+        const prev = displayHistoryLocations[i - 1]
+        const R = 6371 // km
+        const dLat = (pt.lat - prev.lat) * (Math.PI / 180)
+        const dLon = (pt.lon - prev.lon) * (Math.PI / 180)
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(prev.lat * (Math.PI / 180)) *
+            Math.cos(pt.lat * (Math.PI / 180)) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2)
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+        const d = R * c
+        if (!isNaN(d) && d < 150) {
+          totalDist += d
+        }
+      }
+    }
+
+    return {
+      distanceKm: Number(totalDist.toFixed(2)),
+      maxSpeed: Math.round(maxSpeed),
+      avgSpeed: Math.round(sumSpeed / displayHistoryLocations.length),
+      count: displayHistoryLocations.length,
+      movingPoints: moving,
+      stoppedPoints: stopped,
+    }
+  }, [displayHistoryLocations])
+
 
   // Add Device Stepped Modal states
   const [showAddDeviceModal, setShowAddDeviceModal] = useState<boolean>(false)
@@ -319,18 +385,34 @@ export default function DeviceSection() {
   }, [])
 
   // Load main map route for selected tractor with current filter
-  const loadMainMapRoute = async (deviceImei: string, filterVal = selectedFilter) => {
+  const loadMainMapRoute = async (
+    deviceImei: string,
+    filterVal = selectedFilter,
+    startD = customStartDate,
+    endD = customEndDate
+  ) => {
     if (!deviceImei) return
     setHistoryLoading(true)
     try {
       const dev = devices.find((d) => d.id === deviceImei)
       const devRegion = dev?.region || "SW"
 
-      console.log("[Devices Main Map] Loading route history for:", deviceImei, "Filter:", filterVal, "Region:", devRegion)
+      console.log("[Devices Main Map] Loading route history for:", deviceImei, "Filter:", filterVal, "Region:", devRegion, "Dates:", startD, endD)
+
+      const params: any = {}
+      if (filterVal === "custom") {
+        params.start_date = startD
+        params.end_date = endD
+        params.range = undefined
+        params.filter = undefined
+      } else if (filterVal !== "all") {
+        params.range = filterVal
+        params.filter = filterVal
+      }
 
       const historyData = await DeviceLocationService.getDeviceLocationHistory(
         deviceImei,
-        { filter: filterVal === "all" ? undefined : (filterVal as any) },
+        params,
         devRegion
       )
 
@@ -346,11 +428,12 @@ export default function DeviceSection() {
   // Reload main map route whenever selected tractor or filter changes
   useEffect(() => {
     if (selectedTractor) {
-      loadMainMapRoute(selectedTractor, selectedFilter)
+      loadMainMapRoute(selectedTractor, selectedFilter, customStartDate, customEndDate)
     } else {
       setHistoryLocations([])
     }
-  }, [selectedTractor, selectedFilter])
+  }, [selectedTractor, selectedFilter, customStartDate, customEndDate])
+
 
   // Socket.IO Real-time Motion Tracking Connection to device.holatractor.com
   useEffect(() => {
@@ -1155,7 +1238,7 @@ export default function DeviceSection() {
 
     const selectedDev = devices.find((d) => d.id === selectedTractor)
 
-    if (!showRoutePath || historyLocations.length === 0) {
+    if (!showRoutePath || displayHistoryLocations.length === 0) {
       // If no route points for this filter, focus on device current position
       if (selectedDev && selectedDev.lat !== 0 && selectedDev.lng !== 0) {
         googleMapRef.current.panTo({ lat: selectedDev.lat, lng: selectedDev.lng })
@@ -1164,7 +1247,7 @@ export default function DeviceSection() {
       return
     }
 
-    const path = historyLocations.map((loc) => ({ lat: loc.lat, lng: loc.lon }))
+    const path = displayHistoryLocations.map((loc) => ({ lat: loc.lat, lng: loc.lon }))
 
     if (path.length > 0) {
       // Draw smooth blue route polyline
@@ -1180,7 +1263,7 @@ export default function DeviceSection() {
       // Add Start Point Marker (oldest point at path.length - 1)
       if (path.length > 1) {
         const startPoint = path[path.length - 1]
-        const startLoc = historyLocations[historyLocations.length - 1]
+        const startLoc = displayHistoryLocations[displayHistoryLocations.length - 1]
         startMarkerRef.current = new window.google.maps.Marker({
           position: startPoint,
           map: googleMapRef.current,
@@ -1202,7 +1285,7 @@ export default function DeviceSection() {
         const step = Math.max(1, Math.floor(path.length / 25))
         for (let i = 1; i < path.length - 1; i += step) {
           const pt = path[i]
-          const loc = historyLocations[i]
+          const loc = displayHistoryLocations[i]
           const wpMarker = new window.google.maps.Marker({
             position: pt,
             map: googleMapRef.current,
@@ -1237,7 +1320,8 @@ export default function DeviceSection() {
         googleMapRef.current.setZoom(16)
       }
     }
-  }, [historyLocations, showRoutePath, selectedTractor, mapsLoaded, devices])
+  }, [displayHistoryLocations, showRoutePath, selectedTractor, mapsLoaded, devices])
+
 
   // Draw real-time motion trail for the selected device
   useEffect(() => {
@@ -1393,19 +1477,22 @@ export default function DeviceSection() {
               </div>
 
               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider px-1.5 flex items-center gap-1">
-                <History className="w-3 h-3 text-blue-400" /> Route
+                <History className="w-3 h-3 text-blue-400" /> History:
               </span>
 
               {[
-                { label: "All", value: "all" },
                 { label: "Today", value: "today" },
                 { label: "Yesterday", value: "yesterday" },
                 { label: "7D", value: "week" },
                 { label: "30D", value: "month" },
+                { label: "All", value: "all" },
               ].map((f) => (
                 <button
                   key={f.value}
-                  onClick={() => setSelectedFilter(f.value)}
+                  onClick={() => {
+                    setSelectedFilter(f.value)
+                    setShowDatePicker(false)
+                  }}
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
                     selectedFilter === f.value
                       ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
@@ -1415,6 +1502,42 @@ export default function DeviceSection() {
                   {f.label}
                 </button>
               ))}
+
+              {/* Custom Date Range Toggle Button */}
+              <button
+                onClick={() => {
+                  setSelectedFilter("custom")
+                  setShowDatePicker(!showDatePicker)
+                }}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                  selectedFilter === "custom"
+                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800"
+                }`}
+              >
+                <span>📅 Custom</span>
+              </button>
+
+              {/* Motion Filter (All vs Moving vs Idle) */}
+              <div className="flex items-center gap-1 border-l border-slate-700/80 pl-1.5 ml-0.5">
+                {[
+                  { label: "⚡ All", value: "all" as const },
+                  { label: "🚜 Moving", value: "moving" as const },
+                  { label: "🛑 Idle", value: "stopped" as const },
+                ].map((m) => (
+                  <button
+                    key={m.value}
+                    onClick={() => setMotionFilter(m.value)}
+                    className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition-all ${
+                      motionFilter === m.value
+                        ? "bg-emerald-600/80 text-white shadow-sm"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800"
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
 
               <button
                 onClick={() => setShowRoutePath(!showRoutePath)}
@@ -1439,6 +1562,92 @@ export default function DeviceSection() {
               </button>
             </div>
           </div>
+
+          {/* Custom Date Range Picker Card (When custom is active or toggled) */}
+          {selectedFilter === "custom" && showDatePicker && (
+            <div className="absolute top-16 right-14 z-[1000] bg-slate-900/95 p-3 rounded-2xl backdrop-blur-md border border-slate-700 shadow-2xl flex items-center gap-3 text-white">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-slate-400 font-semibold">From:</span>
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-slate-400 font-semibold">To:</span>
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                />
+              </div>
+
+              <button
+                onClick={() => {
+                  if (selectedTractor) {
+                    loadMainMapRoute(selectedTractor, "custom", customStartDate, customEndDate)
+                  }
+                  setShowDatePicker(false)
+                }}
+                className="px-3 py-1 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30 transition-all"
+              >
+                Apply Range
+              </button>
+            </div>
+          )}
+
+          {/* Route History Telemetry Statistics Bar (Floating HUD under controls) */}
+          {selectedDevice && (
+            <div className="absolute top-14 left-3 z-[998] flex items-center gap-2 flex-wrap pointer-events-none">
+              <div className="px-3 py-1 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700/80 shadow-lg text-[11px] text-slate-300 flex items-center gap-3 font-semibold pointer-events-auto">
+                <span className="flex items-center gap-1 text-blue-300">
+                  <Route className="w-3.5 h-3.5" />
+                  {historyLoading ? (
+                    <span className="flex items-center gap-1">
+                      <RefreshCw className="w-3 h-3 animate-spin text-blue-400" /> Querying route...
+                    </span>
+                  ) : (
+                    <span>{routeStats.count} Waypoints</span>
+                  )}
+                </span>
+
+                <span className="text-slate-600">•</span>
+
+                <span className="flex items-center gap-1 text-emerald-300">
+                  <span>🛣️</span>
+                  <span>{routeStats.distanceKm} km</span>
+                </span>
+
+                <span className="text-slate-600">•</span>
+
+                <span className="flex items-center gap-1 text-amber-300">
+                  <span>🚀 Max:</span>
+                  <span>{routeStats.maxSpeed} km/h</span>
+                </span>
+
+                <span className="text-slate-600">•</span>
+
+                <span className="flex items-center gap-1 text-purple-300">
+                  <span>⏱️ Avg:</span>
+                  <span>{routeStats.avgSpeed} km/h</span>
+                </span>
+
+                {routeStats.movingPoints > 0 && (
+                  <>
+                    <span className="text-slate-600">•</span>
+                    <span className="text-emerald-400 font-mono text-[10px]">
+                      {routeStats.movingPoints} moving
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
 
           {/* Device Not Connected Alert Banner */}
           {selectedDevice && !selectedDevice.hasGps && selectedDevice.status === "Not Connected" && (
