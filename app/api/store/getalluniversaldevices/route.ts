@@ -120,7 +120,15 @@ export async function GET(request: NextRequest) {
 
     // 4. Ultimate Fallback: Query live device list directly from device.holatractor.com/api/devices
     try {
-      const devRes = await axios.get("https://device.holatractor.com/api/devices", { timeout: 10000 });
+      const gpsKey = process.env.NEXT_PUBLIC_GPS_API_KEY || "gps_live_1a04718c33200072bbe";
+      const devRes = await axios.get("https://device.holatractor.com/api/devices", {
+        headers: {
+          Authorization: `Bearer ${gpsKey}`,
+          "X-API-Key": gpsKey,
+        },
+        params: { api_key: gpsKey },
+        timeout: 10000,
+      });
       if (Array.isArray(devRes.data) && devRes.data.length > 0) {
         const liveDevices = devRes.data.map((d: any, idx: number) => ({
           id: d.imei,

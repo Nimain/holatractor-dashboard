@@ -26,22 +26,18 @@ import { renderInstance, TractorAIBaseURL } from "@/utils/Axios/RenderInstance"
 import { useCookie } from "next-cookie"
 import axios from "axios"
 import { successMessage, errorMessage } from "@/utils/Toastify/Messages"
-import DeviceLocationService, { type DeviceLocationData } from "@/utils/Axios/DeviceLocationService"
+import DeviceLocationService, {
+  type DeviceLocationData,
+  DeviceBaseURL,
+  GPS_API_KEY,
+  deviceLocationInstance as deviceInstance,
+} from "@/utils/Axios/DeviceLocationService"
 import { getGoogleMapsTractorIcon } from "@/utils/map/tractorIcon"
 import { io, type Socket } from "socket.io-client"
 
 // Google Maps API Key - Replace with your actual API key
 const GOOGLE_MAPS_API_KEY = "AIzaSyDjMCI0xj2Q-WTc9J7yWX-Mvh0DBM7oHbg"
 
-// Device Base URL for GPS history
-const DeviceBaseURL = "https://device.holatractor.com/"
-
-const deviceInstance = axios.create({
-  baseURL: DeviceBaseURL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-})
 
 interface BaseTractorItem {
   base_tractor_id: string
@@ -870,6 +866,44 @@ export default function DeviceSection() {
             rawData = response.data.data
           }
         } catch {}
+      }
+
+      if (rawData.length === 0) {
+        try {
+          const liveGpsDevices = await DeviceLocationService.getAllDevices()
+          if (Array.isArray(liveGpsDevices) && liveGpsDevices.length > 0) {
+            rawData = liveGpsDevices.map((d: any, idx: number) => ({
+              id: d.imei,
+              device_imei: d.imei,
+              device_region: "SW",
+              base: { status: d.online ? 1 : 0 },
+              tractorInStore: {
+                hourly_price: 35.0,
+                baseTractor: {
+                  name: `GPS Tracker Tractor #${idx + 1}`,
+                  model: `IMEI: ${d.imei}`,
+                  images: [],
+                },
+                store: {
+                  name: "Active Fleet Telemetry",
+                  image: "",
+                  location: {
+                    lat: d.lat ? String(d.lat) : "-17.8230",
+                    lan: d.lon ? String(d.lon) : "-63.2026",
+                  },
+                  owner: {
+                    user: {
+                      first_name: "Fleet",
+                      last_name: "Operations",
+                    },
+                  },
+                },
+              },
+            }))
+          }
+        } catch (e) {
+          console.warn("[Devices] Fallback to DeviceLocationService.getAllDevices failed:", e)
+        }
       }
 
       if (rawData.length > 0) {
