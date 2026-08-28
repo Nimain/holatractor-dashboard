@@ -1,5 +1,6 @@
 import { renderInstance } from "@/utils/Axios/RenderInstance"
 import axios from "axios"
+import DeviceLocationService, { type DeviceLocationData, type LocationHistoryParams } from "@/utils/Axios/DeviceLocationService"
 
 interface Device {
   id: string
@@ -191,63 +192,11 @@ class DeviceApiService {
   }
 
   static async getDeviceLocationHistory(imei: string, params?: LocationHistoryParams): Promise<DeviceLocationData[]> {
-    try {
-      const apiUrl = `/api/device/${imei}/locations`
-
-      console.log("Fetching from proxy URL:", apiUrl)
-
-      const response = await axios.get<DeviceLocationData[]>(apiUrl, {
-        timeout: 15000,
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        params: {
-          limit: params?.limit || 50,
-          ...params,
-        },
-      })
-
-      return response.data || []
-    } catch (error) {
-      console.error("Error fetching device location history:", error)
-      if (axios.isAxiosError(error)) {
-        if (error.code === "ERR_NETWORK") {
-          console.error("Network error - check internet connection")
-        } else if (error.response?.status === 404) {
-          console.error("Device location endpoint not found - check IMEI or API endpoint")
-        }
-      }
-      throw error
-    }
+    return DeviceLocationService.getDeviceLocationHistory(imei, params || {}, "SW")
   }
 
   static async getCurrentDeviceLocation(imei: string): Promise<DeviceLocationData | null> {
-    try {
-      const apiUrl = `/api/device/${imei}/locations`
-
-      const response = await axios.get<DeviceLocationData[]>(apiUrl, {
-        timeout: 15000,
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        params: { limit: 1 },
-      })
-
-      const locations = response.data || []
-      return locations.length > 0 ? locations[0] : null
-    } catch (error) {
-      console.error("Error fetching current device location:", error)
-      if (axios.isAxiosError(error)) {
-        if (error.code === "ERR_NETWORK") {
-          console.error("Network error - check internet connection")
-        } else if (error.response?.status === 404) {
-          console.error("Device location endpoint not found - check IMEI or API endpoint")
-        }
-      }
-      throw error
-    }
+    return DeviceLocationService.getCurrentDeviceLocation(imei, "SW")
   }
 }
 

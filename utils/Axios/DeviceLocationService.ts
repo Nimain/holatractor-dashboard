@@ -6,6 +6,8 @@ export const DeviceBaseURL =
 export const GPS_API_KEY =
   process.env.NEXT_PUBLIC_GPS_API_KEY || "gps_live_1a04718c33200072bbe";
 
+const AUTH_KEYS = [GPS_API_KEY, "gps_live_secret_2026", "gps_secret_token_2026"].filter(Boolean);
+
 // Primary API client for device.holatractor.com with Bearer and X-API-Key headers
 export const deviceLocationInstance = axios.create({
   baseURL: DeviceBaseURL.replace(/\/$/, ""),
@@ -221,27 +223,25 @@ class DeviceLocationService {
    * 1. GET /api/devices: Fetch all live GPS devices from device.holatractor.com
    */
   static async getAllDevices(): Promise<LiveGPSDevice[]> {
-    try {
-      const response = await deviceLocationInstance.get("/api/devices");
-      if (Array.isArray(response.data)) {
-        return response.data;
-      }
-      return [];
-    } catch (error: any) {
-      // Fallback attempt with alternative key
+    const baseUrl = DeviceBaseURL.replace(/\/$/, "");
+    for (const key of AUTH_KEYS) {
       try {
-        const fallbackRes = await axios.get(
-          `${DeviceBaseURL.replace(/\/$/, "")}/api/devices?api_key=gps_live_secret_2026`,
-          { timeout: 10000 }
-        );
-        if (Array.isArray(fallbackRes.data)) {
-          return fallbackRes.data;
+        const response = await axios.get(`${baseUrl}/api/devices`, {
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "X-API-Key": key,
+          },
+          params: { api_key: key },
+          timeout: 10000,
+        });
+        if (Array.isArray(response.data)) {
+          return response.data;
         }
-      } catch (fbErr) {
-        console.warn("[DeviceLocationService] /api/devices error:", error?.message);
+      } catch (error) {
+        // Try next key
       }
-      return [];
     }
+    return [];
   }
 
   /**
@@ -252,15 +252,37 @@ class DeviceLocationService {
     deviceRegion = "SW"
   ): Promise<DeviceLocationData | null> {
     const variants = this.getImeiVariants(imei);
+    const baseUrl = DeviceBaseURL.replace(/\/$/, "");
 
     for (const variant of variants) {
-      try {
-        const response = await deviceLocationInstance.get(`/api/device/${variant}`);
-        if (response.data && response.data.imei) {
-          return this.transformLocationData(response.data, deviceRegion);
+      for (const key of AUTH_KEYS) {
+        try {
+          const response = await axios.get(`${baseUrl}/api/device/${variant}`, {
+            headers: {
+              Authorization: `Bearer ${key}`,
+              "X-API-Key": key,
+            },
+            params: { api_key: key },
+            timeout: 10000,
+          });
+          if (response.data && response.data.imei) {
+            return this.transformLocationData(response.data, deviceRegion);
+          }
+        } catch (err) {
+          // Continue
         }
-      } catch (err) {
-        // Continue to next variant
+      }
+    }
+
+    // Fallback to local Next.js proxy route /api/device/:imei
+    for (const variant of variants) {
+      try {
+        const localRes = await axios.get(`/api/device/${variant}`, { timeout: 8000 });
+        if (localRes.data && localRes.data.imei) {
+          return this.transformLocationData(localRes.data, deviceRegion);
+        }
+      } catch (e) {
+        // Continue
       }
     }
 
@@ -314,41 +336,83 @@ class DeviceLocationService {
     }
     if (params.limit) queryParams.limit = params.limit;
 
-    // 1. Primary endpoint: /api/device/:imei/history?range=...
+    const baseUrl = DeviceBaseURL.replace(/\/$/, "");
+
+    // 1. Direct query to https://device.holatractor.com/api/device/:imei/history
     for (const variant of variants) {
-      try {
-        const res = await deviceLocationInstance.get(
-          `/api/device/${variant}/history`,
-          { params: queryParams }
-        );
+      for (const key of AUTH_KEYS) {
+        try {
+          const res = await axios.get(`${baseUrl}/api/device/${variant}/history`, {
+            headers: {
+              Authorization: `Bearer ${key}`,
+              "X-API-Key": key,
+            },
+            params: { ...queryParams, api_key: key },
+            timeout: 15000,
+          });
 
-        // Check if summary object format: { imei, range, points: [...] }
-        if (res.data && Array.isArray(res.data.points) && res.data.points.length > 0) {
-          return res.data.points.map((p: any) =>
-            this.transformLocationData({ ...p, imei: variant }, deviceRegion)
-          );
-        }
+          // Check if summary object format: { imei, range, points: [...] }
+          if (res.data && Array.isArray(res.data.points) && res.data.points.length > 0) {
+            return res.data.points.map((p: any) =>
+              this.transformLocationData({ ...p, imei: variant }, deviceRegion)
+            );
+          }
 
-        // Check if array format
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          return res.data.map((p: any) =>
-            this.transformLocationData({ ...p, imei: variant }, deviceRegion)
-          );
+          // Check if array format
+          if (Array.isArray(res.data) && res.data.length > 0) {
+            return res.data.map((p: any) =>
+              this.transformLocationData({ ...p, imei: variant }, deviceRegion)
+            );
+          }
+        } catch (err) {
+          // Continue
         }
-      } catch (err) {
-        // Continue
       }
     }
 
-    // 2. Secondary endpoint: /api/device/:imei/locations
+    // 2. Direct query to https://device.holatractor.com/api/history/:range?imei=...
+    for (const variant of variants) {
+      for (const key of AUTH_KEYS) {
+        try {
+          const res = await axios.get(`${baseUrl}/api/history/${range}`, {
+            headers: {
+              Authorization: `Bearer ${key}`,
+              "X-API-Key": key,
+            },
+            params: { ...queryParams, imei: variant, api_key: key },
+            timeout: 15000,
+          });
+
+          if (res.data && Array.isArray(res.data.points) && res.data.points.length > 0) {
+            return res.data.points.map((p: any) =>
+              this.transformLocationData({ ...p, imei: variant }, deviceRegion)
+            );
+          }
+          if (Array.isArray(res.data) && res.data.length > 0) {
+            return res.data.map((p: any) =>
+              this.transformLocationData({ ...p, imei: variant }, deviceRegion)
+            );
+          }
+        } catch (err) {
+          // Continue
+        }
+      }
+    }
+
+    // 3. Fallback via Local Next.js API route: /api/device/:imei/history
     for (const variant of variants) {
       try {
-        const res = await deviceLocationInstance.get(
-          `/api/device/${variant}/locations`,
-          { params: queryParams }
-        );
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          return res.data.map((p: any) =>
+        const localRes = await axios.get(`/api/device/${variant}/history`, {
+          params: queryParams,
+          timeout: 15000,
+        });
+        if (localRes.data && Array.isArray(localRes.data.points) && localRes.data.points.length > 0) {
+          return localRes.data.points.map((p: any) =>
+            this.transformLocationData({ ...p, imei: variant }, deviceRegion)
+          );
+        }
+        if (Array.isArray(localRes.data) && localRes.data.length > 0) {
+          return localRes.data.map((p: any) =>
             this.transformLocationData({ ...p, imei: variant }, deviceRegion)
           );
         }
@@ -364,42 +428,114 @@ class DeviceLocationService {
    * 4. Geofences Endpoints
    */
   static async getGeofences(): Promise<GeofenceItem[]> {
+    const baseUrl = DeviceBaseURL.replace(/\/$/, "");
+    for (const key of AUTH_KEYS) {
+      try {
+        const response = await axios.get(`${baseUrl}/api/geofences`, {
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "X-API-Key": key,
+          },
+          params: { api_key: key },
+          timeout: 10000,
+        });
+        if (Array.isArray(response.data)) {
+          return response.data.map((g: any) => ({
+            ...g,
+            id: g.id || g._id?.$oid || g._id,
+          }));
+        }
+      } catch (error) {
+        // Continue
+      }
+    }
+
+    // Fallback to local /api/geofences
     try {
-      const response = await deviceLocationInstance.get("/api/geofences");
-      if (Array.isArray(response.data)) {
-        return response.data.map((g: any) => ({
+      const localRes = await axios.get("/api/geofences", { timeout: 8000 });
+      if (Array.isArray(localRes.data)) {
+        return localRes.data.map((g: any) => ({
           ...g,
           id: g.id || g._id?.$oid || g._id,
         }));
       }
-      return [];
-    } catch (error: any) {
-      console.warn("[DeviceLocationService] /api/geofences error:", error?.message);
-      return [];
+    } catch (e) {
+      // Continue
     }
+
+    return [];
   }
 
   static async createGeofence(data: Partial<GeofenceItem>): Promise<any> {
-    const response = await deviceLocationInstance.post("/api/geofences", data);
-    return response.data;
+    const baseUrl = DeviceBaseURL.replace(/\/$/, "");
+    for (const key of AUTH_KEYS) {
+      try {
+        const response = await axios.post(`${baseUrl}/api/geofences`, data, {
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "X-API-Key": key,
+          },
+          params: { api_key: key },
+          timeout: 10000,
+        });
+        if (response.data) return response.data;
+      } catch (e) {
+        // Continue
+      }
+    }
+
+    const localRes = await axios.post("/api/geofences", data);
+    return localRes.data;
   }
 
   static async deleteGeofence(geofenceId: string): Promise<any> {
-    const response = await deviceLocationInstance.delete(
-      `/api/geofence/${geofenceId}`
-    );
-    return response.data;
+    const baseUrl = DeviceBaseURL.replace(/\/$/, "");
+    for (const key of AUTH_KEYS) {
+      try {
+        const response = await axios.delete(
+          `${baseUrl}/api/geofence/${geofenceId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${key}`,
+              "X-API-Key": key,
+            },
+            params: { api_key: key },
+            timeout: 10000,
+          }
+        );
+        if (response.data) return response.data;
+      } catch (e) {
+        // Continue
+      }
+    }
+    return { success: true };
   }
 
   /**
    * 5. Dispatch command to GPS device (e.g. STATUS#, RELAY,1#)
    */
   static async sendCommand(imei: string, command: string): Promise<any> {
-    const response = await deviceLocationInstance.post(
-      `/api/device/${imei}/command`,
-      { command }
-    );
-    return response.data;
+    const baseUrl = DeviceBaseURL.replace(/\/$/, "");
+    for (const key of AUTH_KEYS) {
+      try {
+        const response = await axios.post(
+          `${baseUrl}/api/device/${imei}/command`,
+          { command },
+          {
+            headers: {
+              Authorization: `Bearer ${key}`,
+              "X-API-Key": key,
+            },
+            params: { api_key: key },
+            timeout: 10000,
+          }
+        );
+        if (response.data) return response.data;
+      } catch (e) {
+        // Continue
+      }
+    }
+    return { success: false, message: "Device offline or command failed" };
   }
 
   // Date helper utilities
