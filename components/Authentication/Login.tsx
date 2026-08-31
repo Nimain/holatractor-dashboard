@@ -91,7 +91,7 @@ const loginTranslations = {
 };
 
 const LogInPage = () => {
-  const [authMethod, setAuthMethod] = useState<"push" | "password">("push");
+  const [authMethod, setAuthMethod] = useState<"push" | "password">("password");
   const [lang, setLang] = useState<"es" | "en">("es");
   const [email, setEmail] = useState("");
   const [passwrd, setPassword] = useState("");
@@ -350,30 +350,51 @@ const LogInPage = () => {
     try {
       let resData: any = null;
 
+      // 1. Primary: Next.js direct authentication endpoint with failover
       try {
-        const res = await renderInstance.post("/user/login", {
+        const localAuthRes = await axios.post("/api/auth/login", {
           email: email.trim(),
-          password: encryptedPassword,
+          password: passwrd,
           authType: "EMAIL",
         });
-
-        if ((res.status === 200 || res.status === 201) && (res.data?.access_token || res.data?.data?.access_token)) {
-          resData = res.data;
-        } else if (res.data === "Email verification link sent successfully") {
-          successMessage("Email verification link sent successfully");
-          return;
+        if (
+          (localAuthRes.status === 200 || localAuthRes.status === 201) &&
+          (localAuthRes.data?.access_token || localAuthRes.data?.data?.access_token)
+        ) {
+          resData = localAuthRes.data;
         }
-      } catch (nestErr: any) {
-        console.warn("NestJS login notice, trying fallback:", nestErr?.message);
+      } catch (localErr: any) {
+        console.warn("Local auth notice, trying NestJS/FastAPI:", localErr?.message);
       }
 
+      // 2. Secondary: NestJS Backend
+      if (!resData) {
+        try {
+          const res = await renderInstance.post("/user/login", {
+            email: email.trim(),
+            password: encryptedPassword,
+            authType: "EMAIL",
+          });
+
+          if ((res.status === 200 || res.status === 201) && (res.data?.access_token || res.data?.data?.access_token)) {
+            resData = res.data;
+          } else if (res.data === "Email verification link sent successfully") {
+            successMessage("Email verification link sent successfully");
+            return;
+          }
+        } catch (nestErr: any) {
+          console.warn("NestJS login notice, trying FastAPI:", nestErr?.message);
+        }
+      }
+
+      // 3. Tertiary: FastAPI Backend
       if (!resData) {
         try {
           const fastApiUrl = "https://tractorai.sinsignal.com/user/login";
           const fastApiRes = await axios.post(
             fastApiUrl,
             { email: email.trim(), password: passwrd, authType: "EMAIL" },
-            { timeout: 10000 }
+            { timeout: 8000 }
           );
           if (
             (fastApiRes.status === 200 || fastApiRes.status === 201) &&

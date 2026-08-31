@@ -45,7 +45,22 @@ export async function POST(request: NextRequest) {
     const expiresInSeconds = 180; // 3 minutes for comfortable mobile interaction
     const expiresAt = now + expiresInSeconds * 1000;
 
-    // 1. Save challenge directly to PostgreSQL database
+    // Global in-memory fallback store
+    if (!(global as any)._pushChallengesMap) {
+      (global as any)._pushChallengesMap = new Map();
+    }
+    (global as any)._pushChallengesMap.set(challengeId, {
+      challenge_id: challengeId,
+      email,
+      match_number: matchNumber,
+      options,
+      status: "PENDING",
+      device_info: deviceInfo,
+      created_at: now,
+      expires_at: expiresAt,
+    });
+
+    // 1. Save challenge to PostgreSQL database (if connected)
     try {
       const client = await pool.connect();
       try {

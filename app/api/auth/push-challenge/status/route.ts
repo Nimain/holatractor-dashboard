@@ -12,21 +12,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Challenge ID is required" }, { status: 400 });
     }
 
-    const now = Date.now();
-    const client = await pool.connect();
+    const memoryChallenges: Map<string, any> = (global as any)._pushChallengesMap || new Map();
+    let row: any = memoryChallenges.get(challengeId) || null;
+
+    let client: any = null;
     try {
+      client = await pool.connect();
       const result = await client.query(
         `SELECT challenge_id, status, token, user_data, expires_at FROM _push_challenges WHERE challenge_id = $1 LIMIT 1`,
         [challengeId]
       );
-
-      if (result.rows.length === 0) {
-        return NextResponse.json({ error: "Challenge not found" }, { status: 404 });
+      if (result.rows.length > 0) {
+        row = result.rows[0];
       }
+    } catch (_) {}
 
-      const row = result.rows[0];
-      const expiresAt = Number(row.expires_at);
+    if (!row) {
+      if (client) client.release();
+      return NextResponse.json({ error: "Challenge not found" }, { status: 404 });
+    }
 
+    const expiresAt = Number(row.expires_at);
+
+    try {
       if (row.status === "APPROVED" && row.token) {
         let userData = row.user_data;
         if (typeof userData === "string") {
@@ -43,7 +51,7 @@ export async function GET(request: NextRequest) {
           isDealer: Boolean(userData?.isDealer),
           isOperator: Boolean(userData?.isOperator),
           isAgent: Boolean(userData?.isAgent),
-          isAdmin: false,
+          isAdmin: Boolean(userData?.isAdmin),
           role: userData?.role || [],
         });
       }
@@ -53,10 +61,17 @@ export async function GET(request: NextRequest) {
       }
 
       if (now > expiresAt) {
-        await client.query(
-          `UPDATE _push_challenges SET status = 'EXPIRED' WHERE challenge_id = $1`,
-          [challengeId]
-        );
+        if (client) {
+          try {
+            await client.query(
+              `UPDATE _push_challenges SET status = 'EXPIRED' WHERE challenge_id = $1`,
+              [challengeId]
+            );
+          } catch (_) {}
+        }
+        if (memoryChallenges.has(challengeId)) {
+          memoryChallenges.set(challengeId, { ...row, status: "EXPIRED" });
+        }
         return NextResponse.json({ status: "EXPIRED", time_left: 0 });
       }
 
@@ -65,7 +80,7 @@ export async function GET(request: NextRequest) {
         time_left: Math.max(0, Math.floor((expiresAt - now) / 1000)),
       });
     } finally {
-      client.release();
+      if (client) client.release();
     }
   } catch (error: any) {
     console.error("Check push challenge status error:", error);
