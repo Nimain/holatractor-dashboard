@@ -21,6 +21,11 @@ import {
   Check,
   Search,
   RefreshCw,
+  Route,
+  Navigation,
+  MapPin,
+  Shield,
+  Trash2,
 } from "lucide-react"
 import { renderInstance, TractorAIBaseURL } from "@/utils/Axios/RenderInstance"
 import { useCookie } from "next-cookie"
@@ -28,6 +33,7 @@ import axios from "axios"
 import { successMessage, errorMessage } from "@/utils/Toastify/Messages"
 import DeviceLocationService, {
   type DeviceLocationData,
+  type GeofenceItem,
   DeviceBaseURL,
   GPS_API_KEY,
   deviceLocationInstance as deviceInstance,
@@ -231,6 +237,18 @@ export default function DeviceSection() {
   const startMarkerRef = useRef<google.maps.Marker | null>(null)
   const waypointMarkersRef = useRef<google.maps.Marker[]>([])
 
+  // Geofence management state
+  const [geofences, setGeofences] = useState<GeofenceItem[]>([])
+  const [showGeofences, setShowGeofences] = useState<boolean>(true)
+  const [showGeofenceModal, setShowGeofenceModal] = useState<boolean>(false)
+  const [newGeofenceName, setNewGeofenceName] = useState<string>("")
+  const [newGeofenceRadius, setNewGeofenceRadius] = useState<number>(500)
+  const [newGeofenceAlert, setNewGeofenceAlert] = useState<"ENTER" | "EXIT" | "BOTH">("BOTH")
+  const [creatingGeofence, setCreatingGeofence] = useState<boolean>(false)
+  const geofenceCirclesRef = useRef<google.maps.Circle[]>([])
+  const geofenceMarkersRef = useRef<google.maps.Marker[]>([])
+
+
   // Filter history points based on motion filter
   const displayHistoryLocations = useMemo(() => {
     if (!Array.isArray(historyLocations)) return []
@@ -379,10 +397,12 @@ export default function DeviceSection() {
     })
   }, [])
 
-  // Fetch devices from API and resolve GPS locations from device.holatractor.com
+  // Fetch devices and geofences from API and resolve GPS locations from device.holatractor.com
   useEffect(() => {
     fetchDevices()
+    fetchGeofences()
   }, [])
+
 
   // Load main map route for selected tractor with current filter
   const loadMainMapRoute = async (
@@ -1079,12 +1099,76 @@ export default function DeviceSection() {
     }
   }
 
+  // Fetch all geofences from device.holatractor.com /api/geofences
+  const fetchGeofences = async () => {
+    try {
+      const fences = await DeviceLocationService.getGeofences()
+      setGeofences(Array.isArray(fences) ? fences : [])
+    } catch (err) {
+      console.warn("[Devices] Failed to fetch geofences:", err)
+    }
+  }
+
+  const handleCreateGeofence = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newGeofenceName.trim()) {
+      errorMessage("Please enter a geofence name.")
+      return
+    }
+
+    const currentDev = getSelectedDevice()
+    const centerLat = currentDev && currentDev.lat !== 0 ? currentDev.lat : mapCenter.lat
+    const centerLon = currentDev && currentDev.lng !== 0 ? currentDev.lng : mapCenter.lng
+
+    setCreatingGeofence(true)
+    try {
+      await DeviceLocationService.createGeofence({
+        name: newGeofenceName.trim(),
+        center_lat: centerLat,
+        center_lon: centerLon,
+        radius_meters: Number(newGeofenceRadius),
+        alert_on: newGeofenceAlert,
+        devices: ["all"],
+        enabled: true,
+      })
+      successMessage(`Geofence "${newGeofenceName}" created successfully!`)
+      setNewGeofenceName("")
+      setShowGeofenceModal(false)
+      fetchGeofences()
+    } catch (err: any) {
+      errorMessage(err?.message || "Failed to create geofence.")
+    } finally {
+      setCreatingGeofence(false)
+    }
+  }
+
+  const handleDeleteGeofence = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete geofence "${name}"?`)) return
+    try {
+      await DeviceLocationService.deleteGeofence(id)
+      successMessage(`Geofence "${name}" deleted.`)
+      fetchGeofences()
+    } catch (err: any) {
+      errorMessage("Failed to delete geofence.")
+    }
+  }
+
+
   const handlePingSelectedDevice = async () => {
     const dev = getSelectedDevice()
     if (!dev) return
     setPinging(true)
     try {
-      successMessage(`Pinging GPS telemetry for ${dev.name}...`)
+      successMessage(`📡 Pinging GPS tracker ${dev.id} (${dev.name})...`)
+
+      // 1. Dispatch GT06 STATUS# ping command to live TCP socket on device.holatractor.com
+      try {
+        await DeviceLocationService.sendCommand(dev.id, "STATUS#")
+      } catch (cmdErr) {
+        // Continue to telemetry fetch even if socket command was offline
+      }
+
+      // 2. Fetch fresh real-time coordinates and telemetry from /api/device/:imei
       const latest = await DeviceLocationService.getCurrentDeviceLocation(dev.id, dev.region)
       if (latest && latest.lat && latest.lon && latest.lat !== 0 && latest.lon !== 0) {
         setDevices((prev) =>
@@ -1109,23 +1193,24 @@ export default function DeviceSection() {
           googleMapRef.current.setZoom(16)
         }
         // Refresh route history as well
-        loadMainMapRoute(dev.id, selectedFilter)
-        successMessage(`GPS coordinates updated from device.holatractor.com!`)
+        loadMainMapRoute(dev.id, selectedFilter, customStartDate, customEndDate)
+        successMessage(`✅ Ping successful: ${latest.speed || 0} km/h • Battery ${latest.battery_level || 85}% • Lat ${latest.lat.toFixed(4)}, Lon ${latest.lon.toFixed(4)}`)
       } else {
         setDevices((prev) =>
           prev.map((d) => (d.id === dev.id ? { ...d, status: "Not Connected", hasGps: false } : d))
         )
-        errorMessage("Device is not connected / No GPS response received.")
+        errorMessage("Device is offline / No GPS response received.")
       }
     } catch (err: any) {
       setDevices((prev) =>
         prev.map((d) => (d.id === dev.id ? { ...d, status: "Not Connected", hasGps: false } : d))
       )
-      errorMessage("Device is not connected / Server timeout.")
+      errorMessage(err?.message || "Device ping timed out.")
     } finally {
       setPinging(false)
     }
   }
+
 
   const toggleFullscreen = () => setIsFullscreen(!isFullscreen)
 
@@ -1345,7 +1430,55 @@ export default function DeviceSection() {
     }
   }, [liveTrails, selectedTractor])
 
+  // Draw active Geofence zones directly onto Google Maps
+  useEffect(() => {
+
+    if (!googleMapRef.current || !mapsLoaded || !window.google) return
+
+    // Clear previous geofence overlays
+    geofenceCirclesRef.current.forEach((c) => c.setMap(null))
+    geofenceCirclesRef.current = []
+    geofenceMarkersRef.current.forEach((m) => m.setMap(null))
+    geofenceMarkersRef.current = []
+
+    if (!showGeofences || geofences.length === 0) return
+
+    geofences.forEach((gf) => {
+      if (!gf.center_lat || !gf.center_lon) return
+      const center = { lat: Number(gf.center_lat), lng: Number(gf.center_lon) }
+      const radius = Number(gf.radius_meters || 500)
+
+      const circle = new window.google.maps.Circle({
+        strokeColor: "#F59E0B",
+        strokeOpacity: 0.85,
+        strokeWeight: 2,
+        fillColor: "#F59E0B",
+        fillOpacity: 0.18,
+        map: googleMapRef.current,
+        center,
+        radius,
+      })
+      geofenceCirclesRef.current.push(circle)
+
+      const marker = new window.google.maps.Marker({
+        position: center,
+        map: googleMapRef.current,
+        title: `Geofence: ${gf.name} (${radius}m)`,
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 4.5,
+          fillColor: "#F59E0B",
+          fillOpacity: 1,
+          strokeColor: "#FFFFFF",
+          strokeWeight: 1.5,
+        },
+      })
+      geofenceMarkersRef.current.push(marker)
+    })
+  }, [geofences, showGeofences, mapsLoaded])
+
   const selectedDevice = getSelectedDevice()
+
 
   // Loading state
   if (loading) {
@@ -1551,6 +1684,20 @@ export default function DeviceSection() {
                 {showRoutePath ? "Path ON" : "Path OFF"}
               </button>
 
+              {/* Geofences Control Button */}
+              <button
+                onClick={() => setShowGeofenceModal(true)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 border ${
+                  showGeofences
+                    ? "bg-amber-600/20 text-amber-300 border-amber-500/40 hover:bg-amber-600/30"
+                    : "bg-slate-800 text-slate-400 border-slate-700 hover:text-white"
+                }`}
+                title="Manage & View Geofences"
+              >
+                <Shield className="w-3 h-3 text-amber-400" />
+                <span>Geofences ({geofences.length})</span>
+              </button>
+
               <button
                 onClick={handlePingSelectedDevice}
                 disabled={pinging || !selectedDevice}
@@ -1562,6 +1709,7 @@ export default function DeviceSection() {
               </button>
             </div>
           </div>
+
 
           {/* Custom Date Range Picker Card (When custom is active or toggled) */}
           {selectedFilter === "custom" && showDatePicker && (
@@ -2756,6 +2904,181 @@ export default function DeviceSection() {
                       </div>
                     </form>
                   )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GEOFENCES MANAGER MODAL */}
+      {showGeofenceModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+              <div className="flex items-center space-x-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+                  <Shield className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Geofence Zones</h3>
+                  <p className="text-xs text-slate-400">Virtual perimeter alerts & boundary tracking</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowGeofenceModal(false)}
+                className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+              {/* Overlay Toggle Switch */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
+                <div>
+                  <h5 className="text-xs font-bold text-white">Show Geofence Overlays on Map</h5>
+                  <p className="text-[11px] text-slate-400">Render circular boundaries directly on Google Maps</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowGeofences(!showGeofences)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    showGeofences
+                      ? "bg-amber-600 text-white shadow-md shadow-amber-600/30"
+                      : "bg-slate-700 text-slate-300"
+                  }`}
+                >
+                  {showGeofences ? "Overlays ON" : "Overlays OFF"}
+                </button>
+              </div>
+
+              {/* Existing Geofences List */}
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2.5">
+                  Active Geofences ({geofences.length})
+                </h4>
+                {geofences.length === 0 ? (
+                  <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/40 text-center text-xs text-slate-400">
+                    No geofences created yet. Create one below!
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {geofences.map((gf: any) => {
+                      const id = gf._id?.$oid || gf._id || gf.id || ""
+                      return (
+                        <div
+                          key={id || gf.name}
+                          className="p-3 rounded-xl bg-slate-800/70 border border-slate-700/70 flex items-center justify-between hover:border-slate-600 transition-all"
+                        >
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-white">{gf.name}</span>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">
+                                {gf.radius_meters || 500}m radius
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 font-mono">
+                              Center: {Number(gf.center_lat || 0).toFixed(4)}, {Number(gf.center_lon || 0).toFixed(4)} • Alert: {gf.alert_on || "BOTH"}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (googleMapRef.current && gf.center_lat && gf.center_lon) {
+                                  googleMapRef.current.panTo({ lat: Number(gf.center_lat), lng: Number(gf.center_lon) })
+                                  googleMapRef.current.setZoom(16)
+                                  setShowGeofenceModal(false)
+                                }
+                              }}
+                              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-700 hover:bg-slate-600 text-white"
+                              title="Center on Map"
+                            >
+                              Focus
+                            </button>
+                            {id && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteGeofence(id, gf.name)}
+                                className="p-1.5 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 transition-all"
+                                title="Delete Geofence"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Create New Geofence Form */}
+              <div className="pt-3 border-t border-slate-800">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 mb-2.5 flex items-center gap-1.5">
+                  <Plus className="w-3.5 h-3.5" /> Create New Geofence Around Current View
+                </h4>
+                <form onSubmit={handleCreateGeofence} className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Geofence Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Northern Farm Perimeter"
+                      value={newGeofenceName}
+                      onChange={(e) => setNewGeofenceName(e.target.value)}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">Radius (Meters)</label>
+                      <input
+                        type="number"
+                        min="50"
+                        max="50000"
+                        step="50"
+                        value={newGeofenceRadius}
+                        onChange={(e) => setNewGeofenceRadius(Number(e.target.value))}
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">Alert Trigger</label>
+                      <select
+                        value={newGeofenceAlert}
+                        onChange={(e: any) => setNewGeofenceAlert(e.target.value)}
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      >
+                        <option value="BOTH">Entry & Exit (Both)</option>
+                        <option value="ENTER">Entry Only</option>
+                        <option value="EXIT">Exit Only</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={creatingGeofence}
+                    className="w-full py-2.5 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 shadow-lg shadow-amber-600/25 transition-all flex items-center justify-center disabled:opacity-50"
+                  >
+                    {creatingGeofence ? (
+                      <>
+                        <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent mr-2"></div>
+                        Creating Geofence...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4 mr-1.5" /> Save & Activate Geofence
+                      </>
+                    )}
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         </div>
