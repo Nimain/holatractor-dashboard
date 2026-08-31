@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Challenge ID is required" }, { status: 400 });
     }
 
+    const now = Date.now();
     const memoryChallenges: Map<string, any> = (global as any)._pushChallengesMap || new Map();
     let row: any = memoryChallenges.get(challengeId) || null;
 
