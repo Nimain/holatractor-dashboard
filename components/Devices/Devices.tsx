@@ -2168,8 +2168,8 @@ export default function DeviceSection() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center">
-                      <UserIcon className="w-4 h-4 mr-2 text-emerald-400" /> Step 1: Select Owner ({deviceOptions.length}
-                      {totalOwnersCount > deviceOptions.length ? ` of ${totalOwnersCount}` : ""})
+                      <UserIcon className="w-4 h-4 mr-2 text-emerald-400" /> Step 1: Select Owner ({filteredOwners.length}
+                      {totalOwnersCount > filteredOwners.length ? ` of ${totalOwnersCount}` : ""})
                     </h4>
                     {optionsLoading && (
                       <div className="flex items-center text-xs text-emerald-400 font-medium space-x-1.5">
@@ -2208,17 +2208,17 @@ export default function DeviceSection() {
 
                   {/* Owners List */}
                   <div className="space-y-2.5 max-h-[48vh] overflow-y-auto pr-1">
-                    {optionsLoading && deviceOptions.length === 0 ? (
+                    {optionsLoading && filteredOwners.length === 0 ? (
                       <div className="py-16 text-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-2 border-emerald-500 border-t-transparent mx-auto mb-3"></div>
                         <p className="text-slate-400 text-xs font-medium">Searching owners in database...</p>
                       </div>
-                    ) : deviceOptions.length === 0 ? (
+                    ) : filteredOwners.length === 0 ? (
                       <div className="py-12 text-center text-slate-400 text-sm">
                         No owners matching &quot;{ownerSearchTerm}&quot; found.
                       </div>
                     ) : (
-                      deviceOptions.map((owner) => {
+                      filteredOwners.map((owner) => {
                             const isSelected = selectedOwner?.owner_id === owner.owner_id
                             const totalTractors = owner.stores.reduce((acc, s) => acc + s.tractors.length, 0)
                             return (
