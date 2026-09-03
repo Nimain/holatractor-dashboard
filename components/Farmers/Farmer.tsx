@@ -163,16 +163,20 @@ const FarmerSection = () => {
       let farmerList: Farmer[] = []
       try {
         const localRes = await axios.get("/api/farmer")
-        if (Array.isArray(localRes.data) && localRes.data.length > 0) {
+        if (Array.isArray(localRes.data)) {
           farmerList = localRes.data
         }
-      } catch {}
+      } catch (e) {
+        console.warn("Local /api/farmer notice:", e)
+      }
 
       if (farmerList.length === 0) {
-        const response = await renderInstance.get("/farmer")
-        farmerList = Array.isArray(response.data)
-          ? response.data
-          : (response.data?.farmers || response.data?.data || [])
+        try {
+          const response = await renderInstance.get("/farmer")
+          farmerList = Array.isArray(response.data)
+            ? response.data
+            : (response.data?.farmers || response.data?.data || [])
+        } catch {}
       }
 
       setAllFarmers(farmerList)

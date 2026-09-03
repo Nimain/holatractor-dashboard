@@ -32,16 +32,20 @@ const DealerSection = () => {
             let dealerList: Dealer[] = []
             try {
                 const localRes = await axios.get("/api/dealer")
-                if (Array.isArray(localRes.data) && localRes.data.length > 0) {
+                if (Array.isArray(localRes.data)) {
                     dealerList = localRes.data
                 }
-            } catch {}
+            } catch (e) {
+                console.warn("Local /api/dealer notice:", e)
+            }
 
             if (dealerList.length === 0) {
-                const res = await renderInstance.get("/dealer")
-                dealerList = Array.isArray(res.data)
-                    ? res.data
-                    : (res.data?.dealers || res.data?.data || [])
+                try {
+                    const res = await renderInstance.get("/dealer")
+                    dealerList = Array.isArray(res.data)
+                        ? res.data
+                        : (res.data?.dealers || res.data?.data || [])
+                } catch {}
             }
 
             const sortedUsers = [...dealerList].sort((a: Dealer, b: Dealer) => {
@@ -49,7 +53,7 @@ const DealerSection = () => {
             })
             setUsers(sortedUsers)
         } catch (err) {
-            errorMessage("Error fetching user list")
+            console.error("Error fetching dealer list:", err)
         } finally {
             setLoading(false)
         }

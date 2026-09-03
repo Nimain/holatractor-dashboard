@@ -50,22 +50,26 @@ const OwnerSection = () => {
       let ownerList: Owner[] = [];
       try {
         const localRes = await axios.get("/api/owner");
-        if (Array.isArray(localRes.data) && localRes.data.length > 0) {
+        if (Array.isArray(localRes.data)) {
           ownerList = localRes.data;
         }
-      } catch {}
+      } catch (e) {
+        console.warn("Local /api/owner notice:", e);
+      }
 
       if (ownerList.length === 0) {
-        const res = await renderInstance.get("/owner");
-        ownerList = Array.isArray(res.data)
-          ? res.data
-          : (res.data?.owners || res.data?.data || []);
+        try {
+          const res = await renderInstance.get("/owner");
+          ownerList = Array.isArray(res.data)
+            ? res.data
+            : (res.data?.owners || res.data?.data || []);
+        } catch {}
       }
 
       const sortedUsers = sortUsersByUpdateDate(ownerList);
       setUsers(sortedUsers);
     } catch (err) {
-      errorMessage("Error fetching user list");
+      console.error("Error fetching user list:", err);
     } finally {
       setLoading(false);
     }
@@ -596,14 +600,14 @@ const OwnerSection = () => {
                         })}
                       </span>
                       <span
-                        className={`font-medium ${details.status === "active"
+                        className={`font-medium ${String(details.status) === "active" || Number(details.status) === 1
                             ? "text-green-600"
-                            : details.status === "pending"
+                            : String(details.status) === "pending"
                               ? "text-yellow-600"
                               : "text-red-600"
                           }`}
                       >
-                        {details.status}
+                        {String(details.status) === "1" ? "active" : details.status}
                       </span>
                     </div>
 

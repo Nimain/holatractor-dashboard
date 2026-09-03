@@ -61,16 +61,20 @@ const AgentSection = () => {
       let agentList: Agent[] = []
       try {
         const localRes = await axios.get("/api/agent")
-        if (Array.isArray(localRes.data) && localRes.data.length > 0) {
+        if (Array.isArray(localRes.data)) {
           agentList = localRes.data
         }
-      } catch {}
+      } catch (e) {
+        console.warn("Local /api/agent notice:", e)
+      }
 
       if (agentList.length === 0) {
-        const res = await renderInstance.get("/agent")
-        agentList = Array.isArray(res.data)
-          ? res.data
-          : (res.data?.agents || res.data?.data || [])
+        try {
+          const res = await renderInstance.get("/agent")
+          agentList = Array.isArray(res.data)
+            ? res.data
+            : (res.data?.agents || res.data?.data || [])
+        } catch {}
       }
 
       const sortedUsers = [...agentList].sort((a: Agent, b: Agent) => {
@@ -79,7 +83,7 @@ const AgentSection = () => {
       setUsers(sortedUsers)
       setCurrentPage(1)
     } catch (err) {
-      errorMessage("Error fetching user list")
+      console.error("Error fetching agent list:", err)
     } finally {
       setLoading(false)
     }

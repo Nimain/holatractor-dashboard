@@ -39,16 +39,20 @@ const OperatorSection = () => {
             let operatorList: Operator[] = []
             try {
                 const localRes = await axios.get("/api/operator")
-                if (Array.isArray(localRes.data) && localRes.data.length > 0) {
+                if (Array.isArray(localRes.data)) {
                     operatorList = localRes.data
                 }
-            } catch {}
+            } catch (e) {
+                console.warn("Local /api/operator notice:", e)
+            }
 
             if (operatorList.length === 0) {
-                const res = await renderInstance.get("/operator")
-                operatorList = Array.isArray(res.data)
-                    ? res.data
-                    : (res.data?.operators || res.data?.data || [])
+                try {
+                    const res = await renderInstance.get("/operator")
+                    operatorList = Array.isArray(res.data)
+                        ? res.data
+                        : (res.data?.operators || res.data?.data || [])
+                } catch {}
             }
 
             const sortedUsers = [...operatorList].sort((a: Operator, b: Operator) => {
@@ -56,7 +60,7 @@ const OperatorSection = () => {
             })
             setUsers(sortedUsers)
         } catch (err) {
-            errorMessage("Error fetching user list")
+            console.error("Error fetching operator list:", err)
         } finally {
             setLoading(false)
         }
@@ -359,11 +363,11 @@ const OperatorSection = () => {
                                                 {/* Status Badge */}
                                                 <div className="flex-shrink-0">
                                                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                                        details.Status === 'active' 
+                                                        String(details.Status) === 'active' || Number(details.Status) === 1 
                                                             ? 'bg-green-100 text-green-700' 
                                                             : 'bg-gray-100 text-gray-700'
                                                     }`}>
-                                                        {details.Status}
+                                                        {String(details.Status) === '1' ? 'active' : details.Status}
                                                     </span>
                                                 </div>
 
@@ -465,8 +469,8 @@ const OperatorSection = () => {
                                 <div className="bg-slate-50 border border-slate-100 rounded-xl p-3.5">
                                     <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-1">Status</p>
                                     <div className="flex items-center gap-1.5 font-semibold text-sm text-slate-800">
-                                        <span className={`w-2 h-2 rounded-full ${selectedOperator.Status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
-                                        <span className="capitalize">{selectedOperator.Status || 'Active'}</span>
+                                        <span className={`w-2 h-2 rounded-full ${String(selectedOperator.Status) === 'active' || Number(selectedOperator.Status) === 1 ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+                                        <span className="capitalize">{String(selectedOperator.Status) === '1' ? 'Active' : selectedOperator.Status || 'Active'}</span>
                                     </div>
                                 </div>
                                 

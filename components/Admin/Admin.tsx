@@ -26,16 +26,34 @@ const AdminSection = () => {
     const [selectedAdmin, setSelectedAdmin] = useState<UserProfile | null>(null)
     const [editOpen, setEditOpen] = useState(false)
 
-    function fetchAllUsers() {
+    async function fetchAllUsers() {
         setLoading(true)
-        renderInstance.get("/user/admins/all")
-            .then((res) => {
-                setUsers(res.data)
-            }).catch((err) => {
-                errorMessage("Error fetching user list")
-            }).finally(() => {
-                setLoading(false)
-            })
+        try {
+            let adminList: UserProfile[] = []
+            try {
+                const localRes = await axios.get("/api/user/admins/all")
+                if (Array.isArray(localRes.data)) {
+                    adminList = localRes.data
+                }
+            } catch (e) {
+                console.warn("Local /api/user/admins/all notice:", e)
+            }
+
+            if (adminList.length === 0) {
+                try {
+                    const res = await renderInstance.get("/user/admins/all")
+                    if (Array.isArray(res.data)) {
+                        adminList = res.data
+                    }
+                } catch {}
+            }
+
+            setUsers(adminList)
+        } catch (err) {
+            console.error("Error fetching admin list:", err)
+        } finally {
+            setLoading(false)
+        }
     }
 
     useEffect(() => {
