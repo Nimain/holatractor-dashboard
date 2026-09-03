@@ -50,8 +50,9 @@ const PaymentHistory = () => {
   const [activeHeaderHover, setActiveHeaderHover] = useState("");
 
   const API_BASE =
+    process.env.NEXT_PUBLIC_TRACTOR_AI_URL ||
     process.env.NEXT_PUBLIC_API_URL ||
-    "https://holatractor-backend-render.onrender.com";
+    "https://tractorai.sinsignal.com";
   const access_token = getAccessToken();
 
   useEffect(() => {

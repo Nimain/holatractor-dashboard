@@ -1,12 +1,11 @@
 import axios, { AxiosResponse } from "axios";
 
-export const NestJsBaseURL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://holatractor-backend-render.onrender.com/";
-export const DeviceBaseURL = "https://device.holatractor.com/";
 export const TractorAIBaseURL =
   process.env.NEXT_PUBLIC_TRACTOR_AI_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
   "https://tractorai.sinsignal.com/";
+export const NestJsBaseURL = TractorAIBaseURL;
+export const DeviceBaseURL = "https://device.holatractor.com/";
 export const FastApiBaseURL = TractorAIBaseURL;
 
 function getCookie(name: string): string | null {
@@ -21,7 +20,7 @@ function getCookie(name: string): string | null {
 }
 
 export const renderInstance = axios.create({
-  baseURL: NestJsBaseURL,
+  baseURL: TractorAIBaseURL,
   headers: {
     "Content-Type": "application/json",
   },

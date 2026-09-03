@@ -79,31 +79,31 @@ const OperatorAction = (
         <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
                 <div
-                    className="flex items-center justify-between gap-3 bg-muted p-4 rounded-lg cursor-pointer hover:bg-background transition-all duration-300 text-sm md:text-base">
-                    <p className="w-10 md:w-16 text-center">{index + 1}</p>
+                    className="flex items-center justify-between gap-3 bg-muted p-4 rounded-xl cursor-pointer hover:bg-white hover:shadow-sm transition-all duration-300 text-sm md:text-base">
+                    <p className="w-12 text-slate-500 font-semibold text-center">#{index + 1}</p>
                     
-                    <p className="w-20 md:w-32 truncate">
-                        {mailHover === index ? name : `${name.slice(0, 5)}...`}
+                    <p className="w-48 font-semibold text-slate-900 truncate" title={name}>
+                        {name}
                     </p>
                     
-                    <p className={`truncate transition-all ${index === mailHover ? 'w-full' : 'w-20 md:w-32'}`}>
-                        {mailHover === index ? email : `${email.slice(0, 5)}...`}
+                    <p className="w-48 text-slate-600 text-sm truncate" title={email}>
+                        {email || "N/A"}
                     </p>
                     
-                    <div className={`px-2 py-1 text-xs md:text-sm ${emailVerified ? 'text-green-700' : 'text-red-500'} bg-muted-foreground/10 text-center w-20 md:w-24 rounded-full`}>
-                        {emailVerified ? 'Yes' : 'No'}
+                    <div className={`px-2.5 py-1 text-xs font-semibold ${emailVerified ? 'text-emerald-700 bg-emerald-50 border border-emerald-200' : 'text-amber-700 bg-amber-50 border border-amber-200'} text-center w-24 rounded-full`}>
+                        {emailVerified ? 'Verified' : 'Pending'}
                     </div>
                     
-                    <div className={`px-2 py-1 text-xs md:text-sm ${status === 1 ? 'text-green-700' : 'text-red-500'} bg-muted-foreground/10 text-center w-20 md:w-24 rounded-full`}>
+                    <div className={`px-2.5 py-1 text-xs font-semibold ${status === 1 ? 'text-emerald-700 bg-emerald-100' : 'text-red-700 bg-red-100'} text-center w-24 rounded-full`}>
                         {status === 1 ? 'Active' : 'Inactive'}
                     </div>
                     
-                    <p className="hidden md:block w-32 truncate">
-                        {mailHover === index ? creatDate : `${creatDate.slice(0, 12)}...`}
+                    <p className="hidden md:block w-36 text-slate-500 text-xs truncate">
+                        {creatDate}
                     </p>
                     
-                    <p className="hidden md:block w-32 truncate">
-                        {mailHover === index ? updateDate : `${updateDate.slice(0, 12)}...`}
+                    <p className="hidden md:block w-36 text-slate-500 text-xs truncate">
+                        {updateDate}
                     </p>
                 </div>
             </SheetTrigger>

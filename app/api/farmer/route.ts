@@ -6,10 +6,9 @@ import pool from "@/utils/Database/db";
 export const dynamic = "force-dynamic";
 
 const FastApiBaseURL =
-  process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "https://tractorai.sinsignal.com/";
-const NestJsBaseURL =
+  process.env.NEXT_PUBLIC_TRACTOR_AI_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://holatractor-backend-render.onrender.com/";
+  "https://tractorai.sinsignal.com/";
 
 function getAdminHeaders() {
   try {
@@ -161,17 +160,6 @@ export async function GET(request: NextRequest) {
     } catch (dbErr: any) {
       console.warn("[/api/farmer] Database query fallback:", dbErr?.message);
     }
-
-    // 3. NestJS /farmer
-    try {
-      const backendRes = await axios.get(`${NestJsBaseURL}farmer`, {
-        headers,
-        timeout: 4000,
-      });
-      if (Array.isArray(backendRes.data)) {
-        return NextResponse.json(applySearch(backendRes.data.map(normalizeFarmer)));
-      }
-    } catch {}
 
     return NextResponse.json([]);
   } catch (error: any) {

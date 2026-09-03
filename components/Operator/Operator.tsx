@@ -36,26 +36,9 @@ const OperatorSection = () => {
     async function fetchAllUsers() {
         setLoading(true)
         try {
-            let operatorList: Operator[] = []
-            try {
-                const localRes = await axios.get("/api/operator")
-                if (Array.isArray(localRes.data)) {
-                    operatorList = localRes.data
-                }
-            } catch (e) {
-                console.warn("Local /api/operator notice:", e)
-            }
-
-            if (operatorList.length === 0) {
-                try {
-                    const res = await renderInstance.get("/operator")
-                    operatorList = Array.isArray(res.data)
-                        ? res.data
-                        : (res.data?.operators || res.data?.data || [])
-                } catch {}
-            }
-
-            const sortedUsers = [...operatorList].sort((a: Operator, b: Operator) => {
+            const localRes = await axios.get("/api/operator")
+            const operatorList = Array.isArray(localRes.data) ? localRes.data : []
+            const sortedUsers = [...operatorList].sort((a: any, b: any) => {
                 return new Date(b?.createdAt || 0).getTime() - new Date(a?.createdAt || 0).getTime()
             })
             setUsers(sortedUsers)
@@ -200,111 +183,34 @@ const OperatorSection = () => {
             </div>
 
             {/* Desktop Table Header - Hidden on mobile */}
-            <div className='hidden lg:flex text-lg xl:text-xl font-semibold items-center justify-between gap-2 xl:gap-3 bg-[#ededed] p-4 xl:p-5 rounded cursor-pointer overflow-x-auto'>
+            <div className='hidden lg:flex text-[16px] font-[600] items-center justify-between gap-2 xl:gap-3 bg-slate-100 p-4 rounded-xl text-slate-700'>
 
-                <div className='min-w-[80px] xl:w-[100px] flex items-center justify-between group'>
-                    Id
-                    <div className='flex items-center gap-1 xl:gap-1.5 opacity-0 transition-all duration-500 group-hover:opacity-100'>
-                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <ArrowUpwardIcon className="text-lg xl:text-xl" />
-                        </div>
-                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <MoreVertIcon className="text-lg xl:text-xl" />
-                        </div>
-                    </div>
+                <div className='w-12 font-bold text-center'>
+                    #
                 </div>
 
-                <div className='min-w-[120px] xl:w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group'>
-                    Name
-                    <div className='flex items-center gap-1 xl:gap-1.5 opacity-0 transition-all duration-500 group-hover:opacity-100'>
-                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <ArrowUpwardIcon className="text-lg xl:text-xl" />
-                        </div>
-                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <MoreVertIcon className="text-lg xl:text-xl" />
-                        </div>
-                    </div>
+                <div className='w-48 font-bold'>
+                    Operator Full Name
                 </div>
 
-                <div className='min-w-[120px] xl:w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group'>
-                    Email
-                    <div className='flex items-center gap-1 xl:gap-1.5 opacity-0 transition-all duration-500 group-hover:opacity-100'>
-                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <ArrowUpwardIcon className="text-lg xl:text-xl" />
-                        </div>
-                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <MoreVertIcon className="text-lg xl:text-xl" />
-                        </div>
-                    </div>
+                <div className='w-48 font-bold'>
+                    Email Address
                 </div>
 
-                <div className='min-w-[120px] xl:w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group'
-                    onMouseEnter={() => { setActiveHover('Verified') }}
-                    onMouseLeave={() => { setActiveHover('') }}>
-                    {
-                        activeHover === 'Verified' ?
-                            'Veri...'
-                            :
-                            'Verified'
-                    }
-                    <div className='flex items-center gap-1 xl:gap-1.5 opacity-0 transition-all duration-500 group-hover:opacity-100'>
-                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <ArrowUpwardIcon className="text-lg xl:text-xl" />
-                        </div>
-                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <MoreVertIcon className="text-lg xl:text-xl" />
-                        </div>
-                    </div>
+                <div className='w-24 font-bold text-center'>
+                    Verified
                 </div>
 
-                <div className='min-w-[120px] xl:w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group'>
+                <div className='w-24 font-bold text-center'>
                     Status
-                    <div className='flex items-center gap-1 xl:gap-1.5 opacity-0 transition-all duration-500 group-hover:opacity-100'>
-                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <ArrowUpwardIcon className="text-lg xl:text-xl" />
-                        </div>
-                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <MoreVertIcon className="text-lg xl:text-xl" />
-                        </div>
-                    </div>
                 </div>
 
-                <div className='min-w-[150px] xl:w-[180px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group'
-                    onMouseEnter={() => { setActiveHover('Joined at') }}
-                    onMouseLeave={() => { setActiveHover('') }}>
-                    {
-                        activeHover === 'Joined at' ?
-                            'Join...'
-                            :
-                            'Joined at'
-                    }
-                    <div className='flex items-center gap-1 xl:gap-1.5 opacity-0 transition-all duration-500 group-hover:opacity-100'>
-                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <ArrowUpwardIcon className="text-lg xl:text-xl" />
-                        </div>
-                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <MoreVertIcon className="text-lg xl:text-xl" />
-                        </div>
-                    </div>
+                <div className='w-36 font-bold'>
+                    Joined At
                 </div>
 
-                <div className='min-w-[150px] xl:w-[180px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group'
-                    onMouseEnter={() => { setActiveHover('Updated at') }}
-                    onMouseLeave={() => { setActiveHover('') }}>
-                    {
-                        activeHover === 'Updated at' ?
-                            'Upda...'
-                            :
-                            'Updated at'
-                    }
-                    <div className='flex items-center gap-1 xl:gap-1.5 opacity-0 transition-all duration-500 group-hover:opacity-100'>
-                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <ArrowUpwardIcon className="text-lg xl:text-xl" />
-                        </div>
-                        <div className='rounded-full w-7 h-7 xl:w-8 xl:h-8 flex items-center justify-center transition-all duration-500 hover:bg-gray-300'>
-                            <MoreVertIcon className="text-lg xl:text-xl" />
-                        </div>
-                    </div>
+                <div className='w-36 font-bold'>
+                    Updated At
                 </div>
 
             </div>

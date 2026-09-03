@@ -6,10 +6,9 @@ import pool from "@/utils/Database/db";
 export const dynamic = "force-dynamic";
 
 const FastApiBaseURL =
-  process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "https://tractorai.sinsignal.com/";
-const NestJsBaseURL =
+  process.env.NEXT_PUBLIC_TRACTOR_AI_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://holatractor-backend-render.onrender.com/";
+  "https://tractorai.sinsignal.com/";
 
 function getAdminHeaders() {
   try {
@@ -80,7 +79,7 @@ export async function GET(request: NextRequest) {
             role: [String(u.role_name || "admin")],
           }));
 
-          return NextResponse.json(adminsList);
+        return NextResponse.json(adminsList);
         }
       } finally {
         client.release();
@@ -89,19 +88,8 @@ export async function GET(request: NextRequest) {
       console.warn("[/api/user/admins/all] DB fallback:", dbErr?.message);
     }
 
-    // 2. Try FastAPI / NestJS
-    try {
-      const backendRes = await axios.get(`${NestJsBaseURL}user/admins/all`, {
-        headers,
-        timeout: 4000,
-      });
-      if (Array.isArray(backendRes.data)) {
-        return NextResponse.json(backendRes.data);
-      }
-    } catch {}
-
-    // 3. Fallback: Return primary default system admin
-    return NextResponse.json([
+    // 3. Fallback: Return primary default system admin + dynamic admins
+    const defaultList = [
       {
         id: "admin_sistemas",
         first_name: "Sistemas",
@@ -118,7 +106,17 @@ export async function GET(request: NextRequest) {
         updatedAt: new Date().toISOString(),
         role: ["admin", "superAdmin"],
       },
-    ]);
+    ];
+
+    if ((global as any)._dynamicAdminsMap) {
+      (global as any)._dynamicAdminsMap.forEach((adm: any) => {
+        if (!defaultList.some((d) => d.email === adm.email || d.id === adm.id)) {
+          defaultList.push(adm);
+        }
+      });
+    }
+
+    return NextResponse.json(defaultList);
   } catch (error: any) {
     console.error("[/api/user/admins/all] Fatal error:", error);
     return NextResponse.json([]);

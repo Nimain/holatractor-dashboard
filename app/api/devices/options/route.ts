@@ -6,10 +6,9 @@ import pool from "@/utils/Database/db";
 export const dynamic = "force-dynamic";
 
 const FastApiBaseURL =
-  process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "https://tractorai.sinsignal.com/";
-const NestJsBaseURL =
+  process.env.NEXT_PUBLIC_TRACTOR_AI_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://holatractor-backend-render.onrender.com/";
+  "https://tractorai.sinsignal.com/";
 
 // Base catalog of tractors
 export const BASE_TRACTORS_CATALOG = [

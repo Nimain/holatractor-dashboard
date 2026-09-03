@@ -5,10 +5,9 @@ import jwt from "jsonwebtoken";
 export const dynamic = "force-dynamic";
 
 const FastApiBaseURL =
-  process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "https://tractorai.sinsignal.com/";
-const NestJsBaseURL =
+  process.env.NEXT_PUBLIC_TRACTOR_AI_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://holatractor-backend-render.onrender.com/";
+  "https://tractorai.sinsignal.com/";
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,7 +33,7 @@ export async function POST(request: NextRequest) {
       "Content-Type": "application/json",
     };
 
-    // 1. Try FastAPI localhost /api/v1/admin/devices
+    // 1. Try FastAPI /api/v1/admin/devices
     try {
       const fastApiRes = await axios.post(
         `${FastApiBaseURL.replace(/\/$/, "")}/api/v1/admin/devices`,
@@ -45,23 +44,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(fastApiRes.data, { status: fastApiRes.status });
       }
     } catch (err: any) {
-      console.warn("FastAPI POST device error notice, trying next fallback");
-    }
-
-    // 2. Fallback: NestJS /store/addDevicetoTractor
-    try {
-      const res = await axios.post(
-        `${NestJsBaseURL}store/addDevicetoTractor`,
-        {
-          device_id: body.device_imei,
-          tractor_store_id: body.tractor_id,
-          device_region: body.device_region || "SW",
-        },
-        { headers, timeout: 5000 }
-      );
-      return NextResponse.json(res.data, { status: res.status });
-    } catch (err: any) {
-      console.warn("NestJS POST device notice, using internal assignment fallback");
+      console.warn("FastAPI POST device error notice, using internal assignment fallback");
     }
 
     // 3. Fallback: Local database / in-memory assignment success

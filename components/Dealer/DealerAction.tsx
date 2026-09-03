@@ -81,43 +81,32 @@ const DealerAction = (
                 <div
                     className='text-[18px] flex items-center justify-between gap-[10px] bg-[#ededed] p-[20px] rounded cursor-pointer hover:bg-white transition-all duration-500'>
 
-                    <p
-                        className='w-[100px]'>
-                        {index + 1}
+                    <p className='w-[60px] font-semibold text-slate-500'>
+                        #{index + 1}
                     </p>
 
-                    <p className='w-[140px]'>
-                        {mailHover === index ? name : `${name.slice(0, 5)}...`}
+                    <p className='w-[220px] font-semibold text-slate-900 truncate' title={name}>
+                        {name}
                     </p>
 
-                    <p className={`transition ${index === mailHover ? 'w-fit' : 'w-[140px]'}`}>
-                        {mailHover === index ? email : `${email.slice(0, 5)}...`}
+                    <p className='w-[220px] text-slate-600 text-[15px] truncate' title={email}>
+                        {email || "N/A"}
                     </p>
 
-                    <div className={`px-[10px] text-[14px] py-[6px] ${emailVerified ? 'text-[#3e875e]' : 'text-red-400'} bg-[#dfe4e2] text-center w-[140px] rounded-full`}>
-                        {
-                            emailVerified ?
-                                'Yes'
-                                :
-                                'No'
-                        }
+                    <div className={`px-[12px] text-[13px] font-semibold py-[4px] ${emailVerified ? 'text-emerald-700 bg-emerald-50 border border-emerald-200' : 'text-amber-700 bg-amber-50 border border-amber-200'} text-center w-[100px] rounded-full`}>
+                        {emailVerified ? 'Verified' : 'Pending'}
                     </div>
 
-                    <p className={`px-[10px] text-[14px] py-[6px] ${status === 1 ? 'text-[#3e875e]' : 'text-red-400'} bg-[#dfe4e2] text-center w-[140px] rounded-full`}>
-                        {
-                            status === 1 ?
-                                'Active'
-                                :
-                                'Inactive'
-                        }
+                    <div className={`px-[12px] text-[13px] font-semibold py-[4px] ${status === 1 ? 'text-emerald-700 bg-emerald-100' : 'text-red-700 bg-red-100'} text-center w-[100px] rounded-full`}>
+                        {status === 1 ? 'Active' : 'Inactive'}
+                    </div>
+
+                    <p className='w-[160px] text-slate-500 text-[14px] truncate'>
+                        {creatDate}
                     </p>
 
-                    <p className='w-[180px]'>
-                        {mailHover === index ? creatDate : `${creatDate.slice(0, 12)}...`}
-                    </p>
-
-                    <p className='w-[180px]'>
-                        {mailHover === index ? updateDate : `${updateDate.slice(0, 12)}...`}
+                    <p className='w-[160px] text-slate-500 text-[14px] truncate'>
+                        {updateDate}
                     </p>
 
                 </div>

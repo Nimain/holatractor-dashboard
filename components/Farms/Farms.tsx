@@ -185,21 +185,8 @@ const FarmSection = () => {
   async function fetchAllFarms() {
     setLoading(true);
     try {
-      let farmList: Farm[] = [];
-      try {
-        const localRes = await axios.get("/api/farm");
-        if (Array.isArray(localRes.data) && localRes.data.length > 0) {
-          farmList = localRes.data;
-        }
-      } catch {}
-
-      if (farmList.length === 0) {
-        const res = await renderInstance.get("/farm");
-        farmList = Array.isArray(res.data)
-          ? res.data
-          : (res.data?.farms || res.data?.data || []);
-      }
-
+      const localRes = await axios.get("/api/farm");
+      const farmList = Array.isArray(localRes.data) ? localRes.data : [];
       const sortedFarms = sortFarmsByUpdateDate(farmList);
       setFarms(sortedFarms);
     } catch {

@@ -68,13 +68,14 @@ export async function GET(req: NextRequest) {
     }
   } catch (dbErr: any) {
     console.error("Direct DB fetch error:", dbErr?.message);
-    // Fallback to NestJS / FastAPI
+    // Fallback to FastAPI
     try {
-      const nestRes = await axios.get(
-        "https://holatractor-backend-render.onrender.com/inventory",
+      const fastApiUrl = process.env.NEXT_PUBLIC_TRACTOR_AI_URL || process.env.NEXT_PUBLIC_API_URL || "https://tractorai.sinsignal.com/";
+      const fastRes = await axios.get(
+        `${fastApiUrl.replace(/\/$/, "")}/inventory`,
         { timeout: 5000 }
       );
-      return NextResponse.json(nestRes.data);
+      return NextResponse.json(fastRes.data);
     } catch (e: any) {
       return NextResponse.json({ error: "Failed to load inventory" }, { status: 500 });
     }

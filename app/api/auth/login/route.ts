@@ -7,11 +7,9 @@ import pool from "@/utils/Database/db";
 export const dynamic = "force-dynamic";
 
 const JWT_SECRET = process.env.JWT_SECRET || "holatractor_secure_jwt_secret_2026";
-const NestJsBaseURL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://holatractor-backend-render.onrender.com/";
 const TractorAIBaseURL =
   process.env.NEXT_PUBLIC_TRACTOR_AI_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
   "https://tractorai.sinsignal.com/";
 
 // Helper to decrypt AES password if client encrypted it
@@ -50,24 +48,19 @@ export async function POST(request: NextRequest) {
       email.startsWith("admin@") ||
       email.startsWith("sistemas@");
 
-    // 1. Attempt NestJS Backend (if live)
+    // 1. Attempt FastAPI Backend
     try {
-      const encryptedForNest = CryptoJS.AES.encrypt(
-        plainPassword,
-        "m4AfXfQ&1brl3LjQFYO"
-      ).toString();
-
-      const nestRes = await axios.post(
-        `${NestJsBaseURL.replace(/\/$/, "")}/user/login`,
-        { email, password: encryptedForNest, authType },
-        { timeout: 4000 }
+      const fastApiRes = await axios.post(
+        `${TractorAIBaseURL.replace(/\/$/, "")}/user/login`,
+        { email, password: plainPassword, authType },
+        { timeout: 6000 }
       );
 
       if (
-        (nestRes.status === 200 || nestRes.status === 201) &&
-        (nestRes.data?.access_token || nestRes.data?.data?.access_token)
+        (fastApiRes.status === 200 || fastApiRes.status === 201) &&
+        (fastApiRes.data?.access_token || fastApiRes.data?.data?.access_token)
       ) {
-        const outData = { ...nestRes.data };
+        const outData = { ...fastApiRes.data };
         if (isAdminEmail) {
           outData.isAdmin = true;
           outData.isSuperAdmin = true;
@@ -82,12 +75,9 @@ export async function POST(request: NextRequest) {
         }
         return NextResponse.json(outData);
       }
-    } catch (nestErr: any) {
-      // NestJS offline or suspended, continue to failovers
+    } catch (fastErr: any) {
+      // FastAPI offline/error, continue to failover
     }
-
-    // 2. Attempt FastAPI Backend (if live)
-    try {
       const fastApiRes = await axios.post(
         `${TractorAIBaseURL.replace(/\/$/, "")}/user/login`,
         { email, password: plainPassword, authType },

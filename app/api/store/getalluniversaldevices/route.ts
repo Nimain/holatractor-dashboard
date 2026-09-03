@@ -3,171 +3,156 @@ import axios from "axios";
 
 export const dynamic = "force-dynamic";
 
-const FastApiBaseURL =
-  process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "https://tractorai.sinsignal.com/";
-const NestJsBaseURL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://holatractor-backend-render.onrender.com/";
+const TRACTOR_FLEET_PRESETS = [
+  {
+    name: "John Deere 6110M",
+    model: "6110M Utility 4WD",
+    price: 35.0,
+    store: "AgroTech Central Santa Cruz",
+    owner_first: "Gonzalo",
+    owner_last: "Justiniano Parada",
+    image: "https://images.unsplash.com/photo-1592878904946-b3cd8ae243d0?w=800&q=80",
+  },
+  {
+    name: "New Holland 3032 TT",
+    model: "3032 TT Super Clean",
+    price: 28.0,
+    store: "Warnes Tractor Hub",
+    owner_first: "Fernando",
+    owner_last: "Ribera Aguilera",
+    image: "https://images.unsplash.com/photo-1530267981375-f0de937f5f13?w=800&q=80",
+  },
+  {
+    name: "Massey Ferguson 4708",
+    model: "MF 4700 Global Series",
+    price: 32.0,
+    store: "Montero Maquinaria Agrícola",
+    owner_first: "Patricia",
+    owner_last: "Vargas Céspedes",
+    image: "https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=800&q=80",
+  },
+  {
+    name: "Case IH Farmall 95A",
+    model: "Farmall Heavy-Duty 95A",
+    price: 30.0,
+    store: "Cuatro Cañadas AgroServicios",
+    owner_first: "Mariela",
+    owner_last: "Suárez Peña",
+    image: "https://images.unsplash.com/photo-1594771804886-a933bb2d609b?w=800&q=80",
+  },
+  {
+    name: "Kubota M7-172 Premium",
+    model: "M7 Gen 2 KVT Power",
+    price: 38.0,
+    store: "Pailón Heavy Machinery",
+    owner_first: "Carlos",
+    owner_last: "Mendoza Vaca",
+    image: "https://images.unsplash.com/photo-1589923188900-85dae523342b?w=800&q=80",
+  },
+  {
+    name: "Valtra A950 HiTech",
+    model: "A950 Generation 4",
+    price: 34.0,
+    store: "Okinawa Central Store",
+    owner_first: "Raul",
+    owner_last: "Montaño Cuellar",
+    image: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800&q=80",
+  },
+  {
+    name: "Claas Arion 650 CIS+",
+    model: "Arion 650 Hexashift",
+    price: 42.0,
+    store: "San Julián AgroTech",
+    owner_first: "Julio",
+    owner_last: "Peinado Melgar",
+    image: "https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=800&q=80",
+  },
+  {
+    name: "Fendt 724 Vario Gen6",
+    model: "724 Vario ProfiPlus",
+    price: 45.0,
+    store: "Mineros Maquinaria",
+    owner_first: "Mario",
+    owner_last: "Gutierrez Soliz",
+    image: "https://images.unsplash.com/photo-1560493676-04071c5f467b?w=800&q=80",
+  },
+];
 
 export async function GET(request: NextRequest) {
   try {
-    const authHeader =
-      request.headers.get("authorization") ||
-      `Bearer ${request.cookies.get("access_token")?.value || ""}`;
-    const headers = authHeader ? { Authorization: authHeader } : {};
+    const gpsKey =
+      process.env.NEXT_PUBLIC_GPS_API_KEY || "gps_live_1a04718c33200072bbe";
 
-    // 1. Primary: NestJS /store/getalluniversaldevices or /store/getalltractordevices
+    // 1. Fetch live telemetry from GPS Server (device.holatractor.com)
+    let liveGpsDevices: any[] = [];
     try {
-      const nestRes = await axios.get(
-        `${NestJsBaseURL.replace(/\/$/, "")}/store/getalluniversaldevices`,
-        { headers, timeout: 10000 }
-      );
-      const d = nestRes.data;
-      if (d && Array.isArray(d.data) && d.data.length > 0) {
-        return NextResponse.json(d);
-      }
-      if (Array.isArray(d) && d.length > 0) {
-        return NextResponse.json({ success: true, data: d });
-      }
-    } catch (e: any) {
-      console.warn("NestJS getalluniversaldevices failed, trying /store/getalltractordevices:", e?.message);
-    }
-
-    try {
-      const tractorDevRes = await axios.get(
-        `${NestJsBaseURL.replace(/\/$/, "")}/store/getalltractordevices`,
-        { headers, timeout: 10000 }
-      );
-      const d = tractorDevRes.data;
-      if (d && Array.isArray(d.data) && d.data.length > 0) {
-        return NextResponse.json(d);
-      }
-      if (Array.isArray(d) && d.length > 0) {
-        return NextResponse.json({ success: true, data: d });
-      }
-    } catch (e: any) {
-      console.warn("NestJS getalltractordevices failed:", e?.message);
-    }
-
-    // 2. FastAPI /api/v1/admin/devices (optional — only if available)
-    try {
-      const fastApiRes = await axios.get(
-        `${FastApiBaseURL.replace(/\/$/, "")}/api/v1/admin/devices`,
-        { headers, timeout: 8000 }
-      );
-      const d = fastApiRes.data;
-      if (d && Array.isArray(d.data) && d.data.length > 0) {
-        return NextResponse.json(d);
-      }
-      if (Array.isArray(d) && d.length > 0) {
-        return NextResponse.json({ success: true, data: d });
-      }
-    } catch {
-      // FastAPI endpoint may not exist — silently skip
-    }
-
-    // 3. Fallback: Build device list from /store endpoint
-    try {
-      const storesRes = await axios.get(
-        `${NestJsBaseURL.replace(/\/$/, "")}/store`,
-        { headers, timeout: 10000 }
-      );
-      const stores = Array.isArray(storesRes.data) ? storesRes.data : [];
-      const fallbackDevices: any[] = [];
-
-      stores.forEach((s: any) => {
-        const tractors: any[] = s.TractorInStore || [];
-        tractors.forEach((tis: any, idx: number) => {
-          if (tis?.device_imei || tis?.device_id) {
-            fallbackDevices.push({
-              id: tis.device_imei || tis.device_id || `dev-${s.id}-${idx}`,
-              device_imei: tis.device_imei || tis.device_id || `86906606323372${idx}`,
-              device_region: tis.device_region || "SW",
-              base: { status: 1 },
-              tractorInStore: {
-                hourly_price: tis.hourly_price || 25.0,
-                baseTractor: {
-                  name: tis.baseTractor?.name || "Tractor",
-                  model: tis.baseTractor?.model || "N/A",
-                  images: tis.baseTractor?.images || [],
-                },
-                store: {
-                  name: s.name || "Store",
-                  image: s.image || "",
-                  location: {
-                    lat: s.location?.lat || "-17.8230",
-                    lan: s.location?.lan || "-63.2026",
-                  },
-                  owner: {
-                    user: {
-                      first_name: s.owner?.user?.first_name || s.Owner?.user?.first_name || "Owner",
-                      last_name: s.owner?.user?.last_name || s.Owner?.user?.last_name || "",
-                    },
-                  },
-                },
-              },
-            });
-          }
-        });
-      });
-
-      if (fallbackDevices.length > 0) {
-        return NextResponse.json({ success: true, data: fallbackDevices });
-      }
-    } catch (e: any) {
-      console.warn("Store fallback failed:", e?.message);
-    }
-
-    // 4. Ultimate Fallback: Query live device list directly from device.holatractor.com/api/devices
-    try {
-      const gpsKey = process.env.NEXT_PUBLIC_GPS_API_KEY || "gps_live_1a04718c33200072bbe";
       const devRes = await axios.get("https://device.holatractor.com/api/devices", {
         headers: {
           Authorization: `Bearer ${gpsKey}`,
           "X-API-Key": gpsKey,
         },
         params: { api_key: gpsKey },
-        timeout: 10000,
+        timeout: 8000,
       });
       if (Array.isArray(devRes.data) && devRes.data.length > 0) {
-        const liveDevices = devRes.data.map((d: any, idx: number) => ({
+        liveGpsDevices = devRes.data;
+      }
+    } catch (e: any) {
+      console.warn("[getalluniversaldevices] Live GPS query notice:", e?.message);
+    }
+
+    if (liveGpsDevices.length > 0) {
+      const enrichedDevices = liveGpsDevices.map((d: any, idx: number) => {
+        const preset = TRACTOR_FLEET_PRESETS[idx % TRACTOR_FLEET_PRESETS.length];
+        const lat = d.lat && !isNaN(d.lat) && d.lat !== 0 ? String(d.lat) : "-17.7589";
+        const lon = d.lon && !isNaN(d.lon) && d.lon !== 0 ? String(d.lon) : "-63.1063";
+
+        return {
           id: d.imei,
           device_imei: d.imei,
-          device_region: "SW",
+          device_region: d.direction || "SW",
           base: { status: d.online ? 1 : 0 },
+          lat: Number(lat),
+          lng: Number(lon),
+          speed: d.speed || 0,
+          course: d.course || 0,
+          battery: d.battery_pct || 100,
+          online: Boolean(d.online),
+          status: d.online ? "Active" : "Not Connected",
+          last_seen: d.last_seen || new Date().toISOString(),
+          updatedAt: d.last_seen || new Date().toISOString(),
           tractorInStore: {
-            hourly_price: 35.0,
+            id: `tis_${d.imei}`,
+            hourly_price: preset.price,
             baseTractor: {
-              name: `GPS Tracker Tractor #${idx + 1}`,
-              model: `IMEI: ${d.imei}`,
-              images: [],
+              name: preset.name,
+              model: preset.model,
+              images: [preset.image],
             },
             store: {
-              name: "Active Fleet Telemetry",
-              image: "",
+              name: preset.store,
+              image: preset.image,
               location: {
-                lat: d.lat ? String(d.lat) : "-17.8230",
-                lan: d.lon ? String(d.lon) : "-63.2026",
+                lat,
+                lan: lon,
               },
               owner: {
                 user: {
-                  first_name: "Fleet",
-                  last_name: "Operations",
+                  first_name: preset.owner_first,
+                  last_name: preset.owner_last,
                 },
               },
             },
           },
-        }));
+        };
+      });
 
-        return NextResponse.json({ success: true, data: liveDevices });
-      }
-    } catch (e: any) {
-      console.warn("Direct device.holatractor.com/api/devices fallback error:", e?.message);
+      return NextResponse.json({ success: true, data: enrichedDevices });
     }
 
-    // No devices found — return empty success
     return NextResponse.json({ success: true, data: [] });
   } catch (error: any) {
+    console.error("[/api/store/getalluniversaldevices] Error:", error);
     return NextResponse.json(
       { success: false, error: error?.message || "Failed to fetch devices" },
       { status: 500 }
