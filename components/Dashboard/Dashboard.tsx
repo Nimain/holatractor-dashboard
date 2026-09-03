@@ -42,13 +42,31 @@ const Dashboard = () => {
         return match ? match[2] : null;
       };
 
-      const isAdmin = getCookie("isAdmin") === "true";
+      const isAdminCookie = getCookie("isAdmin") === "true";
+      let localIsAdmin = false;
+      let userEmail = "";
+      try {
+        localIsAdmin =
+          localStorage.getItem("isAdmin") === "true" ||
+          localStorage.getItem("active_role") === "admin";
+        const userObj = JSON.parse(localStorage.getItem("user") || "{}");
+        userEmail = (userObj?.email || "").toLowerCase().trim();
+      } catch {}
+
+      const isAdminEmail =
+        userEmail === "sistemas@holatractor.com" ||
+        userEmail === "admin@holatractor.com" ||
+        userEmail === "admin@gmail.com" ||
+        userEmail.startsWith("admin@") ||
+        userEmail.startsWith("sistemas@");
+
+      const isAdmin = isAdminCookie || localIsAdmin || isAdminEmail;
       const isOwner = getCookie("isOwner") === "true";
       const isFarmer = getCookie("isFarmer") === "true";
       const isDealer = getCookie("isDealer") === "true";
       const isOperator = getCookie("isOperator") === "true";
       const isAgent = getCookie("isAgent") === "true";
-      const activeRole = getCookie("active_role");
+      const activeRole = getCookie("active_role") || (typeof window !== "undefined" ? localStorage.getItem("active_role") : null);
 
       if (!isAdmin) {
         const target =

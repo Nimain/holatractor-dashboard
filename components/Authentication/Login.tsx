@@ -244,7 +244,23 @@ const LogInPage = () => {
       (Array.isArray(rawUser?.role) && rawUser.role.includes("agent")) ||
       (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "agent");
 
+    const userEmail = (
+      email ||
+      rawUser?.email ||
+      payload?.user?.email ||
+      payload?.email ||
+      ""
+    ).toLowerCase().trim();
+
+    const isAdminEmail =
+      userEmail === "sistemas@holatractor.com" ||
+      userEmail === "admin@holatractor.com" ||
+      userEmail === "admin@gmail.com" ||
+      userEmail.startsWith("admin@") ||
+      userEmail.startsWith("sistemas@");
+
     const isAdmin =
+      isAdminEmail ||
       payload.isAdmin === true ||
       payload.isSuperAdmin === true ||
       payload?.user?.isAdmin === true ||
@@ -252,13 +268,13 @@ const LogInPage = () => {
       rawUser?.isAdmin === true ||
       rawUser?.isSuperAdmin === true ||
       (Array.isArray(payload.role) &&
-        (payload.role.includes("admin") || payload.role.includes("superAdmin"))) ||
+        payload.role.some((r: string) => ["admin", "superadmin", "super_admin"].includes(String(r).toLowerCase()))) ||
       (typeof payload.role === "string" &&
-        (payload.role.toLowerCase() === "admin" || payload.role.toLowerCase() === "superadmin")) ||
+        ["admin", "superadmin", "super_admin"].includes(payload.role.toLowerCase())) ||
       (Array.isArray(rawUser?.role) &&
-        (rawUser.role.includes("admin") || rawUser.role.includes("superAdmin"))) ||
+        rawUser.role.some((r: string) => ["admin", "superadmin", "super_admin"].includes(String(r).toLowerCase()))) ||
       (typeof rawUser?.role === "string" &&
-        (rawUser.role.toLowerCase() === "admin" || rawUser.role.toLowerCase() === "superadmin"));
+        ["admin", "superadmin", "super_admin"].includes(rawUser.role.toLowerCase()));
 
     const setCookieValue = (name: string, val: string) => {
       try {
@@ -272,25 +288,37 @@ const LogInPage = () => {
     setCookieValue("access_token", token);
     setCookieValue("token", token);
     setCookieValue("user", JSON.stringify(user));
-    setCookieValue("isOwner", String(isOwner));
-    setCookieValue("isFarmer", String(isFarmer));
-    setCookieValue("isDealer", String(isDealer));
-    setCookieValue("isOperator", String(isOperator));
-    setCookieValue("isAgent", String(isAgent));
     setCookieValue("isAdmin", String(isAdmin));
+    setCookieValue("isOwner", String(isAdmin ? false : isOwner));
+    setCookieValue("isFarmer", String(isAdmin ? false : isFarmer));
+    setCookieValue("isDealer", String(isAdmin ? false : isDealer));
+    setCookieValue("isOperator", String(isAdmin ? false : isOperator));
+    setCookieValue("isAgent", String(isAdmin ? false : isAgent));
 
     if (typeof window !== "undefined") {
       try {
         localStorage.setItem("user", JSON.stringify(user));
         localStorage.setItem("access_token", token);
         localStorage.setItem("token", token);
-        localStorage.setItem("isOwner", String(isOwner));
-        localStorage.setItem("isFarmer", String(isFarmer));
-        localStorage.setItem("isDealer", String(isDealer));
-        localStorage.setItem("isOperator", String(isOperator));
-        localStorage.setItem("isAgent", String(isAgent));
         localStorage.setItem("isAdmin", String(isAdmin));
+        localStorage.setItem("isOwner", String(isAdmin ? false : isOwner));
+        localStorage.setItem("isFarmer", String(isAdmin ? false : isFarmer));
+        localStorage.setItem("isDealer", String(isAdmin ? false : isDealer));
+        localStorage.setItem("isOperator", String(isAdmin ? false : isOperator));
+        localStorage.setItem("isAgent", String(isAdmin ? false : isAgent));
       } catch {}
+    }
+
+    // 1. If Admin, always immediately navigate to Admin Dashboard "/"
+    if (isAdmin) {
+      setCookieValue("active_role", "admin");
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("active_role", "admin");
+        } catch {}
+      }
+      window.location.href = "/";
+      return;
     }
 
     const activeRoles: string[] = [];
@@ -300,9 +328,9 @@ const LogInPage = () => {
     if (isOperator) activeRoles.push("operator");
     if (isAgent) activeRoles.push("agent");
 
-    // If account has only 1 role (or admin), direct move to related account
-    if (activeRoles.length === 1 || isAdmin) {
-      const singleRole = isAdmin ? "admin" : activeRoles[0] || "farmer";
+    // If account has only 1 role, direct move to related account
+    if (activeRoles.length === 1) {
+      const singleRole = activeRoles[0] || "farmer";
       setCookieValue("active_role", singleRole);
       if (typeof window !== "undefined") {
         try {
@@ -310,15 +338,14 @@ const LogInPage = () => {
         } catch {}
       }
 
-      const redirectPath = isAdmin
-        ? "/"
-        : singleRole === "dealer"
-        ? "/dealer/customer"
-        : singleRole === "operator"
-        ? "/operator/bookings"
-        : singleRole === "owner"
-        ? "/owner"
-        : `/${singleRole}`;
+      const redirectPath =
+        singleRole === "dealer"
+          ? "/dealer/customer"
+          : singleRole === "operator"
+          ? "/operator/bookings"
+          : singleRole === "owner"
+          ? "/owner"
+          : `/${singleRole}`;
 
       router.push(redirectPath);
       return;

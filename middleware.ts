@@ -24,7 +24,28 @@ export function middleware(req: NextRequest) {
   const isAgent = req.cookies.get("isAgent")?.value === "true"
   const isOperator = req.cookies.get("isOperator")?.value === "true"
   const isFarmer = req.cookies.get("isFarmer")?.value === "true"
-  const isAdmin = req.cookies.get("isAdmin")?.value === "true"
+  const activeRole = req.cookies.get("active_role")?.value
+
+  let userEmail = ""
+  try {
+    const rawUserCookie = req.cookies.get("user")?.value
+    if (rawUserCookie) {
+      const parsedUser = JSON.parse(decodeURIComponent(rawUserCookie))
+      userEmail = (parsedUser?.email || "").toLowerCase().trim()
+    }
+  } catch {}
+
+  const isAdminEmail =
+    userEmail === "sistemas@holatractor.com" ||
+    userEmail === "admin@holatractor.com" ||
+    userEmail === "admin@gmail.com" ||
+    userEmail.startsWith("admin@") ||
+    userEmail.startsWith("sistemas@")
+
+  const isAdmin =
+    req.cookies.get("isAdmin")?.value === "true" ||
+    activeRole === "admin" ||
+    isAdminEmail
 
   // 1. Admin has unrestricted access to all dashboards and management pages (direct access to Admin dashboard on /)
   if (isAdmin) {

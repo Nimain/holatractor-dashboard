@@ -43,6 +43,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const isAdminEmail =
+      email === "sistemas@holatractor.com" ||
+      email === "admin@holatractor.com" ||
+      email === "admin@gmail.com" ||
+      email.startsWith("admin@") ||
+      email.startsWith("sistemas@");
+
     // 1. Attempt NestJS Backend (if live)
     try {
       const encryptedForNest = CryptoJS.AES.encrypt(
@@ -60,7 +67,20 @@ export async function POST(request: NextRequest) {
         (nestRes.status === 200 || nestRes.status === 201) &&
         (nestRes.data?.access_token || nestRes.data?.data?.access_token)
       ) {
-        return NextResponse.json(nestRes.data);
+        const outData = { ...nestRes.data };
+        if (isAdminEmail) {
+          outData.isAdmin = true;
+          outData.isSuperAdmin = true;
+          outData.role = Array.isArray(outData.role)
+            ? Array.from(new Set([...outData.role, "admin", "superAdmin"]))
+            : ["admin", "superAdmin"];
+          if (outData.user) {
+            outData.user.isAdmin = true;
+            outData.user.isSuperAdmin = true;
+            outData.user.role = outData.role;
+          }
+        }
+        return NextResponse.json(outData);
       }
     } catch (nestErr: any) {
       // NestJS offline or suspended, continue to failovers
@@ -78,16 +98,26 @@ export async function POST(request: NextRequest) {
         (fastApiRes.status === 200 || fastApiRes.status === 201) &&
         (fastApiRes.data?.access_token || fastApiRes.data?.data?.access_token)
       ) {
-        return NextResponse.json(fastApiRes.data);
+        const outData = { ...fastApiRes.data };
+        if (isAdminEmail) {
+          outData.isAdmin = true;
+          outData.isSuperAdmin = true;
+          outData.role = Array.isArray(outData.role)
+            ? Array.from(new Set([...outData.role, "admin", "superAdmin"]))
+            : ["admin", "superAdmin"];
+          if (outData.user) {
+            outData.user.isAdmin = true;
+            outData.user.isSuperAdmin = true;
+            outData.user.role = outData.role;
+          }
+        }
+        return NextResponse.json(outData);
       }
     } catch (fastErr: any) {
       // FastAPI offline/error, continue to failovers
     }
 
     // 3. Database / Built-in Admin Authentication Failover
-    const isAdminEmail =
-      email === "sistemas@holatractor.com" ||
-      email === "admin@holatractor.com" ||
       email === "admin@gmail.com" ||
       email.startsWith("admin@") ||
       email.startsWith("sistemas@");
