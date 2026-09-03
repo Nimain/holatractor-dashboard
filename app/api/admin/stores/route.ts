@@ -92,171 +92,36 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.warn("[GET /api/admin/stores] Database query fallback:", error?.message);
 
-    // Collect all stores from SEED + Dynamic memory map
-    const fallbackStores = [
-      {
-        id: "store-montero-hub",
-        name: "Montero North Agricultural Hub",
-        description: "Premier machinery station in Northern Santa Cruz",
-        image: "https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=600&q=80",
-        owner_user_id: "owner-agrosantacruz",
-        tractor_count: 2,
-        attachment_count: 3,
-        operator_count: 4,
-        closing_days: [],
-        owner: {
-          id: "owner-agrosantacruz",
-          name: "AgroSantaCruz Machinery Corp",
-          email: "contacto@agrosantacruz.bo",
-          mobile: "+591 71023456",
-          image: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&q=80",
-        },
-        location: {
-          id: "loc-montero",
-          name: "Montero Central",
-          address: "Km 50 Carretera al Norte",
-          city: "Montero",
-          state: "Santa Cruz",
-          country: "Bolivia",
-        },
-      },
-      {
-        id: "store-warnes-center",
-        name: "Warnes Central Fleet Station",
-        description: "Heavy machinery and implement rental center",
-        image: "https://images.unsplash.com/photo-1586771107445-d3ca888129ff?w=600&q=80",
-        owner_user_id: "owner-agrosantacruz",
-        tractor_count: 1,
-        attachment_count: 2,
-        operator_count: 2,
-        closing_days: [],
-        owner: {
-          id: "owner-agrosantacruz",
-          name: "AgroSantaCruz Machinery Corp",
-          email: "contacto@agrosantacruz.bo",
-          mobile: "+591 71023456",
-          image: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&q=80",
-        },
-        location: {
-          id: "loc-warnes",
-          name: "Warnes Industrial Park",
-          address: "Av. Industrial 120",
-          city: "Warnes",
-          state: "Santa Cruz",
-          country: "Bolivia",
-        },
-      },
-      {
-        id: "store-yacuiba-fleet",
-        name: "Yacuiba Heavy Equipment Depot",
-        description: "Gran Chaco agricultural support hub",
-        image: "https://images.unsplash.com/photo-1590682680695-43b964a3ae17?w=600&q=80",
-        owner_user_id: "owner-granchaco",
-        tractor_count: 2,
-        attachment_count: 4,
-        operator_count: 3,
-        closing_days: [],
-        owner: {
-          id: "owner-granchaco",
-          name: "Gran Chaco Tractores & Equipos",
-          email: "operaciones@granchacoagro.bo",
-          mobile: "+591 76543210",
-          image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80",
-        },
-        location: {
-          id: "loc-yacuiba",
-          name: "Yacuiba Base",
-          address: "Ruta 9 Gran Chaco",
-          city: "Yacuiba",
-          state: "Tarija",
-          country: "Bolivia",
-        },
-      },
-      {
-        id: "store-sanpedro-base",
-        name: "San Pedro Central Farm Store",
-        description: "Comprehensive machinery depot and service bay",
-        image: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=600&q=80",
-        owner_user_id: "owner-sanpedro",
-        tractor_count: 2,
-        attachment_count: 2,
-        operator_count: 3,
-        closing_days: [],
-        owner: {
-          id: "owner-sanpedro",
-          name: "San Pedro Agro Maquinarias SRL",
-          email: "gerencia@sanpedroagro.com",
-          mobile: "+591 72198765",
-          image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80",
-        },
-        location: {
-          id: "loc-sanpedro",
-          name: "San Pedro Center",
-          address: "Av. Principal 450",
-          city: "San Pedro",
-          state: "Santa Cruz",
-          country: "Bolivia",
-        },
-      },
-      {
-        id: "store-cbba-valley",
-        name: "Cochabamba Valley Store",
-        description: "Valle Central farm tools & tractors",
-        image: "https://images.unsplash.com/photo-1563245372-f21724e3856d?w=600&q=80",
-        owner_user_id: "owner-vallecentral",
-        tractor_count: 1,
-        attachment_count: 1,
-        operator_count: 2,
-        closing_days: [],
-        owner: {
-          id: "owner-vallecentral",
-          name: "Valle Central Machinery & Tools",
-          email: "logistica@vallecentral.bo",
-          mobile: "+591 73456789",
-          image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80",
-        },
-        location: {
-          id: "loc-cbba",
-          name: "Valle Alto",
-          address: "Carretera Antigua a Santa Cruz",
-          city: "Cochabamba",
-          state: "Cochabamba",
-          country: "Bolivia",
-        },
-      },
-    ];
+    const fallbackStores: any[] = [];
 
     if ((global as any)._dynamicStoresMap) {
       (global as any)._dynamicStoresMap.forEach((dyn: any) => {
-        const exists = fallbackStores.some((s) => s.id === dyn.store_id || s.id === dyn.id);
-        if (!exists) {
-          fallbackStores.unshift({
-            id: dyn.store_id || dyn.id,
-            name: dyn.store_name || dyn.name,
-            description: dyn.description || "Hola Store Unit",
-            image: dyn.store_image || dyn.image,
-            owner_user_id: dyn.owner_id || dyn.owner_user_id,
-            tractor_count: (dyn.tractors || []).length,
-            attachment_count: 0,
-            operator_count: 1,
-            closing_days: dyn.closing_days || [],
-            owner: {
-              id: dyn.owner_id || "owner-agrosantacruz",
-              name: "Store Owner",
-              email: "",
-              mobile: "",
-              image: "",
-            },
-            location: {
-              id: "loc-dynamic",
-              name: "Operational Hub",
-              address: "Carretera Principal",
-              city: "Santa Cruz",
-              state: "Santa Cruz",
-              country: "Bolivia",
-            },
-          });
-        }
+        fallbackStores.unshift({
+          id: dyn.store_id || dyn.id,
+          name: dyn.store_name || dyn.name,
+          description: dyn.description || "Hola Store Unit",
+          image: dyn.store_image || dyn.image,
+          owner_user_id: dyn.owner_id || dyn.owner_user_id,
+          tractor_count: (dyn.tractors || []).length,
+          attachment_count: 0,
+          operator_count: 1,
+          closing_days: dyn.closing_days || [],
+          owner: {
+            id: dyn.owner_id || "owner_id",
+            name: dyn.owner_name || "Store Owner",
+            email: dyn.owner_email || "",
+            mobile: dyn.owner_mobile || "",
+            image: dyn.owner_image || "",
+          },
+          location: {
+            id: "loc-dynamic",
+            name: "Operational Hub",
+            address: "Carretera Principal",
+            city: "Santa Cruz",
+            state: "Santa Cruz",
+            country: "Bolivia",
+          },
+        });
       });
     }
 

@@ -110,54 +110,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.warn("[GET /api/admin/store-tractors] Direct DB error, using fallback:", error?.message);
 
-    const fallbackTis = [
-      {
-        id: "tis-scz-01",
-        hourly_price: 35.0,
-        store_id: "store-montero-hub",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        lat: "-17.3400",
-        lan: "-63.2500",
-        baseTractor: {
-          id: "bt-jd-6110m",
-          name: "John Deere 6110M - Unit #1",
-          model: "6110M Utility",
-          type: "medium",
-          description: "Heavy-duty farm work tractor",
-          images: ["https://images.unsplash.com/photo-1592878904946-b3cd8ae243d0?w=800&q=80"],
-        },
-        store: {
-          id: "store-montero-hub",
-          name: "Montero North Agricultural Hub",
-          description: "Premier machinery station in Northern Santa Cruz",
-          image: "https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=600&q=80",
-        },
-      },
-      {
-        id: "tis-scz-02",
-        hourly_price: 30.0,
-        store_id: "store-montero-hub",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        lat: "-17.3450",
-        lan: "-63.2550",
-        baseTractor: {
-          id: "bt-mf-4708",
-          name: "Massey Ferguson 4708 - Unit #2",
-          model: "MF 4700 Global",
-          type: "medium",
-          description: "Global series tractor",
-          images: ["https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=800&q=80"],
-        },
-        store: {
-          id: "store-montero-hub",
-          name: "Montero North Agricultural Hub",
-          description: "Premier machinery station in Northern Santa Cruz",
-          image: "https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=600&q=80",
-        },
-      },
-    ];
+    const fallbackTis: any[] = [];
 
     if ((global as any)._dynamicStoreTractorsMap) {
       (global as any)._dynamicStoreTractorsMap.forEach((dyn: any) => {
