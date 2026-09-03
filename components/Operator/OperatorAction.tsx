@@ -41,38 +41,38 @@ const OperatorAction = (
     const { cookie } = useCookie()
     const access_token = cookie.get("access_token")
 
-    function InactiveOperator() {
+    async function InactiveOperator() {
         setLoading(true)
-        renderInstance.patch(`/operator/inactivate_operator/${id}`, {}, {
-            headers: {
-                Authorization: `Bearer ${access_token}`,
-            },
-        }).then(() => {
-            successMessage("Operator inactivated successfully")
-            setOpen(false)
-            window.location.reload()
-        }).catch((error) => {
-            errorMessage(error?.response?.data?.message || "Failed to inactivate operator")
-        }).finally(() => {
-            setLoading(false)
-        })
+        try {
+            await fetch(`/api/operator/inactivate_operator/${id}`, {
+                method: "PATCH",
+                headers: { Authorization: `Bearer ${access_token}` },
+            });
+            successMessage("Operator inactivated successfully");
+            setOpen(false);
+            setTimeout(() => window.location.reload(), 300);
+        } catch (error: any) {
+            errorMessage("Failed to inactivate operator");
+        } finally {
+            setLoading(false);
+        }
     }
 
-    function ActiveOperator() {
+    async function ActiveOperator() {
         setLoading(true)
-        renderInstance.patch(`/operator/activate_operator/${id}`, {}, {
-            headers: {
-                Authorization: `Bearer ${access_token}`,
-            },
-        }).then(() => {
-            successMessage("Operator activated successfully")
-            setOpen(false)
-            window.location.reload()
-        }).catch((error) => {
-            errorMessage(error?.response?.data?.message || "Failed to activate operator")
-        }).finally(() => {
-            setLoading(false)
-        })
+        try {
+            await fetch(`/api/operator/activate_operator/${id}`, {
+                method: "PATCH",
+                headers: { Authorization: `Bearer ${access_token}` },
+            });
+            successMessage("Operator activated successfully");
+            setOpen(false);
+            setTimeout(() => window.location.reload(), 300);
+        } catch (error: any) {
+            errorMessage("Failed to activate operator");
+        } finally {
+            setLoading(false);
+        }
     }
 
     return (

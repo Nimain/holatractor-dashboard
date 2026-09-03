@@ -39,40 +39,40 @@ const DealerAction = (
     const { cookie } = useCookie()
     const access_token = cookie.get("access_token")
 
-    function InactiveDealer(e: MouseEvent<HTMLButtonElement, globalThis.MouseEvent>) {
+    async function InactiveDealer(e: MouseEvent<HTMLButtonElement, globalThis.MouseEvent>) {
         e.stopPropagation()
         e.preventDefault()
         setLoading(true)
-        renderInstance.patch(`/dealer/inactivate_dealer/${id}`, {}, {
-            headers: {
-                Authorization: `Bearer ${access_token}`,
-            },
-        }).then(() => {
-            successMessage("Success")
-            window.location.reload()
-        }).catch(() => {
-            errorMessage("Try again")
-        }).finally(() => {
-            setLoading(false)
-        })
+        try {
+            await fetch(`/api/dealer/inactivate_dealer/${id}`, {
+                method: "PATCH",
+                headers: { Authorization: `Bearer ${access_token}` },
+            });
+            successMessage("Dealer inactivated successfully");
+            setTimeout(() => window.location.reload(), 300);
+        } catch {
+            errorMessage("Try again");
+        } finally {
+            setLoading(false);
+        }
     }
 
-    function ActiveDealer(e: MouseEvent<HTMLButtonElement, globalThis.MouseEvent>) {
+    async function ActiveDealer(e: MouseEvent<HTMLButtonElement, globalThis.MouseEvent>) {
         e.stopPropagation()
         e.preventDefault()
         setLoading(true)
-        renderInstance.patch(`/dealer/activate_dealer/${id}`, {}, {
-            headers: {
-                Authorization: `Bearer ${access_token}`,
-            },
-        }).then(() => {
-            successMessage("Success")
-            window.location.reload()
-        }).catch(() => {
-            errorMessage("Try again")
-        }).finally(() => {
-            setLoading(false)
-        })
+        try {
+            await fetch(`/api/dealer/activate_dealer/${id}`, {
+                method: "PATCH",
+                headers: { Authorization: `Bearer ${access_token}` },
+            });
+            successMessage("Dealer activated successfully");
+            setTimeout(() => window.location.reload(), 300);
+        } catch {
+            errorMessage("Try again");
+        } finally {
+            setLoading(false);
+        }
     }
 
     return (
