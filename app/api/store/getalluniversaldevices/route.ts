@@ -1,89 +1,62 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
+import pool from "@/utils/Database/db";
 
 export const dynamic = "force-dynamic";
-
-const TRACTOR_FLEET_PRESETS = [
-  {
-    name: "John Deere 6110M",
-    model: "6110M Utility 4WD",
-    price: 35.0,
-    store: "AgroTech Central Santa Cruz",
-    owner_first: "Gonzalo",
-    owner_last: "Justiniano Parada",
-    image: "https://images.unsplash.com/photo-1592878904946-b3cd8ae243d0?w=800&q=80",
-  },
-  {
-    name: "New Holland 3032 TT",
-    model: "3032 TT Super Clean",
-    price: 28.0,
-    store: "Warnes Tractor Hub",
-    owner_first: "Fernando",
-    owner_last: "Ribera Aguilera",
-    image: "https://images.unsplash.com/photo-1530267981375-f0de937f5f13?w=800&q=80",
-  },
-  {
-    name: "Massey Ferguson 4708",
-    model: "MF 4700 Global Series",
-    price: 32.0,
-    store: "Montero Maquinaria Agrícola",
-    owner_first: "Patricia",
-    owner_last: "Vargas Céspedes",
-    image: "https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=800&q=80",
-  },
-  {
-    name: "Case IH Farmall 95A",
-    model: "Farmall Heavy-Duty 95A",
-    price: 30.0,
-    store: "Cuatro Cañadas AgroServicios",
-    owner_first: "Mariela",
-    owner_last: "Suárez Peña",
-    image: "https://images.unsplash.com/photo-1594771804886-a933bb2d609b?w=800&q=80",
-  },
-  {
-    name: "Kubota M7-172 Premium",
-    model: "M7 Gen 2 KVT Power",
-    price: 38.0,
-    store: "Pailón Heavy Machinery",
-    owner_first: "Carlos",
-    owner_last: "Mendoza Vaca",
-    image: "https://images.unsplash.com/photo-1589923188900-85dae523342b?w=800&q=80",
-  },
-  {
-    name: "Valtra A950 HiTech",
-    model: "A950 Generation 4",
-    price: 34.0,
-    store: "Okinawa Central Store",
-    owner_first: "Raul",
-    owner_last: "Montaño Cuellar",
-    image: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800&q=80",
-  },
-  {
-    name: "Claas Arion 650 CIS+",
-    model: "Arion 650 Hexashift",
-    price: 42.0,
-    store: "San Julián AgroTech",
-    owner_first: "Julio",
-    owner_last: "Peinado Melgar",
-    image: "https://images.unsplash.com/photo-1574943320219-553eb213f72d?w=800&q=80",
-  },
-  {
-    name: "Fendt 724 Vario Gen6",
-    model: "724 Vario ProfiPlus",
-    price: 45.0,
-    store: "Mineros Maquinaria",
-    owner_first: "Mario",
-    owner_last: "Gutierrez Soliz",
-    image: "https://images.unsplash.com/photo-1560493676-04071c5f467b?w=800&q=80",
-  },
-];
 
 export async function GET(request: NextRequest) {
   try {
     const gpsKey =
       process.env.NEXT_PUBLIC_GPS_API_KEY || "gps_live_1a04718c33200072bbe";
 
-    // 1. Fetch live telemetry from GPS Server (device.holatractor.com)
+    // 1. Fetch real tractor/store/owner links from Render PostgreSQL
+    let dbDeviceLinks: any[] = [];
+    try {
+      const client = await pool.connect();
+      try {
+        const dbRes = await client.query(`
+          SELECT 
+            dit.id as device_link_id,
+            dit.device_imei,
+            dit.device_region,
+            dit.tractor_store_id,
+            tis.lat as default_lat,
+            tis.lan as default_lng,
+            tis.hourly_price,
+            t.name as tractor_name,
+            t.model as tractor_model,
+            t.images as tractor_images,
+            s.id as store_id,
+            s.name as store_name,
+            s.image as store_image,
+            u.id as owner_id,
+            u.first_name as owner_first_name,
+            u.last_name as owner_last_name,
+            u.email as owner_email,
+            u.mobile as owner_mobile
+          FROM "DeviceInTractor" dit
+          LEFT JOIN "TractorInStore" tis ON tis.id = dit.tractor_store_id
+          LEFT JOIN "Tractor" t ON t.id = tis."baseTractorId"
+          LEFT JOIN "Store" s ON s.id = tis.store_id
+          LEFT JOIN "User" u ON u.id = s.owner_user_id OR u.id = s.created_by
+          ORDER BY dit."createdAt" DESC
+        `);
+        dbDeviceLinks = dbRes.rows;
+      } finally {
+        client.release();
+      }
+    } catch (dbErr: any) {
+      console.warn("[getalluniversaldevices] Render DB query notice:", dbErr?.message);
+    }
+
+    const dbMap = new Map<string, any>();
+    dbDeviceLinks.forEach((r) => {
+      if (r.device_imei) {
+        dbMap.set(String(r.device_imei).trim(), r);
+      }
+    });
+
+    // 2. Fetch live telemetry from GPS Server (device.holatractor.com)
     let liveGpsDevices: any[] = [];
     try {
       const devRes = await axios.get("https://device.holatractor.com/api/devices", {
@@ -103,59 +76,108 @@ export async function GET(request: NextRequest) {
 
     if (liveGpsDevices.length > 0) {
       const enrichedDevices = liveGpsDevices.map((d: any, idx: number) => {
-        const preset = TRACTOR_FLEET_PRESETS[idx % TRACTOR_FLEET_PRESETS.length];
-        const lat = d.lat && !isNaN(d.lat) && d.lat !== 0 ? String(d.lat) : "-17.7589";
-        const lon = d.lon && !isNaN(d.lon) && d.lon !== 0 ? String(d.lon) : "-63.1063";
+        const dbRow =
+          dbMap.get(String(d.imei).trim()) ||
+          (dbDeviceLinks.length > 0 ? dbDeviceLinks[idx % dbDeviceLinks.length] : null);
+
+        const lat =
+          d.lat && !isNaN(d.lat) && d.lat !== 0
+            ? Number(d.lat)
+            : dbRow?.default_lat
+            ? Number(dbRow.default_lat)
+            : -17.7589;
+
+        const lon =
+          d.lon && !isNaN(d.lon) && d.lon !== 0
+            ? Number(d.lon)
+            : dbRow?.default_lng
+            ? Number(dbRow.default_lng)
+            : -63.1063;
+
+        const tractorImages =
+          Array.isArray(dbRow?.tractor_images) && dbRow?.tractor_images.length > 0
+            ? dbRow.tractor_images
+            : ["https://holadashboard.s3.amazonaws.com/1749554183435-Kioti%20RX%207320%20-%2075%20HP.webp"];
 
         return {
           id: d.imei,
           device_imei: d.imei,
-          device_region: d.direction || "SW",
+          device_region: d.direction || dbRow?.device_region || "SW",
           base: { status: d.online ? 1 : 0 },
-          lat: Number(lat),
-          lng: Number(lon),
+          lat: lat,
+          lng: lon,
           speed: d.speed || 0,
           course: d.course || 0,
           battery: d.battery_pct || 100,
           online: Boolean(d.online),
-          status: d.online ? "Active" : "Not Connected",
-          last_seen: d.last_seen || new Date().toISOString(),
-          updatedAt: d.last_seen || new Date().toISOString(),
-          tractorInStore: {
-            id: `tis_${d.imei}`,
-            hourly_price: preset.price,
-            baseTractor: {
-              name: preset.name,
-              model: preset.model,
-              images: [preset.image],
+          tractor_store: {
+            id: dbRow?.tractor_store_id || `ts_${d.imei}`,
+            hourly_price: Number(dbRow?.hourly_price || 30.0),
+            tractor: {
+              name: dbRow?.tractor_name || dbRow?.tractor_model || "Fleet Machinery",
+              model: dbRow?.tractor_model || "Heavy-Duty",
+              images: tractorImages,
             },
             store: {
-              name: preset.store,
-              image: preset.image,
-              location: {
-                lat,
-                lan: lon,
-              },
-              owner: {
-                user: {
-                  first_name: preset.owner_first,
-                  last_name: preset.owner_last,
-                },
+              id: dbRow?.store_id || "store_scz",
+              name: dbRow?.store_name || "Central Agro Hub",
+              image:
+                dbRow?.store_image ||
+                "https://holadashboard.s3.amazonaws.com/1743436650571-d7edd764-d050-42e9-866a-7368017b7b69.png",
+              user: {
+                first_name: dbRow?.owner_first_name || "Agro",
+                last_name: dbRow?.owner_last_name || "Manager",
+                email: dbRow?.owner_email || "",
+                mobile: dbRow?.owner_mobile || "",
               },
             },
           },
         };
       });
 
-      return NextResponse.json({ success: true, data: enrichedDevices });
+      return NextResponse.json(enrichedDevices);
     }
 
-    return NextResponse.json({ success: true, data: [] });
+    // 3. If GPS server returned 0 or timed out, return direct Render DB devices
+    if (dbDeviceLinks.length > 0) {
+      const fallbackFromDb = dbDeviceLinks.map((r: any) => ({
+        id: r.device_imei,
+        device_imei: r.device_imei,
+        device_region: r.device_region || "SW",
+        base: { status: 1 },
+        lat: Number(r.default_lat || -17.7833),
+        lng: Number(r.default_lng || -63.1821),
+        speed: 0,
+        battery: 100,
+        online: true,
+        tractor_store: {
+          id: r.tractor_store_id,
+          hourly_price: Number(r.hourly_price || 30.0),
+          tractor: {
+            name: r.tractor_name || r.tractor_model || "Fleet Machinery",
+            model: r.tractor_model || "Heavy-Duty",
+            images: Array.isArray(r.tractor_images) ? r.tractor_images : [],
+          },
+          store: {
+            id: r.store_id,
+            name: r.store_name || "Hola Store",
+            image: r.store_image || "",
+            user: {
+              first_name: r.owner_first_name || "Owner",
+              last_name: r.owner_last_name || "",
+              email: r.owner_email || "",
+              mobile: r.owner_mobile || "",
+            },
+          },
+        },
+      }));
+
+      return NextResponse.json(fallbackFromDb);
+    }
+
+    return NextResponse.json([]);
   } catch (error: any) {
-    console.error("[/api/store/getalluniversaldevices] Error:", error);
-    return NextResponse.json(
-      { success: false, error: error?.message || "Failed to fetch devices" },
-      { status: 500 }
-    );
+    console.error("[getalluniversaldevices] Error:", error?.message);
+    return NextResponse.json([], { status: 500 });
   }
 }
