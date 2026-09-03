@@ -401,6 +401,7 @@ export default function DeviceSection() {
   useEffect(() => {
     fetchDevices()
     fetchGeofences()
+    fetchDeviceOptions("", 1, false)
   }, [])
 
 
@@ -921,23 +922,24 @@ export default function DeviceSection() {
   }
 
   const filteredOwners = useMemo(() => {
+    if (!deviceOptions || !Array.isArray(deviceOptions)) return []
     if (!ownerSearchTerm.trim()) return deviceOptions
     const term = ownerSearchTerm.toLowerCase().trim()
     const cleanDigits = term.replace(/\D/g, "")
 
     return deviceOptions.filter((o) => {
-      const nameMatch = o.owner_name.toLowerCase().includes(term)
-      const emailMatch = o.owner_email.toLowerCase().includes(term)
-      const mob = (o.owner_mobile || "").toLowerCase()
+      const nameMatch = (o?.owner_name || "").toLowerCase().includes(term)
+      const emailMatch = (o?.owner_email || "").toLowerCase().includes(term)
+      const mob = (o?.owner_mobile || "").toLowerCase()
       const mobDigits = mob.replace(/\D/g, "")
       const mobileMatch = mob.includes(term) || (cleanDigits.length >= 3 && mobDigits.includes(cleanDigits))
-      const storeMatch = o.stores.some((s) => s.store_name.toLowerCase().includes(term))
-      const tractorMatch = o.stores.some((s) =>
-        s.tractors.some(
+      const storeMatch = (o?.stores || []).some((s) => (s?.store_name || "").toLowerCase().includes(term))
+      const tractorMatch = (o?.stores || []).some((s) =>
+        (s?.tractors || []).some(
           (t) =>
-            t.name.toLowerCase().includes(term) ||
-            t.model.toLowerCase().includes(term) ||
-            (t.current_imei && t.current_imei.toLowerCase().includes(term))
+            (t?.name || "").toLowerCase().includes(term) ||
+            (t?.model || "").toLowerCase().includes(term) ||
+            (t?.current_imei && t.current_imei.toLowerCase().includes(term))
         )
       )
       return nameMatch || emailMatch || mobileMatch || storeMatch || tractorMatch
@@ -2219,11 +2221,12 @@ export default function DeviceSection() {
                       </div>
                     ) : (
                       filteredOwners.map((owner) => {
-                            const isSelected = selectedOwner?.owner_id === owner.owner_id
-                            const totalTractors = owner.stores.reduce((acc, s) => acc + s.tractors.length, 0)
+                            const isSelected = selectedOwner?.owner_id === owner?.owner_id
+                            const totalTractors = (owner?.stores || []).reduce((acc, s) => acc + (s?.tractors || []).length, 0)
+                            const ownerName = owner?.owner_name || "Owner"
                             return (
                               <div
-                                key={owner.owner_id}
+                                key={owner?.owner_id || Math.random().toString()}
                                 onClick={() => {
                                   setSelectedOwner(owner)
                                   setSelectedStore(null)
@@ -2237,22 +2240,22 @@ export default function DeviceSection() {
                                 }`}
                               >
                                 <div className="flex items-center space-x-3">
-                                  {owner.owner_image ? (
+                                  {owner?.owner_image ? (
                                     <img
                                       src={owner.owner_image}
-                                      alt={owner.owner_name}
+                                      alt={ownerName}
                                       className="w-10 h-10 rounded-full object-cover border border-slate-600"
                                     />
                                   ) : (
                                     <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20 flex items-center justify-center text-sm">
-                                      {owner.owner_name.slice(0, 2).toUpperCase()}
+                                      {ownerName.slice(0, 2).toUpperCase()}
                                     </div>
                                   )}
                                   <div>
-                                    <h5 className="text-sm font-semibold text-white">{owner.owner_name}</h5>
+                                    <h5 className="text-sm font-semibold text-white">{ownerName}</h5>
                                     <div className="flex flex-wrap items-center gap-x-2 text-xs text-slate-400 mt-0.5">
-                                      {owner.owner_email && <span>{owner.owner_email}</span>}
-                                      {owner.owner_mobile && (
+                                      {owner?.owner_email && <span>{owner.owner_email}</span>}
+                                      {owner?.owner_mobile && (
                                         <span className="text-emerald-400 font-mono font-medium">
                                           📱 {owner.owner_mobile}
                                         </span>
@@ -2263,7 +2266,7 @@ export default function DeviceSection() {
                                 <div className="flex items-center space-x-3">
                                   <div className="text-right">
                                     <span className="text-xs text-slate-300 font-medium block">
-                                      {owner.stores.length} {owner.stores.length === 1 ? "Store" : "Stores"}
+                                      {(owner?.stores || []).length} {(owner?.stores || []).length === 1 ? "Store" : "Stores"}
                                     </span>
                                     <span className="text-[11px] text-slate-500">
                                       {totalTractors} {totalTractors === 1 ? "Tractor" : "Tractors"}
