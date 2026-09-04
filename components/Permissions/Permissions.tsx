@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { Avatar } from "@mui/material";
@@ -8,6 +8,7 @@ import { useCookie } from "next-cookie";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { allModuleList } from "./AllModule";
 import {
   KeyRound,
@@ -20,6 +21,7 @@ import {
   Sparkles,
   Check,
   X,
+  Search,
 } from "lucide-react";
 
 type PermissionType = "create" | "read" | "update" | "delete";
@@ -48,6 +50,7 @@ const Permissions = () => {
   const [activePermissions, setActivePermissions] = useState<ModulePermission[]>([]);
   const [fetchingRoles, setFetchingRoles] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [moduleSearch, setModuleSearch] = useState("");
 
   // Fetch Roles
   const fetchAllRoles = useCallback(async () => {
@@ -109,6 +112,13 @@ const Permissions = () => {
   };
 
   const currentRole = roles.find((r) => r.id === selectedRoleId);
+
+  // Filter modules based on search
+  const filteredModules = useMemo(() => {
+    if (!moduleSearch.trim()) return allModuleList;
+    const q = moduleSearch.toLowerCase().trim();
+    return allModuleList.filter((m) => m.toLowerCase().includes(q));
+  }, [moduleSearch]);
 
   // Toggle single permission
   const handleToggle = (moduleName: string, type: PermissionType) => {
@@ -265,7 +275,7 @@ const Permissions = () => {
       {currentRole && (
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 overflow-hidden shadow-sm space-y-4 p-6">
           {/* Header & Quick Action Buttons */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Shield className="w-4 h-4 text-indigo-600" />
@@ -278,34 +288,46 @@ const Permissions = () => {
               </p>
             </div>
 
-            {currentRole.name !== "admin" && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleBulkSet("all")}
-                  className="rounded-xl text-xs h-8 px-2.5 text-indigo-600 border-slate-200"
-                >
-                  Grant All CRUD
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleBulkSet("readOnly")}
-                  className="rounded-xl text-xs h-8 px-2.5 text-slate-600 border-slate-200"
-                >
-                  Read Only
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleBulkSet("clear")}
-                  className="rounded-xl text-xs h-8 px-2.5 text-rose-600 hover:bg-rose-50"
-                >
-                  Clear All
-                </Button>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="relative w-48 sm:w-60">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Input
+                  placeholder="Filter modules..."
+                  value={moduleSearch}
+                  onChange={(e) => setModuleSearch(e.target.value)}
+                  className="pl-8 h-8 text-xs rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950"
+                />
               </div>
-            )}
+
+              {currentRole.name !== "admin" && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBulkSet("all")}
+                    className="rounded-xl text-xs h-8 px-2.5 text-indigo-600 border-slate-200"
+                  >
+                    Grant All
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBulkSet("readOnly")}
+                    className="rounded-xl text-xs h-8 px-2.5 text-slate-600 border-slate-200"
+                  >
+                    Read Only
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleBulkSet("clear")}
+                    className="rounded-xl text-xs h-8 px-2.5 text-rose-600 hover:bg-rose-50"
+                  >
+                    Clear All
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Matrix Grid */}
@@ -313,7 +335,7 @@ const Permissions = () => {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 font-semibold uppercase">
-                  <th className="py-3 px-4">System Module</th>
+                  <th className="py-3 px-4">System Module ({filteredModules.length})</th>
                   <th className="py-3 px-4 text-center">Create</th>
                   <th className="py-3 px-4 text-center">Read / View</th>
                   <th className="py-3 px-4 text-center">Update / Edit</th>
@@ -322,7 +344,7 @@ const Permissions = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {allModuleList.map((moduleName) => {
+                {filteredModules.map((moduleName) => {
                   const isAdmin = currentRole.name === "admin";
                   const perm = activePermissions.find((m) => m.name === moduleName) || {};
 
@@ -431,3 +453,4 @@ const Permissions = () => {
 };
 
 export default Permissions;
+

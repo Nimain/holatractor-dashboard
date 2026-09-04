@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/utils/Database/db";
-import cuid from "cuid";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +14,7 @@ export async function GET(request: NextRequest) {
           r.image, 
           r."allowedModules", 
           r."createdAt",
-          (SELECT count(*)::int FROM "User" u WHERE u.role_id = r.id OR lower(u.role) = lower(r.name)) as user_count
+          (SELECT count(*)::int FROM "UserProfile" up WHERE up.role_id = r.id) as user_count
         FROM "Role" r
         ORDER BY r."createdAt" ASC;
       `);
@@ -46,7 +45,7 @@ export async function POST(request: NextRequest) {
       const insertRes = await client.query(
         `
         INSERT INTO "Role" (id, name, image, base_id, "allowedModules", "createdAt", "updatedAt")
-        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+        VALUES ($1, $2, $3, $4, $5::jsonb, NOW(), NOW())
         RETURNING *;
       `,
         [id, name.trim().toLowerCase(), image || "", base_id, JSON.stringify(allowedModules || [])]
@@ -79,7 +78,7 @@ export async function PATCH(request: NextRequest) {
         SET 
           name = COALESCE($1, name),
           image = COALESCE($2, image),
-          "allowedModules" = COALESCE($3, "allowedModules"),
+          "allowedModules" = CASE WHEN $3::text IS NOT NULL THEN $3::jsonb ELSE "allowedModules" END,
           "updatedAt" = NOW()
         WHERE id = $4
         RETURNING *;
@@ -87,7 +86,7 @@ export async function PATCH(request: NextRequest) {
         [
           name ? name.trim().toLowerCase() : null,
           image !== undefined ? image : null,
-          allowedModules ? JSON.stringify(allowedModules) : null,
+          allowedModules !== undefined ? JSON.stringify(allowedModules) : null,
           id,
         ]
       );
@@ -123,3 +122,4 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: error?.message || "Failed to delete role" }, { status: 500 });
   }
 }
+
