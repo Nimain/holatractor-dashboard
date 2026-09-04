@@ -1,5 +1,6 @@
 "use client"
 
+import axios from 'axios';
 import { Attachment } from '@/utils/Types/types'
 import { useEffect, useState } from 'react'
 import AddIcon from '@mui/icons-material/Add';
@@ -13,7 +14,6 @@ import 'swiper/css/pagination';
 import 'swiper/css/scrollbar';
 import { useCookie } from 'next-cookie';
 import { useRouter } from 'next/navigation';
-import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages';
 import { Backdrop } from '@mui/material';
 import Image from 'next/image';
@@ -39,29 +39,21 @@ const AddAttachment = ({allAttachments, selectedAttachments,tractorId}: addAttac
     );    
 
     function handleAddAttachment(attachmentId: string) {
+
         setAdding(true)
 
-        renderInstance.patch(`/attachment/${attachmentId}/${tractorId}/addOrRemove`, {}, {
-            headers: {
-                Authorization: `Bearer ${access_token}`,
-            }
-        }).then(res=>{
-            if(res.status === 200){
-                successMessage("Added")
+        axios.patch(`/api/attachment/${attachmentId}/${tractorId}/addOrRemove`).then(res=>{
+            if(res.status === 200 || res.data?.id){
+                successMessage("Attachment updated for this tractor")
                 setTimeout(() => {
                     router.refresh()
-                }, 2000);
+                }, 1000);
             }
         }).catch((err)=>{
-
-            if (err.response && err.response.status === 404 && err.response.data.message === "Attachment not found"){
-                errorMessage("Attachment not found")
-            } else if (err.response && err.response.status === 404 && err.response.data.message === "Tractor is not present"){
-                errorMessage("Tractor is not present")
-            } else errorMessage("Some error occurred")
-            
+            errorMessage("Some error occurred updating attachment")
         }).finally(()=>{setAdding(false)})
     }
+
 
     return (
         <div>

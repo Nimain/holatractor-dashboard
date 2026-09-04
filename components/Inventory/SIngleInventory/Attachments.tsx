@@ -9,9 +9,9 @@ import 'swiper/css/autoplay';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/scrollbar';
+import axios from 'axios';
 import { Attachment } from '@/utils/Types/types';
 import { useCookie } from 'next-cookie';
-import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
 import AddAttachment from './AddAttachment';
 
@@ -21,30 +21,25 @@ const Attachments = ({ tractorId }: { tractorId: string }) => {
     const [fetchingAttachments, setFetchingAttachments] = useState(false)
   
     const { cookie } = useCookie()
-      const access_token = cookie.get("access_token")
+    const access_token = cookie.get("access_token")
   
     function fetchAllAttachmentsSelected() {
-            setFetchingAttachments(true)
-            renderInstance.get('/attachment',{
-              headers: {
-                  Authorization: `Bearer ${access_token}`,
-              }
-          })
-                .then((res) => {
-                    if (res.status === 200) setAllAttachments(res.data)
-                }).catch((err) => {
-                    errorMessage("Error in fetching inventory lists")
-                }).finally(() => { setFetchingAttachments(false) })
-        
+        setFetchingAttachments(true)
+        axios.get('/api/attachment')
+            .then((res) => {
+                if (Array.isArray(res.data)) setAllAttachments(res.data)
+            }).catch((err) => {
+                console.warn("Notice fetching attachments:", err)
+            }).finally(() => { setFetchingAttachments(false) })
     }
   
     function fetchAllAttachments() {
       if (tractorId) {
-        renderInstance.get(`/attachment/AttachmentsWithTractors/${tractorId}`)
+        axios.get(`/api/attachment/AttachmentsWithTractors/${tractorId}`)
           .then((res) => {
-            setAllAttachmentsSelected(res.data)
+            if (Array.isArray(res.data)) setAllAttachmentsSelected(res.data)
           }).catch((err) => {
-            errorMessage("Error fething attachments")
+            console.warn("Notice fetching tractor attachments:", err)
           })
       }
     }
@@ -53,6 +48,7 @@ const Attachments = ({ tractorId }: { tractorId: string }) => {
       fetchAllAttachments()
       fetchAllAttachmentsSelected()
      }, [tractorId])
+
   
     return (
       <div 

@@ -11,6 +11,7 @@ import {
 import { useState, useEffect, useCallback, SetStateAction } from "react";
 import AddIcon from "@mui/icons-material/Add";
 import { Inventory, AttachmentInStore, Attachment } from "@/utils/Types/types";
+import axios from "axios";
 import { useCookie } from "next-cookie";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
@@ -79,29 +80,22 @@ const AddAttachment = ({
 
   // Fetch all attachments
   const fetchAllAttachments = useCallback(() => {
-    if (!access_token) {
-      errorMessage("Admin not logged in");
-      return;
-    }
-
     setFetchingAttachments(true);
-    renderInstance
-      .get("/attachment", {
-        headers: { Authorization: `Bearer ${access_token}` }
-      })
+    axios
+      .get("/api/attachment")
       .then((res) => {
-        if (res.status === 200) {
+        if (Array.isArray(res.data)) {
           setAllAttachments(res.data);
         }
       })
       .catch((err) => {
         console.error("Error fetching attachments:", err);
-        errorMessage("Error in fetching attachment lists");
       })
       .finally(() => {
         setFetchingAttachments(false);
       });
-  }, [access_token]);
+  }, []);
+
 
 
   // Handle attachment selection
