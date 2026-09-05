@@ -19,12 +19,12 @@ export function middleware(req: NextRequest) {
   }
 
   // Parse role cookies - ensure we're comparing with string "true"
-  const isOwner = req.cookies.get("isOwner")?.value === "true"
-  const isDealer = req.cookies.get("isDealer")?.value === "true"
-  const isAgent = req.cookies.get("isAgent")?.value === "true"
-  const isOperator = req.cookies.get("isOperator")?.value === "true"
-  const isFarmer = req.cookies.get("isFarmer")?.value === "true"
-  const activeRole = req.cookies.get("active_role")?.value
+  let isOwner = req.cookies.get("isOwner")?.value === "true"
+  let isDealer = req.cookies.get("isDealer")?.value === "true"
+  let isAgent = req.cookies.get("isAgent")?.value === "true"
+  let isOperator = req.cookies.get("isOperator")?.value === "true"
+  let isFarmer = req.cookies.get("isFarmer")?.value === "true"
+  let activeRole = req.cookies.get("active_role")?.value
 
   let userEmail = ""
   try {
@@ -32,20 +32,74 @@ export function middleware(req: NextRequest) {
     if (rawUserCookie) {
       const parsedUser = JSON.parse(decodeURIComponent(rawUserCookie))
       userEmail = (parsedUser?.email || "").toLowerCase().trim()
+      if (parsedUser?.isAdmin || parsedUser?.isSuperAdmin) {
+        activeRole = "admin"
+      }
     }
   } catch {}
+
+  // Parse JWT token payload directly for zero-latency role recognition on 1st request
+  const tokenString = token?.value || authHeader?.replace(/^Bearer\s+/i, "") || ""
+  let isJwtAdmin = false
+  if (tokenString && tokenString.includes(".")) {
+    try {
+      const parts = tokenString.split(".")
+      if (parts.length >= 2) {
+        const base64Url = parts[1]
+        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/")
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split("")
+            .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+            .join("")
+        )
+        const jwtPayload = JSON.parse(jsonPayload)
+        if (jwtPayload?.email) {
+          userEmail = (jwtPayload.email || "").toLowerCase().trim()
+        }
+        const isRoleAdmin = (r: any): boolean => {
+          if (!r) return false;
+          if (typeof r === "string") return ["admin", "superadmin", "super_admin", "superadmin"].includes(r.trim().toLowerCase());
+          if (typeof r === "object") {
+            const name = r.name || r.role || r.role_name || "";
+            if (typeof name === "string" && ["admin", "superadmin", "super_admin"].includes(name.trim().toLowerCase())) return true;
+            if (r.isAdmin || r.isSuperAdmin) return true;
+          }
+          return false;
+        };
+
+        if (
+          jwtPayload?.isAdmin === true ||
+          jwtPayload?.isSuperAdmin === true ||
+          (Array.isArray(jwtPayload?.role) && jwtPayload.role.some(isRoleAdmin)) ||
+          (Array.isArray(jwtPayload?.roles) && jwtPayload.roles.some(isRoleAdmin)) ||
+          (typeof jwtPayload?.role === "string" && isRoleAdmin(jwtPayload.role)) ||
+          (typeof jwtPayload?.roles === "string" && isRoleAdmin(jwtPayload.roles))
+        ) {
+          isJwtAdmin = true;
+          activeRole = "admin";
+        }
+        if (jwtPayload?.isOwner) isOwner = true;
+        if (jwtPayload?.isDealer) isDealer = true;
+        if (jwtPayload?.isOperator) isOperator = true;
+        if (jwtPayload?.isAgent) isAgent = true;
+        if (jwtPayload?.isFarmer) isFarmer = true;
+      }
+    } catch {}
+  }
 
   const isAdminEmail =
     userEmail === "sistemas@holatractor.com" ||
     userEmail === "admin@holatractor.com" ||
     userEmail === "admin@gmail.com" ||
     userEmail.startsWith("admin@") ||
-    userEmail.startsWith("sistemas@")
+    userEmail.startsWith("sistemas@");
 
   const isAdmin =
     req.cookies.get("isAdmin")?.value === "true" ||
     activeRole === "admin" ||
-    isAdminEmail
+    isAdminEmail ||
+    isJwtAdmin;
 
   // 1. Admin has unrestricted access to all dashboards and management pages (direct access to Admin dashboard on /)
   if (isAdmin) {
@@ -157,5 +211,7 @@ export function middleware(req: NextRequest) {
 
 // Define which paths should use this middleware
 export const config = {
-  matcher: ["/((?!login|register|farmer_login|create_admin|_next|static|favicon.ico).*)"],
+  matcher: [
+    "/((?!login|register|farmer_login|create_admin|_next|static|favicon\\.ico|apple-touch-icon\\.png|icon\\.png|.*\\.png|.*\\.jpg|.*\\.jpeg|.*\\.svg|.*\\.ico).*)",
+  ],
 }

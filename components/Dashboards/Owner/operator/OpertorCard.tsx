@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Operator, Store } from '@/utils/Types/types'
 import { useCookie } from 'next-cookie'
 import { renderInstance } from '@/utils/Axios/RenderInstance'
+import { getAuthUserId } from '@/utils/auth/clientAuth'
 import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
 import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
@@ -34,17 +35,17 @@ export default function OperatorCard({ operator }: { operator: Operator }) {
             <CardContent>
                 <div className="flex items-center gap-2 mb-4">
                     <CheckCircle className="text-green-500" />
-                    <span className="font-semibold">{operator.OperatorBookingJob.length} Completed Bookings</span>
+                    <span className="font-semibold">{(operator?.OperatorBookingJob || []).length} Completed Bookings</span>
                 </div>
                 <div className="space-y-2">
-                    {operator.OperatorBookingJob.slice(0, 3).map((job) => (
+                    {(operator?.OperatorBookingJob || []).slice(0, 3).map((job) => (
                         <div key={job.id} className="flex items-center justify-between p-2 bg-secondary rounded-md">
                             <div className="flex items-center gap-2">
                                 <Clock className="text-muted-foreground" size={16} />
-                                <span className="text-sm">{new Date(job.booking.start_date).toLocaleDateString()}</span>
+                                <span className="text-sm">{job?.booking?.start_date ? new Date(job.booking.start_date).toLocaleDateString() : "-"}</span>
                             </div>
                             <Badge variant="outline">
-                                ${job.booking.total_cost.toFixed(2)}
+                                ${Number(job?.booking?.total_cost || 0).toFixed(2)}
                             </Badge>
                         </div>
                     ))}
@@ -62,22 +63,25 @@ function SelectStore({id}:{id: string}) {
     const [fetching, setFetching] = useState(false)
 
     const { cookie } = useCookie()
-    const user = cookie.get("user")
+    const rawUser = cookie.get("user")
+    const parsedUser = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser); } catch { return null; } })() : rawUser
+    const user = parsedUser || {}
+    const currentUserId = user?.userId || getAuthUserId()
 
     function fetchOwner() {
         setFetching(true)
-        renderInstance.get(`/owner/${user.userId}`)
+        const targetId = currentUserId || getAuthUserId()
+        const endpoint = targetId ? `/owner/${targetId}` : `/owner`
+        renderInstance.get(endpoint)
             .then((res) => {
-                setStores(res.data.stores)
+                setStores(res.data?.stores || [])
             }).catch((err) => {
-                errorMessage("Error fetching user detaild")
+                console.error("Error fetching owner stores in OperatorCard:", err)
             }).finally(()=>{setFetching(false)})
     }
 
     useEffect(()=>{
-        if(user){
-            fetchOwner()
-        }
+        fetchOwner()
     },[])
 
     return (

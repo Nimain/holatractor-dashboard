@@ -106,9 +106,9 @@ const NewCategory = () => {
 
     try {
       const res = await renderInstance.post("/category", payload);
-      if (res.status === 201) {
+      if (res.status === 201 || res.data) {
         successMessage("Category added successfully");
-        router.push("/categories"); // redirect after success
+        router.push("/Category"); // redirect after success
       }
     } catch (err) {
       errorMessage("Failed to add category");

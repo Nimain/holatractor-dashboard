@@ -358,9 +358,9 @@ export function AddDeviceModal({
                     <div className="bg-[#f4e6e6] h-36 flex items-center justify-center">
                       <Image
                         src={
-                          tractor.baseTractor.images?.[0] || "/placeholder.svg"
+                          tractor?.baseTractor?.images?.[0] || (tractor as any)?.image || "/placeholder.svg"
                         }
-                        alt={tractor.baseTractor.name}
+                        alt={tractor?.baseTractor?.name || (tractor as any)?.name || "Tractor"}
                         width={300}
                         height={200}
                         className="h-full w-full object-cover rounded-t-md"
@@ -372,17 +372,14 @@ export function AddDeviceModal({
                     <div className="bg-white dark:bg-black p-3 space-y-1">
                       <div className="flex items-center justify-between">
                         <h3 className="text-sm font-bold text-red-600 dark:text-red-400">
-                          {tractor.baseTractor.name}
+                          {tractor?.baseTractor?.name || (tractor as any)?.name || "Tractor"}
                         </h3>
-                        {/* <Badge variant="outline" className="text-[10px] px-2">
-                          {tractor.baseTractor.type}
-                        </Badge> */}
                       </div>
 
                       <div className="flex justify-between text-xs">
                         <span className="text-red-500 font-medium">Model:</span>
                         <span className="font-semibold text-red-500">
-                          {tractor.baseTractor.model}
+                          {tractor?.baseTractor?.model || (tractor as any)?.model || "N/A"}
                         </span>
                       </div>
 
@@ -392,7 +389,7 @@ export function AddDeviceModal({
                             Type:
                           </span>
                           <span className="text-red-500">
-                            {tractor.baseTractor.type}
+                            {tractor?.baseTractor?.type || (tractor as any)?.type || "Standard"}
                           </span>
                         </div>
                       </div>
@@ -441,13 +438,14 @@ export function AddDeviceModal({
                 <h4 className="font-medium mb-2">{t.selectedTractor}</h4>
                 <div className="flex items-center gap-3 bg-white text-red-500 rounded-xl p-1">
                   <Avatar className="h-12 w-12 ">
-                    {selectedTractor.baseTractor.images?.[0] ? (
+                    {selectedTractor?.baseTractor?.images?.[0] || (selectedTractor as any)?.image ? (
                       <AvatarImage
                         src={
-                          selectedTractor.baseTractor.images[0] ||
+                          selectedTractor?.baseTractor?.images?.[0] ||
+                          (selectedTractor as any)?.image ||
                           "/placeholder.svg"
                         }
-                        alt={selectedTractor.baseTractor.name}
+                        alt={selectedTractor?.baseTractor?.name || (selectedTractor as any)?.name || "Tractor"}
                       />
                     ) : (
                       <AvatarFallback>
@@ -457,10 +455,10 @@ export function AddDeviceModal({
                   </Avatar>
                   <div>
                     <p className="font-semibold">
-                      {selectedTractor.baseTractor.name}
+                      {selectedTractor?.baseTractor?.name || (selectedTractor as any)?.name || "Tractor"}
                     </p>
                     <p className="text-sm text-red-500">
-                      {t.model} {selectedTractor.baseTractor.model}
+                      {t.model} {selectedTractor?.baseTractor?.model || (selectedTractor as any)?.model || "N/A"}
                     </p>
                   </div>
                 </div>

@@ -39,6 +39,8 @@ import {
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { renderInstance, TractorAIBaseURL, FastApiBaseURL, NestJsBaseURL } from "@/utils/Axios/RenderInstance";
 import { useFarmContext } from "@/components/wrappers/FarmProvider";
+import { useDispatch } from "react-redux";
+import { changeFarm } from "@/redux/ActiveFarm/ActiveFarm";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { LatLngPoint, calculatePolygonArea } from "./InteractiveFarmDrawer";
@@ -76,6 +78,8 @@ const SOIL_TYPE_OPTIONS = [
   "Red Ferralsol (Tierra Roja)",
 ];
 
+import { getAuthUser, getAuthUserId } from "@/utils/auth/clientAuth";
+
 export default function FarmMapping() {
   const router = useRouter();
   const { cookie } = useCookie();
@@ -90,10 +94,14 @@ export default function FarmMapping() {
         }
       })()
       : rawUser;
-  const userId = parsedUser?.userId || parsedUser?.id || parsedUser?.sub || parsedUser?._id || "farmer_demo_01";
+
+  const authUser = getAuthUser();
+  const authId = getAuthUserId();
+  const userId = parsedUser?.userId || parsedUser?.id || parsedUser?.sub || parsedUser?._id || authId || authUser?.userId || "farmer_demo_01";
   const access_token = cookie.get("access_token");
 
   const { fetchFarmer, setFarms } = useFarmContext();
+  const dispatch = useDispatch();
 
   const [saving, setSaving] = useState(false);
   const [analyzingSoil, setAnalyzingSoil] = useState(false);
@@ -108,16 +116,43 @@ export default function FarmMapping() {
   const [description, setDescription] = useState("");
   const [boundaryType, setBoundaryType] = useState("polygon");
 
-  // Map state
-  const [center, setCenter] = useState<[number, number]>([-17.7833, -63.1821]); // Default Santa Cruz / Regional hub
-  const [points, setPoints] = useState<LatLngPoint[]>([]);
+  // Map state - default Santa Cruz / agricultural regional hub
+  const [center, setCenter] = useState<[number, number]>([-17.7833, -63.1821]);
+  const [points, setPoints] = useState<LatLngPoint[]>(() => {
+    const lat = -17.7833;
+    const lng = -63.1821;
+    const offset = 0.0022; // ~5.0 hectares box
+    return [
+      { lat: lat + offset, lng: lng - offset },
+      { lat: lat + offset, lng: lng + offset },
+      { lat: lat - offset, lng: lng + offset },
+      { lat: lat - offset, lng: lng - offset },
+    ];
+  });
+
+  // Helper to generate a square polygon of desired hectares around a center
+  const generateBoxForHectares = (cLat: number, cLng: number, haStr: string) => {
+    const ha = parseFloat(haStr) || 5.0;
+    // ~1 ha = 100m x 100m -> delta lat ~ 0.0009 per 100m
+    const sideMeters = Math.sqrt(ha * 10000);
+    const halfLat = (sideMeters / 2.0) / 111320.0;
+    const halfLng = (sideMeters / 2.0) / (111320.0 * Math.cos((cLat * Math.PI) / 180.0));
+    return [
+      { lat: Number((cLat + halfLat).toFixed(6)), lng: Number((cLng - halfLng).toFixed(6)) },
+      { lat: Number((cLat + halfLat).toFixed(6)), lng: Number((cLng + halfLng).toFixed(6)) },
+      { lat: Number((cLat - halfLat).toFixed(6)), lng: Number((cLng + halfLng).toFixed(6)) },
+      { lat: Number((cLat - halfLat).toFixed(6)), lng: Number((cLng - halfLng).toFixed(6)) },
+    ];
+  };
 
   // On mount, center near user's GPS if available
   useEffect(() => {
     if (typeof window !== "undefined" && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          setCenter([pos.coords.latitude, pos.coords.longitude]);
+          const newCenter: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+          setCenter(newCenter);
+          setPoints(generateBoxForHectares(newCenter[0], newCenter[1], hectares));
         },
         () => { },
         { timeout: 5000 }
@@ -136,7 +171,6 @@ export default function FarmMapping() {
       if (res.data) {
         setSoilAnalysisData(res.data);
         if (res.data.soil_type) {
-          // Pre-select matching soil option if available
           const match = SOIL_TYPE_OPTIONS.find((s) =>
             s.toLowerCase().includes(res.data.soil_type.toLowerCase())
           );
@@ -185,9 +219,11 @@ export default function FarmMapping() {
       return;
     }
 
-    if (points.length < 3) {
-      errorMessage("Please map at least 3 boundary vertices on the satellite map to complete the parcel polygon.");
-      return;
+    // If points are fewer than 3, auto-generate bounding box from center and hectares
+    let activePoints = points;
+    if (activePoints.length < 3) {
+      activePoints = generateBoxForHectares(center[0], center[1], hectares);
+      setPoints(activePoints);
     }
 
     const numHectares = parseFloat(hectares) || 1.0;
@@ -196,7 +232,7 @@ export default function FarmMapping() {
     setSaving(true);
 
     // Format coordinates according to backend schema (lat, lan, lng as formatted strings)
-    const formattedCoordinates = points.map((p) => ({
+    const formattedCoordinates = activePoints.map((p) => ({
       lat: p.lat.toFixed(6),
       lan: p.lng.toFixed(6),
       lng: p.lng.toFixed(6),
@@ -223,41 +259,44 @@ export default function FarmMapping() {
     try {
       const res = await axios.post("/api/farm", payload, {
         headers: access_token ? { Authorization: `Bearer ${access_token}` } : {},
-        timeout: 12000,
+        timeout: 10000,
       });
       if (res.data) {
         createdRecord = res.data;
       }
     } catch (err1: any) {
-      console.warn("Proxy POST /api/farm failed, attempting direct FastAPI /farm:", err1?.response?.data || err1?.message);
+      console.warn("Proxy POST /api/farm failed, attempting direct localhost FastAPI:", err1?.response?.data || err1?.message);
 
-      // 2. Direct FastAPI POST /farm fallback
+      // 2. Direct FastAPI POST http://127.0.0.1:8000/farm fallback
       try {
-        const fastApiUrl = `${FastApiBaseURL.replace(/\/$/, "")}/farm`;
-        const resFast = await axios.post(fastApiUrl, payload, {
+        const resFast = await axios.post("http://127.0.0.1:8000/farm", payload, {
           headers: access_token ? { Authorization: `Bearer ${access_token}` } : {},
-          timeout: 12000,
+          timeout: 10000,
         });
         if (resFast.data) {
           createdRecord = resFast.data;
         }
       } catch (err2: any) {
-        console.warn("Direct FastAPI POST /farm failed, attempting NestJS:", err2?.response?.data || err2?.message);
+        console.warn("Direct localhost FastAPI POST /farm failed, attempting remote:", err2?.response?.data || err2?.message);
 
-        // 3. Direct NestJS POST /farm fallback
+        // 3. Remote FastAPI fallback
         try {
-          const resNest = await renderInstance.post("farm", payload, { timeout: 10000 });
-          if (resNest.data) {
-            createdRecord = resNest.data;
+          const fastApiUrl = `${FastApiBaseURL.replace(/\/$/, "")}/farm`;
+          const resRemote = await axios.post(fastApiUrl, payload, {
+            headers: access_token ? { Authorization: `Bearer ${access_token}` } : {},
+            timeout: 10000,
+          });
+          if (resRemote.data) {
+            createdRecord = resRemote.data;
           }
         } catch (err3: any) {
-          console.warn("Direct NestJS POST /farm failed:", err3?.message);
+          console.warn("Direct Remote FastAPI POST /farm failed:", err3?.message);
         }
       }
     }
 
     // Always create optimistic local representation for immediate rendering on dashboard map & sidebar
-    const optimisticFarm = {
+    const optimisticFarm: any = {
       id: createdRecord?.id || `farm_${Date.now()}`,
       name: farmName.trim(),
       owner_id: userId,
@@ -267,8 +306,9 @@ export default function FarmMapping() {
       crops: selectedCrops,
       description: description.trim() || `Field with ${selectedCrops.join(", ")} (${soilType})`,
       boundary: {
-        coordinates: points.map((p) => [p.lat, p.lng]),
-        area: boundaryAreaSqm,
+        coordinates: activePoints.map((p) => ({ lat: p.lat, lng: p.lng, lan: p.lng })),
+        area: numHectares,
+        area_hectares: numHectares,
       },
       created_at: new Date().toISOString(),
     };
@@ -283,15 +323,20 @@ export default function FarmMapping() {
       console.warn("Failed saving farm to local storage cache:", e);
     }
 
-    // Update Farm Context state immediately
+    // Update Farm Context & Redux state immediately
     try {
       if (setFarms) {
         setFarms((prev: any[]) => [optimisticFarm, ...(prev || [])]);
       }
+      dispatch(changeFarm(optimisticFarm));
       if (fetchFarmer) {
         fetchFarmer();
       }
-    } catch (e) { }
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("farmer_farm_created"));
+        window.dispatchEvent(new Event("farmer_booking_created"));
+      }
+    } catch (e) {}
 
     successMessage("Field mapped and registered successfully!");
     setSaving(false);
@@ -419,9 +464,20 @@ export default function FarmMapping() {
               {/* Area (Synced with Map) & Boundary Type */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Total Area (Hectares) <span className="text-rose-500">*</span>
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Total Area (Hectares) <span className="text-rose-500">*</span>
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={() => setPoints(generateBoxForHectares(center[0], center[1], hectares))}
+                      className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-1"
+                      title="Generate square polygon for this area around map center"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>Auto-Box</span>
+                    </button>
+                  </div>
                   <div className="relative">
                     <Input
                       type="number"
@@ -429,7 +485,10 @@ export default function FarmMapping() {
                       min="0.01"
                       placeholder="5.0"
                       value={hectares}
-                      onChange={(e) => setHectares(e.target.value)}
+                      onChange={(e) => {
+                        setHectares(e.target.value);
+                        setPoints(generateBoxForHectares(center[0], center[1], e.target.value));
+                      }}
                       required
                       className="rounded-xl border-slate-200 dark:border-slate-800 text-xs h-10 pr-10 font-bold"
                     />
@@ -549,7 +608,7 @@ export default function FarmMapping() {
                 </Link>
                 <Button
                   type="submit"
-                  disabled={saving || points.length < 3}
+                  disabled={saving}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl h-10 px-6 flex items-center gap-2 shadow-sm shadow-emerald-600/20 disabled:opacity-50"
                 >
                   {saving ? (

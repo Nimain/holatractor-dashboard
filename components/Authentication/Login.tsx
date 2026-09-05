@@ -22,6 +22,7 @@ import { useLoading } from "../wrappers/LoaderWrappers";
 import SwitchAccountModal from "../wrappers/SwitchAccountModal";
 import PasswordlessPushLogin from "./PasswordlessPushLogin";
 import FarmerBrandIcon from "@/components/Common/FarmerBrandIcon";
+import { checkIsAdmin, isRoleAdmin } from "@/utils/auth/clientAuth";
 
 const loginTranslations = {
   es: {
@@ -199,51 +200,6 @@ const LogInPage = () => {
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + 7);
 
-    const isOwner =
-      payload.isOwner === true ||
-      payload?.user?.isOwner === true ||
-      rawUser?.isOwner === true ||
-      (Array.isArray(payload.role) && payload.role.includes("owner")) ||
-      (typeof payload.role === "string" && payload.role.toLowerCase() === "owner") ||
-      (Array.isArray(rawUser?.role) && rawUser.role.includes("owner")) ||
-      (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "owner");
-
-    const isFarmer =
-      payload.isFarmer === true ||
-      payload?.user?.isFarmer === true ||
-      rawUser?.isFarmer === true ||
-      (Array.isArray(payload.role) && payload.role.includes("farmer")) ||
-      (typeof payload.role === "string" && payload.role.toLowerCase() === "farmer") ||
-      (Array.isArray(rawUser?.role) && rawUser.role.includes("farmer")) ||
-      (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "farmer");
-
-    const isDealer =
-      payload.isDealer === true ||
-      payload?.user?.isDealer === true ||
-      rawUser?.isDealer === true ||
-      (Array.isArray(payload.role) && payload.role.includes("dealer")) ||
-      (typeof payload.role === "string" && payload.role.toLowerCase() === "dealer") ||
-      (Array.isArray(rawUser?.role) && rawUser.role.includes("dealer")) ||
-      (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "dealer");
-
-    const isOperator =
-      payload.isOperator === true ||
-      payload?.user?.isOperator === true ||
-      rawUser?.isOperator === true ||
-      (Array.isArray(payload.role) && payload.role.includes("operator")) ||
-      (typeof payload.role === "string" && payload.role.toLowerCase() === "operator") ||
-      (Array.isArray(rawUser?.role) && rawUser.role.includes("operator")) ||
-      (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "operator");
-
-    const isAgent =
-      payload.isAgent === true ||
-      payload?.user?.isAgent === true ||
-      rawUser?.isAgent === true ||
-      (Array.isArray(payload.role) && payload.role.includes("agent")) ||
-      (typeof payload.role === "string" && payload.role.toLowerCase() === "agent") ||
-      (Array.isArray(rawUser?.role) && rawUser.role.includes("agent")) ||
-      (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "agent");
-
     const userEmail = (
       email ||
       rawUser?.email ||
@@ -252,29 +208,83 @@ const LogInPage = () => {
       ""
     ).toLowerCase().trim();
 
-    const isAdminEmail =
-      userEmail === "sistemas@holatractor.com" ||
-      userEmail === "admin@holatractor.com" ||
-      userEmail === "admin@gmail.com" ||
-      userEmail.startsWith("admin@") ||
-      userEmail.startsWith("sistemas@");
-
     const isAdmin =
-      isAdminEmail ||
-      payload.isAdmin === true ||
-      payload.isSuperAdmin === true ||
-      payload?.user?.isAdmin === true ||
-      payload?.user?.isSuperAdmin === true ||
-      rawUser?.isAdmin === true ||
-      rawUser?.isSuperAdmin === true ||
-      (Array.isArray(payload.role) &&
-        payload.role.some((r: string) => ["admin", "superadmin", "super_admin"].includes(String(r).toLowerCase()))) ||
-      (typeof payload.role === "string" &&
-        ["admin", "superadmin", "super_admin"].includes(payload.role.toLowerCase())) ||
-      (Array.isArray(rawUser?.role) &&
-        rawUser.role.some((r: string) => ["admin", "superadmin", "super_admin"].includes(String(r).toLowerCase()))) ||
-      (typeof rawUser?.role === "string" &&
-        ["admin", "superadmin", "super_admin"].includes(rawUser.role.toLowerCase()));
+      checkIsAdmin(payload, userEmail) ||
+      checkIsAdmin(rawUser, userEmail) ||
+      checkIsAdmin(payload?.user, userEmail);
+
+    const isOwner = !isAdmin && (
+      payload.isOwner === true ||
+      payload?.user?.isOwner === true ||
+      rawUser?.isOwner === true ||
+      (Array.isArray(payload.role) && payload.role.includes("owner")) ||
+      (Array.isArray(payload.roles) && payload.roles.includes("owner")) ||
+      (typeof payload.role === "string" && payload.role.toLowerCase() === "owner") ||
+      (Array.isArray(rawUser?.role) && rawUser.role.includes("owner")) ||
+      (Array.isArray(rawUser?.roles) && rawUser.roles.includes("owner")) ||
+      (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "owner")
+    );
+
+    const isFarmer = !isAdmin && (
+      payload.isFarmer === true ||
+      payload?.user?.isFarmer === true ||
+      rawUser?.isFarmer === true ||
+      (Array.isArray(payload.role) && payload.role.includes("farmer")) ||
+      (Array.isArray(payload.roles) && payload.roles.includes("farmer")) ||
+      (typeof payload.role === "string" && payload.role.toLowerCase() === "farmer") ||
+      (Array.isArray(rawUser?.role) && rawUser.role.includes("farmer")) ||
+      (Array.isArray(rawUser?.roles) && rawUser.roles.includes("farmer")) ||
+      (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "farmer")
+    );
+
+    const isDealer = !isAdmin && (
+      payload.isDealer === true ||
+      payload?.user?.isDealer === true ||
+      rawUser?.isDealer === true ||
+      (Array.isArray(payload.role) && payload.role.includes("dealer")) ||
+      (Array.isArray(payload.roles) && payload.roles.includes("dealer")) ||
+      (typeof payload.role === "string" && payload.role.toLowerCase() === "dealer") ||
+      (Array.isArray(rawUser?.role) && rawUser.role.includes("dealer")) ||
+      (Array.isArray(rawUser?.roles) && rawUser.roles.includes("dealer")) ||
+      (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "dealer")
+    );
+
+    const isOperator = !isAdmin && (
+      payload.isOperator === true ||
+      payload?.user?.isOperator === true ||
+      rawUser?.isOperator === true ||
+      (Array.isArray(payload.role) && payload.role.includes("operator")) ||
+      (Array.isArray(payload.roles) && payload.roles.includes("operator")) ||
+      (typeof payload.role === "string" && payload.role.toLowerCase() === "operator") ||
+      (Array.isArray(rawUser?.role) && rawUser.role.includes("operator")) ||
+      (Array.isArray(rawUser?.roles) && rawUser.roles.includes("operator")) ||
+      (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "operator")
+    );
+
+    const isAgent = !isAdmin && (
+      payload.isAgent === true ||
+      payload?.user?.isAgent === true ||
+      rawUser?.isAgent === true ||
+      (Array.isArray(payload.role) && payload.role.includes("agent")) ||
+      (Array.isArray(payload.roles) && payload.roles.includes("agent")) ||
+      (typeof payload.role === "string" && payload.role.toLowerCase() === "agent") ||
+      (Array.isArray(rawUser?.role) && rawUser.role.includes("agent")) ||
+      (Array.isArray(rawUser?.roles) && rawUser.roles.includes("agent")) ||
+      (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "agent")
+    );
+
+    const userObj = {
+      ...user,
+      isAdmin,
+      isSuperAdmin: isAdmin,
+      isOwner,
+      isFarmer,
+      isDealer,
+      isOperator,
+      isAgent,
+      role: isAdmin ? ["admin", "superAdmin"] : (user.role || (isFarmer ? ["farmer"] : [])),
+      roles: isAdmin ? ["admin", "superAdmin"] : (user.roles || (isFarmer ? ["farmer"] : [])),
+    };
 
     const setCookieValue = (name: string, val: string) => {
       try {
@@ -287,36 +297,32 @@ const LogInPage = () => {
 
     setCookieValue("access_token", token);
     setCookieValue("token", token);
-    setCookieValue("user", JSON.stringify(user));
+    setCookieValue("user", JSON.stringify(userObj));
     setCookieValue("isAdmin", String(isAdmin));
-    setCookieValue("isOwner", String(isAdmin ? false : isOwner));
-    setCookieValue("isFarmer", String(isAdmin ? false : isFarmer));
-    setCookieValue("isDealer", String(isAdmin ? false : isDealer));
-    setCookieValue("isOperator", String(isAdmin ? false : isOperator));
-    setCookieValue("isAgent", String(isAdmin ? false : isAgent));
+    setCookieValue("isOwner", String(isOwner));
+    setCookieValue("isFarmer", String(isFarmer));
+    setCookieValue("isDealer", String(isDealer));
+    setCookieValue("isOperator", String(isOperator));
+    setCookieValue("isAgent", String(isAgent));
+    setCookieValue("active_role", isAdmin ? "admin" : (isOwner ? "owner" : isDealer ? "dealer" : isOperator ? "operator" : isAgent ? "agent" : "farmer"));
 
     if (typeof window !== "undefined") {
       try {
-        localStorage.setItem("user", JSON.stringify(user));
+        localStorage.setItem("user", JSON.stringify(userObj));
         localStorage.setItem("access_token", token);
         localStorage.setItem("token", token);
         localStorage.setItem("isAdmin", String(isAdmin));
-        localStorage.setItem("isOwner", String(isAdmin ? false : isOwner));
-        localStorage.setItem("isFarmer", String(isAdmin ? false : isFarmer));
-        localStorage.setItem("isDealer", String(isAdmin ? false : isDealer));
-        localStorage.setItem("isOperator", String(isAdmin ? false : isOperator));
-        localStorage.setItem("isAgent", String(isAdmin ? false : isAgent));
+        localStorage.setItem("isOwner", String(isOwner));
+        localStorage.setItem("isFarmer", String(isFarmer));
+        localStorage.setItem("isDealer", String(isDealer));
+        localStorage.setItem("isOperator", String(isOperator));
+        localStorage.setItem("isAgent", String(isAgent));
+        localStorage.setItem("active_role", isAdmin ? "admin" : (isOwner ? "owner" : isDealer ? "dealer" : isOperator ? "operator" : isAgent ? "agent" : "farmer"));
       } catch {}
     }
 
-    // 1. If Admin, always immediately navigate to Admin Dashboard "/"
+    // 1. If Admin, ALWAYS immediately navigate to Admin Dashboard "/"
     if (isAdmin) {
-      setCookieValue("active_role", "admin");
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem("active_role", "admin");
-        } catch {}
-      }
       window.location.href = "/";
       return;
     }
@@ -781,7 +787,7 @@ const GoogleSignIn = ({
                 image: res.data.picture || "",
                 authType: "GOOGLE",
               },
-              { timeout: 10000 }
+              { timeout: 8000 }
             );
             if (
               (fastApiRes.status === 200 || fastApiRes.status === 201) &&
@@ -790,14 +796,36 @@ const GoogleSignIn = ({
               loginResData = fastApiRes.data;
             }
           } catch (fastErr) {
-            console.warn("FastAPI Google login notice:", fastErr);
+            console.warn("FastAPI Google login notice, trying local Next.js auth:", fastErr);
+          }
+        }
+
+        // 3. Fallback: Local Next.js API direct PostgreSQL authentication & auto-provisioning
+        if (!loginResData) {
+          try {
+            const localAuthRes = await axios.post("/api/auth/login", {
+              email: res.data.email,
+              name: res.data.name || `${res.data.given_name || ""} ${res.data.family_name || ""}`.trim(),
+              first_name: res.data.given_name || "",
+              last_name: res.data.family_name || "",
+              image: res.data.picture || "",
+              authType: "GOOGLE",
+            });
+            if (
+              (localAuthRes.status === 200 || localAuthRes.status === 201) &&
+              (localAuthRes.data?.access_token || localAuthRes.data?.data?.access_token)
+            ) {
+              loginResData = localAuthRes.data;
+            }
+          } catch (localErr) {
+            console.warn("Local Google login fallback notice:", localErr);
           }
         }
 
         if (loginResData) {
           setCookiesAndRedirect(loginResData);
         } else {
-          errorMessage("Google Login Failed. Please try again.");
+          errorMessage("Google Login Failed. Please try again or use email password.");
         }
       } catch (err: any) {
         if (
@@ -818,13 +846,19 @@ const GoogleSignIn = ({
             "Your account is inactive. Please contact an administrator."
           );
         } else {
-          errorMessage("Some error occurred");
+          errorMessage(err?.message || "Google authentication encountered an error.");
         }
       } finally {
         setLoading(false);
       }
     },
-    onError: () => errorMessage("Login Failed"),
+    onError: (err: any) => {
+      console.warn("Google OAuth popup error:", err);
+      errorMessage(
+        err?.error_description ||
+        "Google Sign-In failed or popup was closed. Please check Google OAuth authorized origins."
+      );
+    },
   });
 
   return (

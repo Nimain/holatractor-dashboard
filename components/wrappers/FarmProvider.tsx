@@ -2,9 +2,11 @@ import { changeFarm } from '@/redux/ActiveFarm/ActiveFarm';
 import { renderInstance } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
 import { Farm } from '@/utils/Types/types';
+import { getAuthUserId } from '@/utils/auth/clientAuth';
 import { useCookie } from 'next-cookie';
-import { createContext, useState, useContext, ReactNode, Dispatch, SetStateAction } from 'react';
+import { createContext, useState, useContext, useEffect, ReactNode, Dispatch, SetStateAction } from 'react';
 import { useDispatch } from 'react-redux';
+import axios from 'axios';
 
 const FarmContext = createContext<FarmContextType | undefined>(undefined);
 
@@ -33,43 +35,78 @@ export const FarmProvider = ({ children }: { children: ReactNode }) => {
 
     function getUserId(): string | null {
         const rawUser = cookie.get('user');
-        if (!rawUser) return null;
-        let user: UserData | null = null;
-        if (typeof rawUser === 'string') {
-            try {
-                user = JSON.parse(rawUser);
-            } catch {
-                return null;
-            }
-        } else if (typeof rawUser === 'object') {
-            user = rawUser as UserData;
-        }
-        return user?.userId || user?.id || user?.sub || user?._id || null;
-    }
-
-    function fetchFarmer() {
-        const userId = getUserId();
-        if (!userId) {
-            return;
-        }
-
-        setFetching(true);
-        renderInstance
-            .get(`/farmer/${userId}`)
-            .then((res) => {
-                const fetchedFarms = Array.isArray(res.data?.farms) ? res.data.farms : [];
-                setFarms(fetchedFarms);
-                if (fetchedFarms.length > 0) {
-                    dispatch(changeFarm(fetchedFarms[0]));
+        if (rawUser) {
+            let user: UserData | null = null;
+            if (typeof rawUser === 'string') {
+                try {
+                    user = JSON.parse(rawUser);
+                } catch {
+                    user = null;
                 }
-            })
-            .catch((err) => {
-                console.error("Error fetching farmer details in FarmProvider:", err);
-            })
-            .finally(() => {
-                setFetching(false);
-            });
+            } else if (typeof rawUser === 'object') {
+                user = rawUser as UserData;
+            }
+            const foundId = user?.userId || user?.id || user?.sub || user?._id;
+            if (foundId) return foundId;
+        }
+        return getAuthUserId();
     }
+
+    async function fetchFarmer() {
+        const userId = getUserId();
+        setFetching(true);
+
+        try {
+            // 1. Primary: Direct dynamic fetch from /api/farm (which proxies to FastAPI & PostgreSQL)
+            const [localRes, fastRes] = await Promise.all([
+                axios.get(`/api/farm${userId ? `?owner_id=${userId}` : ''}`, { timeout: 4000 }).catch(() => null),
+                axios.get(`http://127.0.0.1:8000/farm${userId ? `?owner_id=${userId}` : ''}`, { timeout: 4000 }).catch(() => null),
+            ]);
+
+            const dynamicFarms = Array.isArray(localRes?.data) && localRes.data.length > 0
+                ? localRes.data
+                : Array.isArray(fastRes?.data?.farms) && fastRes.data.farms.length > 0
+                ? fastRes.data.farms
+                : Array.isArray(fastRes?.data) && fastRes.data.length > 0
+                ? fastRes.data
+                : [];
+
+            if (dynamicFarms.length > 0) {
+                setFarms(dynamicFarms);
+                dispatch(changeFarm(dynamicFarms[0]));
+                setFetching(false);
+                return;
+            }
+        } catch {}
+
+        // 2. Secondary fallback to renderInstance
+        try {
+            const endpoint = userId ? `/farmer/${userId}` : `/farmer`;
+            const res = await renderInstance.get(endpoint);
+            const fetchedFarms = Array.isArray(res.data?.farms) ? res.data.farms : [];
+            if (fetchedFarms.length > 0) {
+                setFarms(fetchedFarms);
+                dispatch(changeFarm(fetchedFarms[0]));
+            }
+        } catch {} finally {
+            setFetching(false);
+        }
+    }
+
+    useEffect(() => {
+        fetchFarmer();
+        const handleFarmCreated = () => {
+            fetchFarmer();
+        };
+        if (typeof window !== 'undefined') {
+            window.addEventListener('farmer_farm_created', handleFarmCreated);
+        }
+        return () => {
+            if (typeof window !== 'undefined') {
+                window.removeEventListener('farmer_farm_created', handleFarmCreated);
+            }
+        };
+    }, []);
 
     return (
         <FarmContext.Provider value={{ farms, fetching, fetchFarmer, setFarms }}>

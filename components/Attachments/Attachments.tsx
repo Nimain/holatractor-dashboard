@@ -75,7 +75,7 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
 
   // Grid layout
   const rowLayout =
-    "grid grid-cols-[50px_90px_2.5fr_2.5fr_120px_110px] items-center gap-x-4 p-4";
+    "grid grid-cols-[50px_90px_minmax(0,2fr)_minmax(0,3fr)_120px_110px] items-center gap-x-4 p-4";
 
   // Theme classes
   const themeClasses = {
@@ -474,126 +474,139 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
         </p>
       </div>
 
-      {/* Table Header */}
-      <div
-        className={`${rowLayout} text-xs font-bold uppercase tracking-wider text-slate-500 ${themeClasses.headerBg} rounded-2xl border border-slate-200/80 dark:border-slate-800`}
-      >
-        <p className="text-center">#</p>
-        <p className="text-center">Preview</p>
-        <p>Implement Details</p>
-        <p>Description / Function</p>
-        <p className="text-center">Fixed Rate</p>
-        <p className="text-center">Actions</p>
-      </div>
-
-
-      {/* Table Content */}
-      <div className="flex flex-col gap-2 mt-5">
-        {filteredAttachments.length === 0 ? (
-          <div className="w-full min-h-[60vh] flex items-center justify-center">
-            <div className="text-center">
-              <Image
-                src={NullImage}
-                alt="No attachments"
-                className="w-48 h-48 mx-auto opacity-50"
-                width={192}
-                height={192}
-                unoptimized
-              />
-              <p className="text-gray-400 mt-4">No attachments found</p>
-            </div>
+      {/* Table Header & Rows Wrapped in Responsive Scroller */}
+      <div className="w-full overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+        <div className="min-w-[760px] p-2 space-y-2">
+          {/* Header */}
+          <div
+            className={`${rowLayout} text-xs font-bold uppercase tracking-wider text-slate-500 ${themeClasses.headerBg} rounded-xl border border-slate-200/60 dark:border-slate-800`}
+          >
+            <p className="text-center">#</p>
+            <p className="text-center">Preview</p>
+            <p>Implement Details</p>
+            <p>Description / Function</p>
+            <p className="text-center">Fixed Rate</p>
+            <p className="text-center">Actions</p>
           </div>
-        ) : (
-          filteredAttachments.map((attachment: any, index) => {
-            const displayImage = getDisplayImage(attachment);
 
-            return (
-              <div
-                key={attachment.id}
-                onClick={() => handleRowClick(attachment)}
-                className={`${rowLayout} text-xs ${themeClasses.cardBg} rounded-2xl cursor-pointer transition-all hover:${themeClasses.hoverBg} ${themeClasses.borderColor} border hover:border-emerald-500/50 hover:shadow-md shadow-sm`}
-              >
-                <p className="text-center font-bold text-slate-400">{index + 1}</p>
-
-                <div className="w-14 h-14 relative mx-auto rounded-xl overflow-hidden shadow-sm">
-                  {displayImage ? (
-                    <SafeImage
-                      src={displayImage}
-                      alt={attachment.name}
-                      className="w-14 h-14"
-                    />
-                  ) : (
-                    <div className="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center">
-                      <ImageIcon size={20} className="text-slate-400" />
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <p className="truncate font-bold text-sm text-slate-900 dark:text-white capitalize">{attachment.name}</p>
-                    {attachment.in_store_count > 0 && (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200/50">
-                        {attachment.in_store_count} stores
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[11px] font-mono text-slate-400 truncate">
-                    ID: {attachment.id.slice(0, 16)}...
-                  </p>
-                </div>
-
-                <div className="space-y-1">
-                  <p className="truncate text-xs text-slate-600 dark:text-slate-300">
-                    {attachment.description || "Agricultural machinery attachment"}
-                  </p>
-                  <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
-                    <CalendarCheck className="w-3 h-3 text-slate-400" />
-                    <span>{attachment.booking_count || 0} associated bookings</span>
-                  </p>
-                </div>
-
+          {/* Table Content */}
+          <div className="flex flex-col gap-2">
+            {filteredAttachments.length === 0 ? (
+              <div className="w-full min-h-[40vh] flex items-center justify-center p-8">
                 <div className="text-center">
-                  <span
-                    className={`font-bold text-sm ${
-                      attachment.fixedPrice && attachment.fixedPrice > 0
-                        ? "text-emerald-600"
-                        : "text-slate-400"
-                    }`}
-                  >
-                    {formatPrice(attachment.fixedPrice)}
-                  </span>
-                  <button
-                    onClick={(e) => handlePriceClick(e, attachment)}
-                    className="p-1 hover:bg-emerald-50 dark:hover:bg-slate-700 rounded-lg transition-colors ml-1.5 inline-flex items-center text-emerald-600"
-                    title="Quick Price Update"
-                  >
-                    <DollarSign size={14} />
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-center gap-1">
-                  <button
-                    onClick={(e) => handleViewClick(e, attachment)}
-                    className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 rounded-lg transition-colors"
-                    title="View Details"
-                  >
-                    <Eye size={16} />
-                  </button>
-
-                  <button
-                    onClick={(e) => handleDeleteClick(e, attachment)}
-                    className="p-1.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-400 hover:text-rose-600 rounded-lg transition-colors"
-                    title="Delete Attachment"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <Image
+                    src={NullImage}
+                    alt="No attachments"
+                    className="w-36 h-36 mx-auto opacity-50"
+                    width={144}
+                    height={144}
+                    unoptimized
+                  />
+                  <p className="text-xs font-semibold text-slate-400 mt-3">No attachments found</p>
                 </div>
               </div>
-            );
-          })
-        )}
+            ) : (
+              filteredAttachments.map((attachment: any, index) => {
+                const displayImage = getDisplayImage(attachment);
+
+                return (
+                  <div
+                    key={attachment.id}
+                    onClick={() => handleRowClick(attachment)}
+                    className={`${rowLayout} text-xs ${themeClasses.cardBg} rounded-xl cursor-pointer transition-all hover:${themeClasses.hoverBg} ${themeClasses.borderColor} border hover:border-emerald-500/50 hover:shadow-sm`}
+                  >
+                    <p className="text-center font-bold text-slate-400 shrink-0">{index + 1}</p>
+
+                    <div className="w-14 h-14 relative mx-auto rounded-xl overflow-hidden shadow-sm shrink-0">
+                      {displayImage ? (
+                        <SafeImage
+                          src={displayImage}
+                          alt={attachment.name}
+                          className="w-14 h-14"
+                        />
+                      ) : (
+                        <div className="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center">
+                          <ImageIcon size={20} className="text-slate-400" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="min-w-0 overflow-hidden space-y-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p 
+                          className="truncate font-bold text-sm text-slate-900 dark:text-white capitalize"
+                          title={attachment.name}
+                        >
+                          {attachment.name}
+                        </p>
+                        {attachment.in_store_count > 0 && (
+                          <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200/50">
+                            {attachment.in_store_count} stores
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] font-mono text-slate-400 truncate">
+                        ID: {attachment.id.slice(0, 16)}...
+                      </p>
+                    </div>
+
+                    <div className="min-w-0 overflow-hidden space-y-1 pr-2">
+                      <p 
+                        className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 break-words leading-relaxed"
+                        title={attachment.description}
+                      >
+                        {attachment.description || "Agricultural machinery attachment"}
+                      </p>
+                      <p className="text-[10px] text-slate-400 flex items-center gap-1.5 truncate">
+                        <CalendarCheck className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span className="truncate">{attachment.booking_count || 0} associated bookings</span>
+                      </p>
+                    </div>
+
+                    <div className="text-center shrink-0">
+                      <span
+                        className={`font-bold text-sm ${
+                          attachment.fixedPrice && attachment.fixedPrice > 0
+                            ? "text-emerald-600"
+                            : "text-slate-400"
+                        }`}
+                      >
+                        {formatPrice(attachment.fixedPrice)}
+                      </span>
+                      <button
+                        onClick={(e) => handlePriceClick(e, attachment)}
+                        className="p-1 hover:bg-emerald-50 dark:hover:bg-slate-700 rounded-lg transition-colors ml-1.5 inline-flex items-center text-emerald-600"
+                        title="Quick Price Update"
+                      >
+                        <DollarSign size={14} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-center gap-1 shrink-0">
+                      <button
+                        onClick={(e) => handleViewClick(e, attachment)}
+                        className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 rounded-lg transition-colors"
+                        title="View Details"
+                      >
+                        <Eye size={16} />
+                      </button>
+
+                      <button
+                        onClick={(e) => handleDeleteClick(e, attachment)}
+                        className="p-1.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-400 hover:text-rose-600 rounded-lg transition-colors"
+                        title="Delete Attachment"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
       </div>
+
 
 
       {/* Edit Modal */}
@@ -787,7 +800,7 @@ const Attachments = ({ theme = "light" }: AttachmentsProps) => {
             <div className="p-6 space-y-5 max-h-[calc(90vh-160px)] overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
               <div className="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Description</p>
-                <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+                <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed break-words whitespace-pre-wrap">
                   {selectedAttachment.description || "No description provided."}
                 </p>
               </div>

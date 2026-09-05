@@ -32,6 +32,7 @@ import {
 import { Booking } from "@/utils/Types/types";
 import OwnerShrimmer from "../_components/OwnerShrimmer";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
+import { getAuthUserId } from "@/utils/auth/clientAuth";
 import { errorMessage } from "@/utils/Toastify/Messages";
 import { useCookie } from "next-cookie";
 import NewBookings from "./NewBookings";
@@ -94,7 +95,10 @@ const Marketplace = () => {
   const [error, setError] = useState<string | null>(null);
 
   const { cookie } = useCookie();
-  const user: user = cookie.get("user");
+  const rawUser = cookie.get("user");
+  const parsedUser = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser); } catch { return null; } })() : rawUser;
+  const user: user = parsedUser || {};
+  const currentUserId = user?.userId || getAuthUserId();
 
   const toggleDialog = () => {
     setIsOpen(!isOpen);
@@ -153,9 +157,13 @@ const Marketplace = () => {
 
   function fetchPageDetails() {
     setFetchingPageDetails(true);
+    const targetId = currentUserId || getAuthUserId();
+    const endpoint = targetId
+      ? `/owner/get-owner-market-page-details/${targetId}`
+      : `/owner/get-owner-market-page-details`;
 
     renderInstance
-      .get(`/owner/get-owner-market-page-details/${user.userId}`)
+      .get(endpoint)
       .then((res) => {
         setCustomers(res.data.customers);
         setTotalStandAloneBookimgs(res.data.totalStandAloneBookimgs);
@@ -165,7 +173,7 @@ const Marketplace = () => {
         setCompletedBookings(res.data.completedBookings);
       })
       .catch((err) => {
-        errorMessage("Error fetching user detaild");
+        console.error("Error fetching marketplace details:", err);
       })
       .finally(() => {
         setFetchingPageDetails(false);
@@ -183,7 +191,7 @@ const Marketplace = () => {
         setNewBookings(res.data);
       })
       .catch((err) => {
-        errorMessage("Error fetching user detaild");
+        console.error("Error fetching stand-alone bookings:", err);
       })
       .finally(() => {
         setFetchingNewPageDetails(false);

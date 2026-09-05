@@ -118,7 +118,7 @@ const OperatorRequests = ({ requests, fetchOperatorTableList  }: { requests: Ope
                                     <CardContent>
                                         <div className="flex items-center gap-2 mb-2">
                                             <CheckCircle className="text-green-500" />
-                                            <span className="font-semibold">{requset.operator.OperatorBookingJob.length} <TranslatedText greetings={operatorWorkPageTranslations.jobsCompleted} /></span>
+                                            <span className="font-semibold">{(requset?.operator?.OperatorBookingJob || []).length} <TranslatedText greetings={operatorWorkPageTranslations.jobsCompleted} /></span>
                                         </div>
                                         <div className="flex items-center gap-2 mb-2">
                                             <DollarSign className="text-green-500" />
@@ -137,14 +137,14 @@ const OperatorRequests = ({ requests, fetchOperatorTableList  }: { requests: Ope
                                             <span className="font-semibold"><TranslatedText greetings={operatorWorkPageTranslations.message} />: {requset.note}</span>
                                         </div>
                                         <div className="space-y-2">
-                                            {requset.operator.OperatorBookingJob.slice(0, 3).map((job) => (
+                                            {(requset?.operator?.OperatorBookingJob || []).slice(0, 3).map((job) => (
                                                 <div key={job.id} className="flex items-center justify-between p-2 bg-secondary rounded-md">
                                                     <div className="flex items-center gap-2">
                                                         <Clock className="text-muted-foreground" size={16} />
-                                                        <span className="text-sm">{new Date(job.booking.start_date).toLocaleDateString()}</span>
+                                                        <span className="text-sm">{job?.booking?.start_date ? new Date(job.booking.start_date).toLocaleDateString() : "-"}</span>
                                                     </div>
                                                     <Badge variant="outline">
-                                                        ${job.booking.total_cost.toFixed(2)}
+                                                        ${Number(job?.booking?.total_cost || 0).toFixed(2)}
                                                     </Badge>
                                                 </div>
                                             ))}

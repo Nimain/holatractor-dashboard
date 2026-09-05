@@ -1,9 +1,14 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { RefreshCw, History, Crosshair } from "lucide-react"
-import { getLeafletTractorDivIcon } from "@/utils/map/tractorIcon"
+import { getGoogleMapsTractorIcon } from "@/utils/map/tractorIcon"
+
+const GOOGLE_MAPS_API_KEY =
+  process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
+  process.env.GOOGLE_MAPS_API_KEY ||
+  "AIzaSyDjMCI0xj2Q-WTc9J7yWX-Mvh0DBM7oHbg"
 
 interface UserLocation {
   latitude: number
@@ -17,6 +22,7 @@ interface DeviceLocation {
   timestamp: string
   speed?: number
   accuracy?: number
+  course?: number
 }
 
 interface InteractiveMapProps {
@@ -49,228 +55,206 @@ export default function InteractiveMap({
   translations: t,
 }: InteractiveMapProps) {
   const mapRef = useRef<HTMLDivElement>(null)
-  const mapInstanceRef = useRef<any>(null)
+  const mapInstanceRef = useRef<google.maps.Map | null>(null)
+  const userMarkerRef = useRef<google.maps.Marker | null>(null)
+  const deviceMarkerRef = useRef<google.maps.Marker | null>(null)
+  const polylineRef = useRef<google.maps.Polyline | null>(null)
+  const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false)
 
+  // Load Google Maps script
   useEffect(() => {
-    if (!mapRef.current) return
+    if (typeof window === "undefined") return
 
-    // Initialize Leaflet map
-    const initMap = async () => {
-      try {
-        // Dynamically import Leaflet to avoid SSR issues
-        const L = (await import("leaflet")).default
-
-        // Fix for default markers in Leaflet
-        delete (L.Icon.Default.prototype as any)._getIconUrl
-        L.Icon.Default.mergeOptions({
-          iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-          iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-          shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-        })
-
-        // Default center (will be updated when locations are available)
-        const defaultCenter: [number, number] = [20.5937, 78.9629] // Center of India
-        const defaultZoom = 5
-
-        // Create map
-        const map = L.map(mapRef.current).setView(defaultCenter, defaultZoom)
-
-        // Add OpenStreetMap tiles
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-          maxZoom: 19,
-        }).addTo(map)
-
-        mapInstanceRef.current = map
-
-        console.log(" Map initialized successfully")
-      } catch (error) {
-        console.error(" Error initializing map:", error)
-      }
+    if (window.google && window.google.maps) {
+      setGoogleMapsLoaded(true)
+      return
     }
 
-    initMap()
-
-    // Cleanup
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove()
-        mapInstanceRef.current = null
-      }
+    const existingScript = document.getElementById("google-maps-script")
+    if (existingScript) {
+      existingScript.addEventListener("load", () => setGoogleMapsLoaded(true))
+      return
     }
+
+    const script = document.createElement("script")
+    script.id = "google-maps-script"
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry,places`
+    script.async = true
+    script.defer = true
+    script.onload = () => setGoogleMapsLoaded(true)
+    document.head.appendChild(script)
   }, [])
 
+  // Initialize Map
   useEffect(() => {
-    if (!mapInstanceRef.current) return
+    if (!googleMapsLoaded || !mapRef.current || !window.google?.maps) return
 
-    const updateMap = async () => {
-      try {
-        const L = (await import("leaflet")).default
-        const map = mapInstanceRef.current
+    if (!mapInstanceRef.current) {
+      const defaultCenter = { lat: 20.5937, lng: 78.9629 }
+      mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+        center: defaultCenter,
+        zoom: 5,
+        mapTypeId: "hybrid" as any,
+        zoomControl: true,
+        mapTypeControl: true,
+        streetViewControl: false,
+        fullscreenControl: true,
+      })
+    }
+  }, [googleMapsLoaded])
 
-        // Clear existing markers and layers
-        map.eachLayer((layer: any) => {
-          if (layer instanceof L.Marker || layer instanceof L.Polyline || layer instanceof L.Circle) {
-            map.removeLayer(layer)
-          }
+  // Update Markers & Polylines
+  useEffect(() => {
+    if (!mapInstanceRef.current || !window.google?.maps) return
+
+    const map = mapInstanceRef.current
+    const bounds = new window.google.maps.LatLngBounds()
+    let hasBounds = false
+
+    // User Location Marker
+    if (userLocation) {
+      const userPos = { lat: userLocation.latitude, lng: userLocation.longitude }
+      if (!userMarkerRef.current) {
+        userMarkerRef.current = new window.google.maps.Marker({
+          position: userPos,
+          map,
+          title: t?.yourLocation || "Your Location",
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: "#3B82F6",
+            fillOpacity: 1,
+            strokeColor: "#FFFFFF",
+            strokeWeight: 2,
+          },
         })
+      } else {
+        userMarkerRef.current.setPosition(userPos)
+        userMarkerRef.current.setMap(map)
+      }
+      bounds.extend(userPos)
+      hasBounds = true
+    } else if (userMarkerRef.current) {
+      userMarkerRef.current.setMap(null)
+    }
 
-        const markers: any[] = []
-        const bounds = L.latLngBounds([])
+    // Device Location Marker
+    if (deviceLocation && deviceLocation.latitude && deviceLocation.longitude) {
+      const devPos = { lat: deviceLocation.latitude, lng: deviceLocation.longitude }
+      const course = deviceLocation.course || 0
+      const isMoving = (deviceLocation.speed || 0) > 0.5
+      const tractorIcon = getGoogleMapsTractorIcon({
+        course,
+        isLive: isRealTimeTracking,
+        isMoving,
+        status: "Active",
+        size: 56,
+      })
 
-        // Add user location marker
-        if (userLocation) {
-          const userMarker = L.marker([userLocation.latitude, userLocation.longitude], {
-            title: t.yourLocation,
-          })
-            .addTo(map)
-            .bindPopup(
-              `<div>
-                <strong>${t.yourLocation}</strong><br/>
-                ${userLocation.latitude.toFixed(6)}, ${userLocation.longitude.toFixed(6)}<br/>
-                ${userLocation.accuracy ? `${t.accuracy} ${userLocation.accuracy.toFixed(0)}m` : ""}
-              </div>`,
-            )
+      if (!deviceMarkerRef.current) {
+        deviceMarkerRef.current = new window.google.maps.Marker({
+          position: devPos,
+          map,
+          title: t?.deviceLocationTitle || "Device Location",
+          icon: tractorIcon,
+          zIndex: 999,
+        })
+      } else {
+        deviceMarkerRef.current.setPosition(devPos)
+        deviceMarkerRef.current.setIcon(tractorIcon)
+        deviceMarkerRef.current.setMap(map)
+      }
+      bounds.extend(devPos)
+      hasBounds = true
+    } else if (deviceMarkerRef.current) {
+      deviceMarkerRef.current.setMap(null)
+    }
 
-          // Add accuracy circle
-          if (userLocation.accuracy) {
-            L.circle([userLocation.latitude, userLocation.longitude], {
-              radius: userLocation.accuracy,
-              fillColor: "#3b82f6",
-              fillOpacity: 0.1,
-              color: "#3b82f6",
-              weight: 1,
-            }).addTo(map)
-          }
+    // Historical Polyline
+    if (polylineRef.current) {
+      polylineRef.current.setMap(null)
+      polylineRef.current = null
+    }
 
-          markers.push(userMarker)
-          bounds.extend([userLocation.latitude, userLocation.longitude])
-        }
+    if (historicalLocations && historicalLocations.length > 1) {
+      const path = historicalLocations
+        .filter((l) => l.latitude && l.longitude)
+        .map((l) => ({ lat: l.latitude, lng: l.longitude }))
 
-        // Add device location marker with transparent tractor icon
-        if (deviceLocation) {
-          const deviceIcon = getLeafletTractorDivIcon(L, {
-            course: (deviceLocation as any).course || 0,
-            isSelected: true,
-            isLive: isRealTimeTracking,
-            isMoving: (deviceLocation.speed || 0) > 0.5,
-            status: "Active",
-            size: 54,
-          })
-
-          const deviceMarker = L.marker([deviceLocation.latitude, deviceLocation.longitude], {
-            icon: deviceIcon,
-            title: t.deviceLocationTitle,
-          })
-            .addTo(map)
-            .bindPopup(
-              `<div>
-                <strong>${t.deviceLocationTitle}</strong><br/>
-                ${deviceLocation.latitude.toFixed(6)}, ${deviceLocation.longitude.toFixed(6)}<br/>
-                ${new Date(deviceLocation.timestamp).toLocaleString()}<br/>
-                ${deviceLocation.speed !== undefined ? `${t.speed}: ${deviceLocation.speed.toFixed(1)} ${t.kmh}` : ""}
-              </div>`,
-            )
-
-          markers.push(deviceMarker)
-          bounds.extend([deviceLocation.latitude, deviceLocation.longitude])
-        }
-
-        // Add historical path
-        if (historicalLocations.length > 1) {
-          const pathCoords = historicalLocations.map((loc) => [loc.latitude, loc.longitude] as [number, number])
-
-          L.polyline(pathCoords, {
-            color: "#8b5cf6",
-            weight: 3,
-            opacity: 0.7,
-            dashArray: "5, 5",
-          })
-            .addTo(map)
-            .bindPopup(`<div><strong>Historical Path</strong><br/>${historicalLocations.length} location points</div>`)
-
-          // Add bounds for historical locations
-          historicalLocations.forEach((loc) => {
-            bounds.extend([loc.latitude, loc.longitude])
-          })
-        }
-
-        // Fit map to show all markers
-        if (bounds.isValid()) {
-          map.fitBounds(bounds, { padding: [20, 20] })
-        }
-
-        console.log("[v0] Map updated with locations")
-      } catch (error) {
-        console.error("[v0] Error updating map:", error)
+      if (path.length > 1) {
+        polylineRef.current = new window.google.maps.Polyline({
+          path,
+          geodesic: true,
+          strokeColor: "#8B5CF6",
+          strokeOpacity: 0.8,
+          strokeWeight: 4,
+          map,
+        })
+        path.forEach((p) => bounds.extend(p))
+        hasBounds = true
       }
     }
 
-    updateMap()
+    if (hasBounds) {
+      map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 })
+    }
   }, [userLocation, deviceLocation, historicalLocations, isRealTimeTracking, t])
 
   const formatDistance = (distance: number): string => {
     if (distance < 1000) {
-      return `${Math.round(distance)} ${t.meters}`
+      return `${Math.round(distance)} ${t?.meters || "m"}`
     }
-    return `${(distance / 1000).toFixed(1)} ${t.kilometers}`
+    return `${(distance / 1000).toFixed(1)} ${t?.kilometers || "km"}`
   }
 
   return (
-    <div className="relative w-full h-full">
-      {/* Map container */}
-      <div ref={mapRef} className="w-full h-full" />
+    <div className="relative w-full h-full min-h-[400px]">
+      {/* Google Map Container */}
+      <div ref={mapRef} className="w-full h-full min-h-[400px] rounded-xl overflow-hidden" />
 
       {/* Loading overlays */}
       {locationLoading && (
-        <div className="absolute top-4 left-4 bg-white/90 rounded-lg p-3 shadow-lg">
-          <RefreshCw className="h-4 w-4 animate-spin mb-1" />
-          <p className="text-xs">{t.gettingLocation}</p>
+        <div className="absolute top-4 left-4 bg-white/90 dark:bg-slate-900/90 rounded-lg p-3 shadow-lg z-10 backdrop-blur-sm">
+          <RefreshCw className="h-4 w-4 animate-spin mb-1 text-orange-600" />
+          <p className="text-xs">{t?.gettingLocation || "Getting location..."}</p>
         </div>
       )}
 
       {deviceLocationLoading && (
-        <div className="absolute top-4 right-4 bg-white/90 rounded-lg p-3 shadow-lg">
-          <RefreshCw className="h-4 w-4 animate-spin mb-1" />
-          <p className="text-xs">{t.gettingDeviceLocation}</p>
+        <div className="absolute top-4 right-4 bg-white/90 dark:bg-slate-900/90 rounded-lg p-3 shadow-lg z-10 backdrop-blur-sm">
+          <RefreshCw className="h-4 w-4 animate-spin mb-1 text-orange-600" />
+          <p className="text-xs">{t?.gettingDeviceLocation || "Getting device location..."}</p>
         </div>
       )}
 
       {/* Distance display */}
       {distance && (
-        <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 bg-white/90 rounded-lg p-3 shadow-lg">
+        <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 bg-white/90 dark:bg-slate-900/90 rounded-lg p-3 shadow-lg z-10 backdrop-blur-sm">
           <div className="flex items-center gap-2">
-            <Crosshair className="h-4 w-4" />
+            <Crosshair className="h-4 w-4 text-orange-600" />
             <p className="text-sm font-medium">
-              {t.distance} {formatDistance(distance)}
+              {t?.distance || "Distance"}: {formatDistance(distance)}
             </p>
           </div>
         </div>
       )}
 
       {/* Control buttons */}
-      <div className="absolute bottom-4 right-4 flex gap-2">
+      <div className="absolute bottom-4 right-4 flex gap-2 z-10">
         <Button size="sm" variant="secondary" onClick={onRefreshLocation} disabled={locationLoading}>
           <RefreshCw className={`h-4 w-4 mr-1 ${locationLoading ? "animate-spin" : ""}`} />
-          {t.refreshLocation}
+          {t?.refreshLocation || "Refresh Location"}
         </Button>
         <Button size="sm" variant="secondary" onClick={onRefreshDeviceLocation} disabled={deviceLocationLoading}>
           <RefreshCw className={`h-4 w-4 mr-1 ${deviceLocationLoading ? "animate-spin" : ""}`} />
-          {t.refreshDeviceLocation}
+          {t?.refreshDeviceLocation || "Refresh Device"}
         </Button>
         <Button size="sm" variant="secondary" onClick={onViewHistory} disabled={trackingLoading}>
           <History className={`h-4 w-4 mr-1 ${trackingLoading ? "animate-spin" : ""}`} />
-          {t.viewHistory}
+          {t?.viewHistory || "View History"}
         </Button>
       </div>
-
-      {/* Leaflet CSS */}
-      <link
-        rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
-        integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
-        crossOrigin=""
-      />
     </div>
   )
 }
+

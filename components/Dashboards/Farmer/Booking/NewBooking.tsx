@@ -36,7 +36,14 @@ import {
   Timer,
   Check,
   AlertCircle,
+  Globe,
 } from "lucide-react";
+import {
+  getLiveCurrencyRates,
+  BASE_CURRENCY_CONFIGS,
+  CurrencyConfig,
+  formatDynamicPrice,
+} from "@/utils/currency/currencyService";
 
 interface AgriculturalTask {
   id: string;
@@ -239,6 +246,10 @@ export default function NewBookingFlow() {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [activeCategory, setActiveCategory] = useState<string>("all");
 
+  const [currencyMap, setCurrencyMap] = useState<Record<string, CurrencyConfig>>(BASE_CURRENCY_CONFIGS);
+  const [selectedCurrencyKey, setSelectedCurrencyKey] = useState<string>("AUTO");
+  const [detectedCurrency, setDetectedCurrency] = useState<CurrencyConfig>(BASE_CURRENCY_CONFIGS.INR);
+
   // Step 1: Task Selection
   const [selectedTask, setSelectedTask] = useState<AgriculturalTask>(AGRICULTURAL_TASKS[0]);
 
@@ -259,6 +270,92 @@ export default function NewBookingFlow() {
 
   // Confirmation Screen
   const [confirmedBooking, setConfirmedBooking] = useState<any>(null);
+
+  // Fetch live currency rates from TractorAI / API
+  useEffect(() => {
+    let mounted = true;
+    getLiveCurrencyRates().then((rates) => {
+      if (mounted && rates) {
+        setCurrencyMap(rates);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Auto-detect farmer local currency
+  useEffect(() => {
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+      const rawUser = cookie.get("user");
+      let uCountry = "";
+      let uPhone = "";
+      if (rawUser) {
+        const u = typeof rawUser === "string" ? JSON.parse(rawUser) : rawUser;
+        uCountry = u?.country_code || u?.country || "";
+        uPhone = u?.phone || u?.mobile || "";
+      }
+
+      if (
+        tz.includes("Calcutta") ||
+        tz.includes("Kolkata") ||
+        tz.includes("Colombo") ||
+        uCountry === "+91" ||
+        uCountry === "IN" ||
+        uPhone.startsWith("+91")
+      ) {
+        setDetectedCurrency(currencyMap.INR || BASE_CURRENCY_CONFIGS.INR);
+      } else if (
+        tz.includes("La_Paz") ||
+        tz.includes("Bolivia") ||
+        uCountry === "+591" ||
+        uCountry === "BO" ||
+        uPhone.startsWith("+591")
+      ) {
+        setDetectedCurrency(currencyMap.BOB || BASE_CURRENCY_CONFIGS.BOB);
+      } else if (
+        tz.includes("Lima") ||
+        uCountry === "+51" ||
+        uCountry === "PE" ||
+        uPhone.startsWith("+51")
+      ) {
+        setDetectedCurrency(currencyMap.PEN || BASE_CURRENCY_CONFIGS.PEN);
+      } else if (
+        tz.includes("Sao_Paulo") ||
+        uCountry === "+55" ||
+        uCountry === "BR" ||
+        uPhone.startsWith("+55")
+      ) {
+        setDetectedCurrency(currencyMap.BRL || BASE_CURRENCY_CONFIGS.BRL);
+      } else if (
+        tz.includes("Europe") ||
+        tz.includes("Madrid") ||
+        tz.includes("Paris") ||
+        tz.includes("Berlin")
+      ) {
+        setDetectedCurrency(currencyMap.EUR || BASE_CURRENCY_CONFIGS.EUR);
+      } else {
+        setDetectedCurrency(currencyMap.INR || BASE_CURRENCY_CONFIGS.INR);
+      }
+    } catch {
+      setDetectedCurrency(currencyMap.INR || BASE_CURRENCY_CONFIGS.INR);
+    }
+  }, [currencyMap, cookie]);
+
+  const activeCurrency: CurrencyConfig =
+    selectedCurrencyKey === "AUTO"
+      ? detectedCurrency
+      : currencyMap[selectedCurrencyKey] || BASE_CURRENCY_CONFIGS[selectedCurrencyKey] || BASE_CURRENCY_CONFIGS.INR;
+
+  // Persist active currency for other components / modals
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined" && activeCurrency) {
+        sessionStorage.setItem("@farmer_active_currency", JSON.stringify(activeCurrency));
+      }
+    } catch {}
+  }, [activeCurrency]);
 
   // Load farmer's farms
   useEffect(() => {
@@ -312,6 +409,8 @@ export default function NewBookingFlow() {
           scheduled_date: scheduledDateStr,
           preferred_time_slot: timeSlot,
           include_operator: includeOperator,
+          currency: activeCurrency.code,
+          exchange_rate: activeCurrency.rate,
         },
         { timeout: 8000, headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
@@ -320,11 +419,11 @@ export default function NewBookingFlow() {
         setQuoteData(res.data);
       }
     } catch {
-      // Robust client fallback pricing calculation
-      const baseLocal = selectedTask.rate_per_ha;
-      const subtotal = baseLocal * hectares;
-      const discount = includeOperator ? subtotal * 0.1 : 0.0;
-      const total = subtotal - discount;
+      // Robust client fallback pricing calculation in dynamic local currency
+      const baseUsd = selectedTask.rate_per_ha;
+      const subtotalUsd = baseUsd * hectares;
+      const discountUsd = includeOperator ? subtotalUsd * 0.1 : 0.0;
+      const totalUsd = subtotalUsd - discountUsd;
 
       setQuoteData({
         success: true,
@@ -332,8 +431,9 @@ export default function NewBookingFlow() {
         task_type: selectedTask.id,
         task_name: selectedTask.name_es,
         hectares: Number(hectares),
-        currency: "USD",
-        currency_symbol: "$",
+        currency: activeCurrency.code,
+        currency_symbol: activeCurrency.symbol,
+        exchange_rate: activeCurrency.rate,
         machinery: {
           tractor_id: "tractor_jd_75hp",
           model: selectedTask.default_model,
@@ -344,14 +444,14 @@ export default function NewBookingFlow() {
           operator_included: includeOperator,
         },
         pricing: {
-          price_per_hectare: baseLocal,
-          total_amount: total,
-          currency: "USD",
-          currency_symbol: "$",
-          bundle_discount_amount: discount,
+          price_per_hectare: baseUsd,
+          total_amount: totalUsd,
+          currency: activeCurrency.code,
+          currency_symbol: activeCurrency.symbol,
+          bundle_discount_amount: discountUsd,
           bundle_discount_pct: includeOperator ? 10.0 : 0.0,
-          pricing_guarantee: "Garantía de Tarifa TractorAI",
-          ai_validation_badge: "🤖 Validado por TractorAI",
+          pricing_guarantee: `Garantía de Tarifa TractorAI (${activeCurrency.code})`,
+          ai_validation_badge: `🤖 Validado por TractorAI (${activeCurrency.code})`,
         },
         timing: {
           estimated_hours: (selectedTask.hrs_per_ha * hectares).toFixed(1),
@@ -545,7 +645,7 @@ export default function NewBookingFlow() {
             <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4 border border-slate-200/60 dark:border-slate-700 space-y-1">
               <span className="text-slate-400 font-semibold uppercase text-[10px]">Total Amount</span>
               <p className="font-bold text-emerald-600 dark:text-emerald-400 text-base">
-                {confirmedBooking.currency_symbol || "$"}{Number(confirmedBooking.total_amount).toFixed(2)} {confirmedBooking.currency || "USD"}
+                {formatDynamicPrice(Number(confirmedBooking.total_amount || quoteData?.pricing?.total_amount || selectedTask.rate_per_ha * hectares * 0.9), activeCurrency)} {activeCurrency.code}
               </p>
             </div>
           </div>
@@ -590,32 +690,58 @@ export default function NewBookingFlow() {
           </h1>
         </div>
 
-        {/* Stepper Indicator */}
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          {[
-            { step: 1, label: "1. Select Task" },
-            { step: 2, label: "2. Field & Timing" },
-            { step: 3, label: "3. Confirm" },
-          ].map((s, idx) => (
-            <React.Fragment key={s.step}>
-              <div
-                onClick={() => {
-                  if (s.step < currentStep) setCurrentStep(s.step as any);
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-                  currentStep === s.step
-                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
-                    : currentStep > s.step
-                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 cursor-pointer"
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-400"
-                }`}
-              >
-                {currentStep > s.step ? <Check className="w-3.5 h-3.5" /> : null}
-                <span>{s.label}</span>
-              </div>
-              {idx < 2 && <ChevronRight className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600" />}
-            </React.Fragment>
-          ))}
+        {/* Currency Selector & Stepper Indicator */}
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+          {/* Dynamic Currency Switcher */}
+          <div className="flex items-center gap-1.5 bg-slate-100/90 dark:bg-slate-800/90 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+            <Globe className="w-3.5 h-3.5 text-emerald-600 ml-1.5" />
+            <Select value={selectedCurrencyKey} onValueChange={setSelectedCurrencyKey}>
+              <SelectTrigger className="h-7 border-none bg-transparent shadow-none font-bold text-xs gap-1 px-1.5 focus:ring-0">
+                <SelectValue placeholder="Currency" />
+              </SelectTrigger>
+              <SelectContent align="end">
+                <SelectItem value="AUTO" className="text-xs font-bold text-emerald-600">
+                  ⚡ Auto ({detectedCurrency.flag} {detectedCurrency.code})
+                </SelectItem>
+                {Object.values(currencyMap).map((curr) => (
+                  <SelectItem key={curr.code} value={curr.code} className="text-xs font-medium">
+                    {curr.flag} {curr.regionName} ({curr.symbol})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-[10px] font-mono font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950 px-1.5 py-0.5 rounded mr-0.5">
+              1 USD = {activeCurrency.symbol}{activeCurrency.rate}
+            </span>
+          </div>
+
+          {/* Stepper Indicator */}
+          <div className="flex items-center gap-2">
+            {[
+              { step: 1, label: "1. Select Task" },
+              { step: 2, label: "2. Field & Timing" },
+              { step: 3, label: "3. Confirm" },
+            ].map((s, idx) => (
+              <React.Fragment key={s.step}>
+                <div
+                  onClick={() => {
+                    if (s.step < currentStep) setCurrentStep(s.step as any);
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                    currentStep === s.step
+                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                      : currentStep > s.step
+                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 cursor-pointer"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-400"
+                  }`}
+                >
+                  {currentStep > s.step ? <Check className="w-3.5 h-3.5" /> : null}
+                  <span>{s.label}</span>
+                </div>
+                {idx < 2 && <ChevronRight className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600" />}
+              </React.Fragment>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -685,7 +811,7 @@ export default function NewBookingFlow() {
                     <div>
                       <span className="text-[10px] text-slate-400 font-bold uppercase">Estimated Rate</span>
                       <p className="text-sm font-black text-slate-900 dark:text-white">
-                        ${task.rate_per_ha.toFixed(2)}{" "}
+                        {formatDynamicPrice(task.rate_per_ha, activeCurrency)}{" "}
                         <span className="text-[10px] text-slate-400 font-normal">/ ha</span>
                       </p>
                     </div>
@@ -1006,15 +1132,15 @@ export default function NewBookingFlow() {
                   <div>
                     <span className="text-[10px] text-slate-400 font-bold uppercase">Total Service Investment</span>
                     <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
-                      {quoteData?.currency_symbol || "$"}{Number(quoteData?.pricing?.total_amount || selectedTask.rate_per_ha * hectares * 0.9).toFixed(2)}{" "}
-                      <span className="text-xs font-normal text-slate-500">{quoteData?.currency || "USD"}</span>
+                      {formatDynamicPrice(Number(quoteData?.pricing?.total_amount || (selectedTask.rate_per_ha * hectares * (includeOperator ? 0.9 : 1.0))), activeCurrency)}{" "}
+                      <span className="text-xs font-normal text-slate-500">{activeCurrency.code}</span>
                     </div>
                   </div>
 
                   <div className="space-y-2 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
                     <div className="flex justify-between text-slate-600 dark:text-slate-400">
                       <span>Rate per Hectare</span>
-                      <span className="font-bold">${selectedTask.rate_per_ha.toFixed(2)}</span>
+                      <span className="font-bold">{formatDynamicPrice(selectedTask.rate_per_ha, activeCurrency)}</span>
                     </div>
                     <div className="flex justify-between text-slate-600 dark:text-slate-400">
                       <span>Area</span>
@@ -1022,12 +1148,12 @@ export default function NewBookingFlow() {
                     </div>
                     <div className="flex justify-between text-slate-600 dark:text-slate-400">
                       <span>Subtotal</span>
-                      <span className="font-bold">${(selectedTask.rate_per_ha * hectares).toFixed(2)}</span>
+                      <span className="font-bold">{formatDynamicPrice(selectedTask.rate_per_ha * hectares, activeCurrency)}</span>
                     </div>
                     {includeOperator && (
                       <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
                         <span>Bundle Operator Discount (10%)</span>
-                        <span>-${(selectedTask.rate_per_ha * hectares * 0.1).toFixed(2)}</span>
+                        <span>-{formatDynamicPrice(selectedTask.rate_per_ha * hectares * 0.1, activeCurrency)}</span>
                       </div>
                     )}
                   </div>

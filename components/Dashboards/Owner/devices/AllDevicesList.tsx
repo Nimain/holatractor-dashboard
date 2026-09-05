@@ -86,10 +86,11 @@ export function AllDeviceList({ language = "en" }: DeviceListProps) {
     try {
       setLoading(true);
       const devicesData = await DeviceApiService.getAllDevices();
-      setDevices(devicesData);
+      setDevices(Array.isArray(devicesData) ? devicesData : []);
     } catch (error) {
       console.error("Error fetching devices:", error);
       errorMessage("Failed to load devices");
+      setDevices([]);
     } finally {
       setLoading(false);
     }
@@ -223,8 +224,12 @@ export function AllDeviceList({ language = "en" }: DeviceListProps) {
 
           {/* All Devices */}
           {devices.map((device) => {
-            const status = getDeviceStatus(device.base.status);
-            const isOnline = status === "online";
+            const status = getDeviceStatus(device?.base?.status ?? 0);
+            const isOnline = status === "online" || Boolean((device as any)?.online);
+            const tractorName = device?.tractorInStore?.baseTractor?.name || (device as any)?.name || "Tractor Device";
+            const tractorImage = device?.tractorInStore?.baseTractor?.images?.[0] || (device as any)?.image;
+            const imei = device?.device_imei || (device as any)?.imei || "N/A";
+            const hourlyPrice = device?.tractorInStore?.hourly_price ?? 0;
 
             return (
               <div key={device.id} className="flex">
@@ -232,38 +237,16 @@ export function AllDeviceList({ language = "en" }: DeviceListProps) {
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="">
-                        {/* Original */}
-                        {/* {device.tractorInStore?.baseTractor?.images?.[0] ? (
-                        <Avatar className="h-12 w-12">
-                          <AvatarImage
-                            src={
-                              device.tractorInStore.baseTractor.images[0] ||
-                              "/placeholder.svg"
-                            }
-                            alt={device.tractorInStore.baseTractor.name}
-                          />
-                          <AvatarFallback>
-                            <Truck className="h-6 w-6" />
-                          </AvatarFallback>
-                        </Avatar>
-                      ) : (
-                        <div className="h-12 w-12 bg-muted rounded-full flex items-center justify-center">
-                          <Truck className="h-6 w-6 text-muted-foreground" />
-                        </div>
-                      )} */}
-
                         {/* Updated One */}
                         <div className="flex justify-center mx-14">
                           <div className="relative bg-[#f4e6e6] p-2 rounded-xl shadow-2xl w-[250px] h-36 flex items-center justify-center">
                             {/* Green online dot */}
-                            <div className="absolute top-1 right-1 h-3 w-3 bg-green-500 rounded-full border-2 border-white shadow z-10" />
+                            <div className={`absolute top-1 right-1 h-3 w-3 ${isOnline ? "bg-green-500" : "bg-gray-400"} rounded-full border-2 border-white shadow z-10`} />
 
-                            {device.tractorInStore?.baseTractor?.images?.[0] ? (
+                            {tractorImage ? (
                               <Image
-                                src={
-                                  device.tractorInStore.baseTractor.images[0]
-                                }
-                                alt={device.tractorInStore.baseTractor.name}
+                                src={tractorImage}
+                                alt={tractorName}
                                 width={400}
                                 height={400}
                                 unoptimized={true}
@@ -279,17 +262,13 @@ export function AllDeviceList({ language = "en" }: DeviceListProps) {
 
                         <div className="mt-3">
                           <CardTitle className="text-base">
-                            {device.tractorInStore.baseTractor?.name}
+                            {tractorName}
                           </CardTitle>
                           <p className="text-sm text-muted">
-                            {/* {t.model} {device.tractorInStore.baseTractor.model} */}
+                            {/* {t.model} */}
                           </p>
                         </div>
                       </div>
-                      {/* <Badge variant={isOnline ? "default" : "secondary"} className="flex items-center gap-1">
-                      {isOnline ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-                      {isOnline ? t.online : t.offline}
-                    </Badge> */}
                     </div>
                   </CardHeader>
 
@@ -297,21 +276,20 @@ export function AllDeviceList({ language = "en" }: DeviceListProps) {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted">{t.imei}</span>
-                        <span className="font-mono">{device.device_imei}</span>
+                        <span className="font-mono">{imei}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted">Price:</span>
                         <span className="font-semibold text-white">
-                          ${device.tractorInStore.hourly_price}/{t.hour}
+                          ${hourlyPrice}/{t.hour}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-muted flex items-center gap-1">
-                          {/* <Clock className="h-3 w-3" /> */}
                           Last seen:
                         </span>
                         <span className="text-xs">
-                          {formatTime(device.updatedAt)}
+                          {formatTime(device?.updatedAt || "")}
                         </span>
                       </div>
                     </div>

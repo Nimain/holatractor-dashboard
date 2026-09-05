@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 
-const FastApiBaseURL =
-  process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "https://tractorai.sinsignal.com/";
+const FastApiEndpoints = [
+  "http://127.0.0.1:8000",
+  process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "",
+  process.env.NEXT_PUBLIC_API_URL || "",
+  "https://tractorai.sinsignal.com",
+].filter(Boolean);
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,16 +27,19 @@ export async function GET(request: NextRequest) {
 
     const headers = authHeader ? { Authorization: authHeader } : {};
 
-    try {
-      const fastRes = await axios.get(
-        `${FastApiBaseURL.replace(/\/$/, "")}/farm/soil-analysis?lat=${lat}&lng=${lng}`,
-        { headers, timeout: 8000 }
-      );
-      if (fastRes.data) {
-        return NextResponse.json(fastRes.data);
+    for (const baseUrl of FastApiEndpoints) {
+      try {
+        const cleanBase = baseUrl.replace(/\/$/, "");
+        const fastRes = await axios.get(
+          `${cleanBase}/farm/soil-analysis?lat=${lat}&lng=${lng}`,
+          { headers, timeout: 5000 }
+        );
+        if (fastRes.data) {
+          return NextResponse.json(fastRes.data);
+        }
+      } catch (err: any) {
+        // Try next endpoint
       }
-    } catch (err: any) {
-      console.warn("Tractor AI soil analysis API error:", err?.response?.data || err?.message);
     }
 
     // Heuristic fallback for agricultural soil analysis

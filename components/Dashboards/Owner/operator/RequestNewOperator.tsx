@@ -18,7 +18,7 @@ import { useCookie } from "next-cookie";
 import { useEffect, useState } from "react";
 import OperatorCard from "./OpertorCard";
 import { Label } from "@/components/ui/label";
-import { CircleAlert, DollarSign, HomeIcon, House, HousePlus, Inbox, Mail, Plus, Send, Settings, Store, Store, User, Watch, X } from "lucide-react";
+import { CircleAlert, DollarSign, HomeIcon, House, HousePlus, Inbox, Mail, Plus, Send, Settings, User, Watch, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -30,6 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { requestNewOperatorTranslations } from "./RequestNewOperatorTranslations";
 import TranslatedText from "@/components/Menubar/TranslatedText";
+import { getAuthUserId } from "@/utils/auth/clientAuth";
 
 interface user {
   userId: string;
@@ -56,7 +57,10 @@ const RequestNewOperator = () => {
   const [description, setDescription] = useState("");
 
   const { cookie } = useCookie();
-  const user: user = cookie.get("user");
+  const rawUser = cookie.get("user");
+  const parsedUser = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser); } catch { return null; } })() : rawUser;
+  const user: user = parsedUser || {};
+  const currentUserId = user?.userId || getAuthUserId();
   const access_token = cookie.get("access_token");
 
   const priceTypeOptions = [
@@ -80,11 +84,12 @@ const RequestNewOperator = () => {
     }
   };
 
-  const removePriceType = (indexToRemove: number) => {
-    setPriceTypes(priceTypes.filter((_, index) => index !== indexToRemove));
+  const removePriceType = (index: number) => {
+    const newPriceTypes = priceTypes.filter((_, i) => i !== index);
+    setPriceTypes(newPriceTypes);
   };
 
-  const updatePriceType = (
+  const handlePriceTypeChange = (
     index: number,
     field: "type" | "value",
     value: string
@@ -96,10 +101,14 @@ const RequestNewOperator = () => {
 
   function fetchAllOperators() {
     setFetching(true);
+    const targetId = currentUserId || getAuthUserId();
+    const endpoint = targetId
+      ? `/owner/get-operators-not-in-store/${targetId}`
+      : `/owner/get-operators-not-in-store`;
     renderInstance
-      .get(`/owner/get-operators-not-in-store/${user.userId}`)
+      .get(endpoint)
       .then((res) => {
-        setOperators(res.data);
+        setOperators(res.data || []);
       })
       .catch((err) => {
         errorMessage("Error fetching operators");
@@ -111,13 +120,15 @@ const RequestNewOperator = () => {
 
   function fetchOwner() {
     setFetchingStore(true);
+    const targetId = currentUserId || getAuthUserId();
+    const endpoint = targetId ? `/owner/${targetId}` : `/owner`;
     renderInstance
-      .get(`/owner/${user.userId}`)
+      .get(endpoint)
       .then((res) => {
-        setStores(res.data.stores);
+        setStores(res.data?.stores || []);
       })
       .catch((err) => {
-        errorMessage("Error fetching user detaild");
+        console.error("Error fetching stores in RequestNewOperator:", err);
       })
       .finally(() => {
         setFetchingStore(false);
@@ -279,7 +290,7 @@ const RequestNewOperator = () => {
                 <Select
                   value={priceType.type}
                   onValueChange={(value) =>
-                    updatePriceType(index, "type", value)
+                    handlePriceTypeChange(index, "type", value)
                   }
                 >
                   <SelectTrigger className="border bg-transparent">
@@ -325,7 +336,7 @@ const RequestNewOperator = () => {
                       if (parseInt(e.target.value) < 1) {
                         return;
                       }
-                      updatePriceType(index, "value", e.target.value);
+                      handlePriceTypeChange(index, "value", e.target.value);
                     }}
                   />
                   {index > 0 && (

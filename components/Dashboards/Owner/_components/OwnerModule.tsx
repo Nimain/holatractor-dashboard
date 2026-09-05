@@ -42,19 +42,23 @@ const OwnerModule = () => {
   };
 
   const { cookie } = useCookie()
-  const user = cookie.get("user")
+  const rawUser = cookie.get("user")
+  const parsedUser = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser); } catch { return null; } })() : rawUser;
+  const user = parsedUser || {};
   const access_token = cookie.get("access_token")
 
   const { slug } = useParams()
 
   function fetchStores() {
     setFetchingStoreDetails(true)
+    const targetId = user?.userId || getAuthUserId();
+    const endpoint = targetId ? `/owner/${targetId}` : `/owner`;
 
-    renderInstance.get(`/owner/${user.userId}`)
+    renderInstance.get(endpoint)
       .then((res) => {
         setStore(res.data)
       }).catch((err) => {
-        errorMessage("Error fetching user detaild")
+        console.error("Error fetching store details:", err);
       }).finally(() => {
         setFetchingStoreDetails(false)
       })
@@ -65,7 +69,7 @@ const OwnerModule = () => {
     renderInstance.get(`/booking/${slug}/bookings`)
       .then((res) => {
         setGetBookingsOfAStore(res.data)
-        setfilteredPaymentBookings(res.data.filter((request: Booking) => (request.payment.length >= 1)))
+        setfilteredPaymentBookings(res.data.filter((request: Booking) => (Array.isArray(request?.payment) && request.payment.length >= 1)))
       }).catch((err) => {
         errorMessage("Some error occurred in fetching bookings")
       }).finally(() => {
@@ -155,7 +159,7 @@ const OwnerModule = () => {
       renderInstance.get(`/booking/${slug}/bookings`)
       .then((res) => {
         setGetBookingsOfAStore(res.data)
-        setfilteredPaymentBookings(res.data.filter((request: Booking) => (request.payment.length >= 1)))
+        setfilteredPaymentBookings(res.data.filter((request: Booking) => (Array.isArray(request?.payment) && request.payment.length >= 1)))
       })
     });
 
@@ -334,29 +338,43 @@ const OwnerModule = () => {
 
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {filteredPaymentBookings
-                      .filter((booking)=> (((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED")))).length === 0 ?
+                      .filter((booking)=> {
+                        const pStatus = booking?.payment?.[0]?.status ? String(booking.payment[0].status) : "";
+                        return (booking.bookingStatus === BookingStatus.Finished && (pStatus === "FarmerPENDING" || pStatus === "OwnerREJECTED"));
+                      }).length === 0 ?
                       <p>0 unpaid bookings</p>
                       :
                       filteredPaymentBookings
-                        .filter((booking)=> (((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED"))))
-                        .map((request) => (
-                          <Card key={request.id} className="drop-shadow-md">
-                            <CardHeader>
-                              <CardTitle>{renderUserName(request.user)}</CardTitle>
-                              <Badge className="w-fit">{`${request.payment[0].status}`}</Badge>
-                            </CardHeader>
-                            <CardContent>
-                              <p>Total Cost: ${request.total_cost.toFixed(2)}</p>
-                              {/* <p>Location: {request.location}</p> */}
-                            </CardContent>
-                            <CardFooter className="flex justify-end space-x-2">
-                              <PaymentReview
-                                referenceNumber={request.payment[0].transaction_reference[request.payment[0].transaction_reference.length - 1]}
-                                screenshotUrl={request.payment[0].screenshots[request.payment[0].screenshots.length - 1]}
-                                paymentId={request.payment[0].id} />
-                            </CardFooter>
-                          </Card>
-                        ))}
+                        .filter((booking)=> {
+                          const pStatus = booking?.payment?.[0]?.status ? String(booking.payment[0].status) : "";
+                          return (booking.bookingStatus === BookingStatus.Finished && (pStatus === "FarmerPENDING" || pStatus === "OwnerREJECTED"));
+                        })
+                        .map((request) => {
+                          const p = request.payment?.[0];
+                          const pStatus = p?.status ? String(p.status) : "";
+                          const refNum = p?.transaction_reference?.[(p.transaction_reference?.length || 1) - 1] || "";
+                          const screenshot = p?.screenshots?.[(p.screenshots?.length || 1) - 1] || "";
+                          const paymentId = p?.id || "";
+
+                          return (
+                            <Card key={request.id} className="drop-shadow-md">
+                              <CardHeader>
+                                <CardTitle>{renderUserName(request.user)}</CardTitle>
+                                <Badge className="w-fit">{pStatus}</Badge>
+                              </CardHeader>
+                              <CardContent>
+                                <p>Total Cost: ${request.total_cost.toFixed(2)}</p>
+                                {/* <p>Location: {request.location}</p> */}
+                              </CardContent>
+                              <CardFooter className="flex justify-end space-x-2">
+                                <PaymentReview
+                                  referenceNumber={refNum}
+                                  screenshotUrl={screenshot}
+                                  paymentId={paymentId} />
+                              </CardFooter>
+                            </Card>
+                          );
+                        })}
                   </div>
               }
             </TabsContent>
@@ -367,29 +385,43 @@ const OwnerModule = () => {
 
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {filteredPaymentBookings
-                      .filter((request) => (`${request.payment[0].status}` === "FarmerCONFIRMED")).length === 0 ?
+                      .filter((request) => {
+                        const pStatus = request?.payment?.[0]?.status ? String(request.payment[0].status) : "";
+                        return request.owner_confirm && request.confirm && pStatus === "FarmerCONFIRMED";
+                      }).length === 0 ?
                       <p>There is nothing to review</p>
                       :
                       filteredPaymentBookings
-                        .filter((request) => (request.owner_confirm && request.confirm && `${request.payment[0].status}` === "FarmerCONFIRMED"))
-                        .map((request) => (
-                          <Card key={request.id} className="drop-shadow-md">
-                            <CardHeader>
-                              <CardTitle>{renderUserName(request.user)}</CardTitle>
-                              <Badge className="w-fit">{`${request.payment[0].status}`}</Badge>
-                            </CardHeader>
-                            <CardContent>
-                              <p>Total Cost: ${request.total_cost.toFixed(2)}</p>
-                              {/* <p>Location: {request.location}</p> */}
-                            </CardContent>
-                            <CardFooter className="flex justify-end space-x-2">
-                              <PaymentReview
-                                referenceNumber={request.payment[0].transaction_reference[request.payment[0].transaction_reference.length - 1]}
-                                screenshotUrl={request.payment[0].screenshots[request.payment[0].screenshots.length - 1]}
-                                paymentId={request.payment[0].id} />
-                            </CardFooter>
-                          </Card>
-                        ))}
+                        .filter((request) => {
+                          const pStatus = request?.payment?.[0]?.status ? String(request.payment[0].status) : "";
+                          return request.owner_confirm && request.confirm && pStatus === "FarmerCONFIRMED";
+                        })
+                        .map((request) => {
+                          const p = request.payment?.[0];
+                          const pStatus = p?.status ? String(p.status) : "";
+                          const refNum = p?.transaction_reference?.[(p.transaction_reference?.length || 1) - 1] || "";
+                          const screenshot = p?.screenshots?.[(p.screenshots?.length || 1) - 1] || "";
+                          const paymentId = p?.id || "";
+
+                          return (
+                            <Card key={request.id} className="drop-shadow-md">
+                              <CardHeader>
+                                <CardTitle>{renderUserName(request.user)}</CardTitle>
+                                <Badge className="w-fit">{pStatus}</Badge>
+                              </CardHeader>
+                              <CardContent>
+                                <p>Total Cost: ${request.total_cost.toFixed(2)}</p>
+                                {/* <p>Location: {request.location}</p> */}
+                              </CardContent>
+                              <CardFooter className="flex justify-end space-x-2">
+                                <PaymentReview
+                                  referenceNumber={refNum}
+                                  screenshotUrl={screenshot}
+                                  paymentId={paymentId} />
+                              </CardFooter>
+                            </Card>
+                          );
+                        })}
                   </div>
               }
             </TabsContent>
@@ -400,23 +432,34 @@ const OwnerModule = () => {
 
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {filteredPaymentBookings
-                      .filter((booking)=> (booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED")).length === 0 ?
+                      .filter((booking)=> {
+                        const pStatus = booking?.payment?.[0]?.status ? String(booking.payment[0].status) : "";
+                        return (booking.bookingStatus === BookingStatus.Finished) && (pStatus === "COMPLETED");
+                      }).length === 0 ?
                       <p>0 bookings completed</p>
                       :
                       filteredPaymentBookings
-                        .filter((booking)=> (booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
-                        .map((request) => (
-                          <Card key={request.id} className="drop-shadow-md">
-                            <CardHeader>
-                              <CardTitle>{renderUserName(request.user)}</CardTitle>
-                              <Badge className="w-fit">{`${request.payment[0].status}`}</Badge>
-                            </CardHeader>
-                            <CardContent>
-                              <p>Total Cost: ${request.total_cost.toFixed(2)}</p>
-                              {/* <p>Location: {request.location}</p> */}
-                            </CardContent>
-                          </Card>
-                        ))}
+                        .filter((booking)=> {
+                          const pStatus = booking?.payment?.[0]?.status ? String(booking.payment[0].status) : "";
+                          return (booking.bookingStatus === BookingStatus.Finished) && (pStatus === "COMPLETED");
+                        })
+                        .map((request) => {
+                          const p = request.payment?.[0];
+                          const pStatus = p?.status ? String(p.status) : "";
+
+                          return (
+                            <Card key={request.id} className="drop-shadow-md">
+                              <CardHeader>
+                                <CardTitle>{renderUserName(request.user)}</CardTitle>
+                                <Badge className="w-fit">{pStatus}</Badge>
+                              </CardHeader>
+                              <CardContent>
+                                <p>Total Cost: ${request.total_cost.toFixed(2)}</p>
+                                {/* <p>Location: {request.location}</p> */}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
                   </div>
               }
             </TabsContent>

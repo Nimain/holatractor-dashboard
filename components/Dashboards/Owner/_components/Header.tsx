@@ -17,6 +17,8 @@ import UpgradePlanModal from './UpgradePlanModal';
 import SwitchAccountModal from '@/components/wrappers/SwitchAccountModal';
 import { UserCheck } from 'lucide-react';
 
+import { getAuthUser, getAuthUserId } from '@/utils/auth/clientAuth';
+
 interface user {
   userId: string;
   image: string;
@@ -31,7 +33,11 @@ const Header = () => {
   const [isSwitchAccountOpen, setIsSwitchAccountOpen] = useState(false);
 
   const { cookie } = useCookie();
-  const user: user = cookie.get("user");
+  const rawUser = cookie.get("user");
+  const parsedUser = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser); } catch { return null; } })() : rawUser;
+  const authUser = getAuthUser();
+  const user: user = parsedUser || authUser || {};
+  const currentUserId = user?.userId || authUser.userId || getAuthUserId();
   const access_token = cookie.get("access_token");
 
   const isOwner = cookie.get("isOwner") === "true";
@@ -42,9 +48,12 @@ const Header = () => {
   const hasMultipleRoles = [isOwner, isFarmer, isDealer, isAgent, isOperator].filter(Boolean).length > 1;
 
   const fetchNotifications = async () => {
-    if (user?.userId) {
-      renderInstance.get(`/owner/${user.userId}`).then((res) => {
-        setNotifications(res.data.notifications || []);
+    const targetId = currentUserId || getAuthUserId();
+    if (targetId) {
+      renderInstance.get(`/owner/${targetId}`).then((res) => {
+        setNotifications(res.data?.notifications || []);
+      }).catch((err) => {
+        console.error("Error fetching notifications:", err);
       });
     }
   };
@@ -55,17 +64,17 @@ const Header = () => {
       headers: {
         Authorization: `Bearer ${access_token}`,
       },
+    }).catch((err) => {
+      console.error("Error deleting notification:", err);
     });
   };
 
   useEffect(() => {
-    if (user) {
-      fetchNotifications();
-    }
+    fetchNotifications();
   }, []);
 
   useEffect(() => {
-    if (!isOpen && user) {
+    if (!isOpen) {
       fetchNotifications();
     }
   }, [isOpen]);

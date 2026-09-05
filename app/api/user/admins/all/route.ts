@@ -3,6 +3,8 @@ import axios from "axios";
 import jwt from "jsonwebtoken";
 import pool from "@/utils/Database/db";
 
+import { getFastApiAuthHeaders } from "@/utils/auth/serverAuth";
+
 export const dynamic = "force-dynamic";
 
 const FastApiBaseURL =
@@ -10,28 +12,9 @@ const FastApiBaseURL =
   process.env.NEXT_PUBLIC_API_URL ||
   "https://tractorai.sinsignal.com/";
 
-function getAdminHeaders() {
-  try {
-    const adminToken = jwt.sign(
-      {
-        sub: "admin_master",
-        id: "admin_master",
-        email: "sistemas@holatractor.com",
-        role: "admin",
-        isAdmin: true,
-      },
-      "ecommProdPrj",
-      { expiresIn: "1h" }
-    );
-    return { Authorization: `Bearer ${adminToken}` };
-  } catch {
-    return {};
-  }
-}
-
 export async function GET(request: NextRequest) {
   try {
-    const headers = getAdminHeaders();
+    const headers = getFastApiAuthHeaders(request);
 
     // 1. Direct PostgreSQL query for Admins
     try {

@@ -19,6 +19,7 @@ import {
 import { Booking } from "@/utils/Types/types";
 import { useCookie } from "next-cookie";
 import { NestJsBaseURL, renderInstance } from "@/utils/Axios/RenderInstance";
+import { getAuthUserId } from "@/utils/auth/clientAuth";
 import { errorMessage } from "@/utils/Toastify/Messages";
 import { io, Socket } from "socket.io-client";
 import TranslatedText from "@/components/Menubar/TranslatedText";
@@ -82,7 +83,10 @@ const Bookings = () => {
   const rightSectionRef = useRef<HTMLDivElement>(null);
 
   const { cookie } = useCookie();
-  const user: user = cookie.get("user");
+  const rawUser = cookie.get("user");
+  const parsedUser = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser); } catch { return null; } })() : rawUser;
+  const user: user = parsedUser || {};
+  const currentUserId = user?.userId || getAuthUserId();
   const access_token = cookie.get("access_token");
 
   function generateYearOptions() {
@@ -96,11 +100,13 @@ const Bookings = () => {
 
   function fetchBookings() {
     setFetchingBookings(true);
+    const targetId = currentUserId || getAuthUserId();
+    const endpoint = targetId
+      ? `/owner/get-owner-booking-page-details/${targetId}?filter=${selectedFilter}&page=${page}&itemsPerPage=${itemsPerPage}`
+      : `/owner/get-owner-booking-page-details?filter=${selectedFilter}&page=${page}&itemsPerPage=${itemsPerPage}`;
 
     renderInstance
-      .get(
-        `/owner/get-owner-booking-page-details/${user.userId}?filter=${selectedFilter}&page=${page}&itemsPerPage=${itemsPerPage}`
-      )
+      .get(endpoint)
       .then((res) => {
         setAllBookings(res.data.allBookings);
         setTotalBookings(res.data.total);
@@ -129,9 +135,13 @@ const Bookings = () => {
 
   function fetchBookingCharts() {
     setFetchingBookingsChart(true);
+    const targetId = currentUserId || getAuthUserId();
+    const endpoint = targetId
+      ? `/owner/get-booking-chart/${targetId}?year=${year}`
+      : `/owner/get-booking-chart?year=${year}`;
 
     renderInstance
-      .get(`/owner/get-booking-chart/${user.userId}?year=${year}`)
+      .get(endpoint)
       .then((res) => {
         if (Array.isArray(res.data) && res.data.length > 0) {
           setChartData(res.data);
@@ -185,9 +195,10 @@ const Bookings = () => {
 
   useEffect(() => {
     // Connect to the socket server
+    const targetId = currentUserId || getAuthUserId();
     const newSocket: Socket = io(NestJsBaseURL, {
       query: {
-        userId: user.userId,
+        userId: targetId,
       },
     });
 

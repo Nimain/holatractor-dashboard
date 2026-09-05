@@ -8,15 +8,45 @@ export const NestJsBaseURL = TractorAIBaseURL;
 export const DeviceBaseURL = "https://device.holatractor.com/";
 export const FastApiBaseURL = TractorAIBaseURL;
 
-function getCookie(name: string): string | null {
+export function getClientAuthToken(): string | null {
   if (typeof document === "undefined") return null;
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) {
-    const cookieVal = parts.pop()?.split(";").shift();
-    return cookieVal ? decodeURIComponent(cookieVal) : null;
+
+  // 1. Check Cookies
+  const cookieMatches = [
+    document.cookie.match(/(?:^|;\s*)access_token=([^;]+)/),
+    document.cookie.match(/(?:^|;\s*)token=([^;]+)/),
+    document.cookie.match(/(?:^|;\s*)accessToken=([^;]+)/),
+  ];
+
+  for (const match of cookieMatches) {
+    if (match?.[1]) {
+      const val = decodeURIComponent(match[1]).trim();
+      if (val && val !== "undefined" && val !== "null") return val.replace(/^Bearer\s+/i, "");
+    }
   }
+
+  // 2. Check localStorage Fallback
+  if (typeof window !== "undefined" && window.localStorage) {
+    try {
+      const lsToken =
+        localStorage.getItem("access_token") ||
+        localStorage.getItem("token") ||
+        localStorage.getItem("accessToken");
+      if (lsToken && lsToken !== "undefined" && lsToken !== "null") {
+        return lsToken.replace(/^Bearer\s+/i, "").trim();
+      }
+    } catch {}
+  }
+
   return null;
+}
+
+import { getAuthToken, getAuthUserId } from "@/utils/auth/clientAuth";
+
+export function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
+  return match?.[1] ? decodeURIComponent(match[1]).trim() : null;
 }
 
 export const renderInstance = axios.create({
@@ -26,13 +56,26 @@ export const renderInstance = axios.create({
   },
 });
 
-// Automatic authorization header attachment for renderInstance
+// Automatic authorization header attachment with Bearer token & URL sanitization for renderInstance
 renderInstance.interceptors.request.use(
   (config) => {
-    if (typeof window !== "undefined" && !config.headers.Authorization) {
-      const token = getCookie("access_token");
-      if (token) {
+    if (typeof window !== "undefined") {
+      const token = getAuthToken() || getClientAuthToken();
+      if (token && !config.headers.Authorization) {
         config.headers.Authorization = `Bearer ${token}`;
+      }
+
+      // Safeguard: sanitize any /undefined or /null in outgoing URLs
+      if (config.url) {
+        if (config.url.includes("/undefined") || config.url.includes("/null")) {
+          const authUserId = getAuthUserId();
+          if (authUserId) {
+            config.url = config.url.replace(/\/undefined(?=[\/?#]|$)/g, `/${authUserId}`).replace(/\/null(?=[\/?#]|$)/g, `/${authUserId}`);
+          } else {
+            // Strip the /undefined parameter so it falls back to the base route without crash
+            config.url = config.url.replace(/\/undefined(?=[\/?#]|$)/g, "").replace(/\/null(?=[\/?#]|$)/g, "");
+          }
+        }
       }
     }
     return config;
@@ -302,6 +345,7 @@ renderInstance.interceptors.response.use(
     }
 
     // If backend returns 500 or 404 on /farmer/${userId}
+    // If backend returns 500 or 404 on /farmer/${userId}
     const isSingleFarmer = (url.includes("/farmer/") || url.startsWith("farmer/")) && !url.includes("logPage");
     if (isSingleFarmer) {
       try {
@@ -312,14 +356,21 @@ renderInstance.interceptors.response.use(
         const fastApiBase = TractorAIBaseURL.replace(/\/$/, "");
 
         try {
-          const [bookingsRes, farmsRes, farmerProfileRes] = await Promise.all([
+          const [bookingsRes, farmsLocalRes, farmsFastRes, farmerProfileRes] = await Promise.all([
             axios.get(`${fastApiBase}/simple-booking/list/${farmerIdOrUserId}`, { headers, timeout: 6000 }).catch(() => null),
-            axios.get(`${fastApiBase}/api/v1/farms`, { headers, timeout: 6000 }).catch(() => null),
+            axios.get(`/api/farm${farmerIdOrUserId ? `?owner_id=${farmerIdOrUserId}` : ''}`, { timeout: 3500 }).catch(() => null),
+            axios.get(`http://127.0.0.1:8000/farm${farmerIdOrUserId ? `?owner_id=${farmerIdOrUserId}` : ''}`, { timeout: 3500 }).catch(() => null),
             axios.get(`${fastApiBase}/user/farmer-profile`, { headers, timeout: 6000 }).catch(() => null),
           ]);
 
           const bookings = Array.isArray(bookingsRes?.data) ? bookingsRes.data : Array.isArray(bookingsRes?.data?.data) ? bookingsRes.data.data : [];
-          const farms = Array.isArray(farmsRes?.data) ? farmsRes.data : Array.isArray(farmsRes?.data?.data) ? farmsRes.data.data : [];
+          const farms = Array.isArray(farmsLocalRes?.data)
+            ? farmsLocalRes.data
+            : Array.isArray(farmsFastRes?.data?.farms)
+            ? farmsFastRes.data.farms
+            : Array.isArray(farmsFastRes?.data)
+            ? farmsFastRes.data
+            : [];
 
           let totalPaid = 0;
           let totalUnpaid = 0;
@@ -406,8 +457,20 @@ renderInstance.interceptors.response.use(
         const token = getCookie("access_token");
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const fastApiBase = TractorAIBaseURL.replace(/\/$/, "");
-        const fRes = await axios.get(`${fastApiBase}/api/v1/farms`, { headers, timeout: 6000 }).catch(() => null);
-        const fData = Array.isArray(fRes?.data) ? fRes.data : Array.isArray(fRes?.data?.data) ? fRes.data.data : [];
+
+        const [localRes, fastRes] = await Promise.all([
+          axios.get("/api/farm", { timeout: 3500 }).catch(() => null),
+          axios.get("http://127.0.0.1:8000/farm", { headers, timeout: 3500 }).catch(() => null),
+        ]);
+
+        const fData = Array.isArray(localRes?.data)
+          ? localRes.data
+          : Array.isArray(fastRes?.data?.farms)
+          ? fastRes.data.farms
+          : Array.isArray(fastRes?.data)
+          ? fastRes.data
+          : [];
+
         if (fData.length > 0) {
           return {
             ...error.response,
@@ -421,27 +484,55 @@ renderInstance.interceptors.response.use(
       } catch {}
     }
 
-    // If backend returns 500 or 404 on /store
+    // If backend returns 500, 404, or 405 on /store
     if (url === "/store" || url === "store" || url.startsWith("/store") || url.startsWith("store")) {
       try {
         const token = getCookie("access_token");
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const fastApiBase = TractorAIBaseURL.replace(/\/$/, "");
-        const [storesRes, tractorsRes] = await Promise.all([
-          axios.get(`${fastApiBase}/owner/owner/stores`, { headers, timeout: 6000 }).catch(() => null),
-          axios.get(`${fastApiBase}/store/alltractors`, { headers, timeout: 6000 }).catch(() => null),
-        ]);
-        const sData = Array.isArray(storesRes?.data) ? storesRes.data : Array.isArray(storesRes?.data?.data) ? storesRes.data.data : [];
-        if (sData.length > 0) {
-          return {
-            ...error.response,
-            data: sData,
-            status: 200,
-            statusText: "OK",
-            headers: {},
-            config: error.config,
-          } as AxiosResponse;
+
+        // 1. Try localhost FastAPI first
+        const fastApiEndpoints = [
+          "http://127.0.0.1:8000/store/all_stores/with_in_distance",
+          "http://127.0.0.1:8000/api/v1/owner/stores",
+          "http://127.0.0.1:8000/store",
+          `${fastApiBase}/api/v1/owner/stores`,
+          `${fastApiBase}/store/all_stores/with_in_distance`,
+        ];
+
+        for (const ep of fastApiEndpoints) {
+          try {
+            const res = await axios.get(ep, { headers, timeout: 3500 });
+            const sData = Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
+            if (sData.length > 0) {
+              return {
+                ...error.response,
+                data: sData,
+                status: 200,
+                statusText: "OK",
+                headers: {},
+                config: error.config,
+              } as AxiosResponse;
+            }
+          } catch {}
         }
+
+        // 2. Try internal Next.js API
+        try {
+          if (typeof window !== "undefined") {
+            const localApiRes = await axios.get("/api/store", { headers, timeout: 4000 });
+            if (Array.isArray(localApiRes.data) && localApiRes.data.length > 0) {
+              return {
+                ...error.response,
+                data: localApiRes.data,
+                status: 200,
+                statusText: "OK",
+                headers: {},
+                config: error.config,
+              } as AxiosResponse;
+            }
+          }
+        } catch {}
       } catch {}
     }
 
@@ -487,6 +578,95 @@ renderInstance.interceptors.response.use(
       }
     }
 
+    // If backend returns error on /credits/ (packages, currencies, coupons, purchases)
+    if (url.includes("credits/") || url.startsWith("/credits") || url.startsWith("credits")) {
+      try {
+        const token = getCookie("access_token");
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const method = (error.config?.method || "get").toLowerCase();
+        const data = error.config?.data ? (typeof error.config.data === "string" ? JSON.parse(error.config.data) : error.config.data) : undefined;
+        
+        // Map url to internal /api/credits/...
+        let cleanPath = url;
+        if (cleanPath.startsWith(TractorAIBaseURL)) {
+          cleanPath = cleanPath.slice(TractorAIBaseURL.length);
+        }
+        if (!cleanPath.startsWith("/")) cleanPath = `/${cleanPath}`;
+        if (cleanPath.startsWith("/api/v1/")) cleanPath = cleanPath.replace("/api/v1/", "/");
+        if (!cleanPath.startsWith("/api/")) cleanPath = `/api${cleanPath}`;
+
+        const localRes = await axios({
+          method,
+          url: cleanPath,
+          data,
+          headers,
+          timeout: 8000,
+        });
+
+        if (localRes.data) {
+          return {
+            ...error.response,
+            data: localRes.data,
+            status: localRes.status,
+            statusText: localRes.statusText || "OK",
+            headers: localRes.headers || {},
+            config: error.config,
+          } as AxiosResponse;
+        }
+      } catch (creditsFallbackErr) {
+        console.error("Credits fallback error:", creditsFallbackErr);
+      }
+    }
+
+    // If backend returns error on /servicecategory, /category, /services
+    const isCategoryOrService =
+      url.includes("servicecategory") ||
+      url.includes("services") ||
+      url.includes("/category") ||
+      url.startsWith("category");
+
+    if (isCategoryOrService) {
+      try {
+        const token = getCookie("access_token");
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const method = (error.config?.method || "get").toLowerCase();
+        const data = error.config?.data
+          ? typeof error.config.data === "string"
+            ? JSON.parse(error.config.data)
+            : error.config.data
+          : undefined;
+
+        let cleanPath = url;
+        if (cleanPath.startsWith(TractorAIBaseURL)) {
+          cleanPath = cleanPath.slice(TractorAIBaseURL.length);
+        }
+        if (!cleanPath.startsWith("/")) cleanPath = `/${cleanPath}`;
+        if (cleanPath.startsWith("/api/v1/")) cleanPath = cleanPath.replace("/api/v1/", "/");
+        if (!cleanPath.startsWith("/api/")) cleanPath = `/api${cleanPath}`;
+
+        const localRes = await axios({
+          method,
+          url: cleanPath,
+          data,
+          headers,
+          timeout: 8000,
+        });
+
+        if (localRes.data) {
+          return {
+            ...error.response,
+            data: localRes.data,
+            status: localRes.status,
+            statusText: localRes.statusText || "OK",
+            headers: localRes.headers || {},
+            config: error.config,
+          } as AxiosResponse;
+        }
+      } catch (catServiceErr) {
+        console.error("Category/Service fallback error:", catServiceErr);
+      }
+    }
+
     return Promise.reject(error);
   }
 );
@@ -500,9 +680,9 @@ export const tractorAiInstance = axios.create({
 
 tractorAiInstance.interceptors.request.use(
   (config) => {
-    if (typeof window !== "undefined" && !config.headers.Authorization) {
-      const token = getCookie("access_token");
-      if (token) {
+    if (typeof window !== "undefined") {
+      const token = getClientAuthToken();
+      if (token && !config.headers.Authorization) {
         config.headers.Authorization = `Bearer ${token}`;
       }
     }

@@ -1,79 +1,66 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import { Owner } from "@/utils/Types/types";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import axios from "axios";
-import { renderInstance } from "@/utils/Axios/RenderInstance";
+import Image from "next/image";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
+import { Owner } from "@/utils/Types/types";
 import { errorMessage } from "@/utils/Toastify/Messages";
 import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogFooter,
   DialogTrigger,
 } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import OwnerRegister from "../Authentication/OwnerRegister";
-import Image from "next/image";
-import NullImage from "@/assets/AnimateIcons/Owner.svg";
 import OwnerAction from "./OwnerAction";
-import { useSelector } from "react-redux";
-import { RootState } from "@/redux/store";
+import {
+  Tractor,
+  Users,
+  Search,
+  RefreshCw,
+  Plus,
+  CheckCircle,
+  XCircle,
+  Mail,
+  Phone,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  UserCheck,
+  UserX,
+  ShieldCheck,
+  ArrowUpDown,
+  Edit,
+} from "lucide-react";
+
+function isValidImageUrl(url?: string | null): boolean {
+  if (!url || typeof url !== "string") return false;
+  const t = url.trim();
+  if (t.startsWith("file://") || t.startsWith("file:/") || t === "NO" || t.toLowerCase() === "null" || t.toLowerCase() === "undefined") return false;
+  return t.startsWith("http://") || t.startsWith("https://") || t.startsWith("/");
+}
 
 const OwnerSection = () => {
-  const [activeHover, setActiveHover] = useState("");
-  const [mailHover, setMailHover] = useState(-1);
-  const [loading, setLoading] = useState(false);
-
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [users, setUsers] = useState<Owner[]>([]);
-  const [open, setOpen] = useState(false);
+  const [openRegister, setOpenRegister] = useState(false);
   const [newOwnerName, setNewOwnerName] = useState("");
   const [isSignUpCard, setIsSignUpCard] = useState(false);
 
-  // Sort users by updatedAt in descending order (most recent first)
-  const sortUsersByUpdateDate = (usersList: Owner[]) => {
-    if (!Array.isArray(usersList)) return [];
-    return [...usersList].sort((a, b) => {
-      const dateA = new Date(a?.updatedAt || 0).getTime();
-      const dateB = new Date(b?.updatedAt || 0).getTime();
-      return dateB - dateA;
-    });
-  };
-
-  async function fetchAllUsers() {
-    setLoading(true);
-    try {
-      let ownerList: Owner[] = [];
-      try {
-        const localRes = await axios.get("/api/owner");
-        if (Array.isArray(localRes.data)) {
-          ownerList = localRes.data;
-        }
-      } catch (e) {
-        console.warn("Local /api/owner notice:", e);
-      }
-
-      if (ownerList.length === 0) {
-        try {
-          const res = await renderInstance.get("/owner");
-          ownerList = Array.isArray(res.data)
-            ? res.data
-            : (res.data?.owners || res.data?.data || []);
-        } catch {}
-      }
-
-      const sortedUsers = sortUsersByUpdateDate(ownerList);
-      setUsers(sortedUsers);
-    } catch (err) {
-      console.error("Error fetching user list:", err);
-    } finally {
-      setLoading(false);
-    }
-  }
+  // Search, Filter, Sort, Pagination
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [sortBy, setSortBy] = useState<"date" | "name" | "status">("date");
+  const [sortAsc, setSortAsc] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const { language: locale } = useSelector(
     (root: RootState) => root.ActiveLanguage
@@ -83,600 +70,816 @@ const OwnerSection = () => {
     return translations[locale] || translations["en"];
   };
 
+  // ── Fetch Owners from FastAPI / API Route ──────────────────────────────────
+  const fetchAllUsers = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+
+    try {
+      // Calls /api/owner which tries FastAPI (/api/v1/admin/owners) first
+      const res = await axios.get("/api/owner", { timeout: 8000 });
+      let ownerList: Owner[] = [];
+
+      if (Array.isArray(res.data)) {
+        ownerList = res.data;
+      } else if (res.data?.owners && Array.isArray(res.data.owners)) {
+        ownerList = res.data.owners;
+      }
+
+      setUsers(ownerList);
+    } catch (err) {
+      console.error("Error fetching owner list from FastAPI:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAllUsers();
+  }, [fetchAllUsers]);
+
   const splitFullName = (fullName: string) => {
     const nameParts = fullName.trim().split(/\s+/);
     const firstName = nameParts.shift();
     const lastName = nameParts.pop();
     const middleName = nameParts.join(" ");
-
     return { firstName, middleName, lastName };
   };
 
-  function handleNameChage(name: string) {
+  function handleNameChange(name: string) {
     setNewOwnerName(name);
-
     const { lastName } = splitFullName(name);
-
     if (lastName) setIsSignUpCard(true);
     else setIsSignUpCard(false);
   }
 
-  const refreshUsersList = () => {
-    fetchAllUsers();
-  };
+  // ── Calculated Stats ───────────────────────────────────────────────────────
+  const stats = useMemo(() => {
+    const total = users.length;
+    const active = users.filter((u) => u.status === 1).length;
+    const inactive = total - active;
+    const verified = users.filter((u) => u.user?.emailVerified).length;
+    return { total, active, inactive, verified };
+  }, [users]);
 
-  useEffect(() => {
-    fetchAllUsers();
-  }, []);
+  // ── Filtered & Sorted Owners ───────────────────────────────────────────────
+  const filteredUsers = useMemo(() => {
+    let list = [...users];
 
-  const formatDate = (date: string | Date): string => {
-    const options: Intl.DateTimeFormatOptions = {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    };
+    // Status filter
+    if (statusFilter === "active") {
+      list = list.filter((u) => u.status === 1);
+    } else if (statusFilter === "inactive") {
+      list = list.filter((u) => u.status !== 1);
+    }
 
+    // Search query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter((u) => {
+        const fullName = `${u.user?.first_name || ""} ${u.user?.middle_name || ""} ${u.user?.last_name || ""}`.toLowerCase();
+        const email = (u.user?.email || "").toLowerCase();
+        const mobile = (u.user?.mobile || "").toLowerCase();
+        const id = (u.id || "").toLowerCase();
+        return fullName.includes(q) || email.includes(q) || mobile.includes(q) || id.includes(q);
+      });
+    }
+
+    // Sort
+    list.sort((a, b) => {
+      if (sortBy === "name") {
+        const nameA = `${a.user?.first_name || ""} ${a.user?.last_name || ""}`.toLowerCase();
+        const nameB = `${b.user?.first_name || ""} ${b.user?.last_name || ""}`.toLowerCase();
+        return sortAsc ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+      }
+      if (sortBy === "status") {
+        const sA = a.status === 1 ? 1 : 0;
+        const sB = b.status === 1 ? 1 : 0;
+        return sortAsc ? sA - sB : sB - sA;
+      }
+      // date
+      const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+      const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+      return sortAsc ? dateA - dateB : dateB - dateA;
+    });
+
+    return list;
+  }, [users, statusFilter, searchQuery, sortBy, sortAsc]);
+
+  // Pagination calculation
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / itemsPerPage));
+  const paginatedUsers = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredUsers.slice(start, start + itemsPerPage);
+  }, [filteredUsers, currentPage, itemsPerPage]);
+
+  const formatDate = (date: string | Date | undefined): string => {
+    if (!date) return "N/A";
     const dateObj = typeof date === "string" ? new Date(date) : date;
-
-    return dateObj.toLocaleDateString(undefined, options);
+    return dateObj.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
   };
 
   return (
-    <div className="mt-6 md:mt-10 px-4 md:px-6 lg:px-8 text-base md:text-lg">
-
-      <div className="mb-5 md:mb-8 w-full flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <p className="text-lg md:text-xl lg:text-2xl font-semibold">
-          {getTranslation(locale, {
-            en: "Total owners:",
-            es: "Propietarios totales:",
-            ay: "Taqpacha jilatanaka:",
-            qu: "Lliw dueñoqkuna:",
-            gn: "Opa jára:",
-          })}{" "}
-          {users.length}
-        </p>
-
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button
-              name="Name_next_button"
-              onClick={() => {
-                setOpen(true);
-              }}
-              className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-sm transition-all"
-            >
-              {getTranslation(locale, {
-                en: "New owner",
-                es: "Nuevo propietario",
-                ay: "Machaqa jilata",
-                qu: "Musuq dueño",
-                gn: "Jára pyahu",
-              })}
-            </Button>
-          </DialogTrigger>
-
-          <DialogContent
-            className="bg-white rounded-2xl w-[95vw] max-w-[460px] p-0 overflow-hidden shadow-2xl border border-gray-100"
-            style={{ scrollbarWidth: "none" }}
-          >
-            {/* Modal Header */}
-            <div className="bg-slate-900 p-6 text-white relative">
-              <p className="text-xs uppercase tracking-wider font-semibold text-emerald-400 mb-1">Owner Directory</p>
-              <h2 className="text-xl font-bold">
-                {getTranslation(locale, {
-                  en: "Register New Owner",
-                  es: "Registrar Nuevo Propietario",
-                  ay: "Machaqa Jilata Qillqaña",
-                  qu: "Musuq Dueño Qillqay",
-                  gn: "Jára Pyahu Mboheraguasu",
-                })}
-              </h2>
-              <p className="text-xs text-slate-300 mt-1">
-                {getTranslation(locale, {
-                  en: "Enter the owner's full legal name to start registration.",
-                  es: "Ingrese el nombre completo del propietario para comenzar.",
-                  ay: "Qalltañatakix jilatan taqpach sutip qillqaña.",
-                  qu: "Qallarinaykipaq dueñopa llapan sutinta qillqay.",
-                  gn: "Emoinge jára réra hekopete eñepyrũ hag̃ua.",
-                })}
-              </p>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6 space-y-4">
-              <div>
-                <Label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                  {getTranslation(locale, {
-                    en: "Full Legal Name *",
-                    es: "Nombre Completo *",
-                    ay: "Taqpacha Suti *",
-                    qu: "Llapan Suti *",
-                    gn: "Téra Hekopete *",
-                  })}
-                </Label>
-                <Input
-                  value={newOwnerName}
-                  onChange={(e) => {
-                    handleNameChage(e.target.value);
-                  }}
-                  placeholder="e.g. Juan Carlos Martinez"
-                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all font-medium"
-                />
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-              <DialogClose asChild>
-                <Button
-                  onClick={() => {
-                    setOpen(false);
-                  }}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-xl border border-slate-200 hover:bg-slate-100 transition-all bg-white"
-                >
-                  {getTranslation(locale, {
-                    en: "Cancel",
-                    es: "Cancelar",
-                    ay: "Tukuyaña",
-                    qu: "Chinkachiy",
-                    gn: "Ñemboty",
-                  })}
-                </Button>
-              </DialogClose>
-
-              {isSignUpCard ? (
-                <OwnerRegister inPage={true} name={newOwnerName} />
-              ) : (
-                <Button
-                  name="Name_next_button"
-                  onClick={() => {
-                    errorMessage("Please give your name");
-                  }}
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-md transition-all active:scale-[0.98]"
-                >
-                  {getTranslation(locale, {
-                    en: "Next Step →",
-                    es: "Siguiente Paso →",
-                    ay: "Jutiri Paso →",
-                    qu: "Qatiqnin Paso →",
-                    gn: "Paso Upeigua →",
-                  })}
-                </Button>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Desktop Table View - Hidden on mobile/tablet */}
-      <div className="hidden lg:block">
-        {/* Table Header */}
-        <div className="text-base lg:text-lg xl:text-xl font-semibold flex items-center justify-between gap-2 xl:gap-4 bg-[#ededed] p-4 xl:p-5 rounded cursor-pointer overflow-x-auto">
-          <div className="min-w-[80px] flex items-center justify-between group">
-            {getTranslation(locale, {
-              en: "Id",
-              es: "Id",
-              ay: "Id",
-              qu: "Id",
-              gn: "Id",
-            })}
-            <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
-              <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                <ArrowUpwardIcon fontSize="small" />
-              </div>
-              <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                <MoreVertIcon fontSize="small" />
-              </div>
-            </div>
-          </div>
-
-          <div className="min-w-[120px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
-            {getTranslation(locale, {
-              en: "Name",
-              es: "Nombre",
-              ay: "Suti",
-              qu: "Suti",
-              gn: "Téra",
-            })}
-            <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
-              <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                <ArrowUpwardIcon fontSize="small" />
-              </div>
-              <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                <MoreVertIcon fontSize="small" />
-              </div>
-            </div>
-          </div>
-
-          <div className="min-w-[120px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
-            {getTranslation(locale, {
-              en: "Email",
-              es: "Correo electrónico",
-              ay: "Chaski qillqiri",
-              qu: "Willay qillqa",
-              gn: "Ñanduti veve",
-            })}
-            <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
-              <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                <ArrowUpwardIcon fontSize="small" />
-              </div>
-              <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                <MoreVertIcon fontSize="small" />
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="min-w-[100px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
-            onMouseEnter={() => {
-              setActiveHover("Verified");
-            }}
-            onMouseLeave={() => {
-              setActiveHover("");
-            }}
-          >
-            {activeHover === "Verified"
-              ? getTranslation(locale, {
-                en: "Veri...",
-                es: "Veri...",
-                ay: "Chiq...",
-                qu: "Kach...",
-                gn: "Oñe...",
-              })
-              : getTranslation(locale, {
-                en: "Verified",
-                es: "Verificado",
-                ay: "Chiqachata",
-                qu: "Kachkan",
-                gn: "Oñemoneĩ",
-              })}
-            <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
-              <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                <ArrowUpwardIcon fontSize="small" />
-              </div>
-              <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                <MoreVertIcon fontSize="small" />
-              </div>
-            </div>
-          </div>
-
-          <div className="min-w-[100px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group">
-            {getTranslation(locale, {
-              en: "Status",
-              es: "Estado",
-              ay: "Kawsawi",
-              qu: "Kawsay",
-              gn: "Tekotee",
-            })}
-            <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
-              <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                <ArrowUpwardIcon fontSize="small" />
-              </div>
-              <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                <MoreVertIcon fontSize="small" />
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="min-w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
-            onMouseEnter={() => {
-              setActiveHover("Joined at");
-            }}
-            onMouseLeave={() => {
-              setActiveHover("");
-            }}
-          >
-            {activeHover === "Joined at"
-              ? getTranslation(locale, {
-                en: "Join...",
-                es: "Uni...",
-                ay: "Chi...",
-                qu: "Qill...",
-                gn: "Oje...",
-              })
-              : getTranslation(locale, {
-                en: "Joined at",
-                es: "Unido el",
-                ay: "Chiqachata",
-                qu: "Qillqaykama",
-                gn: "Ojejapo",
-              })}
-            <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
-              <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                <ArrowUpwardIcon fontSize="small" />
-              </div>
-              <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                <MoreVertIcon fontSize="small" />
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="min-w-[140px] relative before:absolute before:left-[-8px] before:h-[60%] before:-translate-y-1/2 before:top-1/2 before:w-[3px] before:bg-gray-400 flex items-center justify-between group"
-            onMouseEnter={() => {
-              setActiveHover("Updated at");
-            }}
-            onMouseLeave={() => {
-              setActiveHover("");
-            }}
-          >
-            {activeHover === "Updated at"
-              ? getTranslation(locale, {
-                en: "Upda...",
-                es: "Actu...",
-                ay: "Qill...",
-                qu: "Rima...",
-                gn: "Gua...",
-              })
-              : getTranslation(locale, {
-                en: "Updated at",
-                es: "Actualizado el",
-                ay: "Qillqata",
-                qu: "Rimaykuy",
-                gn: "Guarã",
-              })}
-            <div className="flex items-center gap-1 opacity-0 transition-all duration-500 group-hover:opacity-100">
-              <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                <ArrowUpwardIcon fontSize="small" />
-              </div>
-              <div className="rounded-full w-7 h-7 flex items-center justify-center transition-all duration-500 hover:bg-gray-300">
-                <MoreVertIcon fontSize="small" />
-              </div>
-            </div>
-          </div>
+    <div className="w-full min-h-screen p-4 sm:p-6 lg:p-8 space-y-6">
+      {/* ── Top Header Banner ─────────────────────────────────────────────── */}
+      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden border border-blue-800/40">
+        <div className="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
+          <Tractor size={320} />
         </div>
 
-        {/* Desktop Owner rows */}
-        <div className="flex flex-col gap-2 mt-5">
-          {loading ? (
-            <p className="text-center py-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-400/30 flex items-center gap-1.5">
+                <Tractor size={13} />
+                FastAPI Direct Integration
+              </span>
+              <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                ● Live Database Sync
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
               {getTranslation(locale, {
-                en: "Fetching owner",
-                es: "Obteniendo propietario",
-                ay: "Jilata katuqkasa",
-                qu: "Dueño apanayta",
-                gn: "Oñembyaty jára",
+                en: "Tractor Owners Directory",
+                es: "Directorio de Propietarios de Tractores",
+                ay: "Tractor Jilatanakan Yatiyawi",
+                qu: "Tractor Dueñoqkuna",
+                gn: "Tractor Járakuera",
+              })}
+            </h1>
+            <p className="text-sm text-slate-300 mt-1 max-w-xl">
+              {getTranslation(locale, {
+                en: "Manage and update fleet tractor owners, assign stores, verify KYC documents, and monitor live account statuses directly with FastAPI.",
+                es: "Gestione y actualice propietarios de tractores, asigne tiendas, verifique documentos KYC y supervise estados en vivo directamente con FastAPI.",
+                ay: "Tractor jilatanakaru uñjaña, yatiyawinak askichaña FastAPI tuqi.",
+                qu: "Tractor dueñokunata allichay, qillqakuna qhawariy FastAPI nisqawan.",
+                gn: "Eñangareko ha emboheko tractor járakuerape FastAPI rupi.",
               })}
             </p>
-          ) : users.length === 0 ? (
-            <div className="w-full h-full min-h-[60vh] flex items-center justify-center">
-              <Image
-                src={NullImage}
-                alt="No image found"
-                className="w-[300px] lg:w-[500px] xl:w-[700px] h-auto object-cover"
-                width={400}
-                height={400}
-                unoptimized={true}
-              />
-            </div>
-          ) : (
-            users.map((details, index) => {
-              const name = `${details.user.first_name} ${details.user.middle_name ? details.user.middle_name + " " : ""
-                }${details.user.last_name}`;
-              return (
-                <div
-                  key={details.id}
-                  onMouseEnter={() => {
-                    setMailHover(index);
-                  }}
-                  onMouseLeave={() => {
-                    setMailHover(-1);
-                  }}
-                  className="w-full"
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <Button
+              onClick={() => fetchAllUsers(true)}
+              disabled={refreshing}
+              variant="outline"
+              className="bg-white/10 hover:bg-white/20 text-white border-white/20 rounded-xl px-4 py-2 text-xs font-semibold backdrop-blur-sm transition-all"
+            >
+              <RefreshCw size={14} className={`mr-2 ${refreshing ? "animate-spin" : ""}`} />
+              {refreshing ? "Syncing..." : "Sync FastAPI"}
+            </Button>
+
+            {/* Register New Owner Dialog */}
+            <Dialog open={openRegister} onOpenChange={setOpenRegister}>
+              <DialogTrigger asChild>
+                <Button
+                  onClick={() => setOpenRegister(true)}
+                  className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-xl px-5 py-2 text-xs font-bold shadow-lg shadow-blue-500/25 transition-all"
                 >
-                  <OwnerAction
-                    creatDate={formatDate(details.createdAt)}
-                    email={details.user.email}
-                    emailVerified={details.user.emailVerified}
-                    index={index}
-                    mailHover={mailHover}
-                    name={name}
-                    updateDate={formatDate(details.updatedAt)}
-                    status={details.status}
-                    id={details.id}
-                    user={details.user}
-                    screenshots={details.paymentScreenshots}
-                    document={
-                      details.document
-                        ? {
-                          ...details.document,
-                          expire_date:
-                            details.document.expire_date instanceof Date
-                              ? details.document.expire_date.toISOString()
-                              : details.document.expire_date ?? null,
-                        }
-                        : undefined
-                    }
-                    location={details.location}
-                  />
+                  <Plus size={15} className="mr-1.5" />
+                  {getTranslation(locale, {
+                    en: "New Owner",
+                    es: "Nuevo Propietario",
+                    ay: "Machaqa Jilata",
+                    qu: "Musuq Dueño",
+                    gn: "Jára Pyahu",
+                  })}
+                </Button>
+              </DialogTrigger>
+
+              <DialogContent
+                className="bg-white rounded-2xl w-[95vw] max-w-[460px] p-0 overflow-hidden shadow-2xl border border-gray-100"
+                style={{ scrollbarWidth: "none" }}
+              >
+                <div className="bg-slate-900 p-6 text-white">
+                  <p className="text-xs uppercase tracking-wider font-semibold text-blue-400 mb-1">
+                    FastAPI Registration
+                  </p>
+                  <h2 className="text-xl font-bold">Register New Owner</h2>
+                  <p className="text-xs text-slate-300 mt-1">
+                    Enter the full legal name of the tractor owner to start registration.
+                  </p>
                 </div>
-              );
-            })
+
+                <div className="p-6 space-y-4">
+                  <div>
+                    <Label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                      Full Legal Name *
+                    </Label>
+                    <Input
+                      value={newOwnerName}
+                      onChange={(e) => handleNameChange(e.target.value)}
+                      placeholder="e.g. Carlos Mendoza"
+                      className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 outline-none font-medium"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-5 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                  <DialogClose asChild>
+                    <Button
+                      variant="outline"
+                      className="px-4 py-2 text-xs font-semibold text-slate-600 rounded-xl bg-white"
+                    >
+                      Cancel
+                    </Button>
+                  </DialogClose>
+
+                  {isSignUpCard ? (
+                    <OwnerRegister inPage={true} name={newOwnerName} />
+                  ) : (
+                    <Button
+                      onClick={() => errorMessage("Please provide full name")}
+                      className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl"
+                    >
+                      Next Step →
+                    </Button>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Stat Cards ─────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          {
+            label: "Total Owners",
+            value: stats.total,
+            icon: Users,
+            color: "text-blue-600",
+            bg: "bg-blue-50",
+            border: "border-blue-100",
+          },
+          {
+            label: "Active Accounts",
+            value: stats.active,
+            icon: UserCheck,
+            color: "text-emerald-600",
+            bg: "bg-emerald-50",
+            border: "border-emerald-100",
+          },
+          {
+            label: "Inactive / Pending",
+            value: stats.inactive,
+            icon: UserX,
+            color: "text-red-500",
+            bg: "bg-red-50",
+            border: "border-red-100",
+          },
+          {
+            label: "Verified Emails",
+            value: stats.verified,
+            icon: ShieldCheck,
+            color: "text-indigo-600",
+            bg: "bg-indigo-50",
+            border: "border-indigo-100",
+          },
+        ].map((item, idx) => {
+          const Icon = item.icon;
+          return (
+            <div
+              key={idx}
+              className={`bg-white p-5 rounded-2xl border ${item.border} shadow-sm hover:shadow-md transition-all flex items-center justify-between`}
+            >
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{item.label}</p>
+                <p className="text-2xl sm:text-3xl font-black text-gray-900 mt-1">
+                  {loading ? "..." : item.value}
+                </p>
+              </div>
+              <div className={`w-12 h-12 rounded-xl ${item.bg} ${item.color} flex items-center justify-center flex-shrink-0`}>
+                <Icon size={24} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Controls & Filter Bar ─────────────────────────────────────────── */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200/80 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+        {/* Search input */}
+        <div className="relative flex-1 min-w-[260px]">
+          <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
+            placeholder={getTranslation(locale, {
+              en: "Search owner by name, email, phone, or ID...",
+              es: "Buscar propietario por nombre, correo, teléfono o ID...",
+              ay: "Jilata thaqaña suti, chaski, celular tuqi...",
+              qu: "Dueño maskay sutinwan, chaskinwan...",
+              gn: "Heka jára téra, ñanduti veve rupi...",
+            })}
+            className="pl-10 pr-4 py-2 text-sm bg-gray-50/70 focus:bg-white border-gray-200 rounded-xl w-full"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-700 font-semibold"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {/* Filters and Sorting */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Status Tabs */}
+          <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200/60">
+            {[
+              { id: "all", label: "All" },
+              { id: "active", label: "Active" },
+              { id: "inactive", label: "Inactive" },
+            ].map((st) => (
+              <button
+                key={st.id}
+                onClick={() => {
+                  setStatusFilter(st.id as any);
+                  setCurrentPage(1);
+                }}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  statusFilter === st.id
+                    ? "bg-white text-blue-700 shadow-sm font-bold"
+                    : "text-gray-500 hover:text-gray-900"
+                }`}
+              >
+                {st.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Sort Dropdown */}
+          <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-medium text-gray-600">
+            <ArrowUpDown size={13} className="text-gray-400" />
+            <span className="text-gray-400">Sort:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-transparent text-gray-800 font-semibold outline-none cursor-pointer text-xs"
+            >
+              <option value="date">Updated Date</option>
+              <option value="name">Full Name</option>
+              <option value="status">Status</option>
+            </select>
+            <button
+              onClick={() => setSortAsc(!sortAsc)}
+              title={sortAsc ? "Ascending" : "Descending"}
+              className="ml-1 text-gray-500 hover:text-gray-900 font-bold"
+            >
+              {sortAsc ? "↑" : "↓"}
+            </button>
+          </div>
+
+          {/* Items per page */}
+          <div className="hidden sm:flex items-center gap-1 bg-gray-50 px-2.5 py-1.5 rounded-xl border border-gray-200 text-xs text-gray-500">
+            <span>Show:</span>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="bg-transparent font-semibold text-gray-800 outline-none cursor-pointer"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+
+          {/* Top Quick Page Navigator */}
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl border border-gray-200">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+                className="flex items-center gap-0.5 px-2 py-1 rounded-lg text-xs font-semibold text-gray-700 hover:bg-white disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                title="Previous Page"
+              >
+                <ChevronLeft size={13} />
+                <span className="hidden lg:inline">Prev</span>
+              </button>
+              <span className="text-xs font-bold text-gray-800 px-1.5 whitespace-nowrap">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                className="flex items-center gap-0.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-30 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-all shadow-xs"
+                title="Next Page"
+              >
+                <span>Next</span>
+                <ChevronRight size={13} />
+              </button>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Mobile & Tablet Card View */}
-      <div className="lg:hidden">
+      {/* ── Desktop Table ─────────────────────────────────────────────────── */}
+      <div className="hidden md:block bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm border-collapse">
+            <thead>
+              <tr className="bg-gray-50/80 border-b border-gray-200/80 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                <th className="py-3.5 px-5 w-12">#</th>
+                <th className="py-3.5 px-5">Owner Name & ID</th>
+                <th className="py-3.5 px-5">Contact Details</th>
+                <th className="py-3.5 px-4 text-center">Status</th>
+                <th className="py-3.5 px-4 text-center">Email Verified</th>
+                <th className="py-3.5 px-5">Last Updated</th>
+                <th className="py-3.5 px-5 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-gray-500">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <RefreshCw size={24} className="animate-spin text-blue-600" />
+                      <p className="text-sm font-semibold">Connecting to FastAPI and loading owners...</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : paginatedUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-gray-500">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Tractor size={40} className="text-gray-300" />
+                      <p className="text-base font-semibold text-gray-700">No owners found</p>
+                      <p className="text-xs text-gray-400">Try changing your search keywords or filter options.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                paginatedUsers.map((item, idx) => {
+                  const globalIdx = (currentPage - 1) * itemsPerPage + idx + 1;
+                  const fullName = `${item.user?.first_name || "Owner"} ${item.user?.middle_name ? item.user.middle_name + " " : ""}${item.user?.last_name || ""}`.trim();
+
+                  return (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-blue-50/40 transition-colors group"
+                    >
+                      <td className="py-4 px-5 font-mono text-xs text-gray-400">
+                        {globalIdx}
+                      </td>
+
+                      {/* Owner Info & Avatar */}
+                      <td className="py-4 px-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-500 text-white flex items-center justify-center font-bold text-sm shadow-sm flex-shrink-0">
+                            {isValidImageUrl(item.user?.image) ? (
+                              <Image
+                                src={item.user.image!}
+                                alt={fullName}
+                                width={40}
+                                height={40}
+                                className="w-full h-full object-cover rounded-xl"
+                                unoptimized
+                              />
+                            ) : (
+                              fullName.charAt(0).toUpperCase() || "O"
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                              {fullName}
+                            </p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="font-mono text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded truncate max-w-[140px]">
+                                {item.id}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Contact */}
+                      <td className="py-4 px-5">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5 text-xs text-gray-700">
+                            <Mail size={12} className="text-gray-400" />
+                            <span className="truncate max-w-[180px]">{item.user?.email || "—"}</span>
+                          </div>
+                          {item.user?.mobile && (
+                            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                              <Phone size={12} className="text-gray-400" />
+                              <span>
+                                {item.user?.country_code || ""} {item.user?.mobile}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-4 px-4 text-center">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                            item.status === 1
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : "bg-red-50 text-red-600 border border-red-200"
+                          }`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                              item.status === 1 ? "bg-emerald-500" : "bg-red-500"
+                            }`}
+                          />
+                          {item.status === 1 ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+
+                      {/* Email Verified */}
+                      <td className="py-4 px-4 text-center">
+                        {item.user?.emailVerified ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                            <CheckCircle size={13} /> Verified
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                            <XCircle size={13} /> Pending
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Updated Date */}
+                      <td className="py-4 px-5 text-xs text-gray-500 whitespace-nowrap">
+                        <div className="flex items-center gap-1">
+                          <Calendar size={12} className="text-gray-400" />
+                          {formatDate(item.updatedAt || item.createdAt)}
+                        </div>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-4 px-5 text-right">
+                        <OwnerAction
+                          index={idx}
+                          name={fullName}
+                          email={item.user?.email || ""}
+                          emailVerified={Boolean(item.user?.emailVerified)}
+                          creatDate={formatDate(item.createdAt)}
+                          updateDate={formatDate(item.updatedAt)}
+                          status={item.status}
+                          id={item.id}
+                          user={item.user}
+                          screenshots={item.paymentScreenshots}
+                          document={
+                            item.document
+                              ? {
+                                  ...item.document,
+                                  expire_date:
+                                    item.document.expire_date instanceof Date
+                                      ? item.document.expire_date.toISOString()
+                                      : item.document.expire_date ?? null,
+                                }
+                              : undefined
+                          }
+                          location={item.location}
+                          onUpdate={() => fetchAllUsers(true)}
+                          trigger={
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-3 text-xs rounded-xl border-gray-200 hover:border-blue-500 hover:text-blue-600 gap-1.5 font-semibold transition-all bg-white"
+                            >
+                              <Edit size={13} />
+                              Edit Profile
+                            </Button>
+                          }
+                        />
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── Mobile Cards ──────────────────────────────────────────────────── */}
+      <div className="md:hidden space-y-3">
         {loading ? (
-          <p className="text-center py-8">
-            {getTranslation(locale, {
-              en: "Fetching owner",
-              es: "Obteniendo propietario",
-              ay: "Jilata katuqkasa",
-              qu: "Dueño apanayta",
-              gn: "Oñembyaty jára",
-            })}
-          </p>
-        ) : users.length === 0 ? (
-          <div className="w-full h-full min-h-[50vh] flex items-center justify-center">
-            <Image
-              src={NullImage}
-              alt="No image found"
-              className="w-[200px] sm:w-[300px] h-auto object-cover"
-              width={300}
-              height={300}
-              unoptimized={true}
-            />
+          <div className="text-center py-8 text-gray-500">
+            <RefreshCw size={24} className="animate-spin text-blue-600 mx-auto mb-2" />
+            <p className="text-xs font-semibold">Loading owners from FastAPI...</p>
+          </div>
+        ) : paginatedUsers.length === 0 ? (
+          <div className="text-center py-10 bg-white rounded-2xl border border-gray-200 p-6">
+            <p className="text-sm font-semibold text-gray-700">No owners found</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {users.map((details, index) => {
-              const name = `${details.user.first_name} ${details.user.middle_name ? details.user.middle_name + " " : ""
-                }${details.user.last_name}`;
-              return (
-                <div
-                  key={details.id}
-                  className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow"
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex-1">
-                      <h3
-                        className="font-semibold text-lg mb-1 text-ellipsis overflow-hidden"
-                        style={{
-                          display: "-webkit-box",
-                          WebkitLineClamp: 1, // show only one line
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                        }}
-                      >
-                        {name.split(" ").length > 6 ? name.split(" ").slice(0, 6).join(" ") + "..." : name}
-                      </h3>
+          paginatedUsers.map((item, idx) => {
+            const fullName = `${item.user?.first_name || "Owner"} ${item.user?.middle_name ? item.user.middle_name + " " : ""}${item.user?.last_name || ""}`.trim();
 
-                      <p className="text-sm text-gray-600 mb-2">#{index + 1}</p>
+            return (
+              <div
+                key={item.id}
+                className="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm space-y-3"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-500 text-white flex items-center justify-center font-bold text-base flex-shrink-0">
+                      {isValidImageUrl(item.user?.image) ? (
+                        <Image
+                          src={item.user.image!}
+                          alt={fullName}
+                          width={44}
+                          height={44}
+                          className="w-full h-full object-cover rounded-xl"
+                          unoptimized
+                        />
+                      ) : (
+                        fullName.charAt(0).toUpperCase() || "O"
+                      )}
                     </div>
-
-                    <div
-                      className={`px-2 py-1 rounded text-xs font-medium ${details.user.emailVerified
-                          ? "bg-green-100 text-green-700"
-                          : "bg-yellow-100 text-yellow-700"
-                        }`}
-                    >
-                      {details.user.emailVerified
-                        ? getTranslation(locale, {
-                          en: "Verified",
-                          es: "Verificado",
-                          ay: "Chiqachata",
-                          qu: "Kachkan",
-                          gn: "Oñemoneĩ",
-                        })
-                        : getTranslation(locale, {
-                          en: "Not Verified",
-                          es: "No verificado",
-                          ay: "Janiw chiqachatati",
-                          qu: "Manam kachkanchu",
-                          gn: "Ndoñemoneĩri",
-                        })}
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-gray-900 text-sm truncate">{fullName}</h4>
+                      <p className="text-xs text-gray-500 truncate">{item.user?.email}</p>
                     </div>
                   </div>
 
-                  <div className="space-y-2 text-sm mb-4">
-                    <div className="flex flex-col">
-                      <span className="text-gray-600 font-medium">
-                        {getTranslation(locale, {
-                          en: "Email:",
-                          es: "Correo:",
-                          ay: "Chaski:",
-                          qu: "Willay:",
-                          gn: "Ñanduti:",
-                        })}
-                      </span>
-                      <span className="text-gray-900 truncate">
-                        {details.user.email}
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 font-medium">
-                        {getTranslation(locale, {
-                          en: "Status:",
-                          es: "Estado:",
-                          ay: "Kawsawi:",
-                          qu: "Kawsay:",
-                          gn: "Tekotee:",
-                        })}
-                      </span>
-                      <span
-                        className={`font-medium ${String(details.status) === "active" || Number(details.status) === 1
-                            ? "text-green-600"
-                            : String(details.status) === "pending"
-                              ? "text-yellow-600"
-                              : "text-red-600"
-                          }`}
-                      >
-                        {String(details.status) === "1" ? "active" : details.status}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-col pt-2 border-t border-gray-200">
-                      <div className="flex justify-between mb-1">
-                        <span className="text-gray-600 font-medium">
-                          {getTranslation(locale, {
-                            en: "Joined:",
-                            es: "Unido:",
-                            ay: "Chiqachata:",
-                            qu: "Qillqaykama:",
-                            gn: "Ojejapo:",
-                          })}
-                        </span>
-                        <span className="text-gray-900 text-xs">
-                          {formatDate(details.createdAt)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 font-medium">
-                          {getTranslation(locale, {
-                            en: "Updated:",
-                            es: "Actualizado:",
-                            ay: "Qillqata:",
-                            qu: "Rimaykuy:",
-                            gn: "Guarã:",
-                          })}
-                        </span>
-                        <span className="text-gray-900 text-xs">
-                          {formatDate(details.updatedAt)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Mobile view - Show OwnerAction component inline */}
-                  <div className="pt-3 border-t border-gray-200">
-                    <OwnerAction
-                      creatDate={formatDate(details.createdAt)}
-                      email={details.user.email}
-                      emailVerified={details.user.emailVerified}
-                      index={index}
-                      mailHover={mailHover}
-                      name={name}
-                      updateDate={formatDate(details.updatedAt)}
-                      status={details.status}
-                      id={details.id}
-                      user={details.user}
-                      screenshots={details.paymentScreenshots}
-                      document={
-                        details.document
-                          ? {
-                            ...details.document,
-                            expire_date:
-                              details.document.expire_date instanceof Date
-                                ? details.document.expire_date.toISOString()
-                                : details.document.expire_date ?? null,
-                          }
-                          : undefined
-                      }
-                      location={details.location}
-                    />
-                  </div>
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold flex-shrink-0 ${
+                      item.status === 1
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : "bg-red-50 text-red-600 border border-red-200"
+                    }`}
+                  >
+                    {item.status === 1 ? "Active" : "Inactive"}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
+
+                <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+                  <span>Joined: {formatDate(item.createdAt)}</span>
+
+                  <OwnerAction
+                    index={idx}
+                    name={fullName}
+                    email={item.user?.email || ""}
+                    emailVerified={Boolean(item.user?.emailVerified)}
+                    creatDate={formatDate(item.createdAt)}
+                    updateDate={formatDate(item.updatedAt)}
+                    status={item.status}
+                    id={item.id}
+                    user={item.user}
+                    screenshots={item.paymentScreenshots}
+                    document={
+                      item.document
+                        ? {
+                            ...item.document,
+                            expire_date:
+                              item.document.expire_date instanceof Date
+                                ? item.document.expire_date.toISOString()
+                                : item.document.expire_date ?? null,
+                          }
+                        : undefined
+                    }
+                    location={item.location}
+                    onUpdate={() => fetchAllUsers(true)}
+                    trigger={
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs px-3 rounded-lg border-blue-200 text-blue-600 font-semibold"
+                      >
+                        Edit / View
+                      </Button>
+                    }
+                  />
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
+
+      {/* ── Pagination Footer ─────────────────────────────────────────────── */}
+      {!loading && filteredUsers.length > 0 && (
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200/80 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+          {/* Left: Summary and Rows selector */}
+          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+            <span>
+              Showing <span className="font-bold text-gray-900">{(currentPage - 1) * itemsPerPage + 1}</span>–
+              <span className="font-bold text-gray-900">
+                {Math.min(currentPage * itemsPerPage, filteredUsers.length)}
+              </span>{" "}
+              of <span className="font-bold text-gray-900">{filteredUsers.length}</span> owners
+            </span>
+            <span className="text-gray-300 hidden sm:inline">|</span>
+            <span className="text-xs text-gray-500 hidden sm:inline">
+              Page <span className="font-bold text-gray-900">{currentPage}</span> of{" "}
+              <span className="font-bold text-gray-900">{totalPages}</span>
+            </span>
+            <div className="flex items-center gap-1.5 ml-1">
+              <span className="text-xs text-gray-400">Rows:</span>
+              {[10, 20, 50, 100].map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => {
+                    setItemsPerPage(size);
+                    setCurrentPage(1);
+                  }}
+                  className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-all ${
+                    itemsPerPage === size
+                      ? "bg-slate-900 text-white shadow-xs"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Right: Explicit Previous, Page Number Pills, Next Page */}
+          <div className="flex items-center gap-1.5 flex-wrap justify-center">
+            {/* Previous */}
+            <button
+              type="button"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage <= 1}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-gray-200 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 hover:border-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-xs"
+            >
+              <ChevronLeft size={14} />
+              <span>Previous</span>
+            </button>
+
+            {/* Page Number Pills */}
+            <div className="flex items-center gap-1">
+              {(() => {
+                const pills: (number | "...")[] = [];
+                if (totalPages <= 7) {
+                  for (let i = 1; i <= totalPages; i++) pills.push(i);
+                } else {
+                  pills.push(1);
+                  if (currentPage > 3) pills.push("...");
+                  for (
+                    let i = Math.max(2, currentPage - 1);
+                    i <= Math.min(totalPages - 1, currentPage + 1);
+                    i++
+                  ) {
+                    pills.push(i);
+                  }
+                  if (currentPage < totalPages - 2) pills.push("...");
+                  pills.push(totalPages);
+                }
+                return pills.map((p, idx) =>
+                  p === "..." ? (
+                    <span
+                      key={`ell-${idx}`}
+                      className="w-6 h-8 flex items-center justify-center text-gray-400 text-xs font-bold"
+                    >
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setCurrentPage(p as number)}
+                      className={`min-w-[30px] h-8 px-1.5 flex items-center justify-center rounded-xl text-xs font-bold transition-all ${
+                        p === currentPage
+                          ? "bg-slate-900 text-white shadow-xs ring-2 ring-slate-900/10"
+                          : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-300"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  )
+                );
+              })()}
+            </div>
+
+            {/* Next Page Button */}
+            <button
+              type="button"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+              className="flex items-center gap-1 px-3.5 py-1.5 rounded-xl border border-blue-600 bg-blue-600 text-xs font-bold text-white hover:bg-blue-700 hover:border-blue-700 disabled:opacity-30 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:border-gray-200 disabled:text-gray-400 transition-all shadow-sm"
+            >
+              <span>Next Page</span>
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

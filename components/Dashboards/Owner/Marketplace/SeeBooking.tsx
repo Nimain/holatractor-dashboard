@@ -165,166 +165,174 @@ const SeeBooking = ({ booking }: { booking: Booking }) => {
                     </div>
 
                     {
-                        booking.owner_confirm &&
-                        <div className="mt-6">
-                            <h3 className="text-lg font-semibold">
-                            <TranslatedText greetings={ownerMarketPlaceTranslations.bookingTimeline} />:
-                            </h3>
-                            <div className="space-y-6">
-                                <div className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <div className={`w-3 h-3 rounded-full ${(booking.bookingStatus === BookingStatus.Open) || (booking.bookingStatus === BookingStatus.Accepted) || (booking.bookingStatus === BookingStatus.Arriving) || (booking.bookingStatus === BookingStatus.Arrived) || (booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
-                                            ? 'bg-green-500'
-                                            : 'bg-yellow-400'
-                                            }`} />
-                                    </div>
+                        booking.owner_confirm && (() => {
+                            const paymentList = Array.isArray(booking?.payment) ? booking.payment : [];
+                            const hasPayments = paymentList.length > 0;
+                            const firstPayment = hasPayments ? paymentList[0] : null;
+                            const paymentStatus = firstPayment?.status ? String(firstPayment.status) : "";
 
-                                    <div className="flex-1 pb-6">
-                                        <div className="flex justify-between">
-                                            <p className="font-medium"><TranslatedText greetings={ownerMarketPlaceTranslations.justConfirmedBooking} /></p>
+                            return (
+                                <div className="mt-6">
+                                    <h3 className="text-lg font-semibold">
+                                    <TranslatedText greetings={ownerMarketPlaceTranslations.bookingTimeline} />:
+                                    </h3>
+                                    <div className="space-y-6">
+                                        <div className="flex gap-3">
+                                            <div className="flex flex-col items-center">
+                                                <div className={`w-3 h-3 rounded-full ${(booking.bookingStatus === BookingStatus.Open) || (booking.bookingStatus === BookingStatus.Accepted) || (booking.bookingStatus === BookingStatus.Arriving) || (booking.bookingStatus === BookingStatus.Arrived) || (booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "COMPLETED"))
+                                                    ? 'bg-green-500'
+                                                    : 'bg-yellow-400'
+                                                    }`} />
+                                            </div>
+
+                                            <div className="flex-1 pb-6">
+                                                <div className="flex justify-between">
+                                                    <p className="font-medium"><TranslatedText greetings={ownerMarketPlaceTranslations.justConfirmedBooking} /></p>
+                                                </div>
+                                            </div>
                                         </div>
+                                        {
+                                            booking.bookingStatus === BookingStatus.Open &&
+                                            <AssignOperator selectedRequest={booking.id} storeId={booking.store_id} />
+                                        }
+                                        <div className="flex gap-3">
+                                            <div className="flex flex-col items-center">
+                                                <div className={`w-3 h-3 rounded-full ${(booking.bookingStatus === BookingStatus.Accepted) || (booking.bookingStatus === BookingStatus.Arriving) || (booking.bookingStatus === BookingStatus.Arrived) || (booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "COMPLETED"))
+                                                    ? 'bg-green-500'
+                                                    : 'bg-yellow-400'
+                                                    }`} />
+                                            </div>
+
+                                            <div className="flex-1 pb-6">
+                                                <div className="flex justify-between">
+                                                    <p className="font-medium">
+                                                    <TranslatedText greetings={ownerMarketPlaceTranslations.operatorAcceptedBooking} />
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <div className="flex flex-col items-center">
+                                                <div className={`w-3 h-3 rounded-full ${(booking.bookingStatus === BookingStatus.Arriving) || (booking.bookingStatus === BookingStatus.Arrived) || (booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "COMPLETED"))
+                                                    ? 'bg-green-500'
+                                                    : 'bg-yellow-400'
+                                                    }`} />
+                                            </div>
+
+                                            <div className="flex-1 pb-6">
+                                                <div className="flex justify-between">
+                                                    <p className="font-medium">
+                                                    <TranslatedText greetings={ownerMarketPlaceTranslations.bookingLeftDestination} />
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <div className="flex flex-col items-center">
+                                                <div className={`w-3 h-3 rounded-full ${(booking.bookingStatus === BookingStatus.Arrived) || (booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "COMPLETED"))
+                                                    ? 'bg-green-500'
+                                                    : 'bg-yellow-400'
+                                                    }`} />
+                                            </div>
+
+                                            <div className="flex-1 pb-6">
+                                                <div className="flex justify-between">
+                                                    <p className="font-medium">
+                                                    <TranslatedText greetings={ownerMarketPlaceTranslations.bookingArrivedDestination} />
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <div className="flex flex-col items-center">
+                                                <div className={`w-3 h-3 rounded-full ${(booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "COMPLETED"))
+                                                    ? 'bg-green-500'
+                                                    : 'bg-yellow-400'
+                                                    }`} />
+                                            </div>
+
+                                            <div className="flex-1 pb-6">
+                                                <div className="flex justify-between">
+                                                    <p className="font-medium">
+                                                    <TranslatedText greetings={ownerMarketPlaceTranslations.bookingStartedWork} />
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <div className="flex flex-col items-center">
+                                                <div className={`w-3 h-3 rounded-full ${((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "COMPLETED"))
+                                                    ? 'bg-green-500'
+                                                    : 'bg-yellow-400'
+                                                    }`} />
+                                            </div>
+
+                                            <div className="flex-1 pb-6">
+                                                <div className="flex justify-between">
+                                                    <p className="font-medium">
+                                                    <TranslatedText greetings={ownerMarketPlaceTranslations.bookingCompletedWaitingPayment} />
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <div className="flex flex-col items-center">
+                                                <div className={`w-3 h-3 rounded-full ${((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "COMPLETED"))
+                                                    ? 'bg-green-500'
+                                                    : 'bg-yellow-400'
+                                                    }`} />
+                                            </div>
+
+                                            <div className="flex-1 pb-6">
+                                                <div className="flex justify-between">
+                                                    <p className="font-medium">
+                                                    <TranslatedText greetings={ownerMarketPlaceTranslations.farmerSubmittedPayment} />
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <div className="flex flex-col items-center">
+                                                <div className={`w-3 h-3 rounded-full ${((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "COMPLETED"))
+                                                    ? 'bg-green-500'
+                                                    : 'bg-yellow-400'
+                                                    }`} />
+                                            </div>
+
+                                            <div className="flex-1 pb-6">
+                                                <div className="flex justify-between">
+                                                    <p className="font-medium">
+                                                    <TranslatedText greetings={ownerMarketPlaceTranslations.rejectedPaymentDetails} />
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <div className="flex flex-col items-center">
+                                                <div className={`w-3 h-3 rounded-full ${((booking.bookingStatus === BookingStatus.Finished) && (paymentStatus === "COMPLETED"))
+                                                    ? 'bg-green-500'
+                                                    : 'bg-yellow-400'
+                                                    }`} />
+                                            </div>
+
+                                            <div className="flex-1 pb-6">
+                                                <div className="flex justify-between">
+                                                    <p className="font-medium">
+                                                    <TranslatedText greetings={ownerMarketPlaceTranslations.jobCompletedPaymentAccepted} />
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {
+                                            (hasPayments && firstPayment && (paymentStatus === "FarmerCONFIRMED" || (paymentStatus as any) === PaymentStatus.FarmerCONFIRMED)) && <PaymentReview
+                                                referenceNumber={firstPayment.transaction_reference?.[(firstPayment.transaction_reference?.length || 1) - 1] || ""}
+                                                screenshotUrl={firstPayment.screenshots?.[(firstPayment.screenshots?.length || 1) - 1] || ""}
+                                                paymentId={firstPayment.id} />
+                                        }
                                     </div>
                                 </div>
-                                {
-                                    booking.bookingStatus === BookingStatus.Open &&
-                                    <AssignOperator selectedRequest={booking.id} storeId={booking.store_id} />
-                                }
-                                <div className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <div className={`w-3 h-3 rounded-full ${(booking.bookingStatus === BookingStatus.Accepted) || (booking.bookingStatus === BookingStatus.Arriving) || (booking.bookingStatus === BookingStatus.Arrived) || (booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
-                                            ? 'bg-green-500'
-                                            : 'bg-yellow-400'
-                                            }`} />
-                                    </div>
-
-                                    <div className="flex-1 pb-6">
-                                        <div className="flex justify-between">
-                                            <p className="font-medium">
-                                            <TranslatedText greetings={ownerMarketPlaceTranslations.operatorAcceptedBooking} />
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <div className={`w-3 h-3 rounded-full ${(booking.bookingStatus === BookingStatus.Arriving) || (booking.bookingStatus === BookingStatus.Arrived) || (booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
-                                            ? 'bg-green-500'
-                                            : 'bg-yellow-400'
-                                            }`} />
-                                    </div>
-
-                                    <div className="flex-1 pb-6">
-                                        <div className="flex justify-between">
-                                            <p className="font-medium">
-                                            <TranslatedText greetings={ownerMarketPlaceTranslations.bookingLeftDestination} />
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <div className={`w-3 h-3 rounded-full ${(booking.bookingStatus === BookingStatus.Arrived) || (booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
-                                            ? 'bg-green-500'
-                                            : 'bg-yellow-400'
-                                            }`} />
-                                    </div>
-
-                                    <div className="flex-1 pb-6">
-                                        <div className="flex justify-between">
-                                            <p className="font-medium">
-                                            <TranslatedText greetings={ownerMarketPlaceTranslations.bookingArrivedDestination} />
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <div className={`w-3 h-3 rounded-full ${(booking.bookingStatus === BookingStatus.Started) || (booking.bookingStatus === BookingStatus.Stopped) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
-                                            ? 'bg-green-500'
-                                            : 'bg-yellow-400'
-                                            }`} />
-                                    </div>
-
-                                    <div className="flex-1 pb-6">
-                                        <div className="flex justify-between">
-                                            <p className="font-medium">
-                                            <TranslatedText greetings={ownerMarketPlaceTranslations.bookingStartedWork} />
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <div className={`w-3 h-3 rounded-full ${((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerPENDING")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
-                                            ? 'bg-green-500'
-                                            : 'bg-yellow-400'
-                                            }`} />
-                                    </div>
-
-                                    <div className="flex-1 pb-6">
-                                        <div className="flex justify-between">
-                                            <p className="font-medium">
-                                            <TranslatedText greetings={ownerMarketPlaceTranslations.bookingCompletedWaitingPayment} />
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <div className={`w-3 h-3 rounded-full ${((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "FarmerCONFIRMED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
-                                            ? 'bg-green-500'
-                                            : 'bg-yellow-400'
-                                            }`} />
-                                    </div>
-
-                                    <div className="flex-1 pb-6">
-                                        <div className="flex justify-between">
-                                            <p className="font-medium">
-                                            <TranslatedText greetings={ownerMarketPlaceTranslations.farmerSubmittedPayment} />
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <div className={`w-3 h-3 rounded-full ${((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "OwnerREJECTED")) || ((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
-                                            ? 'bg-green-500'
-                                            : 'bg-yellow-400'
-                                            }`} />
-                                    </div>
-
-                                    <div className="flex-1 pb-6">
-                                        <div className="flex justify-between">
-                                            <p className="font-medium">
-                                            <TranslatedText greetings={ownerMarketPlaceTranslations.rejectedPaymentDetails} />
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <div className={`w-3 h-3 rounded-full ${((booking.bookingStatus === BookingStatus.Finished) && (`${booking.payment[0].status}` === "COMPLETED"))
-                                            ? 'bg-green-500'
-                                            : 'bg-yellow-400'
-                                            }`} />
-                                    </div>
-
-                                    <div className="flex-1 pb-6">
-                                        <div className="flex justify-between">
-                                            <p className="font-medium">
-                                            <TranslatedText greetings={ownerMarketPlaceTranslations.jobCompletedPaymentAccepted} />
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                {
-                                    (booking.payment.length > 0 && booking.payment[0].status === PaymentStatus.FarmerCONFIRMED) && <PaymentReview
-                                        referenceNumber={booking.payment[0].transaction_reference[booking.payment[0].transaction_reference.length - 1]}
-                                        screenshotUrl={booking.payment[0].screenshots[booking.payment[0].screenshots.length - 1]}
-                                        paymentId={booking.payment[0].id} />
-                                }
-                            </div>
-                        </div>
+                            )
+                        })()
                     }
                 </div>
             </SheetContent>

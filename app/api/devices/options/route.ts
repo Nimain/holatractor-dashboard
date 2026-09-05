@@ -10,6 +10,8 @@ const FastApiBaseURL =
   process.env.NEXT_PUBLIC_API_URL ||
   "https://tractorai.sinsignal.com/";
 
+import { getFastApiAuthHeaders } from "@/utils/auth/serverAuth";
+
 // Base catalog of tractors
 export const BASE_TRACTORS_CATALOG = [
   {
@@ -104,15 +106,9 @@ export async function GET(request: NextRequest) {
       params.set("page", String(page));
       params.set("limit", String(limit));
 
-      const fastApiToken = jwt.sign(
-        { sub: "admin_sistemas", role: "admin", isAdmin: true, is_admin: true },
-        "ecommProdPrj",
-        { algorithm: "HS256", expiresIn: "1h" }
-      );
-
       const fastApiRes = await axios.get(`${base}/api/v1/admin/devices/options?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${fastApiToken}` },
-        timeout: 4000,
+        headers: getFastApiAuthHeaders(request),
+        timeout: 5000,
       });
 
       if (
@@ -152,7 +148,8 @@ export async function GET(request: NextRequest) {
                      dit.device_imei, t.name as tractor_name, t.model as tractor_model, t.images as tractor_images
               FROM "TractorInStore" tis
               LEFT JOIN "Tractor" t ON t.id = tis."baseTractorId"
-              LEFT JOIN "DeviceInTractor" dit ON dit."tractorInStoreId" = tis.id
+              LEFT JOIN "DeviceInTractor" dit ON dit.tractor_store_id = tis.id
+              ORDER BY tis."createdAt" DESC
             `),
             client.query(`
               SELECT id, name, model, images
@@ -177,7 +174,7 @@ export async function GET(request: NextRequest) {
           ownersRes.rows.forEach((r: any) => {
             const oid = r.owner_id;
             const fullName = `${r.first_name || ""} ${r.last_name || ""}`.trim();
-            ownerMap[oid] = {
+            const ownerObj = {
               owner_id: oid,
               user_id: r.user_id || oid,
               owner_name: fullName || r.email?.split("@")[0] || "Owner",
@@ -186,6 +183,10 @@ export async function GET(request: NextRequest) {
               owner_image: r.image || "",
               stores: [],
             };
+            ownerMap[oid] = ownerObj;
+            if (r.user_id && r.user_id !== oid) {
+              ownerMap[r.user_id] = ownerObj;
+            }
           });
 
           storesRes.rows.forEach((r: any) => {
@@ -199,8 +200,27 @@ export async function GET(request: NextRequest) {
             storeMap[sid] = stItem;
 
             const ownerId = r.owner_user_id;
-            if (ownerMap[ownerId]) {
-              ownerMap[ownerId].stores.push(stItem);
+            if (ownerId && ownerMap[ownerId]) {
+              if (!ownerMap[ownerId].stores.some((s: any) => s.store_id === sid)) {
+                ownerMap[ownerId].stores.push(stItem);
+              }
+            } else {
+              // Independent or unassigned stores
+              const defaultKey = "unassigned_stores";
+              if (!ownerMap[defaultKey]) {
+                ownerMap[defaultKey] = {
+                  owner_id: defaultKey,
+                  user_id: defaultKey,
+                  owner_name: "General Network Stores",
+                  owner_email: "",
+                  owner_mobile: "",
+                  owner_image: "",
+                  stores: [],
+                };
+              }
+              if (!ownerMap[defaultKey].stores.some((s: any) => s.store_id === sid)) {
+                ownerMap[defaultKey].stores.push(stItem);
+              }
             }
           });
 
@@ -220,15 +240,41 @@ export async function GET(request: NextRequest) {
             }
           });
 
-          const dbOwners = Object.values(ownerMap);
+          // Merge runtime memory tractors if any
+          const dynamicTisMap = getDynamicStoreTractors();
+          dynamicTisMap.forEach((dynTis: any) => {
+            const sid = dynTis.store_id;
+            if (storeMap[sid] && !storeMap[sid].tractors.some((t: any) => t.tractor_store_id === dynTis.id)) {
+              storeMap[sid].tractors.unshift({
+                tractor_store_id: dynTis.id,
+                base_tractor_id: dynTis.base_tractor_id,
+                name: dynTis.name || "Tractor Unit",
+                model: dynTis.model || "Standard",
+                image: dynTis.image || "",
+                hourly_price: dynTis.hourly_price || 20.0,
+                has_device: dynTis.has_device || false,
+                current_imei: dynTis.current_imei || null,
+              });
+            }
+          });
+
+          // Filter unique owners that have stores
+          const uniqueOwnersSet = new Set<any>();
+          Object.values(ownerMap).forEach((o: any) => {
+            if (o.stores && o.stores.length > 0) {
+              uniqueOwnersSet.add(o);
+            }
+          });
+
+          const dbOwners = Array.from(uniqueOwnersSet);
           if (dbOwners.length > 0) {
             optionsData = dbOwners;
           }
         } finally {
           client.release();
         }
-      } catch (_) {
-        // DB fallback
+      } catch (dbErr: any) {
+        console.warn("[GET /api/devices/options] DB options query warning:", dbErr?.message);
       }
     }
 

@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import axios from 'axios'
 import { Button } from '../ui/button'
 import { UserProfile } from '@/utils/Types/types'
 import { renderInstance } from '@/utils/Axios/RenderInstance'
@@ -13,6 +14,7 @@ import EditIcon from "@mui/icons-material/Edit"
 import CloseIcon from "@mui/icons-material/Close"
 import NullImage from "@/assets/AnimateIcons/Operator.svg"
 import { Dialog, DialogContent } from '../ui/dialog';
+
 
 const AdminSection = () => {
     const [activeHover, setActiveHover] = useState('')

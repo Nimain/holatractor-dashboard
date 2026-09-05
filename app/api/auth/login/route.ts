@@ -24,6 +24,139 @@ function getPlainPassword(pass: string): string {
   }
 }
 
+function isRoleAdmin(r: any): boolean {
+  if (!r) return false;
+  if (typeof r === "string") return ["admin", "superadmin", "super_admin", "superadmin"].includes(r.trim().toLowerCase());
+  if (typeof r === "object") {
+    const name = r.name || r.role || r.role_name || "";
+    if (typeof name === "string" && ["admin", "superadmin", "super_admin"].includes(name.trim().toLowerCase())) return true;
+    if (r.isAdmin || r.isSuperAdmin) return true;
+  }
+  return false;
+}
+
+function createAuthResponse(data: any, fallbackRoles: string[] = [], fallbackIsAdmin: boolean = false) {
+  const token = data.access_token || data.token || data.accessToken;
+  let jwtPayload: any = {};
+  if (token && typeof token === "string" && token.includes(".")) {
+    try {
+      const parts = token.split(".");
+      if (parts.length >= 2) {
+        const base64Url = parts[1];
+        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split("")
+            .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+            .join("")
+        );
+        jwtPayload = JSON.parse(jsonPayload);
+      }
+    } catch {}
+  }
+
+  const email = (data.email || data.user?.email || jwtPayload.email || "").toLowerCase().trim();
+  const isAdminEmail =
+    email === "sistemas@holatractor.com" ||
+    email === "admin@holatractor.com" ||
+    email === "admin@gmail.com" ||
+    email.startsWith("admin@") ||
+    email.startsWith("sistemas@");
+
+  const isAdmin =
+    fallbackIsAdmin ||
+    isAdminEmail ||
+    data.isAdmin === true ||
+    data.isSuperAdmin === true ||
+    data.user?.isAdmin === true ||
+    data.user?.isSuperAdmin === true ||
+    jwtPayload.isAdmin === true ||
+    jwtPayload.isSuperAdmin === true ||
+    (Array.isArray(data.role) && data.role.some(isRoleAdmin)) ||
+    (Array.isArray(data.roles) && data.roles.some(isRoleAdmin)) ||
+    (Array.isArray(data.user?.role) && data.user.role.some(isRoleAdmin)) ||
+    (Array.isArray(data.user?.roles) && data.user.roles.some(isRoleAdmin)) ||
+    (Array.isArray(jwtPayload.role) && jwtPayload.role.some(isRoleAdmin)) ||
+    (Array.isArray(jwtPayload.roles) && jwtPayload.roles.some(isRoleAdmin)) ||
+    (typeof data.role === "string" && isRoleAdmin(data.role)) ||
+    (typeof data.roles === "string" && isRoleAdmin(data.roles)) ||
+    (typeof jwtPayload.role === "string" && isRoleAdmin(jwtPayload.role));
+
+  const isOwner = !isAdmin && (data.isOwner === true || data.user?.isOwner === true || jwtPayload.isOwner === true || fallbackRoles.includes("owner"));
+  const isDealer = !isAdmin && (data.isDealer === true || data.user?.isDealer === true || jwtPayload.isDealer === true || fallbackRoles.includes("dealer"));
+  const isOperator = !isAdmin && (data.isOperator === true || data.user?.isOperator === true || jwtPayload.isOperator === true || fallbackRoles.includes("operator"));
+  const isAgent = !isAdmin && (data.isAgent === true || data.user?.isAgent === true || jwtPayload.isAgent === true || fallbackRoles.includes("agent"));
+  const isFarmer = !isAdmin && !isOwner && !isDealer && !isOperator && !isAgent;
+
+  const roles = isAdmin
+    ? ["admin", "superAdmin"]
+    : [
+        ...(isOwner ? ["owner"] : []),
+        ...(isDealer ? ["dealer"] : []),
+        ...(isOperator ? ["operator"] : []),
+        ...(isAgent ? ["agent"] : []),
+        ...(isFarmer ? ["farmer"] : []),
+      ];
+
+  const userObj = {
+    ...(data.user || {}),
+    ...jwtPayload,
+    userId: data.user?.userId || data.user?.id || jwtPayload.userId || jwtPayload.id || jwtPayload.sub || data.userId || data.id || (isAdmin ? "admin_sistemas" : "user_1"),
+    name: data.user?.name || jwtPayload.name || (isAdmin ? "Sistemas HolaTractor" : "User"),
+    email,
+    isAdmin,
+    isSuperAdmin: isAdmin,
+    isOwner,
+    isDealer,
+    isOperator,
+    isAgent,
+    isFarmer,
+    role: roles,
+    roles,
+  };
+
+  const responseData = {
+    ...data,
+    success: true,
+    access_token: token,
+    token,
+    accessToken: token,
+    user: userObj,
+    isAdmin,
+    isSuperAdmin: isAdmin,
+    isOwner,
+    isDealer,
+    isOperator,
+    isAgent,
+    isFarmer,
+    role: roles,
+    roles,
+    active_role: isAdmin ? "admin" : (roles[0] || "farmer"),
+    message: "Login successful",
+  };
+
+  const response = NextResponse.json(responseData);
+
+  const cookieOptions = {
+    path: "/",
+    maxAge: 7 * 24 * 60 * 60,
+    sameSite: "lax" as const,
+  };
+
+  response.cookies.set("access_token", token, cookieOptions);
+  response.cookies.set("token", token, cookieOptions);
+  response.cookies.set("user", JSON.stringify(userObj), cookieOptions);
+  response.cookies.set("isAdmin", String(isAdmin), cookieOptions);
+  response.cookies.set("isOwner", String(isOwner), cookieOptions);
+  response.cookies.set("isFarmer", String(isFarmer), cookieOptions);
+  response.cookies.set("isDealer", String(isDealer), cookieOptions);
+  response.cookies.set("isOperator", String(isOperator), cookieOptions);
+  response.cookies.set("isAgent", String(isAgent), cookieOptions);
+  response.cookies.set("active_role", isAdmin ? "admin" : (roles[0] || "farmer"), cookieOptions);
+
+  return response;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -60,58 +193,13 @@ export async function POST(request: NextRequest) {
         (fastApiRes.status === 200 || fastApiRes.status === 201) &&
         (fastApiRes.data?.access_token || fastApiRes.data?.data?.access_token)
       ) {
-        const outData = { ...fastApiRes.data };
-        if (isAdminEmail) {
-          outData.isAdmin = true;
-          outData.isSuperAdmin = true;
-          outData.role = Array.isArray(outData.role)
-            ? Array.from(new Set([...outData.role, "admin", "superAdmin"]))
-            : ["admin", "superAdmin"];
-          if (outData.user) {
-            outData.user.isAdmin = true;
-            outData.user.isSuperAdmin = true;
-            outData.user.role = outData.role;
-          }
-        }
-        return NextResponse.json(outData);
+        return createAuthResponse(fastApiRes.data, [], isAdminEmail);
       }
     } catch (fastErr: any) {
       // FastAPI offline/error, continue to failover
     }
-      const fastApiRes = await axios.post(
-        `${TractorAIBaseURL.replace(/\/$/, "")}/user/login`,
-        { email, password: plainPassword, authType },
-        { timeout: 4000 }
-      );
 
-      if (
-        (fastApiRes.status === 200 || fastApiRes.status === 201) &&
-        (fastApiRes.data?.access_token || fastApiRes.data?.data?.access_token)
-      ) {
-        const outData = { ...fastApiRes.data };
-        if (isAdminEmail) {
-          outData.isAdmin = true;
-          outData.isSuperAdmin = true;
-          outData.role = Array.isArray(outData.role)
-            ? Array.from(new Set([...outData.role, "admin", "superAdmin"]))
-            : ["admin", "superAdmin"];
-          if (outData.user) {
-            outData.user.isAdmin = true;
-            outData.user.isSuperAdmin = true;
-            outData.user.role = outData.role;
-          }
-        }
-        return NextResponse.json(outData);
-      }
-    } catch (fastErr: any) {
-      // FastAPI offline/error, continue to failovers
-    }
-
-    // 3. Database / Built-in Admin Authentication Failover
-      email === "admin@gmail.com" ||
-      email.startsWith("admin@") ||
-      email.startsWith("sistemas@");
-
+    // 2. Database / Built-in Admin Authentication Failover
     let dbUser: any = null;
     let roles: string[] = [];
     let isFarmer = false;
@@ -120,6 +208,11 @@ export async function POST(request: NextRequest) {
     let isOperator = false;
     let isAgent = false;
     let isAdmin = isAdminEmail;
+
+    const reqName = String(body?.name || "").trim();
+    const reqFirstName = String(body?.first_name || "").trim() || reqName.split(" ")[0] || "User";
+    const reqLastName = String(body?.last_name || "").trim() || (reqName.split(" ").length > 1 ? reqName.split(" ").slice(1).join(" ") : "");
+    const reqImage = String(body?.image || "").trim();
 
     // Try checking PostgreSQL user table if pool is accessible
     try {
@@ -131,6 +224,23 @@ export async function POST(request: NextRequest) {
         );
         if (userRes.rows.length > 0) {
           dbUser = userRes.rows[0];
+        } else if (authType === "GOOGLE") {
+          // Auto-provision Google user in database
+          const newUid = `usr_${Date.now().toString(36)}${Math.random().toString(36).substring(2, 8)}`;
+          await client.query(
+            `INSERT INTO "User" (id, first_name, last_name, email, image, "authType", "email_varified", "createdAt", "updatedAt")
+             VALUES ($1, $2, $3, $4, $5, 'GOOGLE', true, NOW(), NOW())
+             ON CONFLICT (email) DO UPDATE SET image = COALESCE(EXCLUDED.image, "User".image), "updatedAt" = NOW()
+             RETURNING id, first_name, last_name, email, image;`,
+            [newUid, reqFirstName, reqLastName, email, reqImage]
+          ).then((res) => {
+            if (res.rows[0]) dbUser = res.rows[0];
+          }).catch((err) => {
+            console.warn("[/api/auth/login] Google user auto-create warning:", err?.message);
+          });
+        }
+
+        if (dbUser?.id) {
           const uid = dbUser.id;
 
           const [fRes, oRes, dRes, opRes, agRes, rRes] = await Promise.all([
@@ -204,23 +314,25 @@ export async function POST(request: NextRequest) {
 
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "7d" });
 
-    return NextResponse.json({
-      success: true,
-      access_token: token,
-      token,
-      accessToken: token,
-      user: tokenPayload,
-      role: roles,
+    return createAuthResponse(
+      {
+        access_token: token,
+        token,
+        accessToken: token,
+        user: tokenPayload,
+        role: roles,
+        roles,
+        isAdmin,
+        isSuperAdmin: isAdmin,
+        isOwner,
+        isFarmer,
+        isDealer,
+        isOperator,
+        isAgent,
+      },
       roles,
-      isFarmer,
-      isOwner,
-      isDealer,
-      isOperator,
-      isAgent,
-      isAdmin,
-      isSuperAdmin: isAdmin,
-      message: "Login successful",
-    });
+      isAdmin
+    );
   } catch (error: any) {
     console.error("[/api/auth/login] Fatal login error:", error);
     return NextResponse.json(

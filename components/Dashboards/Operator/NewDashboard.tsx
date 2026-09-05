@@ -23,6 +23,8 @@ import { operatorDashboardTranslations } from './OperatorDashboardTranslations';
 import { newBookingTranslations } from '../Farmer/FarmerTranslation';
 import { CircularProgress } from '@mui/material';
 
+import { getAuthUserId } from '@/utils/auth/clientAuth';
+
 interface user {
   userId: string;
   image: string;
@@ -40,7 +42,10 @@ const NewDashboard = () => {
   const [updateStatusBookingCode, setUpdateStatusBookingCode] = useState("")
 
   const { cookie } = useCookie()
-  const user: user = cookie.get("user")
+  const rawUser = cookie.get("user")
+  const parsedUser = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser); } catch { return null; } })() : rawUser
+  const user: user = parsedUser || {}
+  const currentUserId = user?.userId || getAuthUserId()
   const access_token = cookie.get("access_token");
 
   async function handleStatusChange(id: string, value: string) {
@@ -60,7 +65,9 @@ const NewDashboard = () => {
         Authorization: `Bearer ${access_token}`,
       },
     }).then(async () => {
-      const updatedBookings = await renderInstance.get(`/operator/getOperator/${user.userId}`)
+      const targetId = currentUserId || getAuthUserId();
+      const endpoint = targetId ? `/operator/getOperator/${targetId}` : `/operator/getOperator`;
+      const updatedBookings = await renderInstance.get(endpoint)
       setLatestBookings(updatedBookings.data.latestBookings)
       successMessage("Status changed")
     }).catch((err) => {
@@ -84,8 +91,10 @@ const NewDashboard = () => {
 
   function fetchOperator() {
     setFetchingOperatorDetails(true)
+    const targetId = currentUserId || getAuthUserId();
+    const endpoint = targetId ? `/operator/getOperator/${targetId}` : `/operator/getOperator`;
 
-    renderInstance.get(`/operator/getOperator/${user.userId}`)
+    renderInstance.get(endpoint)
       .then((res) => {
         setOperator(res.data.details)
         setStores(res.data.stores)
@@ -93,7 +102,7 @@ const NewDashboard = () => {
         setTodayBookings(res.data.todayBookings)
         setLatestBookings(res.data.latestBookings)
       }).catch((err) => {
-        errorMessage("Error fetching user detaild")
+        console.error("Error fetching operator details:", err);
       }).finally(() => {
         setFetchingOperatorDetails(false)
       })

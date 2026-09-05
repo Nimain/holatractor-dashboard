@@ -11,6 +11,8 @@ import axios from "axios"
 import { renderInstance } from "@/utils/Axios/RenderInstance"
 import { errorMessage } from "@/utils/Toastify/Messages"
 
+import { getAuthUser, checkIsAdmin } from "@/utils/auth/clientAuth"
+
 interface UserCounts {
   farmers: number
   operators: number
@@ -42,29 +44,27 @@ const Dashboard = () => {
         return match ? match[2] : null;
       };
 
+      const authUser = getAuthUser();
       const isAdminCookie = getCookie("isAdmin") === "true";
       let localIsAdmin = false;
-      let userEmail = "";
+      let userObj: any = {};
       try {
         localIsAdmin =
           localStorage.getItem("isAdmin") === "true" ||
           localStorage.getItem("active_role") === "admin";
-        const userObj = JSON.parse(localStorage.getItem("user") || "{}");
-        userEmail = (userObj?.email || "").toLowerCase().trim();
+        userObj = JSON.parse(localStorage.getItem("user") || "{}");
       } catch {}
 
-      const isAdminEmail =
-        userEmail === "sistemas@holatractor.com" ||
-        userEmail === "admin@holatractor.com" ||
-        userEmail === "admin@gmail.com" ||
-        userEmail.startsWith("admin@") ||
-        userEmail.startsWith("sistemas@");
+      const isAdmin =
+        Boolean(authUser?.isAdmin) ||
+        isAdminCookie ||
+        localIsAdmin ||
+        checkIsAdmin(userObj, authUser?.email);
 
-      const isAdmin = isAdminCookie || localIsAdmin || isAdminEmail;
-      const isOwner = getCookie("isOwner") === "true";
-      const isFarmer = getCookie("isFarmer") === "true";
-      const isDealer = getCookie("isDealer") === "true";
-      const isOperator = getCookie("isOperator") === "true";
+      const isOwner = getCookie("isOwner") === "true" || Boolean(authUser?.isOwner);
+      const isFarmer = getCookie("isFarmer") === "true" || Boolean(authUser?.isFarmer);
+      const isDealer = getCookie("isDealer") === "true" || Boolean(authUser?.isDealer);
+      const isOperator = getCookie("isOperator") === "true" || Boolean(authUser?.isOperator);
       const isAgent = getCookie("isAgent") === "true";
       const activeRole = getCookie("active_role") || (typeof window !== "undefined" ? localStorage.getItem("active_role") : null);
 
@@ -82,8 +82,6 @@ const Dashboard = () => {
             ? "/agent"
             : isOwner
             ? "/owner"
-            : isFarmer
-            ? "/farmer"
             : isDealer
             ? "/dealer"
             : isOperator

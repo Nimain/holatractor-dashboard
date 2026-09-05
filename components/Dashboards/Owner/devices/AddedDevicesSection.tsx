@@ -55,9 +55,10 @@ export function AddedDevicesSection({ language = "en" }: AddedDevicesSectionProp
     try {
       setLoading(true)
       const devicesData = await DeviceApiService.getAllDevices()
-      setDevices(devicesData)
+      setDevices(Array.isArray(devicesData) ? devicesData : [])
     } catch (error) {
       console.error("Error fetching devices:", error)
+      setDevices([])
     } finally {
       setLoading(false)
     }
@@ -126,8 +127,12 @@ export function AddedDevicesSection({ language = "en" }: AddedDevicesSectionProp
         <CardContent>
           <div className="flex gap-4 overflow-x-auto pb-2">
             {devices.slice(0, 5).map((device) => {
-              const isOnline = device.base.status === 1
-              const hasLocation = device.tractorInStore.lat && device.tractorInStore.lan
+              const isOnline = device?.base?.status === 1 || Boolean((device as any)?.online)
+              const hasLocation = Boolean(device?.tractorInStore?.lat && device?.tractorInStore?.lan)
+              const tractorName = device?.tractorInStore?.baseTractor?.name || (device as any)?.name || "Tractor Device"
+              const tractorModel = device?.tractorInStore?.baseTractor?.model || "N/A"
+              const tractorImage = device?.tractorInStore?.baseTractor?.images?.[0] || (device as any)?.image
+              const hourlyPrice = device?.tractorInStore?.hourly_price ?? 0
 
               return (
                 <Card
@@ -138,10 +143,10 @@ export function AddedDevicesSection({ language = "en" }: AddedDevicesSectionProp
                   <CardContent className="p-4">
                     <div className="relative mb-3">
                       <Avatar className="h-16 w-16 mx-auto">
-                        {device.tractorInStore.baseTractor.images?.[0] ? (
+                        {tractorImage ? (
                           <AvatarImage
-                            src={device.tractorInStore.baseTractor.images[0] || "/placeholder.svg"}
-                            alt={device.tractorInStore.baseTractor.name}
+                            src={tractorImage || "/placeholder.svg"}
+                            alt={tractorName}
                           />
                         ) : (
                           <AvatarFallback>
@@ -155,13 +160,13 @@ export function AddedDevicesSection({ language = "en" }: AddedDevicesSectionProp
                     </div>
 
                     <div className="text-center space-y-2">
-                      <h4 className="font-semibold text-sm truncate">{device.tractorInStore.baseTractor.name}</h4>
+                      <h4 className="font-semibold text-sm truncate">{tractorName}</h4>
                       <p className="text-xs text-muted-foreground truncate">
-                        {device.tractorInStore.baseTractor.model}
+                        {tractorModel}
                       </p>
 
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-semibold text-green-600">${device.tractorInStore.hourly_price}/hr</span>
+                        <span className="font-semibold text-green-600">${hourlyPrice}/hr</span>
                         <div className="flex items-center gap-1">
                           <MapPin className="h-3 w-3" />
                           <span className="text-muted-foreground">{hasLocation ? t.located : t.noGps}</span>

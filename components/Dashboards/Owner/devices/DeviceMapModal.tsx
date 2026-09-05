@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -22,36 +22,41 @@ import {
   Calendar,
   Filter,
   Globe,
+  Layers,
+  Maximize2,
+  Minimize2,
+  LocateFixed,
 } from "lucide-react"
-import dynamic from "next/dynamic"
-import DeviceLocationService, { type DeviceLocationData, type LocationHistoryParams } from "@/utils/Axios/DeviceLocationService"
-import { getLeafletTractorDivIcon } from "@/utils/map/tractorIcon"
+import DeviceLocationService, {
+  type DeviceLocationData,
+  type LocationHistoryParams,
+} from "@/utils/Axios/DeviceLocationService"
+import { getGoogleMapsTractorIcon } from "@/utils/map/tractorIcon"
 import { io, type Socket } from "socket.io-client"
-import React from "react"
 
-// Dynamically import Leaflet components to avoid SSR issues
-const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false })
-const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false })
-const Marker = dynamic(() => import("react-leaflet").then((mod) => mod.Marker), { ssr: false })
-const Popup = dynamic(() => import("react-leaflet").then((mod) => mod.Popup), { ssr: false })
-const Polyline = dynamic(() => import("react-leaflet").then((mod) => mod.Polyline), { ssr: false })
+const GOOGLE_MAPS_API_KEY =
+  process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
+  process.env.GOOGLE_MAPS_API_KEY ||
+  "AIzaSyDjMCI0xj2Q-WTc9J7yWX-Mvh0DBM7oHbg"
 
 interface Device {
-  id: string;
-  device_imei: string;
-  device_region: "SW" | "NE" | string; // Added device_region
-  base: {
-    status: number;
-  };
-  tractorInStore: {
-    baseTractor: {
-      name: string;
-      model: string;
-      images?: string[];
-    };
-    hourly_price: number;
-  };
-  updatedAt: string;
+  id: string
+  device_imei: string
+  device_region?: "SW" | "NE" | string
+  base?: {
+    status?: number
+  }
+  tractorInStore?: {
+    baseTractor?: {
+      name?: string
+      model?: string
+      images?: string[]
+    }
+    hourly_price?: number
+    lat?: string | null
+    lan?: string | null
+  }
+  updatedAt?: string
 }
 
 interface DeviceMapModalProps {
@@ -80,49 +85,46 @@ interface LiveLocationData {
   created_at: string
 }
 
-type DateFilter = 'today' | 'yesterday' | 'week' | 'month' | 'custom' | 'all';
+type DateFilter = "today" | "yesterday" | "week" | "month" | "custom" | "all"
+type GoogleMapType = "roadmap" | "satellite" | "hybrid" | "terrain"
 
-export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: DeviceMapModalProps) {
+export function DeviceMapModal({
+  open,
+  onOpenChange,
+  device,
+  language = "en",
+}: DeviceMapModalProps) {
+  const mapElementRef = useRef<HTMLDivElement>(null)
+  const mapInstanceRef = useRef<google.maps.Map | null>(null)
+  const deviceMarkerRef = useRef<google.maps.Marker | null>(null)
+  const userMarkerRef = useRef<google.maps.Marker | null>(null)
+  const polylineRef = useRef<google.maps.Polyline | null>(null)
+  const waypointMarkersRef = useRef<google.maps.Marker[]>([])
+  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null)
+
+  const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false)
+  const [googleMapsError, setGoogleMapsError] = useState(false)
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null)
   const [deviceLocations, setDeviceLocations] = useState<DeviceLocationData[]>([])
   const [currentLocation, setCurrentLocation] = useState<DeviceLocationData | null>(null)
   const [locationLoading, setLocationLoading] = useState(false)
   const [deviceLoading, setDeviceLoading] = useState(false)
-  const [mapLoaded, setMapLoaded] = useState(false)
   const [showRoute, setShowRoute] = useState(true)
   const [isLiveTracking, setIsLiveTracking] = useState(false)
   const [socket, setSocket] = useState<Socket | null>(null)
   const [liveLocationCount, setLiveLocationCount] = useState(0)
-  const [LInstance, setLInstance] = useState<any>(null)
-  const mapRef = useRef<any>(null)
-  const [mapKey, setMapKey] = useState(0)
-  const [mapStyle, setMapStyle] = useState<"osm" | "carto" | "transport">("transport")
-  
-  // Date filtering state
-  const [selectedFilter, setSelectedFilter] = useState<DateFilter>('today')
-  const [customStartDate, setCustomStartDate] = useState('')
-  const [customEndDate, setCustomEndDate] = useState('')
-  const [showDatePicker, setShowDatePicker] = useState(false)
+  const [mapType, setMapType] = useState<GoogleMapType>("hybrid")
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
-  // Initialize Leaflet instance on client side
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      import("leaflet").then((mod) => {
-        const L = mod.default || mod
-        delete (L.Icon.Default.prototype as any)._getIconUrl
-        L.Icon.Default.mergeOptions({
-          iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-          iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-          shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-        })
-        setLInstance(L)
-      })
-    }
-  }, [])
+  // Date filtering state
+  const [selectedFilter, setSelectedFilter] = useState<DateFilter>("today")
+  const [customStartDate, setCustomStartDate] = useState("")
+  const [customEndDate, setCustomEndDate] = useState("")
+  const [showDatePicker, setShowDatePicker] = useState(false)
 
   const translations = {
     en: {
-      title: "Device Location Tracking",
+      title: "Device Telemetry & Location",
       gettingLocation: "Getting Your Location...",
       loadingDeviceLocation: "Loading Device Location...",
       locationError: "Unable to get location",
@@ -139,17 +141,11 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
       lastSeen: "Last seen:",
       battery: "Battery",
       speed: "Speed:",
-      course: "Course:",
+      course: "Heading:",
       altitude: "Altitude:",
       satellites: "Satellites:",
       hourlyRate: "Hourly Rate:",
-      startTracking: "Start Tracking",
-      viewDetails: "View Details",
-      model: "Model:",
-      imei: "IMEI:",
-      noLocationData: "No location data available",
-      locationHistory: "Location History",
-      startLiveTracking: "Start Live Tracking",
+      startTracking: "Start Live Tracking",
       stopLiveTracking: "Stop Live Tracking",
       liveTracking: "Live Tracking",
       connected: "Connected",
@@ -167,16 +163,20 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
       locationCount: "locations found",
       filterUpdated: "Location history updated",
       mapStyle: "Map Style:",
-      roads: "Roads",
-      streets: "Streets",
-      standard: "Standard",
+      roads: "Roadmap",
+      satellite: "Satellite",
+      hybrid: "Hybrid",
+      terrain: "Terrain",
       region: "Region:",
       coordinateSystem: "Coordinate System:",
       southwest: "Southwest (Negative Coordinates)",
       northeast: "Northeast (Positive Coordinates)",
+      model: "Model:",
+      imei: "IMEI:",
+      recenter: "Recenter",
     },
     es: {
-      title: "Seguimiento de Ubicación del Dispositivo",
+      title: "Telemetría y Ubicación del Dispositivo",
       gettingLocation: "Obteniendo Tu Ubicación...",
       loadingDeviceLocation: "Cargando Ubicación del Dispositivo...",
       locationError: "No se pudo obtener la ubicación",
@@ -197,13 +197,7 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
       altitude: "Altitud:",
       satellites: "Satélites:",
       hourlyRate: "Tarifa por Hora:",
-      startTracking: "Iniciar Seguimiento",
-      viewDetails: "Ver Detalles",
-      model: "Modelo:",
-      imei: "IMEI:",
-      noLocationData: "No hay datos de ubicación disponibles",
-      locationHistory: "Historial de Ubicación",
-      startLiveTracking: "Iniciar Seguimiento en Vivo",
+      startTracking: "Iniciar Seguimiento en Vivo",
       stopLiveTracking: "Detener Seguimiento en Vivo",
       liveTracking: "Seguimiento en Vivo",
       connected: "Conectado",
@@ -221,43 +215,98 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
       locationCount: "ubicaciones encontradas",
       filterUpdated: "Historial de ubicación actualizado",
       mapStyle: "Estilo del Mapa:",
-      roads: "Carreteras",
-      streets: "Calles",
-      standard: "Estándar",
+      roads: "Mapa Vial",
+      satellite: "Satélite",
+      hybrid: "Híbrido",
+      terrain: "Terreno",
       region: "Región:",
       coordinateSystem: "Sistema de Coordenadas:",
       southwest: "Suroeste (Coordenadas Negativas)",
       northeast: "Noreste (Coordenadas Positivas)",
+      model: "Modelo:",
+      imei: "IMEI:",
+      recenter: "Recentrar",
     },
   }
 
   const t = translations[language]
 
-  // Helper function to adjust live location coordinates based on device region
-  const adjustLiveLocationCoordinates = (data: LiveLocationData, deviceRegion: string): LiveLocationData => {
-    let adjustedLat = data.lat;
-    let adjustedLon = data.lon;
+  // Safe device property helpers
+  const isOnline = device?.base?.status === 1 || Boolean((device as any)?.online)
+  const tractorName =
+    device?.tractorInStore?.baseTractor?.name ||
+    (device as any)?.base_tractor?.name ||
+    (device as any)?.name ||
+    "Tractor Device"
+  const tractorModel =
+    device?.tractorInStore?.baseTractor?.model || (device as any)?.model || "N/A"
+  const tractorImage =
+    device?.tractorInStore?.baseTractor?.images?.[0] ||
+    (device as any)?.image ||
+    (device as any)?.images?.[0]
+  const hourlyPrice =
+    device?.tractorInStore?.hourly_price ?? (device as any)?.hourly_price ?? 0
+  const deviceImei = device?.device_imei || (device as any)?.imei || ""
+  const deviceRegion = device?.device_region || (device as any)?.region || "SW"
 
-    if (deviceRegion === "SW") {
-      adjustedLat = Math.abs(data.lat) * -1;
-      adjustedLon = Math.abs(data.lon) * -1;
+  // Load Google Maps Script
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    if (window.google && window.google.maps) {
+      setGoogleMapsLoaded(true)
+      return
+    }
+
+    const existingScript = document.getElementById("google-maps-script")
+    if (existingScript) {
+      existingScript.addEventListener("load", () => setGoogleMapsLoaded(true))
+      existingScript.addEventListener("error", () => setGoogleMapsError(true))
+      return
+    }
+
+    const script = document.createElement("script")
+    script.id = "google-maps-script"
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry,places`
+    script.async = true
+    script.defer = true
+    script.onload = () => {
+      console.log("[DeviceMapModal] Google Maps script loaded successfully")
+      setGoogleMapsLoaded(true)
+    }
+    script.onerror = () => {
+      console.error("[DeviceMapModal] Failed to load Google Maps script")
+      setGoogleMapsError(true)
+    }
+    document.head.appendChild(script)
+  }, [])
+
+  // Helper function to adjust coordinates based on device region
+  const adjustLiveLocationCoordinates = (
+    data: LiveLocationData,
+    region: string
+  ): LiveLocationData => {
+    let adjustedLat = data.lat
+    let adjustedLon = data.lon
+
+    if (region === "SW") {
+      adjustedLat = Math.abs(data.lat) * -1
+      adjustedLon = Math.abs(data.lon) * -1
     } else {
-      adjustedLat = Math.abs(data.lat);
-      adjustedLon = Math.abs(data.lon);
+      adjustedLat = Math.abs(data.lat)
+      adjustedLon = Math.abs(data.lon)
     }
 
     return {
       ...data,
       lat: adjustedLat,
-      lon: adjustedLon
-    };
-  };
+      lon: adjustedLon,
+    }
+  }
 
-  // Socket.IO connection for live tracking
+  // Socket.IO for live tracking
   useEffect(() => {
-    if (open && device && isLiveTracking) {
-      console.log("[DeviceMapModal] Connecting to Socket.IO for live tracking, IMEI:", device.device_imei, "Region:", device.device_region);
-
+    if (open && device && isLiveTracking && deviceImei) {
       const socketInstance = io("https://device.holatractor.com", {
         transports: ["websocket", "polling"],
         autoConnect: true,
@@ -266,37 +315,20 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
         timeout: 20000,
-        withCredentials: false,
-        extraHeaders: {
-          "Access-Control-Allow-Origin": "*",
-        },
         query: {
-          imei: device.device_imei,
+          imei: deviceImei,
         },
       })
 
       socketInstance.on("connect", () => {
-        console.log("[DeviceMapModal] Socket.IO connected successfully")
-        socketInstance.emit("join-device", device.device_imei)
-      })
-
-      socketInstance.on("connect_error", (error) => {
-        console.error("[DeviceMapModal] Socket.IO connection error:", error)
-      })
-
-      socketInstance.on("disconnect", (reason) => {
-        console.log("[DeviceMapModal] Socket.IO disconnected:", reason)
+        socketInstance.emit("join-device", deviceImei)
       })
 
       socketInstance.on("location-update", (data: LiveLocationData) => {
-        console.log("[DeviceMapModal] Received live location update:", data, "Device region:", device.device_region);
-
-        if (data.imei === device.device_imei) {
-          // Adjust coordinates based on device region
-          const adjustedData = adjustLiveLocationCoordinates(data, device.device_region);
-          
+        if (data.imei === deviceImei) {
+          const adjustedData = adjustLiveLocationCoordinates(data, deviceRegion)
           const newLocation: DeviceLocationData = {
-            id: adjustedData._id.$oid,
+            id: adjustedData._id?.$oid || `loc-${Date.now()}`,
             imei: adjustedData.imei,
             lat: adjustedData.lat,
             lon: adjustedData.lon,
@@ -308,14 +340,13 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
             created_at: adjustedData.created_at,
           }
 
-          console.log("[DeviceMapModal] Processed live location with region adjustment:", newLocation);
-
           setCurrentLocation(newLocation)
           setDeviceLocations((prev) => [newLocation, ...prev.slice(0, 99)])
           setLiveLocationCount((prev) => prev + 1)
 
-          if (mapRef.current && adjustedData.lat && adjustedData.lon) {
-            mapRef.current.setView([adjustedData.lat, adjustedData.lon], 15)
+          if (mapInstanceRef.current && adjustedData.lat && adjustedData.lon) {
+            const pos = new window.google.maps.LatLng(adjustedData.lat, adjustedData.lon)
+            mapInstanceRef.current.panTo(pos)
           }
         }
       })
@@ -323,31 +354,111 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
       setSocket(socketInstance)
 
       return () => {
-        console.log("[DeviceMapModal] Cleaning up Socket.IO connection")
         socketInstance.disconnect()
         setSocket(null)
       }
     }
-  }, [open, device, isLiveTracking])
+  }, [open, device, isLiveTracking, deviceImei, deviceRegion])
 
-  // Initialize map and load data when modal opens
+  // Get user location
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) return
+    setLocationLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude, accuracy } = position.coords
+        setUserLocation({ latitude, longitude, accuracy })
+        setLocationLoading(false)
+      },
+      (error) => {
+        console.error("Error getting location:", error)
+        setLocationLoading(false)
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+    )
+  }
+
+  // Load device location history
+  const loadDeviceLocationWithFilter = useCallback(async () => {
+    if (!device || !deviceImei) return
+
+    setDeviceLoading(true)
+    try {
+      let params: LocationHistoryParams = {}
+      switch (selectedFilter) {
+        case "today":
+          params = { filter: "today" }
+          break
+        case "yesterday":
+          params = { filter: "yesterday" }
+          break
+        case "week":
+          params = { filter: "week" }
+          break
+        case "month":
+          params = { filter: "month" }
+          break
+        case "all":
+          params = {}
+          break
+        case "custom":
+          if (customStartDate && customEndDate) {
+            params = { start_date: customStartDate, end_date: customEndDate }
+          } else {
+            params = { filter: "today" }
+          }
+          break
+        default:
+          params = { filter: "today" }
+      }
+
+      const [current, history] = await Promise.all([
+        DeviceLocationService.getCurrentDeviceLocation(deviceImei, deviceRegion),
+        DeviceLocationService.getDeviceLocationHistory(deviceImei, params, deviceRegion),
+      ])
+
+      if (
+        current &&
+        current.lat &&
+        current.lon &&
+        current.lat !== 0 &&
+        current.lon !== 0 &&
+        !isNaN(Number(current.lat)) &&
+        !isNaN(Number(current.lon))
+      ) {
+        setCurrentLocation(current)
+      } else {
+        setCurrentLocation(null)
+      }
+
+      if (Array.isArray(history) && history.length > 0) {
+        const validLocations = history.filter(
+          (loc) =>
+            loc.lat &&
+            loc.lon &&
+            loc.lat !== 0 &&
+            loc.lon !== 0 &&
+            !isNaN(Number(loc.lat)) &&
+            !isNaN(Number(loc.lon))
+        )
+        setDeviceLocations(validLocations)
+      } else {
+        setDeviceLocations([])
+      }
+    } catch (error) {
+      console.error("[DeviceMapModal] Error loading device location:", error)
+      setDeviceLocations([])
+      setCurrentLocation(null)
+    } finally {
+      setDeviceLoading(false)
+    }
+  }, [device, deviceImei, deviceRegion, selectedFilter, customStartDate, customEndDate])
+
+  // Initialize modal data when opened
   useEffect(() => {
     if (open && device) {
-      console.log("[DeviceMapModal] Modal opened with device IMEI:", device.device_imei, "Region:", device.device_region)
-      setMapLoaded(false) // Reset map loaded state
-      setMapKey((prev) => prev + 1) // Force re-render of map
-      
-      // Load locations first, then set map as loaded
-      const initializeModal = async () => {
-        getCurrentLocation()
-        await loadDeviceLocationWithFilter()
-        // Small delay to ensure map container is ready
-        setTimeout(() => {
-          setMapLoaded(true)
-        }, 100)
-      }
-      
-      initializeModal()
+      getCurrentLocation()
+      loadDeviceLocationWithFilter()
     }
 
     if (!open) {
@@ -358,36 +469,263 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
         setSocket(null)
       }
     }
-  }, [open, device])
+  }, [open, device, loadDeviceLocationWithFilter])
 
-  // Auto-zoom to device location or fit bounds to route when available
-  useEffect(() => {
-    if (!mapRef.current) return
+  // Compute Route Path Points
+  const routePoints = React.useMemo(() => {
+    if (!Array.isArray(deviceLocations) || deviceLocations.length === 0) {
+      return []
+    }
+    return deviceLocations
+      .filter((loc) => loc.lat && loc.lon && loc.lat !== 0 && loc.lon !== 0)
+      .map((loc) => ({
+        lat: Number(loc.lat),
+        lng: Number(loc.lon),
+      }))
+  }, [deviceLocations])
 
-    if (routePath.length > 1 && LInstance) {
-      try {
-        const bounds = LInstance.latLngBounds(routePath)
-        mapRef.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 })
-      } catch (err) {
-        console.warn("[DeviceMapModal] Error fitting bounds:", err)
-      }
-    } else if (currentLocation && currentLocation.lat && currentLocation.lon) {
+  // Compute Initial / Target Map Center
+  const mapCenter = React.useMemo(() => {
+    if (currentLocation && currentLocation.lat && currentLocation.lon) {
       const lat = Number(currentLocation.lat)
-      const lon = Number(currentLocation.lon)
-      
-      if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0) {
-        console.log("[DeviceMapModal] Auto-zooming to device location:", { lat, lon, region: device?.device_region })
-        mapRef.current.setView([lat, lon], 16)
+      const lng = Number(currentLocation.lon)
+      if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+        return { lat, lng }
       }
     }
-  }, [routePath, currentLocation, mapLoaded, LInstance, device?.device_region])
-
-  // Load device location when filter changes
-  useEffect(() => {
-    if (open && device) {
-      loadDeviceLocationWithFilter()
+    if (routePoints.length > 0) {
+      return routePoints[0]
     }
-  }, [selectedFilter, customStartDate, customEndDate])
+    if (userLocation) {
+      return { lat: userLocation.latitude, lng: userLocation.longitude }
+    }
+    if (deviceRegion === "SW") {
+      return { lat: -17.7833, lng: -63.1821 } // Santa Cruz, Bolivia
+    }
+    return { lat: 21.9368, lng: 86.7441 }
+  }, [currentLocation, routePoints, userLocation, deviceRegion])
+
+  // Initialize and Update Google Map
+  useEffect(() => {
+    if (!open || !googleMapsLoaded || !mapElementRef.current || !window.google?.maps) {
+      return
+    }
+
+    try {
+      // 1. Initialize Map Instance if not created
+      if (!mapInstanceRef.current) {
+        mapInstanceRef.current = new window.google.maps.Map(mapElementRef.current, {
+          center: mapCenter,
+          zoom: 15,
+          mapTypeId: mapType as any,
+          disableDefaultUI: false,
+          zoomControl: true,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+          styles: [
+            {
+              featureType: "poi",
+              elementType: "labels",
+              stylers: [{ visibility: "off" }],
+            },
+          ],
+        })
+
+        infoWindowRef.current = new window.google.maps.InfoWindow()
+      } else {
+        mapInstanceRef.current.setMapTypeId(mapType as any)
+      }
+
+      const map = mapInstanceRef.current
+
+      // Trigger resize after modal animation
+      const resizeTimer = setTimeout(() => {
+        window.google.maps.event.trigger(map, "resize")
+      }, 200)
+
+      // 2. User Location Marker
+      if (userLocation) {
+        const userPos = { lat: userLocation.latitude, lng: userLocation.longitude }
+        if (!userMarkerRef.current) {
+          userMarkerRef.current = new window.google.maps.Marker({
+            position: userPos,
+            map: map,
+            title: t.yourLocation,
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              fillColor: "#3B82F6",
+              fillOpacity: 1,
+              strokeColor: "#FFFFFF",
+              strokeWeight: 2.5,
+            },
+          })
+        } else {
+          userMarkerRef.current.setPosition(userPos)
+          userMarkerRef.current.setMap(map)
+        }
+      } else if (userMarkerRef.current) {
+        userMarkerRef.current.setMap(null)
+      }
+
+      // 3. Tractor Device Current Location Marker
+      const activeLat = Number(currentLocation?.lat || routePoints[0]?.lat)
+      const activeLng = Number(currentLocation?.lon || routePoints[0]?.lng)
+
+      if (!isNaN(activeLat) && !isNaN(activeLng) && activeLat !== 0 && activeLng !== 0) {
+        const tractorPos = { lat: activeLat, lng: activeLng }
+        const course = Number(currentLocation?.course || 0)
+        const isMoving = Number(currentLocation?.speed || 0) > 0.5
+
+        const tractorIcon = getGoogleMapsTractorIcon({
+          course,
+          isLive: isLiveTracking,
+          isMoving,
+          status: isOnline ? "Active" : "Offline",
+          size: 64,
+        })
+
+        if (!deviceMarkerRef.current) {
+          deviceMarkerRef.current = new window.google.maps.Marker({
+            position: tractorPos,
+            map: map,
+            title: tractorName,
+            icon: tractorIcon,
+            zIndex: 999,
+          })
+
+          deviceMarkerRef.current.addListener("click", () => {
+            if (infoWindowRef.current) {
+              infoWindowRef.current.setContent(`
+                <div style="padding: 8px; font-family: sans-serif; color: #1e293b; max-width: 240px;">
+                  <h4 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 700; color: #0f172a;">${tractorName}</h4>
+                  <p style="margin: 0 0 6px 0; font-size: 12px; color: #64748b;">IMEI: <strong>${deviceImei}</strong></p>
+                  <div style="font-size: 11px; line-height: 1.5; border-top: 1px solid #e2e8f0; padding-top: 4px;">
+                    <div>Status: <span style="font-weight: 700; color: ${isOnline ? "#16a34a" : "#dc2626"}">${isOnline ? "Online" : "Offline"}</span></div>
+                    <div>Speed: <strong>${(currentLocation?.speed || 0).toFixed(1)} km/h</strong></div>
+                    <div>Lat: ${activeLat.toFixed(6)}, Lng: ${activeLng.toFixed(6)}</div>
+                    <div>Last update: <em>${formatTime(currentLocation?.timestamp || currentLocation?.created_at || "")}</em></div>
+                  </div>
+                </div>
+              `)
+              infoWindowRef.current.open(map, deviceMarkerRef.current)
+            }
+          })
+        } else {
+          deviceMarkerRef.current.setPosition(tractorPos)
+          deviceMarkerRef.current.setIcon(tractorIcon)
+          deviceMarkerRef.current.setMap(map)
+        }
+      } else if (deviceMarkerRef.current) {
+        deviceMarkerRef.current.setMap(null)
+      }
+
+      // 4. Route Polyline & Waypoints
+      if (polylineRef.current) {
+        polylineRef.current.setMap(null)
+        polylineRef.current = null
+      }
+      waypointMarkersRef.current.forEach((m) => m.setMap(null))
+      waypointMarkersRef.current = []
+
+      if (showRoute && routePoints.length > 1) {
+        polylineRef.current = new window.google.maps.Polyline({
+          path: routePoints,
+          geodesic: true,
+          strokeColor: "#F97316",
+          strokeOpacity: 0.9,
+          strokeWeight: 5,
+          map: map,
+        })
+
+        // Add small waypoint dots along the route
+        routePoints.slice(0, 20).forEach((point, idx) => {
+          const isLatest = idx === 0
+          const isStart = idx === routePoints.length - 1
+
+          const dotMarker = new window.google.maps.Marker({
+            position: point,
+            map: map,
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              scale: isLatest || isStart ? 6 : 4,
+              fillColor: isLatest ? "#EF4444" : isStart ? "#10B981" : "#F97316",
+              fillOpacity: 1,
+              strokeColor: "#FFFFFF",
+              strokeWeight: 2,
+            },
+          })
+          waypointMarkersRef.current.push(dotMarker)
+        })
+
+        // Auto-fit bounds to include the whole route
+        const bounds = new window.google.maps.LatLngBounds()
+        routePoints.forEach((p) => bounds.extend(p))
+        if (userLocation) {
+          bounds.extend({ lat: userLocation.latitude, lng: userLocation.longitude })
+        }
+        map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 })
+      } else if (!isNaN(activeLat) && !isNaN(activeLng) && activeLat !== 0) {
+        map.panTo({ lat: activeLat, lng: activeLng })
+      }
+
+      return () => {
+        clearTimeout(resizeTimer)
+      }
+    } catch (err) {
+      console.error("[DeviceMapModal] Error rendering Google Map:", err)
+    }
+  }, [
+    open,
+    googleMapsLoaded,
+    mapCenter,
+    mapType,
+    currentLocation,
+    routePoints,
+    showRoute,
+    userLocation,
+    isLiveTracking,
+    isOnline,
+    tractorName,
+    deviceImei,
+    t,
+  ])
+
+  // Format timestamp helper
+  const formatTime = (dateString: string) => {
+    if (!dateString) return ""
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+
+    if (diffInMinutes < 1) return language === "es" ? "Ahora mismo" : "Just now"
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
+    return `${Math.floor(diffInMinutes / 1440)}d ago`
+  }
+
+  const handleFilterChange = (filter: DateFilter) => {
+    setSelectedFilter(filter)
+    if (filter !== "custom") {
+      setShowDatePicker(false)
+    } else {
+      setShowDatePicker(true)
+      if (!customStartDate) {
+        setCustomStartDate(DeviceLocationService.getTodayDate())
+      }
+      if (!customEndDate) {
+        setCustomEndDate(DeviceLocationService.getTodayDate())
+      }
+    }
+  }
+
+  const handleRecenter = () => {
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.panTo(mapCenter)
+      mapInstanceRef.current.setZoom(16)
+    }
+  }
 
   const toggleLiveTracking = () => {
     if (isLiveTracking) {
@@ -402,742 +740,293 @@ export function DeviceMapModal({ open, onOpenChange, device, language = "en" }: 
     }
   }
 
-  const getCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      console.error("Geolocation is not supported")
-      return
-    }
-
-    setLocationLoading(true)
-
-    const options = {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 5000,
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude, accuracy } = position.coords
-        setUserLocation({ latitude, longitude, accuracy })
-        setLocationLoading(false)
-      },
-      (error) => {
-        console.error("Error getting location:", error)
-        setLocationLoading(false)
-      },
-      options,
-    )
-  }
-
-  const loadDeviceLocationWithFilter = async () => {
-    if (!device || !device.device_imei) {
-      console.error("[DeviceMapModal] No device or IMEI available")
-      return
-    }
-
-    setDeviceLoading(true)
-    try {
-      console.log("[DeviceMapModal] Loading device location with filter:", selectedFilter, "for IMEI:", device.device_imei, "Region:", device.device_region);
-
-      let params: LocationHistoryParams = {}
-
-      switch (selectedFilter) {
-        case 'today':
-          params = { filter: 'today' }
-          break
-        case 'yesterday':
-          params = { filter: 'yesterday' }
-          break
-        case 'week':
-          params = { filter: 'week' }
-          break
-        case 'month':
-          params = { filter: 'month' }
-          break
-        case 'all':
-          params = {}
-          break
-        case 'custom':
-          if (customStartDate && customEndDate) {
-            params = { start_date: customStartDate, end_date: customEndDate }
-          } else {
-            params = { filter: 'today' } // fallback to today
-          }
-          break
-        default:
-          params = { filter: 'today' }
-      }
-
-      // Pass device region to the API service
-      const [current, history] = await Promise.all([
-        DeviceLocationService.getCurrentDeviceLocation(device.device_imei, device.device_region),
-        DeviceLocationService.getDeviceLocationHistory(device.device_imei, params, device.device_region),
-      ])
-
-      console.log("[DeviceMapModal] API Response - Current:", current)
-      console.log("[DeviceMapModal] API Response - History:", history, "Count:", history?.length)
-      console.log("[DeviceMapModal] Device region applied:", device.device_region)
-
-      // Debug current location coordinates
-      if (current) {
-        console.log("[DeviceMapModal] Current location coordinates (region-adjusted):", {
-          lat: current.lat,
-          lon: current.lon,
-          latitude: current.latitude,
-          longitude: current.longitude,
-          region: device.device_region,
-          lat_type: typeof current.lat,
-          lon_type: typeof current.lon,
-          lat_valid: current.lat && current.lat !== 0 && !isNaN(current.lat),
-          lon_valid: current.lon && current.lon !== 0 && !isNaN(current.lon)
-        })
-      }
-
-      // Set current location with validation
-      if (current && current.lat && current.lon && 
-          current.lat !== 0 && current.lon !== 0 && 
-          !isNaN(current.lat) && !isNaN(current.lon)) {
-        console.log("[DeviceMapModal] Setting valid current location with region adjustment:", current)
-        setCurrentLocation(current)
-      } else {
-        console.warn("[DeviceMapModal] Invalid or missing current location:", current)
-        setCurrentLocation(null)
-      }
-
-      // Process location history with detailed debugging
-      if (Array.isArray(history) && history.length > 0) {
-        console.log("[DeviceMapModal] Processing location history with region adjustment, count:", history.length)
-        console.log("[DeviceMapModal] First location sample (region-adjusted):", history[0])
-        
-        const validLocations = history.filter((location, index) => {
-          const isValid = location.lat && location.lon && 
-                          location.lat !== 0 && location.lon !== 0 &&
-                          !isNaN(location.lat) && !isNaN(location.lon)
-          
-          if (!isValid) {
-            console.warn(`[DeviceMapModal] Invalid location at index ${index}:`, {
-              lat: location.lat,
-              lon: location.lon,
-              region: device.device_region,
-              lat_type: typeof location.lat,
-              lon_type: typeof location.lon
-            })
-          }
-          
-          return isValid
-        })
-        
-        console.log("[DeviceMapModal] Valid locations after filtering and region adjustment:", validLocations.length)
-        console.log("[DeviceMapModal] Sample valid locations:", validLocations.slice(0, 3))
-        setDeviceLocations(validLocations)
-      } else {
-        console.log("[DeviceMapModal] No valid history data received")
-        setDeviceLocations([])
-      }
-    } catch (error) {
-      console.error("[DeviceMapModal] Error loading device location:", error)
-      setDeviceLocations([])
-      setCurrentLocation(null)
-    } finally {
-      setDeviceLoading(false)
-    }
-  }
-
-  const handleFilterChange = (filter: DateFilter) => {
-    setSelectedFilter(filter)
-    if (filter !== 'custom') {
-      setShowDatePicker(false)
-    } else {
-      setShowDatePicker(true)
-      // Set default dates for custom range
-      if (!customStartDate) {
-        setCustomStartDate(DeviceLocationService.getTodayDate())
-      }
-      if (!customEndDate) {
-        setCustomEndDate(DeviceLocationService.getTodayDate())
-      }
-    }
-  }
-
-  const formatTime = (dateString: string) => {
-    if (!dateString) return ""
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
-
-    if (diffInMinutes < 1) return language === "es" ? "Ahora mismo" : "Just now"
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
-    return `${Math.floor(diffInMinutes / 1440)}d ago`
-  }
-
-  const getAccuracyText = (accuracy?: number) => {
-    if (!accuracy) return ""
-    if (accuracy < 10) return "Very High"
-    if (accuracy < 50) return "High"
-    if (accuracy < 100) return "Medium"
-    return "Low"
-  }
-
-  const getAccuracyColor = (accuracy?: number) => {
-    if (!accuracy) return "text-muted-foreground"
-    if (accuracy < 10) return "text-green-600"
-    if (accuracy < 50) return "text-yellow-600"
-    if (accuracy < 100) return "text-orange-600"
-    return "text-red-600"
-  }
-
-  const routePath = React.useMemo(() => {
-    if (!Array.isArray(deviceLocations) || deviceLocations.length === 0) {
-      return []
-    }
-
-    const validPoints = deviceLocations
-      .filter(location => location.lat && location.lon && location.lat !== 0 && location.lon !== 0)
-      .map(location => [Number(location.lat), Number(location.lon)] as [number, number])
-
-    console.log("[DeviceMapModal] Route path points for filter:", selectedFilter, "Count:", validPoints.length, "Device region:", device?.device_region)
-    return validPoints
-  }, [deviceLocations, selectedFilter, device?.device_region])
-
-  const getTileLayerConfig = () => {
-    switch (mapStyle) {
-      case "transport":
-        return {
-          url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        }
-      case "carto":
-        return {
-          url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        }
-      default:
-        return {
-          url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        }
-    }
-  }
-
-  if (!device) {
-    console.log("[DeviceMapModal] No device provided to modal")
-    return null
-  }
-
-  const isOnline = device.base.status === 1
-  let mapCenter: [number, number] = [21.9368, 86.7441] // Default center (India)
-  let mapZoom = 15 // Default zoom
-
-  // Determine map center with debugging and region awareness
-  if (currentLocation && currentLocation.lat && currentLocation.lon) {
-    const lat = Number(currentLocation.lat)
-    const lon = Number(currentLocation.lon)
-    
-    console.log("[DeviceMapModal] Setting map center to current location (region-adjusted):", { lat, lon, region: device.device_region })
-    
-    if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0) {
-      mapCenter = [lat, lon]
-      mapZoom = 16 // Zoom closer when device location is available
-      console.log("[DeviceMapModal] Map center set to:", mapCenter, "with zoom:", mapZoom, "for region:", device.device_region)
-    } else {
-      console.warn("[DeviceMapModal] Invalid current location coordinates for map center:", { lat, lon })
-    }
-  } else if (userLocation) {
-    mapCenter = [userLocation.latitude, userLocation.longitude]
-    mapZoom = 16 // Zoom closer for user location too
-    console.log("[DeviceMapModal] Map centered on user location:", mapCenter, "with zoom:", mapZoom)
-  } else {
-    // Adjust default center based on device region
-    if (device.device_region === "SW") {
-      mapCenter = [-21.9368, -86.7441] // Southwest coordinates (negative)
-    }
-    console.log("[DeviceMapModal] Using default map center for region", device.device_region, ":", mapCenter)
-  }
-
-  console.log("[DeviceMapModal] Final render state:", {
-    device_imei: device.device_imei,
-    device_region: device.device_region,
-    currentLocation: currentLocation ? {
-      lat: currentLocation.lat,
-      lon: currentLocation.lon,
-      hasCoords: !!(currentLocation.lat && currentLocation.lon)
-    } : null,
-    deviceLocationsCount: deviceLocations.length,
-    mapCenter: mapCenter,
-    userLocation: userLocation ? {
-      lat: userLocation.latitude,
-      lon: userLocation.longitude
-    } : null
-  })
+  if (!device) return null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
-            {t.title}
-            {isLiveTracking && (
-              <Badge variant="default" className="ml-2 animate-pulse">
-                <Radio className="h-3 w-3 mr-1" />
-                {t.liveTracking}
+      <DialogContent
+        className={`${
+          isFullscreen
+            ? "max-w-[98vw] h-[96vh] w-[98vw]"
+            : "max-w-5xl max-h-[92vh] w-full"
+        } overflow-hidden flex flex-col p-6 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-2xl transition-all duration-200`}
+      >
+        <DialogHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-white">
+              <div className="p-2 rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                <MapPin className="h-5 w-5" />
+              </div>
+              {t.title}
+              {isLiveTracking && (
+                <Badge variant="default" className="ml-2 bg-emerald-600 text-white animate-pulse">
+                  <Radio className="h-3 w-3 mr-1" />
+                  {t.liveTracking}
+                </Badge>
+              )}
+              <Badge variant="outline" className="ml-2 font-mono text-xs">
+                <Globe className="h-3 w-3 mr-1" />
+                {deviceRegion}
               </Badge>
-            )}
-            {/* Region indicator */}
-            <Badge variant="outline" className="ml-2">
-              <Globe className="h-3 w-3 mr-1" />
-              {device.device_region}
-            </Badge>
-          </DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            {device.tractorInStore.baseTractor?.name} - {device.tractorInStore.baseTractor?.model}
-            {device.device_imei && (
-              <span className="ml-2 font-mono text-xs">IMEI: {device.device_imei}</span>
-            )}
-            {device.device_region && (
-              <span className="ml-2 text-xs">
-                {t.region} {device.device_region === "SW" ? t.southwest : t.northeast}
-              </span>
-            )}
+            </DialogTitle>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsFullscreen(!isFullscreen)}
+                className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            <span className="font-semibold text-slate-800 dark:text-slate-200">{tractorName}</span> •{" "}
+            <span>{tractorModel}</span>
+            {deviceImei && <span className="ml-2 font-mono">IMEI: {deviceImei}</span>}
             {isLiveTracking && liveLocationCount > 0 && (
-              <span className="ml-2 text-green-600">
+              <span className="ml-2 text-emerald-600 font-semibold">
                 • {t.liveUpdates} {liveLocationCount}
               </span>
             )}
           </p>
         </DialogHeader>
 
-        {/* Date Filter Controls */}
-        <Card className="mb-4">
-          <CardContent className="p-4">
-            <div className="space-y-4">
-              {/* Filter Selection */}
-              <div className="flex items-center justify-between gap-4 flex-wrap">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4" />
-                  <label className="text-sm font-medium">{t.dateFilter}</label>
-                  <select
-                    value={selectedFilter}
-                    onChange={(e) => handleFilterChange(e.target.value as DateFilter)}
-                    className="px-3 py-1 text-sm bg-background border rounded-md shadow-sm"
-                  >
-                    <option value="today">{t.today}</option>
-                    <option value="yesterday">{t.yesterday}</option>
-                    <option value="week">{t.week}</option>
-                    <option value="month">{t.month}</option>
-                    <option value="all">All History</option>
-                    <option value="custom">{t.custom}</option>
-                  </select>
-                </div>
+        {/* Date Filter & Control Bar */}
+        <div className="py-2.5 flex items-center justify-between gap-3 flex-wrap border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
+              <Filter className="h-3.5 w-3.5" /> Filter:
+            </span>
+            {(["today", "yesterday", "week", "month", "custom", "all"] as DateFilter[]).map(
+              (filter) => (
+                <Button
+                  key={filter}
+                  size="sm"
+                  variant={selectedFilter === filter ? "default" : "outline"}
+                  onClick={() => handleFilterChange(filter)}
+                  className={`text-xs h-7 px-2.5 rounded-full ${
+                    selectedFilter === filter
+                      ? "bg-orange-600 text-white hover:bg-orange-700"
+                      : "text-slate-600 dark:text-slate-300"
+                  }`}
+                >
+                  {t[filter as keyof typeof t] || filter}
+                </Button>
+              )
+            )}
+          </div>
 
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Globe className="h-4 w-4" />
-                    <label className="text-sm font-medium">{t.region}</label>
-                    <Badge variant={device.device_region === "SW" ? "destructive" : "default"}>
-                      {device.device_region} {device.device_region === "SW" ? "(-)" : "(+)"}
-                    </Badge>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium">{t.mapStyle}</label>
-                    <select
-                      value={mapStyle}
-                      onChange={(e) => setMapStyle(e.target.value as "osm" | "carto" | "transport")}
-                      className="px-3 py-1 text-sm bg-background border rounded-md shadow-sm"
-                    >
-                      <option value="transport">{t.roads}</option>
-                      <option value="carto">{t.streets}</option>
-                      <option value="osm">{t.standard}</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowRoute(!showRoute)}
+              className="text-xs h-7 px-2.5 rounded-full"
+            >
+              <Route className="h-3.5 w-3.5 mr-1" />
+              {showRoute ? t.hideRoute : t.showRoute}
+            </Button>
 
-              {/* Custom Date Range */}
-              {showDatePicker && selectedFilter === 'custom' && (
-                <div className="flex items-center gap-4 p-3 bg-muted rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <label className="text-sm font-medium">{t.startDate}:</label>
-                    <input
-                      type="date"
-                      value={customStartDate}
-                      onChange={(e) => setCustomStartDate(e.target.value)}
-                      className="px-2 py-1 text-sm bg-background border rounded-md"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium">{t.endDate}:</label>
-                    <input
-                      type="date"
-                      value={customEndDate}
-                      onChange={(e) => setCustomEndDate(e.target.value)}
-                      className="px-2 py-1 text-sm bg-background border rounded-md"
-                    />
-                  </div>
-                </div>
-              )}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={loadDeviceLocationWithFilter}
+              disabled={deviceLoading}
+              className="text-xs h-7 px-2.5 rounded-full"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 mr-1 ${deviceLoading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
 
-              {/* Control Buttons and Status */}
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    {deviceLocations.length} {t.locationCount}
-                  </Badge>
-                  {selectedFilter && (
-                    <Badge variant="secondary">
-                      {selectedFilter === 'custom' && customStartDate && customEndDate
-                        ? `${customStartDate} to ${customEndDate}`
-                        : t[selectedFilter as keyof typeof t] || selectedFilter}
-                    </Badge>
-                  )}
-                </div>
+            <Button
+              size="sm"
+              variant={isLiveTracking ? "destructive" : "default"}
+              onClick={toggleLiveTracking}
+              className={`text-xs h-7 px-3 rounded-full font-semibold ${
+                isLiveTracking
+                  ? "bg-red-600 hover:bg-red-700 text-white animate-pulse"
+                  : "bg-emerald-600 hover:bg-emerald-700 text-white"
+              }`}
+            >
+              <RadioIcon className="h-3.5 w-3.5 mr-1" />
+              {isLiveTracking ? t.stopLiveTracking : t.startTracking}
+            </Button>
+          </div>
+        </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Button size="sm" variant="outline" onClick={getCurrentLocation} disabled={locationLoading}>
-                    <RefreshCw className={`h-4 w-4 mr-1 ${locationLoading ? "animate-spin" : ""}`} />
-                    {t.refreshLocation}
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={loadDeviceLocationWithFilter} disabled={deviceLoading}>
-                    <MapPin className={`h-4 w-4 mr-1 ${deviceLoading ? "animate-spin" : ""}`} />
-                    {t.loadDeviceLocation}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={isLiveTracking ? "destructive" : "default"}
-                    onClick={toggleLiveTracking}
-                    className={isLiveTracking ? "animate-pulse" : ""}
-                  >
-                    <RadioIcon className="h-4 w-4 mr-1" />
-                    {isLiveTracking ? t.stopLiveTracking : t.startLiveTracking}
-                  </Button>
-                </div>
-              </div>
+        {/* Custom Date Pickers */}
+        {showDatePicker && (
+          <div className="flex items-center gap-3 py-2 bg-slate-50 dark:bg-slate-900/50 px-3 rounded-lg text-xs">
+            <div className="flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5 text-slate-400" />
+              <span>{t.startDate}:</span>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="border rounded px-2 py-1 bg-white dark:bg-slate-900 text-xs"
+              />
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5 text-slate-400" />
+              <span>{t.endDate}:</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="border rounded px-2 py-1 bg-white dark:bg-slate-900 text-xs"
+              />
+            </div>
+            <Button
+              size="sm"
+              onClick={loadDeviceLocationWithFilter}
+              className="bg-orange-600 hover:bg-orange-700 text-white h-7 text-xs rounded-full px-3"
+            >
+              {t.applyFilter}
+            </Button>
+          </div>
+        )}
 
-        <div className="flex-1 overflow-y-auto space-y-6">
-          {/* Map Section */}
-          <Card>
-            <CardContent className="p-0">
-              <div className="h-96 bg-muted rounded-lg relative overflow-hidden">
-                {!mapLoaded ? (
-                  <div className="flex items-center justify-center h-full">
-                    <RefreshCw className="h-8 w-8 animate-spin" />
-                    <span className="ml-2">Loading map...</span>
-                  </div>
-                ) : (
-                  <MapContainer
-                    key={mapKey}
-                    center={mapCenter}
-                    zoom={mapZoom}
-                    style={{ height: "100%", width: "100%" }}
-                    ref={mapRef}
-                  >
-                    <TileLayer
-                      attribution={getTileLayerConfig().attribution}
-                      url={getTileLayerConfig().url}
-                      onError={() => {
-                        console.log("[DeviceMapModal] Primary tile layer failed, falling back")
-                      }}
-                    />
-
-                    {/* User location marker */}
-                    {userLocation && (
-                      <Marker position={[userLocation.latitude, userLocation.longitude]}>
-                        <Popup>
-                          <div className="text-center">
-                            <strong>{t.yourLocation}</strong>
-                            <br />
-                            <div className="text-xs">
-                              Lat: {userLocation.latitude.toFixed(6)}, Lon: {userLocation.longitude.toFixed(6)}
-                            </div>
-                            {userLocation.accuracy && (
-                              <span className={getAccuracyColor(userLocation.accuracy)}>
-                                {t.accuracy} {getAccuracyText(userLocation.accuracy)}
-                              </span>
-                            )}
-                          </div>
-                        </Popup>
-                      </Marker>
-                    )}
-
-                    {/* Device current location marker with transparent tractor icon */}
-                    {currentLocation && currentLocation.lat && currentLocation.lon && (
-                      <Marker
-                        position={[Number(currentLocation.lat), Number(currentLocation.lon)]}
-                        icon={
-                          LInstance
-                            ? getLeafletTractorDivIcon(LInstance, {
-                                course: currentLocation.course || 0,
-                                isSelected: true,
-                                isLive: isLiveTracking,
-                                isMoving: (currentLocation.speed || 0) > 0.5,
-                                status: isOnline ? "Active" : "Offline",
-                                size: 58,
-                              })
-                            : undefined
-                        }
-                      >
-                        <Popup>
-                          <div className="text-center">
-                            <strong>{t.deviceLocation}</strong>
-                            <br />
-                            <div className="text-sm space-y-1">
-                              <div className="text-xs font-mono">
-                                Lat: {Number(currentLocation.lat).toFixed(6)}, Lon: {Number(currentLocation.lon).toFixed(6)}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {t.region} {device.device_region} {device.device_region === "SW" ? "(SW coords)" : "(NE coords)"}
-                              </div>
-                              {currentLocation.speed && (
-                                <div>
-                                  {t.speed} {Number(currentLocation.speed).toFixed(1)} km/h
-                                </div>
-                              )}
-                              {currentLocation.course && (
-                                <div>
-                                  {t.course} {currentLocation.course}°
-                                </div>
-                              )}
-                              <div className="text-xs text-muted-foreground">
-                                {formatTime(currentLocation.timestamp || currentLocation.created_at)}
-                              </div>
-                            </div>
-                          </div>
-                        </Popup>
-                      </Marker>
-                    )}
-
-                    {/* Route polyline */}
-                    {showRoute && routePath.length > 1 && (
-                      <Polyline
-                        positions={routePath}
-                        pathOptions={{
-                          color: "#3B82F6",
-                          weight: 4,
-                          opacity: 0.85,
-                        }}
-                      />
-                    )}
-
-                    {/* Route history waypoint markers */}
-                    {showRoute &&
-                      routePath.length > 0 &&
-                      routePath.slice(0, 15).map((point, index) => {
-                        const isStart = index === routePath.length - 1
-                        const isLatest = index === 0
-                        const waypointIcon = LInstance
-                          ? LInstance.divIcon({
-                              html: `<div style="width: ${isStart || isLatest ? 12 : 8}px; height: ${isStart || isLatest ? 12 : 8}px; border-radius: 50%; background: ${isLatest ? "#EF4444" : isStart ? "#10B981" : "#3B82F6"}; border: 2px solid #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,0.5);"></div>`,
-                              className: "custom-waypoint-dot",
-                              iconSize: [isStart || isLatest ? 12 : 8, isStart || isLatest ? 12 : 8],
-                              iconAnchor: [isStart || isLatest ? 6 : 4, isStart || isLatest ? 6 : 4],
-                            })
-                          : undefined
-
-                        return (
-                          <Marker key={`route-point-${index}`} position={point} icon={waypointIcon}>
-                            <Popup>
-                              <div className="text-sm">
-                                <div>
-                                  <strong>{isLatest ? "Latest Waypoint" : isStart ? "Start Point" : `Route Point ${index + 1}`}</strong>
-                                </div>
-                                <div className="text-xs font-mono">
-                                  Lat: {point[0].toFixed(6)}, Lon: {point[1].toFixed(6)}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {t.region} {device.device_region}
-                                </div>
-                                {deviceLocations[index] && (
-                                  <>
-                                    <div>
-                                      {t.speed} {Number(deviceLocations[index].speed || 0).toFixed(1)} km/h
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                      {formatTime(deviceLocations[index].timestamp || deviceLocations[index].created_at)}
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            </Popup>
-                          </Marker>
-                        )
-                      })}
-                  </MapContainer>
-                )}
-
-                {/* Live tracking status indicator */}
-                {isLiveTracking && (
-                  <div className="absolute bottom-2 left-2">
-                    <Badge variant="default" className="bg-green-600 animate-pulse">
-                      <div className="w-2 h-2 bg-white rounded-full mr-2 animate-ping"></div>
-                      {socket?.connected ? t.connected : t.disconnected}
-                    </Badge>
-                  </div>
-                )}
-
-                {/* Loading indicator for device data */}
-                {deviceLoading && (
-                  <div className="absolute top-2 right-2">
-                    <Badge variant="secondary">
-                      <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-                      Loading...
-                    </Badge>
-                  </div>
-                )}
-
-                {/* Region indicator on map */}
-                <div className="absolute top-2 left-2">
-                  <Badge variant={device.device_region === "SW" ? "destructive" : "default"} className="text-xs">
-                    <Globe className="h-3 w-3 mr-1" />
-                    {device.device_region} {device.device_region === "SW" ? "(-lat,-lon)" : "(+lat,+lon)"}
-                  </Badge>
-                </div>
+        {/* Map Canvas & Telemetry Info */}
+        <div className="flex-1 overflow-y-auto space-y-4 pt-2">
+          <div className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 min-h-[380px] h-[48vh]">
+            {!googleMapsLoaded ? (
+              <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                <RefreshCw className="h-8 w-8 animate-spin text-orange-600 mb-2" />
+                <span className="text-sm font-semibold">Loading Google Maps...</span>
               </div>
-            </CardContent>
-          </Card>
+            ) : googleMapsError ? (
+              <div className="flex flex-col items-center justify-center h-full text-red-500">
+                <p className="text-sm font-semibold">Failed to load Google Maps.</p>
+              </div>
+            ) : (
+              <>
+                <div ref={mapElementRef} className="w-full h-full" />
 
-          {/* Device Info */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4 mb-6">
-                <Avatar className="h-16 w-16">
-                  {device.tractorInStore.baseTractor?.images?.[0] ? (
-                    <AvatarImage
-                      src={device.tractorInStore.baseTractor.images[0] || "/placeholder.svg"}
-                      alt={device.tractorInStore.baseTractor.name}
-                    />
-                  ) : (
-                    <AvatarFallback>
-                      <Truck className="h-8 w-8" />
-                    </AvatarFallback>
-                  )}
-                </Avatar>
-
-                <div className="flex-1">
-                  <h3 className="text-xl font-semibold mb-1">{device.tractorInStore.baseTractor.name}</h3>
-                  <p className="text-muted-foreground mb-2">
-                    {t.model} {device.tractorInStore.baseTractor.model}
-                  </p>
-                  <p className="text-sm text-muted-foreground font-mono">
-                    {t.imei} {device.device_imei}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {t.coordinateSystem} {device.device_region === "SW" ? t.southwest : t.northeast}
-                  </p>
+                {/* Floating Map Controls */}
+                <div className="absolute top-3 right-3 z-10 flex flex-col gap-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-1.5 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800">
+                  <div className="flex items-center gap-1">
+                    {(["hybrid", "satellite", "roadmap", "terrain"] as GoogleMapType[]).map(
+                      (type) => (
+                        <button
+                          key={type}
+                          onClick={() => setMapType(type)}
+                          className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all capitalize ${
+                            mapType === type
+                              ? "bg-orange-600 text-white shadow-sm"
+                              : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                          }`}
+                        >
+                          {type}
+                        </button>
+                      )
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <Badge variant={isOnline ? "default" : "secondary"} className="flex items-center gap-1">
+                {/* Recenter button */}
+                <button
+                  onClick={handleRecenter}
+                  className="absolute bottom-4 right-4 z-10 p-2.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md hover:bg-orange-500 hover:text-white rounded-full shadow-lg border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 transition-all"
+                  title={t.recenter}
+                >
+                  <LocateFixed className="h-5 w-5" />
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Telemetry Stats Card */}
+          <Card className="border border-slate-200 dark:border-slate-800 shadow-sm rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between flex-wrap gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-12 w-12 rounded-xl border border-slate-200">
+                    {tractorImage ? (
+                      <AvatarImage src={tractorImage} alt={tractorName} className="object-cover" />
+                    ) : (
+                      <AvatarFallback className="bg-amber-100 text-amber-800">
+                        <Truck className="h-6 w-6" />
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                  <div>
+                    <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                      {tractorName}
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      {t.model} {tractorModel} • <span className="font-mono">{deviceImei}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={isOnline ? "default" : "secondary"}
+                    className={`flex items-center gap-1 ${
+                      isOnline ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-700"
+                    }`}
+                  >
                     {isOnline ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
                     {isOnline ? t.online : t.offline}
                   </Badge>
-                  <Badge variant={device.device_region === "SW" ? "destructive" : "default"}>
-                    <Globe className="h-3 w-3 mr-1" />
-                    {device.device_region}
+                  <Badge variant="outline" className="text-xs font-semibold">
+                    ${hourlyPrice}/hr
                   </Badge>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
+              {/* 4-Grid Telemetry Metrics */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3">
+                <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                  <Clock className="h-4 w-4 text-slate-400 shrink-0" />
                   <div>
-                    <p className="text-xs text-muted-foreground">{t.lastSeen}</p>
-                    <p className="text-sm font-medium">
+                    <p className="text-[10px] text-slate-400 font-medium">{t.lastSeen}</p>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
                       {currentLocation
                         ? formatTime(currentLocation.timestamp || currentLocation.created_at)
-                        : formatTime(device.updatedAt)}
+                        : formatTime(device?.updatedAt || "")}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <Battery className="h-4 w-4 text-green-600" />
+                <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                  <Battery className="h-4 w-4 text-emerald-600 shrink-0" />
                   <div>
-                    <p className="text-xs text-muted-foreground">{t.battery}</p>
-                    <p className="text-sm font-medium">
-                      {currentLocation?.battery_level ? `${currentLocation.battery_level}%` : "85%"}
+                    <p className="text-[10px] text-slate-400 font-medium">{t.battery}</p>
+                    <p className="text-xs font-bold text-emerald-600">
+                      {currentLocation?.battery_level ? `${currentLocation.battery_level}%` : "92%"}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-blue-600" />
+                <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                  <Zap className="h-4 w-4 text-blue-600 shrink-0" />
                   <div>
-                    <p className="text-xs text-muted-foreground">{t.speed}</p>
+                    <p className="text-[10px] text-slate-400 font-medium">{t.speed}</p>
                     <p
-                      className={`text-sm font-medium ${isLiveTracking && currentLocation?.speed && currentLocation.speed > 0 ? "text-green-600 animate-pulse" : ""}`}
+                      className={`text-xs font-bold ${
+                        (currentLocation?.speed || 0) > 0.5 ? "text-emerald-600 animate-pulse" : "text-slate-700 dark:text-slate-300"
+                      }`}
                     >
-                      {currentLocation?.speed ? `${currentLocation.speed.toFixed(1)} km/h` : "0 km/h"}
+                      {currentLocation?.speed ? `${currentLocation.speed.toFixed(1)} km/h` : "0.0 km/h"}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">💰</span>
+                <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                  <Navigation className="h-4 w-4 text-orange-600 shrink-0" />
                   <div>
-                    <p className="text-xs text-muted-foreground">{t.hourlyRate}</p>
-                    <p className="text-sm font-medium text-green-600">${device.tractorInStore.hourly_price}/hr</p>
+                    <p className="text-[10px] text-slate-400 font-medium">{t.course}</p>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      {currentLocation?.course ? `${currentLocation.course}°` : "0°"}
+                    </p>
                   </div>
                 </div>
-              </div>
-
-              {/* Location History Summary */}
-              {Array.isArray(deviceLocations) && deviceLocations.length > 0 && (
-                <div className="mb-6 p-4 bg-muted rounded-lg">
-                  <h4 className="font-medium mb-2 flex items-center gap-2">
-                    {t.locationHistory}
-                    {isLiveTracking && (
-                      <Badge variant="outline" className="text-xs">
-                        Live: {liveLocationCount} updates
-                      </Badge>
-                    )}
-                    <Badge variant="secondary" className="text-xs">
-                      {selectedFilter === 'custom' && customStartDate && customEndDate
-                        ? `${customStartDate} to ${customEndDate}`
-                        : t[selectedFilter as keyof typeof t] || selectedFilter}
-                    </Badge>
-                    <Badge variant={device.device_region === "SW" ? "destructive" : "default"} className="text-xs">
-                      {device.device_region} coords
-                    </Badge>
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    {deviceLocations.length} {t.locationCount}
-                    {isLiveTracking && " (updating in real-time)"}
-                    {device.device_region === "SW" && " with negative coordinates"}
-                  </p>
-                </div>
-              )}
-
-              {/* No data message */}
-              {!deviceLoading && (!deviceLocations || deviceLocations.length === 0) && (
-                <div className="mb-6 p-4 bg-muted rounded-lg text-center">
-                  <p className="text-sm text-muted-foreground">{t.noLocationData}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Try selecting a different date range or check if the device is active.
-                    {device.device_region === "SW" && " Note: This device uses SW region coordinates (negative values)."}
-                  </p>
-                </div>
-              )}
-
-              <div className="flex gap-3">
-                <Button
-                  className={`flex-1 ${isLiveTracking ? "bg-green-600 hover:bg-green-700" : ""}`}
-                  onClick={toggleLiveTracking}
-                >
-                  <Navigation className="h-4 w-4 mr-2" />
-                  {isLiveTracking ? t.stopLiveTracking : t.startLiveTracking}
-                </Button>
-                <Button variant="outline" className="flex-1 bg-transparent">
-                  {t.viewDetails}
-                </Button>
               </div>
             </CardContent>
           </Card>

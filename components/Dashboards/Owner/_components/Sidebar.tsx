@@ -34,6 +34,8 @@ import TranslatedText from "@/components/Menubar/TranslatedText";
 import { ownerSidebar } from "./OwnerSidebarTranslations";
 import { useOwnerStoreContext } from "@/components/wrappers/StoreProvider";
 
+import { getAuthUser, getAuthUserId } from "@/utils/auth/clientAuth";
+
 interface user {
   userId: string;
   image: string;
@@ -46,7 +48,11 @@ const Sidebar = () => {
   const [showStoreList, setShowStoreList] = useState(false);
 
   const { cookie } = useCookie();
-  const user: user = cookie.get("user");
+  const rawUser = cookie.get("user");
+  const parsedUser = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser); } catch { return null; } })() : rawUser;
+  const authUser = getAuthUser();
+  const user: user = parsedUser || authUser || {};
+  const currentUserId = user?.userId || authUser.userId || getAuthUserId();
   const pathname = usePathname();
 
   const { fetchOwner, stores, loading } = useOwnerStoreContext();
@@ -77,12 +83,8 @@ const Sidebar = () => {
   }
 
   useEffect(() => {
-    if (user) {
-      fetchOwner();
-    }
+    fetchOwner();
   }, []);
-
-  if (!user) return null;
 
   const isActive = (path: string) => pathname === path || (path !== "/owner" && pathname.startsWith(path));
 

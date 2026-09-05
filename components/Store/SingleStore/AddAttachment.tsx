@@ -218,13 +218,13 @@ const AddAttachment = ({
               </Swiper>
             )}
 
-            <div className="flex-1">
-              <h3 className="font-semibold text-sm">{attachment.name}</h3>
-              <p className="text-xs text-gray-600 mt-1">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-sm truncate" title={attachment.name}>{attachment.name}</h3>
+              <p className="text-xs text-gray-600 mt-1 line-clamp-2 break-words" title={attachment.description}>
                 {attachment.description}
               </p>
               {attachment.category && (
-                <p className="text-xs text-blue-600 mt-1 bg-blue-50 px-2 py-1 rounded">
+                <p className="text-xs text-blue-600 mt-1 bg-blue-50 px-2 py-1 rounded inline-block">
                   {attachment.category}
                 </p>
               )}

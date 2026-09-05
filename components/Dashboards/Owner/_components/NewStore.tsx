@@ -38,6 +38,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 import { changeNewStoreShow } from "@/redux/NewStoreShow/NewStoreShow";
 import { useOwnerStoreContext } from "@/components/wrappers/StoreProvider";
+import { getAuthUser, getAuthUserId } from "@/utils/auth/clientAuth";
 import {
   SelectContent,
   SelectItem,
@@ -94,7 +95,11 @@ const NewStore = () => {
   const { show } = useSelector((state: RootState) => state.NewStoreShow);
 
   const { cookie } = useCookie();
-  const user: user = cookie.get("user");
+  const rawUser = cookie.get("user");
+  const parsedUser = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser); } catch { return null; } })() : rawUser;
+  const authUser = getAuthUser();
+  const user: user = parsedUser || authUser || {};
+  const currentUserId = user?.userId || authUser.userId || getAuthUserId();
   const access_token = cookie.get("access_token");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -222,7 +227,7 @@ const NewStore = () => {
       closing_days: closingDays,
       image: storeImages,
       banner: bannerLink,
-      owner_user_id: user.userId,
+      owner_user_id: currentUserId,
       lat: `${location.latitude}`,
       lan: `${location.longitude}`,
       additionalImages: additionalImages,

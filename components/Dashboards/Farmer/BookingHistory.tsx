@@ -10,6 +10,7 @@ import {
   Tractor,
   KeyRound,
   DollarSign,
+  Globe,
   Search,
   RefreshCw,
   ChevronRight,
@@ -26,17 +27,32 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { renderInstance, TractorAIBaseURL } from "@/utils/Axios/RenderInstance";
 import { useCookie } from "next-cookie";
 import { successMessage } from "@/utils/Toastify/Messages";
+import {
+  getLiveCurrencyRates,
+  BASE_CURRENCY_CONFIGS,
+  CurrencyConfig,
+} from "@/utils/currency/currencyService";
 
 export default function FarmerBookingHistory() {
+  const [currencyMap, setCurrencyMap] = useState<Record<string, CurrencyConfig>>(BASE_CURRENCY_CONFIGS);
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [copiedOtp, setCopiedOtp] = useState<string | null>(null);
+  const [selectedCurrencyKey, setSelectedCurrencyKey] = useState<string>("AUTO");
+  const [detectedCurrency, setDetectedCurrency] = useState<CurrencyConfig>(BASE_CURRENCY_CONFIGS.USD);
 
   const { cookie } = useCookie();
   const rawUser = cookie.get("user");
@@ -52,6 +68,117 @@ export default function FarmerBookingHistory() {
       : rawUser;
   const user = parsedUser || {};
   const userId = parsedUser?.userId || parsedUser?.id || parsedUser?.sub || parsedUser?._id || "farmer_demo_01";
+
+  // Dynamic live rate fetch from TractorAI engine / API
+  useEffect(() => {
+    let mounted = true;
+    getLiveCurrencyRates().then((liveRates) => {
+      if (mounted && liveRates) {
+        setCurrencyMap(liveRates);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Auto-detect local currency via Timezone, User metadata, and cached Geolocation
+  useEffect(() => {
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+      const userPhone = user?.phone || user?.mobile || "";
+      const userCountryCode = user?.country_code || user?.country || "";
+
+      if (
+        tz.includes("Calcutta") ||
+        tz.includes("Kolkata") ||
+        tz.includes("Colombo") ||
+        userCountryCode === "+91" ||
+        userCountryCode === "IN" ||
+        userPhone.startsWith("+91")
+      ) {
+        setDetectedCurrency(currencyMap.INR || BASE_CURRENCY_CONFIGS.INR);
+      } else if (
+        tz.includes("La_Paz") ||
+        userCountryCode === "+591" ||
+        userCountryCode === "BO" ||
+        userPhone.startsWith("+591")
+      ) {
+        setDetectedCurrency(currencyMap.BOB || BASE_CURRENCY_CONFIGS.BOB);
+      } else if (
+        tz.includes("Lima") ||
+        userCountryCode === "+51" ||
+        userCountryCode === "PE" ||
+        userPhone.startsWith("+51")
+      ) {
+        setDetectedCurrency(currencyMap.PEN || BASE_CURRENCY_CONFIGS.PEN);
+      } else if (
+        tz.includes("Sao_Paulo") ||
+        tz.includes("Brazil") ||
+        userCountryCode === "+55" ||
+        userCountryCode === "BR"
+      ) {
+        setDetectedCurrency(currencyMap.BRL || BASE_CURRENCY_CONFIGS.BRL);
+      } else if (tz.startsWith("Europe/")) {
+        setDetectedCurrency(currencyMap.EUR || BASE_CURRENCY_CONFIGS.EUR);
+      }
+    } catch {}
+
+    // Non-blocking single geolocation check
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      const cachedGeo = sessionStorage.getItem("@farmer_geo_detected");
+      if (!cachedGeo) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const { latitude, longitude } = pos.coords;
+            try {
+              sessionStorage.setItem("@farmer_geo_detected", "true");
+              if (latitude >= 6.0 && latitude <= 38.0 && longitude >= 68.0 && longitude <= 98.0) {
+                setDetectedCurrency(currencyMap.INR || BASE_CURRENCY_CONFIGS.INR);
+              } else if (latitude >= -23.0 && latitude <= -9.0 && longitude >= -70.0 && longitude <= -57.0) {
+                setDetectedCurrency(currencyMap.BOB || BASE_CURRENCY_CONFIGS.BOB);
+              } else if (latitude >= -18.5 && latitude <= -0.03 && longitude >= -81.5 && longitude <= -68.5) {
+                setDetectedCurrency(currencyMap.PEN || BASE_CURRENCY_CONFIGS.PEN);
+              } else if (latitude >= -34.0 && latitude <= 6.0 && longitude >= -74.0 && longitude <= -34.0) {
+                setDetectedCurrency(currencyMap.BRL || BASE_CURRENCY_CONFIGS.BRL);
+              } else if (latitude >= 35.0 && latitude <= 71.0 && longitude >= -25.0 && longitude <= 40.0) {
+                setDetectedCurrency(currencyMap.EUR || BASE_CURRENCY_CONFIGS.EUR);
+              }
+            } catch {}
+          },
+          () => {},
+          { timeout: 3000, maximumAge: 600000 }
+        );
+      }
+    }
+
+    try {
+      const saved = localStorage.getItem("@farmer_selected_currency");
+      if (saved && (saved === "AUTO" || currencyMap[saved] || BASE_CURRENCY_CONFIGS[saved])) {
+        setSelectedCurrencyKey(saved);
+      }
+    } catch {}
+  }, [user, currencyMap]);
+
+  const handleCurrencyChange = (newKey: string) => {
+    setSelectedCurrencyKey(newKey);
+    try {
+      localStorage.setItem("@farmer_selected_currency", newKey);
+    } catch {}
+  };
+
+  const activeCurrency =
+    selectedCurrencyKey === "AUTO"
+      ? detectedCurrency
+      : currencyMap[selectedCurrencyKey] || BASE_CURRENCY_CONFIGS[selectedCurrencyKey] || BASE_CURRENCY_CONFIGS.USD;
+
+  const formatPrice = (usdAmount: number) => {
+    const converted = Number(usdAmount || 0) * (activeCurrency?.rate || 1.0);
+    return `${activeCurrency.symbol}${converted.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
 
   const normalizeBookingItem = (raw: any) => {
     const rawStatus = (raw.bookingStatus || raw.status || "Confirmed").toLowerCase();
@@ -74,7 +201,28 @@ export default function FarmerBookingHistory() {
     }
 
     const bookingId = raw.id || raw.booking_id || `HT-${Math.floor(100000 + Math.random() * 900000)}`;
-    const totalAmount = Number(raw.total_amount || raw.total_cost || raw.total_price || 0);
+    const rawCost = Number(raw.total_amount || raw.total_cost || raw.total_price || 0);
+    const rawCurrency = (raw.currency || "USD").toUpperCase();
+
+    // Normalize amount to base USD if currency was stored in another unit
+    let baseAmount = rawCost;
+    const inrRate = currencyMap.INR?.rate || 94.0;
+    const bobRate = currencyMap.BOB?.rate || 6.91;
+    const penRate = currencyMap.PEN?.rate || 3.75;
+    const brlRate = currencyMap.BRL?.rate || 5.4;
+    const eurRate = currencyMap.EUR?.rate || 0.92;
+
+    if (rawCurrency === "INR" && rawCost > 2000) {
+      baseAmount = rawCost / inrRate;
+    } else if (rawCurrency === "BOB" && rawCost > 500) {
+      baseAmount = rawCost / bobRate;
+    } else if (rawCurrency === "PEN" && rawCost > 300) {
+      baseAmount = rawCost / penRate;
+    } else if (rawCurrency === "BRL" && rawCost > 400) {
+      baseAmount = rawCost / brlRate;
+    } else if (rawCurrency === "EUR" && rawCost > 100) {
+      baseAmount = rawCost / eurRate;
+    }
 
     const tractorName =
       raw.assigned_tractor ||
@@ -100,8 +248,9 @@ export default function FarmerBookingHistory() {
       tractorName,
       operatorName,
       hectares: Number(raw.hectares || 5.0),
-      totalAmount,
-      currency: raw.currency || "USD",
+      baseAmount,
+      totalAmount: rawCost,
+      currency: rawCurrency,
       currencySymbol: raw.currency_symbol || "$",
       checkinOtp,
       dateStr,
@@ -114,28 +263,9 @@ export default function FarmerBookingHistory() {
 
   const fetchAllBookings = async () => {
     setRefreshing(true);
-    let standardBookings: any[] = [];
-    let simpleBookings: any[] = [];
+
+    // 1. Instant local cache hydration (<50ms paint)
     let localBookings: any[] = [];
-
-    // 1. Fetch from Render standard backend
-    try {
-      const res = await renderInstance.get(`/farmer/${userId}`);
-      if (res.data?.bookings && Array.isArray(res.data.bookings)) {
-        standardBookings = res.data.bookings;
-      }
-    } catch {}
-
-    // 2. Fetch from TractorAI backend (/simple-booking/list/{farmer_id})
-    try {
-      const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
-      const res = await axios.get(`${fastApiBase}/simple-booking/list/${userId}`, { timeout: 5000 });
-      if (Array.isArray(res.data)) {
-        simpleBookings = res.data;
-      }
-    } catch {}
-
-    // 3. Scan all farmer booking local storage keys
     try {
       if (typeof window !== "undefined") {
         for (let i = 0; i < localStorage.length; i++) {
@@ -154,7 +284,52 @@ export default function FarmerBookingHistory() {
       }
     } catch {}
 
-    // 4. Merge, deduplicate and normalize
+    if (localBookings.length > 0) {
+      const seen = new Set<string>();
+      const quickList: any[] = [];
+      for (const item of localBookings) {
+        const bId = item.id || item.booking_id;
+        if (bId && !seen.has(bId)) {
+          seen.add(bId);
+          quickList.push(normalizeBookingItem(item));
+        }
+      }
+      if (quickList.length > 0) {
+        setBookings(quickList);
+        setLoading(false);
+      }
+    }
+
+    // 2. Parallel network fetching with tight timeouts
+    const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
+    let standardBookings: any[] = [];
+    let simpleBookings: any[] = [];
+
+    try {
+      const results = await Promise.allSettled([
+        axios.get(`${fastApiBase}/simple-booking/list/${userId}`, { timeout: 3500 }),
+        axios.get(`http://127.0.0.1:8000/simple-booking/list/${userId}`, { timeout: 2000 }),
+        renderInstance.get(`/farmer/${userId}`, { timeout: 3500 }),
+        axios.get(`/api/booking?farmer_id=${userId}`, { timeout: 3000 }),
+      ]);
+
+      const [remoteFastRes, localFastRes, renderRes, localApiRes] = results;
+
+      if (remoteFastRes.status === "fulfilled" && Array.isArray(remoteFastRes.value.data)) {
+        simpleBookings.push(...remoteFastRes.value.data);
+      }
+      if (localFastRes.status === "fulfilled" && Array.isArray(localFastRes.value.data)) {
+        simpleBookings.push(...localFastRes.value.data);
+      }
+      if (renderRes.status === "fulfilled" && Array.isArray(renderRes.value.data?.bookings)) {
+        standardBookings.push(...renderRes.value.data.bookings);
+      }
+      if (localApiRes.status === "fulfilled" && Array.isArray(localApiRes.value.data)) {
+        standardBookings.push(...localApiRes.value.data);
+      }
+    } catch {}
+
+    // 3. Merge, deduplicate and normalize
     const combined = [...localBookings, ...simpleBookings, ...standardBookings];
     const seen = new Set<string>();
     const normalized: any[] = [];
@@ -172,9 +347,25 @@ export default function FarmerBookingHistory() {
     setBookings(normalized);
     setLoading(false);
     setRefreshing(false);
+    try {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("@farmer_bookings_cache", JSON.stringify(normalized.slice(0, 50)));
+      }
+    } catch {}
   };
 
   useEffect(() => {
+    // 0. Check session cache immediately on mount
+    try {
+      if (typeof window !== "undefined") {
+        const sessionCached = JSON.parse(sessionStorage.getItem("@farmer_bookings_cache") || "[]");
+        if (Array.isArray(sessionCached) && sessionCached.length > 0) {
+          setBookings(sessionCached);
+          setLoading(false);
+        }
+      }
+    } catch {}
+
     fetchAllBookings();
 
     const handleCreated = () => {
@@ -228,7 +419,40 @@ export default function FarmerBookingHistory() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Location-Wise Local Currency Selector */}
+          <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <Globe className="w-3.5 h-3.5 text-emerald-600 ml-2" />
+            <Select value={selectedCurrencyKey} onValueChange={handleCurrencyChange}>
+              <SelectTrigger className="border-0 shadow-none text-xs font-bold h-7 rounded-lg focus:ring-0 w-36">
+                <SelectValue placeholder="Select Currency" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl">
+                <SelectItem value="AUTO" className="text-xs font-bold">
+                  🌍 Auto ({detectedCurrency.code} {detectedCurrency.symbol})
+                </SelectItem>
+                <SelectItem value="INR" className="text-xs font-bold">
+                  🇮🇳 INR (₹) - India
+                </SelectItem>
+                <SelectItem value="BOB" className="text-xs font-bold">
+                  🇧🇴 BOB (Bs.) - Bolivia
+                </SelectItem>
+                <SelectItem value="USD" className="text-xs font-bold">
+                  🇺🇸 USD ($) - Global
+                </SelectItem>
+                <SelectItem value="PEN" className="text-xs font-bold">
+                  🇵🇪 PEN (S/.) - Peru
+                </SelectItem>
+                <SelectItem value="BRL" className="text-xs font-bold">
+                  🇧🇷 BRL (R$) - Brazil
+                </SelectItem>
+                <SelectItem value="EUR" className="text-xs font-bold">
+                  🇪🇺 EUR (€) - Europe
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <Button
             size="sm"
             variant="outline"
@@ -276,10 +500,9 @@ export default function FarmerBookingHistory() {
         <Card className="rounded-2xl border-slate-200/80 dark:border-slate-800 p-4 bg-white dark:bg-slate-900 shadow-sm">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Invested</span>
           <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
-            $
-            {bookings
-              .reduce((acc, curr) => acc + (curr.totalAmount || 0), 0)
-              .toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {formatPrice(
+              bookings.reduce((acc, curr) => acc + (curr.baseAmount || 0), 0)
+            )}
           </div>
         </Card>
       </div>
@@ -453,9 +676,11 @@ export default function FarmerBookingHistory() {
                 <div className="p-5 pt-3 bg-slate-50/60 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                   <div>
                     <span className="text-[10px] font-bold text-slate-400 uppercase">Guaranteed Total</span>
-                    <div className="text-xl font-black text-slate-900 dark:text-white">
-                      {b.currencySymbol}
-                      {b.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <div className="text-xl font-black text-slate-900 dark:text-white flex items-baseline gap-1">
+                      <span>{formatPrice(b.baseAmount)}</span>
+                      <span className="text-[11px] font-bold text-slate-400">
+                        {activeCurrency.code}
+                      </span>
                     </div>
                   </div>
 

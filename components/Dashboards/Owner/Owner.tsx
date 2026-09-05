@@ -13,6 +13,8 @@ import HomeDashboard from "./_components/HomeDashboard";
 import OwnerShrimmer from "./_components/OwnerShrimmer";
 import { useOwnerStoreContext } from "@/components/wrappers/StoreProvider";
 
+import { getAuthUserId } from "@/utils/auth/clientAuth";
+
 interface UserType {
   userId: string;
   image?: string;
@@ -32,38 +34,13 @@ export default function OwnerDashboardPage() {
   const { setStores, stores } = useOwnerStoreContext();
 
   useEffect(() => {
-    let userId = "";
-
-    try {
-      if (typeof window !== "undefined") {
-        // Try getting user from document cookies
-        const match = document.cookie.match(new RegExp("(^| )user=([^;]+)"));
-        if (match) {
-          const userObj = JSON.parse(decodeURIComponent(match[2]));
-          userId = userObj?.userId || userObj?.id || "";
-        }
-        if (!userId) {
-          const storedUser = localStorage.getItem("user");
-          if (storedUser) {
-            const userObj = JSON.parse(storedUser);
-            userId = userObj?.userId || userObj?.id || "";
-          }
-        }
-      }
-    } catch (e) {
-      console.warn("Could not parse user cookie/localStorage", e);
-    }
-
-    if (!userId) {
-      // If user ID still not found, stop shimmering and show dashboard structure
-      setFetchingOwnerDetails(false);
-      return;
-    }
+    const userId = getAuthUserId();
+    const endpoint = userId ? `/owner/${userId}` : `/owner`;
 
     setFetchingOwnerDetails(true);
 
     renderInstance
-      .get(`/owner/${userId}`)
+      .get(endpoint)
       .then((res) => {
         if (res.data) {
           setStores(res.data.stores || []);

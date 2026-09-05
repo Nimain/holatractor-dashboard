@@ -24,6 +24,9 @@ import {
   ArrowUpRight,
   ShieldCheck,
   ChevronRight,
+  Globe,
+  MapPin,
+  Sparkles,
   X,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -56,11 +59,16 @@ import { useCookie } from "next-cookie";
 import { renderInstance, TractorAIBaseURL } from "@/utils/Axios/RenderInstance";
 import PaymentDetailsSheet from "./PaymentDetailsSheet";
 import Link from "next/link";
+import {
+  getLiveCurrencyRates,
+  BASE_CURRENCY_CONFIGS,
+  CurrencyConfig,
+} from "@/utils/currency/currencyService";
 
 interface PaymentItem {
   id: string;
   booking_id: string;
-  amount: number;
+  amount: number; // Base USD amount
   status: "COMPLETED" | "FarmerPENDING" | "FarmerCONFIRMED" | "OwnerREJECTED" | string;
   paymentType: string;
   transactionMethod?: string;
@@ -72,13 +80,15 @@ interface PaymentItem {
 }
 
 export default function PaymentHistory() {
+  const [currencyMap, setCurrencyMap] = useState<Record<string, CurrencyConfig>>(BASE_CURRENCY_CONFIGS);
   const [payments, setPayments] = useState<PaymentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [selectedPayment, setSelectedPayment] = useState<any | null>(null);
+  const [selectedCurrencyKey, setSelectedCurrencyKey] = useState<string>("AUTO");
+  const [detectedCurrency, setDetectedCurrency] = useState<CurrencyConfig>(BASE_CURRENCY_CONFIGS.USD);
 
   const { cookie } = useCookie();
   const rawUser = cookie.get("user");
@@ -95,61 +105,213 @@ export default function PaymentHistory() {
   const userId = parsedUser?.userId || parsedUser?.id || parsedUser?.sub || parsedUser?._id || "farmer_demo_01";
   const access_token = cookie.get("access_token");
 
-  const fetchPayments = async () => {
-    setRefreshing(true);
-    let combinedPayments: PaymentItem[] = [];
-
-    // 1. Primary: TractorAI Simple Booking list
-    try {
-      const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
-      const res = await axios.get(`${fastApiBase}/simple-booking/list/${userId}`, { timeout: 8000 });
-      const bList = Array.isArray(res.data) ? res.data : [];
-
-      if (bList.length > 0) {
-        combinedPayments = bList.map((b: any, idx: number) => {
-          const isDone = b.bookingStatus === "Completed" || b.status === "Completed";
-          const isConfirmed = b.bookingStatus === "Confirmed" || b.status === "Confirmed";
-          const isRejected = b.bookingStatus === "Rejected" || b.status === "Rejected";
-
-          let payStatus = "FarmerPENDING";
-          if (isDone) payStatus = "COMPLETED";
-          else if (isConfirmed) payStatus = "FarmerCONFIRMED";
-          else if (isRejected) payStatus = "OwnerREJECTED";
-
-          return {
-            id: `PAY-${b.id ? String(b.id).slice(-6).toUpperCase() : `00${idx + 1}`}`,
-            booking_id: b.id || `BK-${idx + 100}`,
-            amount: Number(b.total_cost || b.total_amount || 120),
-            status: payStatus,
-            paymentType: b.payment_method || "Credit Card / Direct",
-            transactionMethod: b.payment_method || "Direct Dispatch",
-            receiver_name: b.store_name || "Regional Machinery Depot",
-            createdAt: b.createdAt || b.start_date || new Date().toISOString(),
-            service_name: b.service_name || b.operation_type || "Deep Plowing & Soil Prep",
-            area: Number(b.area_hectares || b.area || 5),
-            booking: {
-              ...b,
-              tractors: b.tractors || [],
-              attachments: b.attachments || [],
-            },
-          };
-        });
+  // Dynamic live rate fetch from TractorAI engine / API
+  useEffect(() => {
+    let mounted = true;
+    getLiveCurrencyRates().then((liveRates) => {
+      if (mounted && liveRates) {
+        setCurrencyMap(liveRates);
       }
-    } catch (errFastApi) {
-      console.warn("TractorAI booking payments fetch error:", errFastApi);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Geolocation auto-detection (cached & non-blocking)
+  useEffect(() => {
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+      const userPhone = rawUser?.phone || rawUser?.mobile || "";
+      const userCountryCode = rawUser?.country_code || rawUser?.country || "";
+
+      if (
+        tz.includes("Calcutta") ||
+        tz.includes("Kolkata") ||
+        tz.includes("Colombo") ||
+        userCountryCode === "+91" ||
+        userCountryCode === "IN" ||
+        userPhone.startsWith("+91")
+      ) {
+        setDetectedCurrency(currencyMap.INR || BASE_CURRENCY_CONFIGS.INR);
+      } else if (
+        tz.includes("La_Paz") ||
+        userCountryCode === "+591" ||
+        userCountryCode === "BO" ||
+        userPhone.startsWith("+591")
+      ) {
+        setDetectedCurrency(currencyMap.BOB || BASE_CURRENCY_CONFIGS.BOB);
+      } else if (
+        tz.includes("Lima") ||
+        userCountryCode === "+51" ||
+        userCountryCode === "PE" ||
+        userPhone.startsWith("+51")
+      ) {
+        setDetectedCurrency(currencyMap.PEN || BASE_CURRENCY_CONFIGS.PEN);
+      } else if (
+        tz.includes("Sao_Paulo") ||
+        userCountryCode === "+55" ||
+        userCountryCode === "BR"
+      ) {
+        setDetectedCurrency(currencyMap.BRL || BASE_CURRENCY_CONFIGS.BRL);
+      } else if (tz.startsWith("Europe/")) {
+        setDetectedCurrency(currencyMap.EUR || BASE_CURRENCY_CONFIGS.EUR);
+      }
+    } catch {}
+
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      const cachedGeo = sessionStorage.getItem("@farmer_geo_detected");
+      if (!cachedGeo) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const { latitude, longitude } = pos.coords;
+            try {
+              sessionStorage.setItem("@farmer_geo_detected", "true");
+              if (latitude >= 6.0 && latitude <= 38.0 && longitude >= 68.0 && longitude <= 98.0) {
+                setDetectedCurrency(currencyMap.INR || BASE_CURRENCY_CONFIGS.INR);
+              } else if (latitude >= -23.0 && latitude <= -9.0 && longitude >= -70.0 && longitude <= -57.0) {
+                setDetectedCurrency(currencyMap.BOB || BASE_CURRENCY_CONFIGS.BOB);
+              } else if (latitude >= -18.5 && latitude <= -0.03 && longitude >= -81.5 && longitude <= -68.5) {
+                setDetectedCurrency(currencyMap.PEN || BASE_CURRENCY_CONFIGS.PEN);
+              }
+            } catch {}
+          },
+          () => {},
+          { timeout: 3000, maximumAge: 600000 }
+        );
+      }
+    }
+  }, [currencyMap, rawUser]);
+
+  const activeCurrency = selectedCurrencyKey === "AUTO"
+    ? detectedCurrency
+    : currencyMap[selectedCurrencyKey] || BASE_CURRENCY_CONFIGS[selectedCurrencyKey] || BASE_CURRENCY_CONFIGS.USD;
+
+  const formatPrice = (usdAmount: number) => {
+    const converted = Number(usdAmount || 0) * (activeCurrency?.rate || 1.0);
+    return `${activeCurrency.symbol} ${converted.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
+
+  const mapRawBookingToPayment = (b: any, idx: number): PaymentItem => {
+    const isDone = b.bookingStatus === "Completed" || b.status === "Completed";
+    const isConfirmed = b.bookingStatus === "Confirmed" || b.status === "Confirmed";
+    const isRejected = b.bookingStatus === "Rejected" || b.status === "Rejected";
+
+    let payStatus = "FarmerPENDING";
+    if (isDone) payStatus = "COMPLETED";
+    else if (isConfirmed) payStatus = "FarmerCONFIRMED";
+    else if (isRejected) payStatus = "OwnerREJECTED";
+
+    const inrRate = currencyMap.INR?.rate || 94.0;
+    const bobRate = currencyMap.BOB?.rate || 6.91;
+    let rawCost = Number(b.total_cost || b.total_amount || 120);
+    if (b.currency === "INR" && rawCost > 2000) {
+      rawCost = rawCost / inrRate;
+    } else if (b.currency === "BOB" && rawCost > 500) {
+      rawCost = rawCost / bobRate;
     }
 
-    // 2. Secondary: NestJS /farmer/paymentPage/${userId}
+    return {
+      id: `PAY-${b.id || b.booking_id ? String(b.id || b.booking_id).slice(-6).toUpperCase() : `00${idx + 1}`}`,
+      booking_id: b.id || b.booking_id || `BK-${idx + 100}`,
+      amount: rawCost,
+      status: payStatus,
+      paymentType: b.payment_method || "Credit Card / Direct",
+      transactionMethod: b.payment_method || "Direct Dispatch",
+      receiver_name: b.store_name || b.store?.name || "Regional Machinery Depot",
+      createdAt: b.createdAt || b.start_date || b.scheduled_date || new Date().toISOString(),
+      service_name: b.task_name_en || b.task_name || b.service_name || b.operation_type || "Deep Plowing & Soil Prep",
+      area: Number(b.hectares || b.area_hectares || b.area || 5),
+      booking: {
+        ...b,
+        tractors: b.tractors || [],
+        attachments: b.attachments || [],
+      },
+    };
+  };
+
+  const fetchPayments = async () => {
+    setRefreshing(true);
+
+    // 1. Instant local cache hydration (<50ms paint)
+    let localRecents: any[] = [];
     try {
-      const headers: Record<string, string> = {};
-      if (access_token) headers["Authorization"] = `Bearer ${access_token}`;
+      if (typeof window !== "undefined") {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i) || "";
+          if (
+            k.startsWith("@farmer_recent_bookings_") ||
+            k.startsWith("@farmer_simple_bookings_") ||
+            k === "@farmer_all_recent_bookings"
+          ) {
+            try {
+              const arr = JSON.parse(localStorage.getItem(k) || "[]");
+              if (Array.isArray(arr)) localRecents.push(...arr);
+            } catch {}
+          }
+        }
+      }
+    } catch {}
 
-      const res = await renderInstance.get(`/farmer/paymentPage/${userId}?filter=all&page=1&limit=50`, {
-        headers,
+    if (localRecents.length > 0) {
+      const seen = new Set<string>();
+      const quickList: PaymentItem[] = [];
+      localRecents.forEach((lb: any, idx: number) => {
+        const bId = lb.id || lb.booking_id;
+        if (bId && !seen.has(bId)) {
+          seen.add(bId);
+          quickList.push(mapRawBookingToPayment(lb, idx));
+        }
       });
+      if (quickList.length > 0) {
+        setPayments(quickList);
+        setLoading(false);
+      }
+    }
 
-      if (Array.isArray(res.data?.payments) && res.data.payments.length > 0) {
-        const nestPayments = res.data.payments.map((p: any) => ({
+    // 2. Parallel network fetching with tight timeouts
+    let combinedPayments: PaymentItem[] = [];
+    const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
+    const headers: Record<string, string> = {};
+    if (access_token) headers["Authorization"] = `Bearer ${access_token}`;
+
+    try {
+      const results = await Promise.allSettled([
+        axios.get(`${fastApiBase}/simple-booking/list/${userId}`, { timeout: 3500 }),
+        axios.get(`http://127.0.0.1:8000/simple-booking/list/${userId}`, { timeout: 1500 }),
+        renderInstance.get(`/farmer/paymentPage/${userId}?filter=all&page=1&limit=50`, { headers, timeout: 3500 }),
+        axios.get(`/api/booking?farmer_id=${userId}`, { timeout: 3000 }),
+      ]);
+
+      const [remoteFastRes, localFastRes, renderRes, localApiRes] = results;
+
+      const rawFastBookings: any[] = [];
+      if (remoteFastRes.status === "fulfilled" && Array.isArray(remoteFastRes.value.data)) {
+        rawFastBookings.push(...remoteFastRes.value.data);
+      }
+      if (localFastRes.status === "fulfilled" && Array.isArray(localFastRes.value.data)) {
+        rawFastBookings.push(...localFastRes.value.data);
+      }
+      if (localApiRes.status === "fulfilled" && Array.isArray(localApiRes.value.data)) {
+        rawFastBookings.push(...localApiRes.value.data);
+      }
+
+      if (rawFastBookings.length > 0) {
+        const seen = new Set<string>();
+        rawFastBookings.forEach((b: any, idx: number) => {
+          const bId = b.id || b.booking_id;
+          if (bId && !seen.has(bId)) {
+            seen.add(bId);
+            combinedPayments.push(mapRawBookingToPayment(b, idx));
+          }
+        });
+      }
+
+      if (renderRes.status === "fulfilled" && Array.isArray(renderRes.value.data?.payments)) {
+        const nestPayments = renderRes.value.data.payments.map((p: any) => ({
           id: p.id,
           booking_id: p.booking_id || p.booking?.id || "BK-NEST",
           amount: Number(p.amount || 0),
@@ -165,7 +327,6 @@ export default function PaymentHistory() {
           booking: p.booking || {},
         }));
 
-        // Merge without duplicates
         const existingIds = new Set(combinedPayments.map((cp) => cp.id));
         for (const np of nestPayments) {
           if (!existingIds.has(np.id)) {
@@ -173,34 +334,19 @@ export default function PaymentHistory() {
           }
         }
       }
-    } catch (errNest) {
-      console.warn("NestJS payments fetch error:", errNest);
-    }
-
-    // 3. Fallback Local Storage bookings
-    try {
-      const localRecents = JSON.parse(localStorage.getItem("@farmer_all_recent_bookings") || "[]");
-      if (Array.isArray(localRecents) && localRecents.length > 0) {
-        const existingIds = new Set(combinedPayments.map((cp) => cp.booking_id));
-        localRecents.forEach((lb: any, idx: number) => {
-          if (lb.id && !existingIds.has(lb.id)) {
-            combinedPayments.unshift({
-              id: `PAY-REC-${idx + 1}`,
-              booking_id: lb.id,
-              amount: Number(lb.total_cost || lb.total_amount || 150),
-              status: "FarmerCONFIRMED",
-              paymentType: lb.payment_method || "Online Settlement",
-              transactionMethod: lb.payment_method || "Card",
-              receiver_name: lb.store_name || "Machinery Fleet Hub",
-              createdAt: lb.createdAt || new Date().toISOString(),
-              service_name: lb.service_name || "Agricultural Service",
-              area: Number(lb.area_hectares || 5),
-              booking: lb,
-            });
-          }
-        });
-      }
     } catch {}
+
+    // Merge with local recents
+    if (localRecents.length > 0) {
+      const existingIds = new Set(combinedPayments.map((cp) => cp.booking_id));
+      localRecents.forEach((lb: any, idx: number) => {
+        const bId = lb.id || lb.booking_id;
+        if (bId && !existingIds.has(bId)) {
+          existingIds.add(bId);
+          combinedPayments.push(mapRawBookingToPayment(lb, idx));
+        }
+      });
+    }
 
     // Sort newest first
     combinedPayments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -208,9 +354,25 @@ export default function PaymentHistory() {
     setPayments(combinedPayments);
     setLoading(false);
     setRefreshing(false);
+    try {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("@farmer_payments_cache", JSON.stringify(combinedPayments.slice(0, 50)));
+      }
+    } catch {}
   };
 
   useEffect(() => {
+    // 0. Check session cache immediately on mount (<20ms)
+    try {
+      if (typeof window !== "undefined") {
+        const sessionCached = JSON.parse(sessionStorage.getItem("@farmer_payments_cache") || "[]");
+        if (Array.isArray(sessionCached) && sessionCached.length > 0) {
+          setPayments(sessionCached);
+          setLoading(false);
+        }
+      }
+    } catch {}
+
     fetchPayments();
 
     const handleBookingCreated = () => {
@@ -226,15 +388,21 @@ export default function PaymentHistory() {
   // Computed summary metrics
   const metrics = useMemo(() => {
     const totalAmount = payments.reduce((acc, p) => acc + (p.amount || 0), 0);
-    const completedCount = payments.filter((p) => p.status === "COMPLETED" || p.status === "PAID").length;
-    const pendingCount = payments.filter((p) => p.status === "FarmerPENDING").length;
-    const reviewCount = payments.filter((p) => p.status === "FarmerCONFIRMED").length;
+    const completedPayments = payments.filter((p) => p.status === "COMPLETED" || p.status === "PAID");
+    const completedAmount = completedPayments.reduce((acc, p) => acc + (p.amount || 0), 0);
+    const pendingPayments = payments.filter((p) => p.status === "FarmerPENDING");
+    const pendingAmount = pendingPayments.reduce((acc, p) => acc + (p.amount || 0), 0);
+    const reviewPayments = payments.filter((p) => p.status === "FarmerCONFIRMED");
+    const reviewAmount = reviewPayments.reduce((acc, p) => acc + (p.amount || 0), 0);
 
     return {
       totalAmount,
-      completedCount,
-      pendingCount,
-      reviewCount,
+      completedCount: completedPayments.length,
+      completedAmount,
+      pendingCount: pendingPayments.length,
+      pendingAmount,
+      reviewCount: reviewPayments.length,
+      reviewAmount,
     };
   }, [payments]);
 
@@ -280,7 +448,8 @@ export default function PaymentHistory() {
       "Payment ID",
       "Booking Reference",
       "Service Description",
-      "Amount (USD)",
+      `Amount (${activeCurrency.code})`,
+      "Exchange Rate to USD",
       "Status",
       "Payment Method",
       "Receiver / Depot",
@@ -291,7 +460,8 @@ export default function PaymentHistory() {
       p.id,
       p.booking_id,
       `"${p.service_name || "Machinery Operation"}"`,
-      `$${p.amount.toFixed(2)}`,
+      `"${formatPrice(p.amount)}"`,
+      activeCurrency.rate,
       p.status,
       p.paymentType,
       `"${p.receiver_name || "Machinery Store"}"`,
@@ -302,7 +472,7 @@ export default function PaymentHistory() {
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.setAttribute("download", `farmer_payment_history_${Date.now()}.csv`);
+    link.setAttribute("download", `farmer_payment_ledger_${activeCurrency.code}_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -350,7 +520,7 @@ export default function PaymentHistory() {
 
   return (
     <div className="w-full min-h-screen py-6 space-y-6 max-w-7xl mx-auto">
-      {/* ── HEADER ───────────────────────────────────────────────────────── */}
+      {/* ── HEADER & REGIONAL CURRENCY BAR ─────────────────────────────────── */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -360,35 +530,69 @@ export default function PaymentHistory() {
             </h1>
           </div>
           <p className="text-xs text-slate-500 font-medium mt-1">
-            Track equipment rental invoices, operator dispatch fees, digital receipts, and real-time transaction settlements.
+            Real-time equipment rental invoices, operator dispatch fees, and dynamic multi-currency financial settlements.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Currency Selector & Quick Actions */}
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          {/* Location-Wise Currency Selector */}
+          <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 p-1 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <Globe className="w-4 h-4 text-emerald-600 ml-2" />
+            <Select value={selectedCurrencyKey} onValueChange={setSelectedCurrencyKey}>
+              <SelectTrigger className="border-0 shadow-none text-xs font-bold h-8 rounded-xl focus:ring-0 w-36">
+                <SelectValue placeholder="Select Currency" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl">
+                <SelectItem value="AUTO" className="text-xs font-bold">
+                  🌍 Auto ({detectedCurrency.code} {detectedCurrency.symbol})
+                </SelectItem>
+                <SelectItem value="INR" className="text-xs font-bold">
+                  🇮🇳 INR (₹) - India
+                </SelectItem>
+                <SelectItem value="BOB" className="text-xs font-bold">
+                  🇧🇴 BOB (Bs.) - Bolivia
+                </SelectItem>
+                <SelectItem value="USD" className="text-xs font-bold">
+                  🇺🇸 USD ($) - Global
+                </SelectItem>
+                <SelectItem value="PEN" className="text-xs font-bold">
+                  🇵🇪 PEN (S/.) - Peru
+                </SelectItem>
+                <SelectItem value="BRL" className="text-xs font-bold">
+                  🇧🇷 BRL (R$) - Brazil
+                </SelectItem>
+                <SelectItem value="EUR" className="text-xs font-bold">
+                  🇪🇺 EUR (€) - Europe
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <Button
             size="sm"
             variant="outline"
             onClick={fetchPayments}
             disabled={refreshing}
-            className="rounded-xl border-slate-200 dark:border-slate-800 text-xs font-bold flex items-center gap-1.5"
+            className="rounded-xl border-slate-200 dark:border-slate-800 text-xs font-bold flex items-center gap-1.5 h-10"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-emerald-600" : ""}`} />
-            <span>Refresh Ledger</span>
+            <span>Refresh</span>
           </Button>
 
           <Button
             size="sm"
             onClick={handleExportCSV}
             disabled={filteredPayments.length === 0}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-emerald-600/20"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 h-10 shadow-sm shadow-emerald-600/20"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Export Statement (CSV)</span>
+            <span>Export CSV</span>
           </Button>
         </div>
       </div>
 
-      {/* ── METRICS SUMMARY CARDS ─────────────────────────────────────────── */}
+      {/* ── METRICS SUMMARY CARDS (DYNAMIC CONVERSION) ─────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="rounded-3xl border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-3">
           <div className="flex items-center justify-between">
@@ -399,7 +603,7 @@ export default function PaymentHistory() {
           </div>
           <div className="space-y-0.5">
             <h3 className="text-2xl font-black text-slate-900 dark:text-white">
-              ${metrics.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {formatPrice(metrics.totalAmount)}
             </h3>
             <p className="text-[11px] font-semibold text-slate-400">{payments.length} Total Transactions</p>
           </div>
@@ -414,39 +618,39 @@ export default function PaymentHistory() {
           </div>
           <div className="space-y-0.5">
             <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-              {metrics.completedCount}
+              {formatPrice(metrics.completedAmount)}
             </h3>
-            <p className="text-[11px] font-semibold text-slate-400">Verified & Invoiced</p>
+            <p className="text-[11px] font-semibold text-slate-400">{metrics.completedCount} Verified & Invoiced</p>
           </div>
         </Card>
 
         <Card className="rounded-3xl border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Under Store Review</span>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Under Review</span>
             <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/50 flex items-center justify-center text-blue-600">
               <Clock className="w-4 h-4" />
             </div>
           </div>
           <div className="space-y-0.5">
             <h3 className="text-2xl font-black text-blue-600 dark:text-blue-400">
-              {metrics.reviewCount}
+              {formatPrice(metrics.reviewAmount)}
             </h3>
-            <p className="text-[11px] font-semibold text-slate-400">Awaiting Depot Confirmation</p>
+            <p className="text-[11px] font-semibold text-slate-400">{metrics.reviewCount} Awaiting Depot Confirmation</p>
           </div>
         </Card>
 
         <Card className="rounded-3xl border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pending Action</span>
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pending Settlement</span>
             <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/50 flex items-center justify-center text-amber-600">
               <AlertCircle className="w-4 h-4" />
             </div>
           </div>
           <div className="space-y-0.5">
             <h3 className="text-2xl font-black text-amber-600 dark:text-amber-400">
-              {metrics.pendingCount}
+              {formatPrice(metrics.pendingAmount)}
             </h3>
-            <p className="text-[11px] font-semibold text-slate-400">Requires Proof / Payment</p>
+            <p className="text-[11px] font-semibold text-slate-400">{metrics.pendingCount} Requires Proof / Payment</p>
           </div>
         </Card>
       </div>
@@ -457,7 +661,7 @@ export default function PaymentHistory() {
           {/* Status Tabs */}
           <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto p-1 bg-slate-100 dark:bg-slate-800/60 rounded-2xl">
             {[
-              { label: "All Ledger", value: "all", count: payments.length },
+              { label: "All Transactions", value: "all", count: payments.length },
               { label: "Settled", value: "completed", count: metrics.completedCount },
               { label: "In Review", value: "review", count: metrics.reviewCount },
               { label: "Pending", value: "pending", count: metrics.pendingCount },
@@ -549,7 +753,7 @@ export default function PaymentHistory() {
         {loading ? (
           <div className="py-20 text-center text-xs text-slate-400 space-y-3">
             <RefreshCw className="w-7 h-7 text-emerald-600 animate-spin mx-auto" />
-            <p className="font-semibold text-sm">Loading verified transactions ledger...</p>
+            <p className="font-semibold text-sm">Loading payment transactions...</p>
           </div>
         ) : filteredPayments.length === 0 ? (
           <div className="py-16 text-center space-y-4">
@@ -598,7 +802,7 @@ export default function PaymentHistory() {
                     Date & Time
                   </TableHead>
                   <TableHead className="font-extrabold text-xs text-slate-600 dark:text-slate-300 py-3.5 text-right">
-                    Amount (USD)
+                    Amount ({activeCurrency.code})
                   </TableHead>
                   <TableHead className="font-extrabold text-xs text-slate-600 dark:text-slate-300 py-3.5 text-center">
                     Status
@@ -659,7 +863,7 @@ export default function PaymentHistory() {
                     {/* Amount */}
                     <TableCell className="py-4 text-right">
                       <span className="font-extrabold text-sm text-slate-900 dark:text-white">
-                        ${payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {formatPrice(payment.amount)}
                       </span>
                     </TableCell>
 
@@ -674,6 +878,7 @@ export default function PaymentHistory() {
                         <PaymentDetailsSheet
                           payment={payment as any}
                           paymentRefresh={fetchPayments}
+                          currency={activeCurrency}
                         />
                       ) : (
                         <Button

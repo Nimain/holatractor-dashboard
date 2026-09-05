@@ -38,14 +38,21 @@ import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { uploadFileToS3 } from "@/utils/AWS/FileUpload";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { useCookie } from "next-cookie";
-import { BankAccountForm, PayPalForm, UPIForm } from "../BookingHistory";
+
+interface CurrencyInfo {
+  code: string;
+  symbol: string;
+  rate: number;
+}
 
 export default function PaymentDetailsSheet({
   payment,
   paymentRefresh,
+  currency = { code: "USD", symbol: "$", rate: 1.0 },
 }: {
   payment: any;
   paymentRefresh: () => void;
+  currency?: CurrencyInfo;
 }) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -54,6 +61,14 @@ export default function PaymentDetailsSheet({
 
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
+
+  const formatPrice = (usdAmount: number) => {
+    const converted = Number(usdAmount || 0) * (currency.rate || 1.0);
+    return `${currency.symbol} ${converted.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} ${currency.code}`;
+  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -107,6 +122,12 @@ export default function PaymentDetailsSheet({
     }
   };
 
+  const handlePrint = () => {
+    if (typeof window !== "undefined") {
+      window.print();
+    }
+  };
+
   const booking = payment.booking || {};
   const tractors = booking.tractors || [];
   const attachments = booking.attachments || [];
@@ -131,10 +152,21 @@ export default function PaymentDetailsSheet({
             <Badge className="bg-emerald-600 text-white font-bold text-xs px-2.5 py-0.5 rounded-lg">
               Official Tax Invoice / Receipt
             </Badge>
-            <span className="font-mono text-xs text-slate-400">Ref: {payment.id}</span>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs text-slate-400">Ref: {payment.id}</span>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={handlePrint}
+                className="h-7 w-7 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                title="Print Invoice"
+              >
+                <Printer className="w-3.5 h-3.5" />
+              </Button>
+            </div>
           </div>
           <SheetTitle className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
-            Settlement Summary: ${Number(payment.amount || 0).toFixed(2)} USD
+            Settlement Summary: {formatPrice(payment.amount)}
           </SheetTitle>
           <p className="text-xs text-slate-500">
             Issued for Booking Ref #{payment.booking_id} • {new Date(payment.createdAt).toLocaleString()}
@@ -173,7 +205,7 @@ export default function PaymentDetailsSheet({
                     </div>
                   </div>
                   <span className="font-extrabold text-xs text-emerald-600 dark:text-emerald-400">
-                    ${tractorObj.hourly_price || 25}/hr
+                    {formatPrice(tractorObj.hourly_price || 25)}/hr
                   </span>
                 </div>
               );
@@ -190,7 +222,7 @@ export default function PaymentDetailsSheet({
                   <span className="font-bold text-slate-800 dark:text-slate-200">
                     {base.name || attObj.name || "Agricultural Implement"}
                   </span>
-                  <span className="font-bold text-slate-500">${attObj.hourly_price || 15}/hr</span>
+                  <span className="font-bold text-slate-500">{formatPrice(attObj.hourly_price || 15)}/hr</span>
                 </div>
               );
             })}
@@ -208,9 +240,9 @@ export default function PaymentDetailsSheet({
           </div>
 
           <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/40 flex items-center justify-between">
-            <span className="font-extrabold text-xs text-slate-900 dark:text-white">Total Dispatched Amount</span>
+            <span className="font-extrabold text-xs text-slate-900 dark:text-white">Total Invoiced Amount</span>
             <span className="font-black text-base text-emerald-600 dark:text-emerald-400">
-              ${Number(payment.amount || 0).toFixed(2)} USD
+              {formatPrice(payment.amount)}
             </span>
           </div>
         </div>
@@ -222,7 +254,7 @@ export default function PaymentDetailsSheet({
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 space-y-2 text-xs">
             <div className="flex items-center justify-between">
               <span className="text-slate-400">Method</span>
-              <span className="font-bold text-slate-800 dark:text-slate-200">{payment.paymentType || "Direct Card"}</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200">{payment.paymentType || "Direct Card / QR"}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-slate-400">Receiver Hub</span>
@@ -231,6 +263,10 @@ export default function PaymentDetailsSheet({
             <div className="flex items-center justify-between">
               <span className="text-slate-400">Transaction Status</span>
               <span className="font-bold text-emerald-600 dark:text-emerald-400 uppercase">{payment.status}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-400">Regional Currency Rate</span>
+              <span className="font-mono text-slate-500">1 USD = {currency.rate} {currency.code}</span>
             </div>
           </div>
         </div>
@@ -281,3 +317,4 @@ export default function PaymentDetailsSheet({
     </Sheet>
   );
 }
+

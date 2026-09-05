@@ -17,6 +17,7 @@ import {
   Building2,
   Sparkles,
   Navigation,
+  Crosshair,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +25,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { renderInstance, TractorAIBaseURL } from "@/utils/Axios/RenderInstance";
 import { useCookie } from "next-cookie";
+import {
+  getLiveCurrencyRates,
+  BASE_CURRENCY_CONFIGS,
+  CurrencyConfig,
+  formatDynamicPrice,
+} from "@/utils/currency/currencyService";
 
 interface Location {
   latitude: number | null;
@@ -41,6 +48,8 @@ interface StoreItem {
   available_tractors_count?: number;
   available_implements_count?: number;
   rate_range?: string;
+  min_rate?: number;
+  max_rate?: number;
   tractors?: any[];
   lat?: number;
   lng?: number;
@@ -52,10 +61,45 @@ export default function FarmerStores() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [location, setLocation] = useState<Location>({ latitude: null, longitude: null });
-  const [selectedRadius, setSelectedRadius] = useState<number>(50); // 50km radius
+  const [selectedRadius, setSelectedRadius] = useState<number>(50); // 50km default radius
+  const [currencyMap, setCurrencyMap] = useState<Record<string, CurrencyConfig>>(BASE_CURRENCY_CONFIGS);
+  const [activeCurrency, setActiveCurrency] = useState<CurrencyConfig>(BASE_CURRENCY_CONFIGS.USD);
 
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
+  const rawUser = cookie.get("user");
+  const parsedUser = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser); } catch { return null; } })() : rawUser;
+  const user = parsedUser || {};
+
+  // Fetch live currency rates
+  useEffect(() => {
+    getLiveCurrencyRates().then((rates) => {
+      if (rates) {
+        setCurrencyMap(rates);
+        const saved = typeof window !== "undefined" ? localStorage.getItem("@farmer_selected_currency") : null;
+        if (saved && rates[saved]) {
+          setActiveCurrency(rates[saved]);
+        } else {
+          // Auto-detect by timezone or country
+          try {
+            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+            const countryCode = user?.country_code || user?.country || "";
+            if (tz.includes("Calcutta") || tz.includes("Kolkata") || countryCode === "+91" || countryCode === "IN") {
+              setActiveCurrency(rates.INR || BASE_CURRENCY_CONFIGS.INR);
+            } else if (tz.includes("La_Paz") || countryCode === "+591" || countryCode === "BO") {
+              setActiveCurrency(rates.BOB || BASE_CURRENCY_CONFIGS.BOB);
+            } else if (tz.includes("Lima") || countryCode === "+51" || countryCode === "PE") {
+              setActiveCurrency(rates.PEN || BASE_CURRENCY_CONFIGS.PEN);
+            } else if (tz.includes("Sao_Paulo") || countryCode === "+55" || countryCode === "BR") {
+              setActiveCurrency(rates.BRL || BASE_CURRENCY_CONFIGS.BRL);
+            } else if (tz.startsWith("Europe/")) {
+              setActiveCurrency(rates.EUR || BASE_CURRENCY_CONFIGS.EUR);
+            }
+          } catch {}
+        }
+      }
+    });
+  }, [user]);
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371; // km
@@ -83,10 +127,10 @@ export default function FarmerStores() {
     const minRate = prices.length > 0 ? Math.min(...prices) : (item.cheapestEquipment || 20);
     const maxRate = prices.length > 0 ? Math.max(...prices) : (item.mostExpensiveEquipment || 45);
 
-    const tractorLat = tractors[0]?.lat || s.lat;
-    const tractorLng = tractors[0]?.lan || tractors[0]?.lng || s.lan || s.lng;
+    const tractorLat = tractors[0]?.lat || s.lat || s.latitude;
+    const tractorLng = tractors[0]?.lan || tractors[0]?.lng || s.lan || s.lng || s.longitude;
 
-    let dist = item.distance !== undefined ? Number(item.distance) : ((idx % 12) * 3.5 + 1.2);
+    let dist = item.distance !== undefined ? Number(item.distance) : ((idx % 8) * 4.2 + 2.5);
     if (userLat && userLng && tractorLat && tractorLng) {
       dist = calculateDistance(userLat, userLng, Number(tractorLat), Number(tractorLng));
     }
@@ -110,6 +154,8 @@ export default function FarmerStores() {
       distance_km: dist,
       available_tractors_count: tractors.length > 0 ? tractors.length : 1,
       available_implements_count: attachments.length > 0 ? attachments.length : 2,
+      min_rate: minRate,
+      max_rate: maxRate,
       rate_range: minRate === maxRate ? `$${minRate} / hr` : `$${minRate} - $${maxRate} / hr`,
       tractors: tractors,
       lat: tractorLat ? Number(tractorLat) : undefined,
@@ -117,104 +163,122 @@ export default function FarmerStores() {
     };
   };
 
-  const fetchStores = async () => {
+  const fetchStores = async (lat?: number | null, lng?: number | null) => {
     setRefreshing(true);
-    let loadedList: StoreItem[] = [];
+    const effectiveLat = lat !== undefined ? lat : location.latitude;
+    const effectiveLng = lng !== undefined ? lng : location.longitude;
 
     const headers: Record<string, string> = {};
     if (access_token) headers["Authorization"] = `Bearer ${access_token}`;
 
-    // 1. First Attempt: 50km radius location query via /store/all_stores/with_in_distance?lat=...&lng=...&radius=50
-    if (location.latitude && location.longitude) {
-      try {
-        const url = `/store/all_stores/with_in_distance?lat=${location.latitude}&lng=${location.longitude}&radius=50`;
-        const res = await renderInstance.get(url, { headers });
-        const data = Array.isArray(res.data) ? res.data : [];
-        if (data.length > 0) {
-          loadedList = data.map((item: any, idx: number) =>
-            normalizeStore(item, idx, location.latitude, location.longitude)
-          );
+    const queryParams =
+      effectiveLat && effectiveLng
+        ? `?lat=${effectiveLat}&lng=${effectiveLng}&radius=50`
+        : "";
+
+    const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
+
+    // Parallel fetching candidates with short timeouts so fastest wins in milliseconds
+    const fetchPromises = [
+      axios.get(`/api/store/all_stores/with_in_distance${queryParams}`, { headers, timeout: 2500 }).catch(() => null),
+      axios.get(`/api/store`, { headers, timeout: 2500 }).catch(() => null),
+      axios.get(`${fastApiBase}/api/v1/owner/stores`, { headers, timeout: 2500 }).catch(() => null),
+      axios.get(`${fastApiBase}/store/all_stores/with_in_distance${queryParams}`, { headers, timeout: 2500 }).catch(() => null),
+      axios.get(`http://127.0.0.1:8000/store/all_stores/with_in_distance${queryParams}`, { headers, timeout: 1500 }).catch(() => null),
+      renderInstance.get(`/store`, { headers }).catch(() => null),
+    ];
+
+    try {
+      const results = await Promise.allSettled(fetchPromises);
+      let loadedData: any[] = [];
+
+      for (const res of results) {
+        if (res.status === "fulfilled" && res.value?.data) {
+          const data = Array.isArray(res.value.data)
+            ? res.value.data
+            : Array.isArray(res.value.data?.stores)
+            ? res.value.data.stores
+            : Array.isArray(res.value.data?.data)
+            ? res.value.data.data
+            : [];
+
+          if (data.length > 0) {
+            loadedData = data;
+            break;
+          }
         }
-      } catch (errDist) {
-        console.warn("Distance query error:", errDist);
       }
-    }
 
-    // 2. Second Attempt: TractorAI Live Stores API (/api/v1/owner/stores)
-    if (loadedList.length === 0) {
-      try {
-        const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
-        const res = await axios.get(`${fastApiBase}/api/v1/owner/stores`, { timeout: 8000 });
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          try {
-            if (typeof window !== "undefined") {
-              sessionStorage.setItem("@farmer_all_stores_cache", JSON.stringify(res.data));
-            }
-          } catch {}
+      if (loadedData.length > 0) {
+        try {
+          if (typeof window !== "undefined") {
+            sessionStorage.setItem("@farmer_all_stores_cache", JSON.stringify(loadedData));
+          }
+        } catch {}
 
-          loadedList = res.data.map((item: any, idx: number) =>
-            normalizeStore(item, idx, location.latitude, location.longitude)
-          );
-        }
-      } catch (errFastApi) {
-        console.warn("TractorAI stores fetch error:", errFastApi);
+        const normalized = loadedData.map((item: any, idx: number) =>
+          normalizeStore(item, idx, effectiveLat, effectiveLng)
+        );
+        normalized.sort((a, b) => (a.distance_km || 0) - (b.distance_km || 0));
+        setStores(normalized);
       }
+    } catch (err) {
+      console.warn("Stores fetching error:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
+  };
 
-    // 3. Third Attempt: NestJS /store
-    if (loadedList.length === 0) {
-      try {
-        const res = await renderInstance.get(`/store`, { headers });
-        const data = Array.isArray(res.data) ? res.data : [];
-        if (data.length > 0) {
-          loadedList = data.map((item: any, idx: number) =>
-            normalizeStore(item, idx, location.latitude, location.longitude)
-          );
-        }
-      } catch (errNest) {
-        console.warn("NestJS stores fetch error:", errNest);
-      }
+  const requestGeolocation = () => {
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const newLat = pos.coords.latitude;
+          const newLng = pos.coords.longitude;
+          setLocation({
+            latitude: newLat,
+            longitude: newLng,
+          });
+          // Non-blocking update with precise distance
+          fetchStores(newLat, newLng);
+        },
+        () => {
+          // Denied or timeout, keep existing or fallback
+        },
+        { timeout: 4000, maximumAge: 60000 }
+      );
     }
-
-    // Sort nearest first
-    loadedList.sort((a, b) => (a.distance_km || 0) - (b.distance_km || 0));
-
-    if (loadedList.length > 0) {
-      setStores(loadedList);
-    }
-    setLoading(false);
-    setRefreshing(false);
   };
 
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setLocation({
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-          });
-        },
-        () => {
-          // Geolocation unavailable/denied, fetch directly
-          fetchStores();
-        },
-        { timeout: 6000 }
-      );
-    } else {
-      fetchStores();
-    }
+    // 1. Instant cache hydration for 0ms initial display
+    try {
+      if (typeof window !== "undefined") {
+        const cached = JSON.parse(sessionStorage.getItem("@farmer_all_stores_cache") || "[]");
+        if (Array.isArray(cached) && cached.length > 0) {
+          const normalized = cached.map((item: any, idx: number) =>
+            normalizeStore(item, idx, location.latitude, location.longitude)
+          );
+          normalized.sort((a, b) => (a.distance_km || 0) - (b.distance_km || 0));
+          setStores(normalized);
+          setLoading(false);
+        }
+      }
+    } catch {}
+
+    // 2. Immediate fetch in parallel
+    fetchStores();
+
+    // 3. Non-blocking GPS detection
+    requestGeolocation();
   }, []);
 
-  useEffect(() => {
-    fetchStores();
-  }, [location.latitude, location.longitude]);
-
-  // Recalculate dynamic distance and filter by 50km radius or search query
+  // Recalculate dynamic distance and filter by selected radius and search query
   const filteredStores = useMemo(() => {
     return stores
       .map((s) => {
-        let dist = s.distance_km || 3.2;
+        let dist = s.distance_km !== undefined ? s.distance_km : 3.5;
         if (location.latitude && location.longitude && s.lat && s.lng) {
           dist = calculateDistance(location.latitude, location.longitude, s.lat, s.lng);
         }
@@ -224,16 +288,31 @@ export default function FarmerStores() {
         };
       })
       .filter((s) => {
+        // Radius filter
+        if (selectedRadius > 0 && s.distance_km !== undefined && s.distance_km > selectedRadius) {
+          return false;
+        }
+
+        // Search query filter
         const matchesSearch =
           s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           (s.address && s.address.toLowerCase().includes(searchQuery.toLowerCase())) ||
           (s.description && s.description.toLowerCase().includes(searchQuery.toLowerCase()));
 
-        if (!matchesSearch) return false;
-        return true;
+        return matchesSearch;
       })
       .sort((a, b) => (a.distance_km || 0) - (b.distance_km || 0));
-  }, [stores, location.latitude, location.longitude, searchQuery]);
+  }, [stores, location.latitude, location.longitude, searchQuery, selectedRadius]);
+
+  const formatStoreRate = (minRate?: number, maxRate?: number) => {
+    if (!minRate || minRate <= 0) return `${activeCurrency.symbol}20 / hr`;
+    const minConverted = formatDynamicPrice(minRate, activeCurrency, 0);
+    if (!maxRate || maxRate === minRate) {
+      return `${minConverted} / hr`;
+    }
+    const maxConverted = formatDynamicPrice(maxRate, activeCurrency, 0);
+    return `${minConverted} - ${maxConverted} / hr`;
+  };
 
   return (
     <div className="w-full min-h-screen py-6 space-y-6 max-w-7xl mx-auto">
@@ -247,11 +326,22 @@ export default function FarmerStores() {
             </h1>
           </div>
           <p className="text-xs text-slate-500 font-medium mt-1">
-            Verified agricultural machinery depots within your 50km service radius ready for instant dispatch.
+            Verified agricultural machinery depots within your {selectedRadius > 0 ? `${selectedRadius}km service radius` : "region"} ready for instant dispatch.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={requestGeolocation}
+            className="rounded-xl border-slate-200 dark:border-slate-800 text-xs font-bold flex items-center gap-1.5"
+            title="Update Current GPS Location"
+          >
+            <Crosshair className="w-3.5 h-3.5 text-emerald-600" />
+            <span>{location.latitude ? "GPS Active" : "Detect GPS"}</span>
+          </Button>
+
           <Button
             size="sm"
             variant="outline"
@@ -260,7 +350,7 @@ export default function FarmerStores() {
             className="rounded-xl border-slate-200 dark:border-slate-800 text-xs font-bold flex items-center gap-1.5"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-emerald-600" : ""}`} />
-            <span>Refresh 50km Radius</span>
+            <span>Refresh Registry</span>
           </Button>
 
           <Link href="/farmer/new-booking">
@@ -275,19 +365,40 @@ export default function FarmerStores() {
         </div>
       </div>
 
-      {/* ── RADIUS BADGE & SEARCH BAR ───────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <Badge className="bg-emerald-600 text-white text-xs font-bold px-3 py-1 flex items-center gap-1.5">
-            <Navigation className="w-3.5 h-3.5" />
-            <span>50km Service Radius</span>
-          </Badge>
-          <Badge variant="outline" className="text-xs font-semibold px-2.5 py-0.5 border-slate-300 dark:border-slate-700">
+      {/* ── RADIUS FILTER PILLS & SEARCH BAR ─────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 pt-1">
+        {/* Radius Filter Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
+          <span className="text-xs font-bold text-slate-400 whitespace-nowrap flex items-center gap-1">
+            <Navigation className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Radius:</span>
+          </span>
+          {[
+            { label: "25 km", value: 25 },
+            { label: "50 km (Standard)", value: 50 },
+            { label: "100 km", value: 100 },
+            { label: "All Depots", value: 0 },
+          ].map((pill) => (
+            <button
+              key={pill.value}
+              onClick={() => setSelectedRadius(pill.value)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                selectedRadius === pill.value
+                  ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/20"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+              }`}
+            >
+              {pill.label}
+            </button>
+          ))}
+
+          <Badge variant="outline" className="text-xs font-semibold px-2.5 py-1 border-slate-300 dark:border-slate-700 ml-1">
             {filteredStores.length} Stores Available
           </Badge>
         </div>
 
-        <div className="relative w-full sm:w-80">
+        {/* Search Bar */}
+        <div className="relative w-full md:w-80">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <Input
             type="text"
@@ -388,7 +499,9 @@ export default function FarmerStores() {
 
                     <div className="flex items-center justify-between pt-1">
                       <span className="text-[10px] font-bold text-slate-400 uppercase">Tariff Range</span>
-                      <span className="font-black text-emerald-600 dark:text-emerald-400">{store.rate_range}</span>
+                      <span className="font-black text-emerald-600 dark:text-emerald-400">
+                        {formatStoreRate(store.min_rate, store.max_rate)}
+                      </span>
                     </div>
                   </div>
                 </div>

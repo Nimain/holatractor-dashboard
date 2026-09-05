@@ -3,32 +3,14 @@ import axios from "axios";
 import jwt from "jsonwebtoken";
 import pool from "@/utils/Database/db";
 
+import { getFastApiAuthHeaders } from "@/utils/auth/serverAuth";
+
 export const dynamic = "force-dynamic";
 
 const FastApiBaseURL =
   process.env.NEXT_PUBLIC_TRACTOR_AI_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
   "https://tractorai.sinsignal.com/";
-
-function getAdminHeaders() {
-  try {
-    const adminToken = jwt.sign(
-      {
-        sub: "admin_master",
-        id: "admin_master",
-        email: "sistemas@holatractor.com",
-        role: "admin",
-        isAdmin: true,
-        is_admin: true,
-      },
-      "ecommProdPrj",
-      { expiresIn: "1h" }
-    );
-    return { Authorization: `Bearer ${adminToken}` };
-  } catch {
-    return {};
-  }
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -267,7 +249,7 @@ export async function GET(request: NextRequest) {
 
     // 2. FastAPI fallback
     try {
-      const headers = getAdminHeaders();
+      const headers = getFastApiAuthHeaders(request);
       const fastApiRes = await axios.get(
         `${FastApiBaseURL.replace(/\/$/, "")}/api/v1/admin/bookings`,
         { headers, timeout: 6000 }

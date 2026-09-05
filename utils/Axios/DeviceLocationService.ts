@@ -4,9 +4,21 @@ import axios from "axios";
 export const DeviceBaseURL =
   process.env.NEXT_PUBLIC_DEVICE_URL || "https://device.holatractor.com";
 export const GPS_API_KEY =
-  process.env.NEXT_PUBLIC_GPS_API_KEY || "gps_live_1a04718c33200072bbe";
+  process.env.NEXT_PUBLIC_DEVICE_AUTH_KEY ||
+  process.env.DEVICE_AUTH_KEY ||
+  process.env.NEXT_PUBLIC_GPS_API_KEY ||
+  process.env.DEVICE_API_KEY ||
+  "gps_live_1a04718c33200072bbe";
 
-const AUTH_KEYS = [GPS_API_KEY, "gps_live_secret_2026", "gps_secret_token_2026"].filter(Boolean);
+const AUTH_KEYS = [
+  process.env.NEXT_PUBLIC_DEVICE_AUTH_KEY,
+  process.env.DEVICE_AUTH_KEY,
+  process.env.NEXT_PUBLIC_GPS_API_KEY,
+  process.env.DEVICE_API_KEY,
+  GPS_API_KEY,
+  "gps_live_secret_2026",
+  "gps_secret_token_2026",
+].filter(Boolean) as string[];
 
 // Primary API client for device.holatractor.com with Bearer and X-API-Key headers
 export const deviceLocationInstance = axios.create({
@@ -162,7 +174,7 @@ class DeviceLocationService {
     } else {
       variants.push(`0${clean}`);
     }
-    return [...new Set(variants)];
+    return Array.from(new Set(variants));
   }
 
   /**

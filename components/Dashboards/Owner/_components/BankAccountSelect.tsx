@@ -16,6 +16,7 @@ import { errorMessage, successMessage } from '@/utils/Toastify/Messages'
 import { BankAccount, PayPal, TransactionMethod, UPI } from '@/utils/Types/types'
 import { uploadFileToS3 } from '@/utils/AWS/FileUpload'
 import { CircularProgress } from '@mui/material'
+import { getAuthUserId } from "@/utils/auth/clientAuth"
 
 const currencies = [
     { code: 'USD', symbol: '$', name: 'US Dollar' },
@@ -305,7 +306,9 @@ function BankAccountForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: bool
 
     const { cookie } = useCookie()
     const access_token = cookie.get("access_token")
-    const user = cookie.get("user")
+    const rawUser = cookie.get("user")
+    const parsedUser = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser); } catch { return null; } })() : rawUser;
+    const authUserId = parsedUser?.userId || getAuthUserId();
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -314,7 +317,7 @@ function BankAccountForm({ setIsAddModalOpen }: { setIsAddModalOpen: (open: bool
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
-        renderInstance.post("/bank-account", { ...formData, ownerId: user.userId }, {
+        renderInstance.post("/bank-account", { ...formData, ownerId: authUserId }, {
             headers: {
                 Authorization: `Bearer ${access_token}`,
             },

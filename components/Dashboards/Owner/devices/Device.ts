@@ -1,10 +1,12 @@
 import { renderInstance } from "@/utils/Axios/RenderInstance"
 import axios from "axios"
-import DeviceLocationService, { type DeviceLocationData, type LocationHistoryParams } from "@/utils/Axios/DeviceLocationService"
+import DeviceLocationService from "@/utils/Axios/DeviceLocationService"
+import type { DeviceLocationData, LocationHistoryParams } from "@/utils/Axios/DeviceLocationService"
 
 interface Device {
   id: string
   device_imei: string
+  device_region?: string
   base_id: string
   tractor_store_id: string
   createdAt: string
@@ -133,10 +135,19 @@ class DeviceApiService {
           Authorization: `Bearer ${access_token}`,
         },
       })
-      return response.data || []
+      if (Array.isArray(response.data)) {
+        return response.data
+      }
+      if (response.data && Array.isArray((response.data as any).data)) {
+        return (response.data as any).data
+      }
+      if (response.data && Array.isArray((response.data as any).devices)) {
+        return (response.data as any).devices
+      }
+      return []
     } catch (error) {
       console.error("Error fetching devices:", error)
-      throw error
+      return []
     }
   }
 

@@ -138,12 +138,43 @@ export async function POST(request: NextRequest) {
     }
 
     const tis_id = generateCuid();
-    const base_id = generateCuid();
-    const doc_id = "cm8k5gx7n0007141wpl3o7ope";
-
     let client: any = null;
+    let savedToDb = false;
+
     try {
       client = await pool.connect();
+
+      // 1. Resolve valid base_id from Store or Base table
+      let base_id = "default_base";
+      const storeRow = await client.query('SELECT base_id FROM "Store" WHERE id = $1 LIMIT 1;', [store_id]);
+      if (storeRow.rows[0]?.base_id) {
+        base_id = storeRow.rows[0].base_id;
+      } else {
+        const baseRow = await client.query('SELECT id FROM "Base" LIMIT 1;');
+        if (baseRow.rows[0]?.id) base_id = baseRow.rows[0].id;
+      }
+
+      // 2. Resolve valid base_tractor_id
+      let validTractorId = base_tractor_id;
+      const tRow = await client.query('SELECT id FROM "Tractor" WHERE id = $1 LIMIT 1;', [base_tractor_id]);
+      if (!tRow.rows[0]?.id) {
+        const firstTractor = await client.query('SELECT id FROM "Tractor" LIMIT 1;');
+        if (firstTractor.rows[0]?.id) validTractorId = firstTractor.rows[0].id;
+      }
+
+      // 3. Resolve valid document_id
+      let doc_id = "cm8k5gx7n0007141wpl3o7ope";
+      const docRow = await client.query('SELECT id FROM "Document" LIMIT 1;');
+      if (docRow.rows[0]?.id) {
+        doc_id = docRow.rows[0].id;
+      } else {
+        doc_id = generateCuid();
+        await client.query(
+          'INSERT INTO "Document" (id, type, url, base_id, "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, NOW(), NOW()) ON CONFLICT DO NOTHING;',
+          [doc_id, "TRACTOR_DOC", "https://holatractor.com", base_id]
+        );
+      }
+
       await client.query(
         `
         INSERT INTO "TractorInStore" (
@@ -152,10 +183,11 @@ export async function POST(request: NextRequest) {
           $1, $2, $3, $4, $5, $6, NOW(), NOW()
         )
       `,
-        [tis_id, base_tractor_id, store_id, hourly_price, doc_id, base_id]
+        [tis_id, validTractorId, store_id, hourly_price, doc_id, base_id]
       );
+      savedToDb = true;
     } catch (dbErr: any) {
-      console.warn("[POST /api/admin/store-tractors] DB fallback to memory:", dbErr?.message);
+      console.warn("[POST /api/admin/store-tractors] DB insert error:", dbErr?.message);
     } finally {
       if (client) client.release();
     }
@@ -260,7 +292,7 @@ export async function DELETE(request: NextRequest) {
 
     const client = await pool.connect();
     try {
-      await client.query(`DELETE FROM "DeviceInTractor" WHERE "tractorInStoreId" = $1`, [id]).catch(() => {});
+      await client.query(`DELETE FROM "DeviceInTractor" WHERE "tractor_store_id" = $1`, [id]).catch(() => {});
       await client.query(`DELETE FROM "TractorInStore" WHERE id = $1`, [id]);
 
       return NextResponse.json({

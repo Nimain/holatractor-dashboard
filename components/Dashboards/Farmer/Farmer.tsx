@@ -76,11 +76,14 @@ const QUICK_SERVICES = [
   { id: "harvesting", title: "Combine Harvest", es: "Cosecha", icon: "🌽", hp: "175+ HP", rate: "$65/ha" },
 ];
 
+import { getAuthUser, getAuthUserId } from "@/utils/auth/clientAuth";
+
 export default function FarmerDashboard() {
   const router = useRouter();
   const dispatch = useDispatch();
   const { cookie } = useCookie();
 
+  const authUser = getAuthUser();
   const rawUser = cookie.get("user");
   const parsedUser: any =
     typeof rawUser === "string"
@@ -92,8 +95,14 @@ export default function FarmerDashboard() {
           }
         })()
       : rawUser;
-  const user: User = parsedUser || {};
-  const userId = parsedUser?.userId || parsedUser?.id || parsedUser?.sub || parsedUser?._id;
+  const user: User = {
+    userId: authUser.userId || parsedUser?.userId || parsedUser?.id || "",
+    image: authUser.image || parsedUser?.image || "",
+    name: authUser.name || parsedUser?.name || "Farmer",
+    email: authUser.email || parsedUser?.email || "",
+    email_varified: authUser.email_varified ?? parsedUser?.email_varified ?? true,
+  };
+  const userId = user.userId || getAuthUserId();
 
   const { activeFarm } = useSelector((root: RootState) => root.ActiveFarm);
 
@@ -113,50 +122,48 @@ export default function FarmerDashboard() {
 
   const limeOptions = { color: "#10b981", fillColor: "#10b981", fillOpacity: 0.35, weight: 3 };
 
-  function fetchFarmerData() {
-    if (!userId) return;
-
+  async function fetchFarmerData() {
+    const activeId = userId || getAuthUserId();
     setFetchingFarmerDetails(true);
-    renderInstance
-      .get(`/farmer/${userId}`)
-      .then((res) => {
-        if (res.data) {
-          setFarmer(res.data.details || null);
-          setTotalPaid(typeof res.data.totalPaid === "number" ? res.data.totalPaid : 0);
-          setTotalUnpaid(typeof res.data.totalUnpaid === "number" ? res.data.totalUnpaid : 0);
-          setCompletedBookingsCount(typeof res.data.completedBookings === "number" ? res.data.completedBookings : 0);
-          const bList = Array.isArray(res.data.bookings) ? res.data.bookings : [];
-          setBookings(bList);
-          setTotalBookings(typeof res.data.totalBookings === "number" ? res.data.totalBookings : bList.length);
-          const fetchedFarms = Array.isArray(res.data.farms) ? res.data.farms : [];
-          setFarms(fetchedFarms);
-          setAllLogs(Array.isArray(res.data.logs) ? res.data.logs : []);
-          if (fetchedFarms.length > 0) {
-            dispatch(changeFarm(fetchedFarms[0]));
-          }
-        }
-      })
-      .catch(async () => {
-        // Direct resilient fallback to FastAPI
-        try {
-          const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
-          const [bookingsRes, farmsRes] = await Promise.all([
-            axios.get(`${fastApiBase}/simple-booking/list/${userId}`, { timeout: 6000 }).catch(() => null),
-            axios.get(`${fastApiBase}/api/v1/farms`, { timeout: 6000 }).catch(() => null),
-          ]);
-          const bList = Array.isArray(bookingsRes?.data) ? bookingsRes.data : [];
-          const fList = Array.isArray(farmsRes?.data) ? farmsRes.data : [];
-          setBookings(bList);
-          setTotalBookings(bList.length);
-          setFarms(fList);
-          if (fList.length > 0) {
-            dispatch(changeFarm(fList[0]));
-          }
-        } catch {}
-      })
-      .finally(() => {
-        setFetchingFarmerDetails(false);
-      });
+    const targetEndpoint = activeId ? `/farmer/${activeId}` : `/farmer`;
+
+    try {
+      const [renderRes, localFarmsRes, fastFarmsRes] = await Promise.all([
+        renderInstance.get(targetEndpoint).catch(() => null),
+        axios.get(`/api/farm${activeId ? `?owner_id=${activeId}` : ""}`, { timeout: 4000 }).catch(() => null),
+        axios.get(`http://127.0.0.1:8000/farm${activeId ? `?owner_id=${activeId}` : ""}`, { timeout: 4000 }).catch(() => null),
+      ]);
+
+      const dynamicFarms = Array.isArray(localFarmsRes?.data) && localFarmsRes.data.length > 0
+        ? localFarmsRes.data
+        : Array.isArray(fastFarmsRes?.data?.farms) && fastFarmsRes.data.farms.length > 0
+        ? fastFarmsRes.data.farms
+        : Array.isArray(fastFarmsRes?.data) && fastFarmsRes.data.length > 0
+        ? fastFarmsRes.data
+        : Array.isArray(renderRes?.data?.farms)
+        ? renderRes.data.farms
+        : [];
+
+      if (renderRes?.data) {
+        setFarmer(renderRes.data.details || null);
+        setTotalPaid(typeof renderRes.data.totalPaid === "number" ? renderRes.data.totalPaid : 0);
+        setTotalUnpaid(typeof renderRes.data.totalUnpaid === "number" ? renderRes.data.totalUnpaid : 0);
+        setCompletedBookingsCount(typeof renderRes.data.completedBookings === "number" ? renderRes.data.completedBookings : 0);
+        const bList = Array.isArray(renderRes.data.bookings) ? renderRes.data.bookings : [];
+        setBookings(bList);
+        setTotalBookings(typeof renderRes.data.totalBookings === "number" ? renderRes.data.totalBookings : bList.length);
+        setAllLogs(Array.isArray(renderRes.data.logs) ? renderRes.data.logs : []);
+      }
+
+      if (dynamicFarms.length > 0) {
+        setFarms(dynamicFarms);
+        dispatch(changeFarm(dynamicFarms[0]));
+      }
+    } catch (err) {
+      console.error("Farmer data load error:", err);
+    } finally {
+      setFetchingFarmerDetails(false);
+    }
   }
 
   useEffect(() => {
@@ -166,6 +173,7 @@ export default function FarmerDashboard() {
       fetchFarmerData();
     };
     window.addEventListener("farmer_booking_created", handleCreated);
+    window.addEventListener("farmer_farm_created", handleCreated);
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -181,6 +189,7 @@ export default function FarmerDashboard() {
 
     return () => {
       window.removeEventListener("farmer_booking_created", handleCreated);
+      window.removeEventListener("farmer_farm_created", handleCreated);
     };
   }, [userId]);
 

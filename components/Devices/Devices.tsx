@@ -955,7 +955,9 @@ export default function DeviceSection() {
 
       try {
         const localRes = await axios.get("/api/store/getalluniversaldevices")
-        if (localRes.data?.success && Array.isArray(localRes.data?.data) && localRes.data.data.length > 0) {
+        if (Array.isArray(localRes.data) && localRes.data.length > 0) {
+          rawData = localRes.data
+        } else if (localRes.data?.success && Array.isArray(localRes.data?.data) && localRes.data.data.length > 0) {
           rawData = localRes.data.data
         }
       } catch {}
@@ -967,7 +969,9 @@ export default function DeviceSection() {
               Authorization: `Bearer ${access_token}`,
             },
           })
-          if (response.data?.success && Array.isArray(response.data?.data)) {
+          if (Array.isArray(response.data) && response.data.length > 0) {
+            rawData = response.data
+          } else if (response.data?.success && Array.isArray(response.data?.data)) {
             rawData = response.data.data
           }
         } catch {}
@@ -1013,31 +1017,45 @@ export default function DeviceSection() {
 
       if (rawData.length > 0) {
         const transformedDevices: Device[] = rawData.map((device: any) => {
-          const rawLat = Number.parseFloat(String(device.lat ?? device.tractorInStore?.store?.location?.lat ?? "-17.7589"))
-          const rawLon = Number.parseFloat(String(device.lng ?? device.lon ?? device.tractorInStore?.store?.location?.lan ?? "-63.1063"))
+          const tis = device.tractorInStore || device.tractor_store || {}
+          const bt = tis.baseTractor || tis.tractor || {}
+          const st = tis.store || device.store || {}
+          const ownerObj = st.owner?.user || st.user || st.owner || {}
+
+          const rawLat = Number.parseFloat(String(device.lat ?? st.location?.lat ?? "-17.7589"))
+          const rawLon = Number.parseFloat(String(device.lng ?? device.lon ?? st.location?.lan ?? "-63.1063"))
           const region = device.device_region || "SW"
           const isOnline = Boolean(device.online || device.base?.status === 1)
 
+          const tImages = bt.images
+            ? Array.isArray(bt.images)
+              ? bt.images[0]
+              : bt.images
+            : null
+
+          const ownerNameFormatted =
+            `${ownerObj.first_name || ""} ${ownerObj.last_name || ""}`.trim() ||
+            ownerObj.name ||
+            "Propietario Agrícola"
+
           return {
             id: String(device.device_imei || device.id),
-            name: device.tractorInStore?.baseTractor?.name || `Tractor IMEI ${device.device_imei || device.id}`,
+            name: bt.name || `Tractor IMEI ${device.device_imei || device.id}`,
             lat: isNaN(rawLat) || rawLat === 0 ? -17.7589 : rawLat,
             lng: isNaN(rawLon) || rawLon === 0 ? -63.1063 : rawLon,
-            speed: device.speed || 0,
-            course: device.course || 0,
+            speed: Number(device.speed) || 0,
+            course: Number(device.course) || 0,
             battery: device.battery || (isOnline ? 100 : 85),
             lastSeen: device.last_seen || device.updatedAt || new Date().toISOString(),
-            field: device.tractorInStore?.store?.name || "Santa Cruz Fleet",
+            field: st.name || "Santa Cruz Fleet",
             status: isOnline ? "Active" : "Not Connected",
             hasGps: true,
             region: region,
-            model: device.tractorInStore?.baseTractor?.model || "Standard 4WD",
-            hourlyPrice: device.tractorInStore?.hourly_price || 35,
-            storeImage: device.tractorInStore?.store?.image || null,
-            tractorImage: device.tractorInStore?.baseTractor?.images?.[0] || null,
-            ownerName:
-              `${device.tractorInStore?.store?.owner?.user?.first_name || ""} ${device.tractorInStore?.store?.owner?.user?.last_name || ""}`.trim() ||
-              "Propietario Agrícola",
+            model: bt.model || "Standard 4WD",
+            hourlyPrice: Number(tis.hourly_price) || 35,
+            storeImage: st.image || null,
+            tractorImage: tImages,
+            ownerName: ownerNameFormatted,
           }
         })
 

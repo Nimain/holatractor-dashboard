@@ -46,6 +46,7 @@ import {
 } from "@/utils/Types/types";
 import { useCookie } from "next-cookie";
 import { NestJsBaseURL, renderInstance } from "@/utils/Axios/RenderInstance";
+import { getAuthUserId } from "@/utils/auth/clientAuth";
 import { errorMessage } from "@/utils/Toastify/Messages";
 import RequestNewOperator from "./RequestNewOperator";
 import OperatorRequests from "./OperatorRequests";
@@ -91,7 +92,10 @@ const OwnerOperator = () => {
     useOperatorsRequestToJoinStoreContext();
 
   const { cookie } = useCookie();
-  const user: user = cookie.get("user");
+  const rawUser = cookie.get("user");
+  const parsedUser = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser); } catch { return null; } })() : rawUser;
+  const user: user = parsedUser || {};
+  const currentUserId = user?.userId || getAuthUserId();
 
   const sortOptions = [
     {
@@ -141,15 +145,17 @@ const OwnerOperator = () => {
 
   function fetchOperators() {
     setFetchingOperatorDetails(true);
+    const targetId = currentUserId || getAuthUserId();
+    const endpoint = targetId
+      ? `/owner/get-operators/${targetId}?searchBy=${searchBy}&search=${searchTerm}&sortBy=${sortBy}&sortOrder=${sortOrder}&page=${page}`
+      : `/owner/get-operators?searchBy=${searchBy}&search=${searchTerm}&sortBy=${sortBy}&sortOrder=${sortOrder}&page=${page}`;
 
     renderInstance
-      .get(
-        `/owner/get-operators/${user.userId}?searchBy=${searchBy}&search=${searchTerm}&sortBy=${sortBy}&sortOrder=${sortOrder}&page=${page}`
-      )
+      .get(endpoint)
       .then((res) => {
-        setAllOperators(res.data.operators);
-        setActiveOperators(res.data.activeOperators);
-        setTotalPages(res.data.totalPages);
+        setAllOperators(res.data?.operators || []);
+        setActiveOperators(res.data?.activeOperators || 0);
+        setTotalPages(res.data?.totalPages || 1);
       })
       .catch((err) => {
         errorMessage("Error fetching operator lists");
@@ -160,22 +166,18 @@ const OwnerOperator = () => {
   }
 
   useEffect(() => {
-    if (user) {
-      fetchOperators();
-    }
+    fetchOperators();
   }, [searchBy, searchTerm, sortBy, sortOrder]);
 
   useEffect(() => {
-    if (user) {
-      fetchAllOperatorRequests();
-    }
+    fetchAllOperatorRequests();
   }, []);
 
   useEffect(() => {
     // Connect to the socket server
     const newSocket: Socket = io(NestJsBaseURL, {
       query: {
-        userId: user.userId,
+        userId: currentUserId,
       },
     });
 
@@ -822,114 +824,120 @@ const OwnerOperator = () => {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {customer.operator.OperatorBookingJob.map(
-                                    (job, index) => (
-                                      <tr
-                                        key={index}
-                                        className="border-b last:border-0"
-                                      >
-                                        <td className="p-4 text-sm">
-                                          {new Date(
-                                            job.booking.start_date
-                                          ).toLocaleDateString()}
-                                        </td>
-                                        <td className="p-4 text-sm">
-                                          {job.booking.booking_hours ? (
-                                            job.booking.booking_hours ===
-                                            BookingHours.EIGHT_HOURS ? (
-                                              <TranslatedText
-                                                greetings={
-                                                  newBookingTranslations.hours[
-                                                    "8h"
-                                                  ]
-                                                }
-                                              />
-                                            ) : job.booking.booking_hours ===
-                                              BookingHours.SEVEN_HOURS ? (
-                                              <TranslatedText
-                                                greetings={
-                                                  newBookingTranslations.hours[
-                                                    "7h"
-                                                  ]
-                                                }
-                                              />
-                                            ) : job.booking.booking_hours ===
-                                              BookingHours.SIX_HOURS ? (
-                                              <TranslatedText
-                                                greetings={
-                                                  newBookingTranslations.hours[
-                                                    "6h"
-                                                  ]
-                                                }
-                                              />
-                                            ) : job.booking.booking_hours ===
-                                              BookingHours.FIVE_HOURS ? (
-                                              <TranslatedText
-                                                greetings={
-                                                  newBookingTranslations.hours[
-                                                    "5h"
-                                                  ]
-                                                }
-                                              />
-                                            ) : job.booking.booking_hours ===
-                                              BookingHours.FOUR_HOURS ? (
-                                              <TranslatedText
-                                                greetings={
-                                                  newBookingTranslations.hours[
-                                                    "4h"
-                                                  ]
-                                                }
-                                              />
-                                            ) : job.booking.booking_hours ===
-                                              BookingHours.THREE_HOURS ? (
-                                              <TranslatedText
-                                                greetings={
-                                                  newBookingTranslations.hours[
-                                                    "3h"
-                                                  ]
-                                                }
-                                              />
-                                            ) : job.booking.booking_hours ===
-                                              BookingHours.TWO_HOURS ? (
-                                              <TranslatedText
-                                                greetings={
-                                                  newBookingTranslations.hours[
-                                                    "2h"
-                                                  ]
-                                                }
-                                              />
+                                  {(customer?.operator?.OperatorBookingJob || []).length > 0 ? (
+                                    customer.operator.OperatorBookingJob.map(
+                                      (job, index) => (
+                                        <tr
+                                          key={index}
+                                          className="border-b last:border-0"
+                                        >
+                                          <td className="p-4 text-sm">
+                                            {job?.booking?.start_date
+                                              ? new Date(
+                                                  job.booking.start_date
+                                                ).toLocaleDateString()
+                                              : "-"}
+                                          </td>
+                                          <td className="p-4 text-sm">
+                                            {job?.booking?.booking_hours ? (
+                                              job.booking.booking_hours ===
+                                              BookingHours.EIGHT_HOURS ? (
+                                                <TranslatedText
+                                                  greetings={
+                                                    newBookingTranslations.hours[
+                                                      "8h"
+                                                    ]
+                                                  }
+                                                />
+                                              ) : job.booking.booking_hours ===
+                                                BookingHours.SEVEN_HOURS ? (
+                                                <TranslatedText
+                                                  greetings={
+                                                    newBookingTranslations.hours[
+                                                      "7h"
+                                                    ]
+                                                  }
+                                                />
+                                              ) : job.booking.booking_hours ===
+                                                BookingHours.SIX_HOURS ? (
+                                                <TranslatedText
+                                                  greetings={
+                                                    newBookingTranslations.hours[
+                                                      "6h"
+                                                    ]
+                                                  }
+                                                />
+                                              ) : job.booking.booking_hours ===
+                                                BookingHours.FIVE_HOURS ? (
+                                                <TranslatedText
+                                                  greetings={
+                                                    newBookingTranslations.hours[
+                                                      "5h"
+                                                    ]
+                                                  }
+                                                />
+                                              ) : job.booking.booking_hours ===
+                                                BookingHours.FOUR_HOURS ? (
+                                                <TranslatedText
+                                                  greetings={
+                                                    newBookingTranslations.hours[
+                                                      "4h"
+                                                    ]
+                                                  }
+                                                />
+                                              ) : job.booking.booking_hours ===
+                                                BookingHours.THREE_HOURS ? (
+                                                <TranslatedText
+                                                  greetings={
+                                                    newBookingTranslations.hours[
+                                                      "3h"
+                                                    ]
+                                                  }
+                                                />
+                                              ) : job.booking.booking_hours ===
+                                                BookingHours.TWO_HOURS ? (
+                                                <TranslatedText
+                                                  greetings={
+                                                    newBookingTranslations.hours[
+                                                      "2h"
+                                                    ]
+                                                  }
+                                                />
+                                              ) : (
+                                                <TranslatedText
+                                                  greetings={
+                                                    newBookingTranslations.hours[
+                                                      "1h"
+                                                    ]
+                                                  }
+                                                />
+                                              )
                                             ) : (
-                                              <TranslatedText
-                                                greetings={
-                                                  newBookingTranslations.hours[
-                                                    "1h"
-                                                  ]
-                                                }
-                                              />
-                                            )
-                                          ) : (
-                                            <TranslatedText
-                                              greetings={
-                                                ownerOperatorTranslations.moreThanEightHours
-                                              }
-                                            />
-                                          )}
-                                        </td>
-                                        <td className="p-4 text-sm">
-                                          {job.booking.end_date
-                                            ? new Date(
-                                                job.booking.end_date
-                                              ).toLocaleDateString()
-                                            : new Date().toLocaleDateString()}
-                                        </td>
-                                        <td className="p-4 text-sm">
-                                          {job.booking.total_cost.toFixed(2)}
-                                        </td>
-                                        <td className="p-4 text-sm">
-                                          {job.booking.bookingStatus}
-                                        </td>
-                                      </tr>
+                                              "-"
+                                            )}
+                                          </td>
+                                          <td className="p-4 text-sm">
+                                            {job?.booking?.end_date
+                                              ? new Date(
+                                                  job.booking.end_date
+                                                ).toLocaleDateString()
+                                              : "-"}
+                                          </td>
+                                          <td className="p-4 text-sm">
+                                            ${Number(job?.booking?.total_cost || 0).toFixed(2)}
+                                          </td>
+                                          <td className="p-4 text-sm">
+                                            {job?.booking?.bookingStatus || job?.status || "Completed"}
+                                          </td>
+                                        </tr>
+                                      )
                                     )
+                                  ) : (
+                                    <tr>
+                                      <td colSpan={5} className="text-center p-6 text-sm text-gray-500">
+                                        No booking jobs found for this operator.
+                                      </td>
+                                    </tr>
                                   )}
                                 </tbody>
                               </table>

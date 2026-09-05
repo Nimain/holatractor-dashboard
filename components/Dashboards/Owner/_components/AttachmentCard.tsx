@@ -29,9 +29,9 @@ export function AttachmentCard({ attachment }: AttachmentCardProps) {
           className="object-cover w-full h-48 rounded-md"
         />
       </CardHeader>
-      <CardContent className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white p-4 ">
-        <CardTitle>{attachment.name}</CardTitle>
-        <p className="text-muted my-2">{attachment.description}</p>
+      <CardContent className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white p-4 min-w-0">
+        <CardTitle className="truncate" title={attachment.name}>{attachment.name}</CardTitle>
+        <p className="text-muted my-2 text-xs line-clamp-2 break-words text-slate-200" title={attachment.description}>{attachment.description}</p>
         <div>
           <h1 className="text-white text-xl mt-1">Features</h1>
           <div className="flex justify-evenly">

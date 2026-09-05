@@ -4,6 +4,8 @@ import { OperatorAddStoreReuests } from "@/utils/Types/types";
 import { useCookie } from "next-cookie";
 import { createContext, Dispatch, ReactNode, SetStateAction, useContext, useState } from "react";
 
+import { getAuthUserId } from "@/utils/auth/clientAuth";
+
 const OperatorsRequestToJoinStoreContext = createContext<OperatorsRequestToJoinStoreContextType | undefined>(undefined);
 
 interface user {
@@ -25,14 +27,21 @@ export const OperatorsRequestToJoinStoreProvider = ({ children }: { children: Re
     const [fetching, setFetching] = useState(false)
 
     const { cookie } = useCookie()
-    const user: user = cookie.get("user")
+    const rawUser = cookie.get("user")
+    const parsedUser = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser); } catch { return null; } })() : rawUser
+    const user: user = parsedUser || {}
 
     function fetchAllOperatorRequests() {
         setFetching(true)
-        renderInstance.get(`/owner/get-requests-from-operators-to-join-store/${user.userId}`)
-            .then((res) => { setOperatorRequests(res.data) })
-            .catch((err) => { errorMessage("Error in fetching operator requests") })
-            .then(()=>{setFetching(false)})
+        const targetId = user?.userId || getAuthUserId();
+        const endpoint = targetId
+            ? `/owner/get-requests-from-operators-to-join-store/${targetId}`
+            : `/owner/get-requests-from-operators-to-join-store`;
+
+        renderInstance.get(endpoint)
+            .then((res) => { setOperatorRequests(Array.isArray(res.data) ? res.data : (res.data?.requests || [])) })
+            .catch((err) => { console.error("Error in fetching operator requests:", err) })
+            .finally(()=>{setFetching(false)})
     }
 
     return (

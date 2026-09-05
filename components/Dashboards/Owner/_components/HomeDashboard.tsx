@@ -39,71 +39,13 @@ import TranslatedText from "@/components/Menubar/TranslatedText";
 import { OwnerDashboardTranslation } from "../OwnerDashboardTranslation";
 import DeviceApiService, { type Device } from "../devices/Device";
 import { useCookie } from "next-cookie";
-
-interface Store {
-  id: string;
-  name: string;
-  description: string;
-  image: string;
-  opening_time: string;
-  closing_time: string;
-  closing_days: string[];
-  location: {
-    lat: string;
-    lan: string;
-  };
-  TractorInStore: TractorInStore[];
-}
-
-interface TractorInStore {
-  id: string;
-  baseTractorId: string;
-  hourly_price: number;
-  store_id: string;
-  baseTractor: {
-    id: string;
-    name: string;
-    description: string;
-    model: string;
-    type: string;
-    year: string;
-    images: string[];
-  };
-}
-
-interface OperatorInStore {
-  id: string;
-  cost_per_job: number;
-  cost_per_hour: number;
-  cost_per_month: number;
-  operator: {
-    user: {
-      first_name: string;
-      middle_name?: string;
-      last_name: string;
-      image?: string;
-    };
-  };
-}
-
-interface Booking {
-  id: string;
-  user?: {
-    first_name: string;
-    last_name: string;
-    image?: string;
-  };
-}
-
-interface Tractor {
-  id: string;
-  name: string;
-}
-
-interface Attachment {
-  id: string;
-  name: string;
-}
+import {
+  Attachment,
+  Booking,
+  OperatorInStore,
+  Store,
+  Tractor,
+} from "@/utils/Types/types";
 
 interface Location {
   latitude: number | null;
@@ -145,9 +87,10 @@ export default function HomeDashboard({
   const fetchDevices = async () => {
     try {
       const deviceData = await DeviceApiService.getAllDevices();
-      setDevices(deviceData);
+      setDevices(Array.isArray(deviceData) ? deviceData : []);
     } catch (error) {
       console.error("Error fetching devices:", error);
+      setDevices([]);
     }
   };
 
@@ -165,25 +108,27 @@ export default function HomeDashboard({
     fetchDevices();
   }, []);
 
+  const deviceList = Array.isArray(devices) ? devices : [];
+
   const nextDevice = () => {
-    if (devices.length > 0) {
-      setCurrentDeviceIndex((prev) => (prev + 1) % devices.length);
+    if (deviceList.length > 0) {
+      setCurrentDeviceIndex((prev) => (prev + 1) % deviceList.length);
     }
   };
 
   const prevDevice = () => {
-    if (devices.length > 0) {
+    if (deviceList.length > 0) {
       setCurrentDeviceIndex(
-        (prev) => (prev - 1 + devices.length) % devices.length
+        (prev) => (prev - 1 + deviceList.length) % deviceList.length
       );
     }
   };
 
-  const activeDevicesCount = devices.filter(
-    (d) => d.base && d.base.status === 1
+  const activeDevicesCount = deviceList.filter(
+    (d) => d?.base?.status === 1 || Boolean((d as any)?.online)
   ).length;
 
-  const currentDevice = devices[currentDeviceIndex];
+  const currentDevice = deviceList[currentDeviceIndex];
 
   return (
     <div className="w-full space-y-6 pb-12">
@@ -450,12 +395,12 @@ export default function HomeDashboard({
                   <TractorIcon className="w-16 h-16 text-amber-600" />
                 </div>
                 <h5 className="text-base font-bold text-slate-900 mb-2">
-                  {currentDevice.base_tractor?.name || "Tractor Device"}
+                  {(currentDevice as any)?.tractorInStore?.baseTractor?.name || (currentDevice as any)?.base_tractor?.name || (currentDevice as any)?.name || "Tractor Device"}
                 </h5>
                 <div className="space-y-2 text-xs mb-4">
                   <div className="flex justify-between border-b border-slate-100 pb-1">
                     <span className="text-slate-500">IMEI:</span>
-                    <span className="font-semibold text-slate-800">{currentDevice.imei}</span>
+                    <span className="font-semibold text-slate-800">{(currentDevice as any)?.device_imei || (currentDevice as any)?.imei || "N/A"}</span>
                   </div>
                   <div className="flex justify-between border-b border-slate-100 pb-1">
                     <span className="text-slate-500">Status:</span>

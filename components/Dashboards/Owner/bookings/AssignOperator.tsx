@@ -133,10 +133,10 @@ const AssignOperator = ({ selectedRequest, storeId }: { selectedRequest: string;
                                                     <Phone className="mr-2 h-4 w-4" />
                                                     <span>{operator.operator.user.mobile}</span>
                                                 </div>
-                                                {operator.operator.OperatorBookingJob.length > 0 && (
+                                                {(operator?.operator?.OperatorBookingJob || []).length > 0 && (
                                                     <div className="flex items-center">
                                                         <Briefcase className="mr-2 h-4 w-4" />
-                                                        <span className="text-sm"><TranslatedText greetings={ownerBookingsTranslation.stores} />: {operator.operator.OperatorBookingJob.length}</span>
+                                                        <span className="text-sm"><TranslatedText greetings={ownerBookingsTranslation.stores} />: {(operator?.operator?.OperatorBookingJob || []).length}</span>
                                                     </div>
                                                 )}
                                             </CardContent>

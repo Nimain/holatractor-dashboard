@@ -1,6 +1,7 @@
 "use client";
 
-import { renderInstance } from "@/utils/Axios/RenderInstance";
+import axios from "axios";
+import { renderInstance, TractorAIBaseURL } from "@/utils/Axios/RenderInstance";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import {
   Booking,
@@ -84,6 +85,22 @@ const CostItem = ({ label, value }: { label: any; value: any }) => (
 );
 
 const formatCurrency = (amount: any) => {
+  try {
+    const num = Number(amount || 0);
+    if (typeof window !== "undefined") {
+      const savedCurr = sessionStorage.getItem("@farmer_active_currency");
+      if (savedCurr) {
+        const parsed = JSON.parse(savedCurr);
+        if (parsed.rate && parsed.symbol) {
+          return `${parsed.symbol}${(num * parsed.rate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+      }
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+      if (tz.includes("Calcutta") || tz.includes("Kolkata") || tz.includes("Colombo")) {
+        return `₹${(num * 94.0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      }
+    }
+  } catch {}
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -143,20 +160,31 @@ const BookingStore = () => {
     });
   }
 
-  const fetchFarms = useCallback(() => {
-    if (!userId) return;
+  const fetchFarms = useCallback(async () => {
     setFetchingFarms(true);
-    renderInstance
-      .get(`/farm/get-with-user-id/${userId}`)
-      .then((res) => {
-        setFarms(Array.isArray(res.data) ? res.data : []);
-      })
-      .catch(() => {
-        errorMessage("Error fetching farms");
-      })
-      .finally(() => {
-        setFetchingFarms(false);
-      });
+    try {
+      const [localRes, fastRes, renderRes] = await Promise.all([
+        axios.get(`/api/farm${userId ? `?owner_id=${userId}` : ""}`, { timeout: 3500 }).catch(() => null),
+        axios.get(`http://127.0.0.1:8000/farm${userId ? `?owner_id=${userId}` : ""}`, { timeout: 3500 }).catch(() => null),
+        renderInstance.get(`/farm/get-with-user-id/${userId || "farmer_demo_01"}`).catch(() => null),
+      ]);
+
+      const farmList = Array.isArray(localRes?.data) && localRes.data.length > 0
+        ? localRes.data
+        : Array.isArray(fastRes?.data?.farms) && fastRes.data.farms.length > 0
+        ? fastRes.data.farms
+        : Array.isArray(renderRes?.data) && renderRes.data.length > 0
+        ? renderRes.data
+        : Array.isArray(renderRes?.data?.farms)
+        ? renderRes.data.farms
+        : [];
+
+      setFarms(farmList);
+    } catch {
+      errorMessage("Error fetching farms");
+    } finally {
+      setFetchingFarms(false);
+    }
   }, [userId]);
 
   const fetchStoreDetails = useCallback(async () => {
@@ -175,18 +203,29 @@ const BookingStore = () => {
       }
     } catch {}
 
-    // 2. Fetch from TractorAI live API if not in cache
+    // 2. Fetch from localhost FastAPI or TractorAI live API
     if (!foundStore) {
-      try {
-        const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
-        const res = await axios.get(`${fastApiBase}/api/v1/owner/stores`, { timeout: 6000 });
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          try {
-            sessionStorage.setItem("@farmer_all_stores_cache", JSON.stringify(res.data));
-          } catch {}
-          foundStore = res.data.find((s: any) => String(s.id) === String(slug));
-        }
-      } catch {}
+      const storeUrls = [
+        `http://127.0.0.1:8000/store/${slug}`,
+        `http://127.0.0.1:8000/store/by-id/${slug}`,
+        `/api/store/${slug}`,
+        `http://127.0.0.1:8000/api/v1/owner/stores`,
+        `${(TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "")}/api/v1/owner/stores`,
+      ];
+
+      for (const url of storeUrls) {
+        if (foundStore) break;
+        try {
+          const res = await axios.get(url, { timeout: 4000 });
+          if (res.data) {
+            if (Array.isArray(res.data)) {
+              foundStore = res.data.find((s: any) => String(s.id || s.store_id) === String(slug));
+            } else if (res.data.id || res.data.store_id || res.data.name) {
+              foundStore = res.data;
+            }
+          }
+        } catch {}
+      }
     }
 
     // 3. If found in TractorAI, format and set
@@ -208,6 +247,27 @@ const BookingStore = () => {
         };
       });
 
+      let dynamicAttachments = foundStore.AttachmentInStore || foundStore.attachments || [];
+      if (dynamicAttachments.length === 0) {
+        try {
+          const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
+          const [localFastRes, remoteFastRes, localAttRes] = await Promise.all([
+            axios.get(`http://127.0.0.1:8000/attachment`, { timeout: 3000 }).catch(() => null),
+            axios.get(`${fastApiBase}/attachment`, { timeout: 3000 }).catch(() => null),
+            axios.get(`/api/attachment`, { timeout: 3000 }).catch(() => null),
+          ]);
+          const fastAttList = Array.isArray(localFastRes?.data)
+            ? localFastRes.data
+            : Array.isArray(remoteFastRes?.data)
+            ? remoteFastRes.data
+            : Array.isArray(remoteFastRes?.data?.data)
+            ? remoteFastRes.data.data
+            : [];
+          const localAttList = Array.isArray(localAttRes?.data) ? localAttRes.data : [];
+          dynamicAttachments = fastAttList.length > 0 ? fastAttList : localAttList;
+        } catch {}
+      }
+
       setStore({
         id: String(foundStore.id),
         name: foundStore.name || "Agri Depot",
@@ -216,9 +276,9 @@ const BookingStore = () => {
         image: foundStore.image || "https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=600&q=80",
         rating: 4.9,
         TractorInStore: tractors,
-        AttachmentInStore: foundStore.AttachmentInStore || [],
+        AttachmentInStore: dynamicAttachments,
         tractors: tractors,
-        attachments: foundStore.attachments || [],
+        attachments: dynamicAttachments,
       } as any);
       setFetchingStoreDetails(false);
       return;
@@ -234,29 +294,38 @@ const BookingStore = () => {
       }
     } catch {}
 
-    // 5. Resilient fallback store data
+    // 5. Fallback store data from live API
+    let dynamicAttachments: any[] = [];
+    try {
+      const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
+      const [localFastRes, remoteFastRes, localAttRes] = await Promise.all([
+        axios.get(`http://127.0.0.1:8000/attachment`, { timeout: 3000 }).catch(() => null),
+        axios.get(`${fastApiBase}/attachment`, { timeout: 3000 }).catch(() => null),
+        axios.get(`/api/attachment`, { timeout: 3000 }).catch(() => null),
+      ]);
+      const fastAttList = Array.isArray(localFastRes?.data)
+        ? localFastRes.data
+        : Array.isArray(remoteFastRes?.data)
+        ? remoteFastRes.data
+        : Array.isArray(remoteFastRes?.data?.data)
+        ? remoteFastRes.data.data
+        : [];
+      const localAttList = Array.isArray(localAttRes?.data) ? localAttRes.data : [];
+      dynamicAttachments = fastAttList.length > 0 ? fastAttList : localAttList;
+    } catch {}
+
     setStore({
       id: String(slug),
       name: "HolaTractor Certified Agricultural Hub",
-      description: "Full fleet of modern heavy tractors, direct seeders, boom sprayers and combine harvesters.",
+      description: "Full fleet of certified tractors and precision implements ready for field dispatch.",
       address: "Regional Agricultural Machinery Zone",
       image: "https://images.unsplash.com/photo-1592928302636-c83cf1e1c887?w=600&q=80",
       rating: 4.9,
       phone: "+591 70000000",
       email: "support@holatractor.com",
-      TractorInStore: [
-        {
-          id: "tr_kioti",
-          baseTractor: {
-            name: "Kioti RX7320 Heavy Utility (73 HP)",
-            model: "RX7320 PowerShuttle",
-            hp: "73 HP",
-            images: ["https://holadashboard.s3.us-west-2.amazonaws.com/1787350724904-1787350724840-1000894674.jpg"],
-            rate_per_hour: 20,
-          },
-        },
-      ],
-      AttachmentInStore: [],
+      TractorInStore: [],
+      AttachmentInStore: dynamicAttachments,
+      attachments: dynamicAttachments,
     } as any);
     setFetchingStoreDetails(false);
   }, [slug]);
@@ -612,178 +681,142 @@ const BookingStore = () => {
 
         <div className="flex-1">
           {selectedTab === "Tractor" && (
-            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-              {((store?.TractorInStore || store?.tractors || []).length === 0 ? [
-                {
-                  id: "tr_jd_6120",
-                  baseTractor: {
-                    name: "John Deere 6120M (120 HP)",
-                    model: "6120M Premium Cab",
-                    type: "Heavy Utility Tractor",
-                    hp: "120 HP",
-                    images: ["https://images.unsplash.com/photo-1592841200221-a6898f307baa?w=600&h=400&fit=crop"],
-                  }
-                },
-                {
-                  id: "tr_nh_t7",
-                  baseTractor: {
-                    name: "New Holland T7.210 (180 HP)",
-                    model: "T7 AutoCommand",
-                    type: "Row-Crop Heavy Tractor",
-                    hp: "180 HP",
-                    images: ["https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=600&h=400&fit=crop"],
-                  }
-                },
-                {
-                  id: "tr_mf_8s",
-                  baseTractor: {
-                    name: "Massey Ferguson 8S.265 (265 HP)",
-                    model: "8S Dyna E-Power",
-                    type: "High-Horsepower Tillage",
-                    hp: "265 HP",
-                    images: ["https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&h=400&fit=crop"],
-                  }
-                }
-              ] : (store?.TractorInStore || store?.tractors || [])).map((item: any, idx: number) => {
-                const tractor = item.tractor || item;
-                const base = tractor.baseTractor || tractor;
-                const tractorId = item.id || `tractor_${idx}`;
-                const tractorName = base.name || "John Deere Fleet Unit";
-                const tractorImg = Array.isArray(base.images) && base.images.length > 0
-                  ? base.images[0]
-                  : (Array.isArray(base.image) && base.image.length > 0 ? base.image[0] : (base.image || "https://images.unsplash.com/photo-1592841200221-a6898f307baa?w=600&h=400&fit=crop"));
+            (store?.TractorInStore || store?.tractors || []).length === 0 ? (
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center shadow-sm">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                  🚜
+                </div>
+                <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">No Tractors Registered</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">There are no tractor units assigned to this depot in FastAPI.</p>
+              </div>
+            ) : (
+              <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+                {(store?.TractorInStore || store?.tractors || []).map((item: any, idx: number) => {
+                  const tractor = item.tractor || item;
+                  const base = tractor.baseTractor || tractor;
+                  const tractorId = item.id || `tractor_${idx}`;
+                  const tractorName = base.name || "Fleet Tractor";
+                  const tractorImg = Array.isArray(base.images) && base.images.length > 0
+                    ? base.images[0]
+                    : (Array.isArray(base.image) && base.image.length > 0 ? base.image[0] : (base.image || "https://images.unsplash.com/photo-1592841200221-a6898f307baa?w=600&h=400&fit=crop"));
 
-                const isSelected = selectedTractorIds.includes(tractorId);
+                  const isSelected = selectedTractorIds.includes(tractorId);
 
-                return (
-                  <Card
-                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
-                    key={tractorId}
-                  >
-                    <div>
-                      <div className="relative w-full h-44 bg-slate-100 dark:bg-slate-800">
-                        <Image
-                          src={tractorImg}
-                          alt={tractorName}
-                          fill
-                          unoptimized={true}
-                          className="object-cover"
-                        />
-                      </div>
-                      <div className="p-4 space-y-2">
-                        <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
-                          {tractorName}
-                        </h3>
-                        <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl">
-                          <div>
-                            <span className="font-semibold text-slate-400">Model: </span>
-                            <span className="font-bold text-slate-700 dark:text-slate-200">{base.model || "Class 6"}</span>
-                          </div>
-                          <div>
-                            <span className="font-semibold text-slate-400">HP: </span>
-                            <span className="font-bold text-emerald-600">{base.hp || "120 HP"}</span>
+                  return (
+                    <Card
+                      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                      key={tractorId}
+                    >
+                      <div>
+                        <div className="relative w-full h-44 bg-slate-100 dark:bg-slate-800">
+                          <Image
+                            src={tractorImg}
+                            alt={tractorName}
+                            fill
+                            unoptimized={true}
+                            className="object-cover"
+                          />
+                        </div>
+                        <div className="p-4 space-y-2">
+                          <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                            {tractorName}
+                          </h3>
+                          <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl">
+                            <div>
+                              <span className="font-semibold text-slate-400">Model: </span>
+                              <span className="font-bold text-slate-700 dark:text-slate-200">{base.model || "Standard"}</span>
+                            </div>
+                            <div>
+                              <span className="font-semibold text-slate-400">HP: </span>
+                              <span className="font-bold text-emerald-600">{base.hp || "Fleet Spec"}</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="p-4 pt-0">
-                      <Button
-                        className={`w-full font-bold text-xs rounded-xl h-9 transition-all ${
-                          isSelected
-                            ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                            : "bg-slate-900 dark:bg-slate-800 hover:bg-emerald-600 text-white"
-                        }`}
-                        onClick={() => handleBookClick(tractorId)}
-                      >
-                        {isSelected ? "✓ Selected in Dispatch" : "+ Select Tractor"}
-                      </Button>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
+                      <div className="p-4 pt-0">
+                        <Button
+                          className={`w-full font-bold text-xs rounded-xl h-9 transition-all ${
+                            isSelected
+                              ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                              : "bg-slate-900 dark:bg-slate-800 hover:bg-emerald-600 text-white"
+                          }`}
+                          onClick={() => handleBookClick(tractorId)}
+                        >
+                          {isSelected ? "✓ Selected in Dispatch" : "+ Select Tractor"}
+                        </Button>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            )
           )}
 
           {selectedTab === "Attachment" && (
-            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-              {((store?.AttachmentInStore || store?.attachments || []).length === 0 ? [
-                {
-                  id: "att_sprayer_24m",
-                  baseAttachment: {
-                    name: "24m Self-Leveling Boom Sprayer",
-                    description: "High-precision chemical & fertilizer application unit with section autoguidance.",
-                    images: ["https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&h=400&fit=crop"],
-                  }
-                },
-                {
-                  id: "att_chisel_plow",
-                  baseAttachment: {
-                    name: "Heavy-Duty 7-Shank Subsoiler",
-                    description: "Deep hardpan soil shattering down to 45cm for improved root development.",
-                    images: ["https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=600&h=400&fit=crop"],
-                  }
-                },
-                {
-                  id: "att_planter_12",
-                  baseAttachment: {
-                    name: "12-Row Pneumatic Direct Seeder",
-                    description: "Precision variable-rate seed delivery with vacuum metering.",
-                    images: ["https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=600&h=400&fit=crop"],
-                  }
-                }
-              ] : (store?.AttachmentInStore || store?.attachments || [])).map((item: any, idx: number) => {
-                const attachment = item.attachment || item;
-                const base = attachment.baseAttachment || attachment;
-                const attachmentId = item.id || `attachment_${idx}`;
-                const attachmentName = base.name || "Agricultural Attachment";
-                const attachmentImg = Array.isArray(base.images) && base.images.length > 0
-                  ? base.images[0]
-                  : (Array.isArray(base.image) && base.image.length > 0 ? base.image[0] : (base.image || "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&h=400&fit=crop"));
+            (store?.AttachmentInStore || store?.attachments || []).length === 0 ? (
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center shadow-sm">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                  ⚙️
+                </div>
+                <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">No Attachments Registered</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">There are no implements or attachments registered for this depot in FastAPI.</p>
+              </div>
+            ) : (
+              <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+                {(store?.AttachmentInStore || store?.attachments || []).map((item: any, idx: number) => {
+                  const attachment = item.attachment || item;
+                  const base = attachment.baseAttachment || attachment;
+                  const attachmentId = item.id || `attachment_${idx}`;
+                  const attachmentName = base.name || "Agricultural Attachment";
+                  const attachmentImg = Array.isArray(base.images) && base.images.length > 0
+                    ? base.images[0]
+                    : (Array.isArray(base.image) && base.image.length > 0 ? base.image[0] : (base.image || "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=600&h=400&fit=crop"));
 
-                const isSelected = selectedAttachmentIds.includes(attachmentId);
+                  const isSelected = selectedAttachmentIds.includes(attachmentId);
 
-                return (
-                  <Card
-                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
-                    key={attachmentId}
-                  >
-                    <div>
-                      <div className="relative w-full h-44 bg-slate-100 dark:bg-slate-800">
-                        <Image
-                          src={attachmentImg}
-                          alt={attachmentName}
-                          fill
-                          unoptimized={true}
-                          className="object-cover"
-                        />
+                  return (
+                    <Card
+                      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                      key={attachmentId}
+                    >
+                      <div>
+                        <div className="relative w-full h-44 bg-slate-100 dark:bg-slate-800">
+                          <Image
+                            src={attachmentImg}
+                            alt={attachmentName}
+                            fill
+                            unoptimized={true}
+                            className="object-cover"
+                          />
+                        </div>
+                        <div className="p-4 space-y-2">
+                          <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                            {attachmentName}
+                          </h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+                            {base.description || "Precision implement ready for field attachment."}
+                          </p>
+                        </div>
                       </div>
-                      <div className="p-4 space-y-2">
-                        <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
-                          {attachmentName}
-                        </h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
-                          {base.description || "Precision implement ready for field attachment."}
-                        </p>
-                      </div>
-                    </div>
 
-                    <div className="p-4 pt-0">
-                      <Button
-                        className={`w-full font-bold text-xs rounded-xl h-9 transition-all ${
-                          isSelected
-                            ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                            : "bg-slate-900 dark:bg-slate-800 hover:bg-emerald-600 text-white"
-                        }`}
-                        onClick={() => handleBookAttachmentClick(attachmentId)}
-                      >
-                        {isSelected ? "✓ Selected in Dispatch" : "+ Select Attachment"}
-                      </Button>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
+                      <div className="p-4 pt-0">
+                        <Button
+                          className={`w-full font-bold text-xs rounded-xl h-9 transition-all ${
+                            isSelected
+                              ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                              : "bg-slate-900 dark:bg-slate-800 hover:bg-emerald-600 text-white"
+                          }`}
+                          onClick={() => handleBookAttachmentClick(attachmentId)}
+                        >
+                          {isSelected ? "✓ Selected in Dispatch" : "+ Select Attachment"}
+                        </Button>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            )
           )}
         </div>
       </div>

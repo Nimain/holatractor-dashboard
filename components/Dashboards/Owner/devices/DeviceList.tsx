@@ -80,14 +80,16 @@ export function DeviceList({ language = "en" }: DeviceListProps) {
     try {
       setLoading(true)
       const devicesData = await DeviceApiService.getAllDevices()
+      const safeDevices = Array.isArray(devicesData) ? devicesData : []
       // Log device regions for debugging
-      devicesData.forEach(device => {
-        console.log(`[DeviceList] Device ${device.device_imei} has region: ${device.device_region}`)
+      safeDevices.forEach(device => {
+        console.log(`[DeviceList] Device ${device.device_imei} has region: ${(device as any).device_region}`)
       })
-      setDevices(devicesData)
+      setDevices(safeDevices)
     } catch (error) {
       console.error("Error fetching devices:", error)
       errorMessage("Failed to load devices")
+      setDevices([])
     } finally {
       setLoading(false)
     }
@@ -189,19 +191,25 @@ export function DeviceList({ language = "en" }: DeviceListProps) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {devices.map((device) => {
-            const status = getDeviceStatus(device.base.status)
-            const isOnline = status === "online"
+            const status = getDeviceStatus(device?.base?.status ?? 0)
+            const isOnline = status === "online" || Boolean((device as any)?.online)
+            const tractorName = device?.tractorInStore?.baseTractor?.name || (device as any)?.name || "Tractor Device"
+            const tractorModel = device?.tractorInStore?.baseTractor?.model || "N/A"
+            const tractorImage = device?.tractorInStore?.baseTractor?.images?.[0] || (device as any)?.image
+            const region = (device as any)?.device_region || "SW"
+            const imei = device?.device_imei || (device as any)?.imei || "N/A"
+            const hourlyPrice = device?.tractorInStore?.hourly_price ?? 0
 
             return (
               <Card key={device.id} className="overflow-hidden">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center space-x-3">
-                      {device.tractorInStore?.baseTractor?.images?.[0] ? (
+                      {tractorImage ? (
                         <Avatar className="h-12 w-12">
                           <AvatarImage
-                            src={device.tractorInStore.baseTractor.images[0] || "/placeholder.svg"}
-                            alt={device.tractorInStore.baseTractor.name}
+                            src={tractorImage || "/placeholder.svg"}
+                            alt={tractorName}
                           />
                           <AvatarFallback>
                             <Truck className="h-6 w-6" />
@@ -213,9 +221,9 @@ export function DeviceList({ language = "en" }: DeviceListProps) {
                         </div>
                       )}
                       <div>
-                        <CardTitle className="text-base">{device.tractorInStore.baseTractor.name}</CardTitle>
+                        <CardTitle className="text-base">{tractorName}</CardTitle>
                         <p className="text-sm text-muted-foreground">
-                          {t.model} {device.tractorInStore.baseTractor.model}
+                          {t.model} {tractorModel}
                         </p>
                       </div>
                     </div>
@@ -225,9 +233,9 @@ export function DeviceList({ language = "en" }: DeviceListProps) {
                         {isOnline ? t.online : t.offline}
                       </Badge>
                       {/* Region badge */}
-                      <Badge variant={device.device_region === "SW" ? "destructive" : "default"} className="text-xs">
+                      <Badge variant={region === "SW" ? "destructive" : "default"} className="text-xs">
                         <Globe className="h-3 w-3 mr-1" />
-                        {device.device_region}
+                        {region}
                       </Badge>
                     </div>
                   </div>
@@ -237,16 +245,16 @@ export function DeviceList({ language = "en" }: DeviceListProps) {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t.imei}:</span>
-                      <span className="font-mono">{device.device_imei}</span>
+                      <span className="font-mono">{imei}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">{t.region}:</span>
-                      <span className="text-xs">{getRegionDisplayName(device.device_region)}</span>
+                      <span className="text-xs">{getRegionDisplayName(region)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Price:</span>
                       <span className="font-semibold text-green-600">
-                        ${device.tractorInStore.hourly_price}/{t.hour}
+                        ${hourlyPrice}/{t.hour}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
@@ -254,7 +262,7 @@ export function DeviceList({ language = "en" }: DeviceListProps) {
                         <Clock className="h-3 w-3" />
                         Last seen:
                       </span>
-                      <span className="text-xs">{formatTime(device.updatedAt)}</span>
+                      <span className="text-xs">{formatTime(device?.updatedAt || "")}</span>
                     </div>
                   </div>
 

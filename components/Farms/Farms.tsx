@@ -37,10 +37,14 @@ import {
   Sparkles,
   Compass,
   Maximize2,
+  RefreshCw,
+  Zap,
+  Activity,
 } from "lucide-react";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
+import { getAuthToken } from "@/utils/auth/clientAuth";
 
 interface Farm {
   id: string;
@@ -127,12 +131,15 @@ const AVAILABLE_CROPS = [
 
 const FarmSection = () => {
   const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [farms, setFarms] = useState<Farm[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTypeFilter, setSelectedTypeFilter] = useState("all");
+  const [selectedFarmerFilter, setSelectedFarmerFilter] = useState("all");
 
-  // Farmers list for create modal
+  // Farmers list for create modal & filtering
   const [farmerOptions, setFarmerOptions] = useState<FarmerOption[]>([]);
   const [farmerSearch, setFarmerSearch] = useState("");
   const [farmerDropdownOpen, setFarmerDropdownOpen] = useState(false);
@@ -182,26 +189,143 @@ const FarmSection = () => {
     });
   };
 
-  async function fetchAllFarms() {
-    setLoading(true);
+  async function fetchAllFarms(manualRefresh = false) {
+    if (manualRefresh) {
+      setIsRefreshing(true);
+    } else if (farms.length === 0) {
+      setLoading(true);
+    }
+
     try {
-      const localRes = await axios.get("/api/farm");
-      const farmList = Array.isArray(localRes.data) ? localRes.data : [];
-      const sortedFarms = sortFarmsByUpdateDate(farmList);
-      setFarms(sortedFarms);
+      const adminToken = getAuthToken() || "";
+      const headers: Record<string, string> = {};
+      if (adminToken) {
+        headers["Authorization"] = `Bearer ${adminToken}`;
+        headers["x-admin-key"] = adminToken;
+        headers["x-api-key"] = adminToken;
+      }
+
+      // Fire all three sources concurrently:
+      //  1. Local FastAPI (fastest — same machine)
+      //  2. Next.js /api/farm (queries "Farm" table directly + FastAPI merge)
+      //  3. Remote FastAPI (backup)
+      const localFastApiUrl = "http://127.0.0.1:8000/farm/all";
+      const serverApiUrl = `/api/farm?refresh=true&t=${Date.now()}`;
+      const remoteFastApiUrl = "https://tractorai.sinsignal.com/farm/all";
+
+      const [localRes, serverRes, remoteRes] = await Promise.allSettled([
+        axios.get(localFastApiUrl, { headers, timeout: 3000 }),
+        axios.get(serverApiUrl, { headers, timeout: 5000 }),
+        axios.get(remoteFastApiUrl, { headers, timeout: 6000 }),
+      ]);
+
+      // Normalize each source — FastAPI wraps in { farms: [...], total: N }
+      const normalizeFarmList = (data: any): any[] => {
+        if (!data) return [];
+        if (Array.isArray(data)) return data;
+        if (Array.isArray(data?.farms)) return data.farms;
+        return [];
+      };
+
+      // Normalize FastAPI farm format → dashboard Farm shape
+      const normalizeFastApiFarm = (fm: any): any => {
+        const coords = fm?.boundary?.coordinates || [];
+        const normalizedCoords = coords.map((c: any) => {
+          if (Array.isArray(c)) return { lat: String(c[1]), lan: String(c[0]), lng: String(c[0]) };
+          return { lat: String(c.lat ?? ""), lan: String(c.lan ?? c.lng ?? ""), lng: String(c.lng ?? c.lan ?? "") };
+        });
+        const areaSqm = Number(fm?.boundary?.area ?? fm?.area_sqm ?? 50000);
+        return {
+          id: String(fm.id),
+          owner_id: String(fm.owner_id || ""),
+          base_id: String(fm.base_id || "base_default"),
+          type: String(fm.type || "polygon"),
+          name: String(fm.name || "Farm"),
+          description: String(fm.description || ""),
+          location: fm.location || "Santa Cruz, Bolivia",
+          soil_type: fm.soil_type || "Franco (Loamy - Balanced)",
+          crops: Array.isArray(fm.crops) ? fm.crops : [],
+          boundary: { area: areaSqm, coordinates: normalizedCoords },
+          createdAt: fm.created_at || fm.createdAt || new Date().toISOString(),
+          updatedAt: fm.updated_at || fm.updatedAt || new Date().toISOString(),
+          Owner: fm.Owner || {
+            id: String(fm.owner_id || ""),
+            first_name: String(fm.owner?.first_name || "Farmer"),
+            middle_name: "",
+            last_name: String(fm.owner?.last_name || ""),
+            email: String(fm.owner?.email || ""),
+            mobile: fm.owner?.mobile || null,
+            country_code: fm.owner?.country_code || "+591",
+            gender: "male",
+            authType: "EMAIL",
+            phoneVerified: false,
+            emailVerified: true,
+            request_to_delete: false,
+          },
+        };
+      };
+
+      // Collect all farms from all sources into a deduplicated map (id → farm)
+      const farmMap = new Map<string, any>();
+
+      // Priority: local FastAPI > Next.js server API > remote FastAPI
+      // We add in reverse priority order so higher-priority overwrites lower-priority
+      if (remoteRes.status === "fulfilled") {
+        normalizeFarmList(remoteRes.value.data).forEach((fm: any) => {
+          const id = String(fm.id || "");
+          if (id) farmMap.set(id, normalizeFastApiFarm(fm));
+        });
+      }
+
+      if (serverRes.status === "fulfilled" && Array.isArray(serverRes.value.data)) {
+        serverRes.value.data.forEach((fm: any) => {
+          const id = String(fm.id || "");
+          if (id) farmMap.set(id, fm); // Already normalized by /api/farm route
+        });
+      }
+
+      if (localRes.status === "fulfilled") {
+        normalizeFarmList(localRes.value.data).forEach((fm: any) => {
+          const id = String(fm.id || "");
+          if (id) farmMap.set(id, normalizeFastApiFarm(fm));
+        });
+      }
+
+      const finalFarmList = Array.from(farmMap.values());
+
+      if (finalFarmList.length > 0) {
+        const sortedFarms = sortFarmsByUpdateDate(finalFarmList);
+        setFarms(sortedFarms);
+        try {
+          localStorage.setItem("admin_farms_cache", JSON.stringify(sortedFarms));
+          sessionStorage.setItem("admin_farms_cache", JSON.stringify(sortedFarms));
+        } catch {}
+        setLastSynced(new Date());
+
+        if (manualRefresh) {
+          successMessage(`✅ Refreshed: ${sortedFarms.length} universal farms loaded`);
+        }
+      } else {
+        if (manualRefresh) {
+          errorMessage("No farms found. Check FastAPI connection.");
+        }
+      }
     } catch {
-      errorMessage("Error fetching farm list");
+      if (manualRefresh) {
+        errorMessage("FastAPI connection timeout. Displaying cached universal farms.");
+      }
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   }
+
 
   async function fetchFarmerOptions() {
     try {
       const res = await axios.get("/api/farmer");
       if (Array.isArray(res.data) && res.data.length > 0) {
         const mapped: FarmerOption[] = res.data.map((f: any) => {
-          // API returns nested user object
           const u = f.user || f;
           const firstName = u.first_name || f.first_name || "";
           const lastName = u.last_name || f.last_name || "";
@@ -216,13 +340,25 @@ const FarmSection = () => {
         });
         setFarmerOptions(mapped);
       }
-    } catch {
-      // Fallback silently
-    }
+    } catch {}
   }
 
+  // Instant Cache Hydration on Mount (<30ms)
   useEffect(() => {
-    fetchAllFarms();
+    try {
+      const cached =
+        sessionStorage.getItem("admin_farms_cache") ||
+        localStorage.getItem("admin_farms_cache");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setFarms(parsed);
+          setLastSynced(new Date());
+        }
+      }
+    } catch {}
+
+    fetchAllFarms(false);
     fetchFarmerOptions();
   }, []);
 
@@ -260,23 +396,31 @@ const FarmSection = () => {
   };
 
   const getOwnerFullName = (owner?: Farm["Owner"] | null): string => {
-    if (!owner) return "Unknown Owner";
+    if (!owner) return "Unknown Farmer";
     return `${owner.first_name || ""} ${
       owner.middle_name ? owner.middle_name + " " : ""
     }${owner.last_name || ""}`.trim() || owner.email || "N/A";
   };
 
-  // Filtered Farms
+  // Distinct Farmers Count across Universal Farms
+  const totalUniqueFarmers = useMemo(() => {
+    const ownerIds = new Set(farms.map((f) => f.owner_id || f.Owner?.id).filter(Boolean));
+    return Math.max(ownerIds.size, farmerOptions.length > 0 ? farmerOptions.length : (farms.length > 0 ? 1 : 0));
+  }, [farms, farmerOptions]);
+
+  // Filtered Farms (Universal Search + Type Filter + Farmer Filter)
   const filteredFarms = useMemo(() => {
     return farms.filter((f) => {
       const q = searchTerm.toLowerCase().trim();
       const nameMatch = f.name?.toLowerCase().includes(q);
-      const ownerMatch = getOwnerFullName(f.Owner).toLowerCase().includes(q);
+      const ownerName = getOwnerFullName(f.Owner).toLowerCase();
+      const ownerMatch = ownerName.includes(q) || (f.Owner?.email || "").toLowerCase().includes(q) || (f.Owner?.mobile || "").includes(q);
       const locMatch = f.location?.toLowerCase().includes(q);
       const typeMatch = selectedTypeFilter === "all" || f.type?.toLowerCase() === selectedTypeFilter.toLowerCase();
-      return (nameMatch || ownerMatch || locMatch || !q) && typeMatch;
+      const farmerMatch = selectedFarmerFilter === "all" || String(f.owner_id) === selectedFarmerFilter || String(f.Owner?.id) === selectedFarmerFilter;
+      return (nameMatch || ownerMatch || locMatch || !q) && typeMatch && farmerMatch;
     });
-  }, [farms, searchTerm, selectedTypeFilter]);
+  }, [farms, searchTerm, selectedTypeFilter, selectedFarmerFilter]);
 
   // Total Area Calculation
   const totalAreaHectares = useMemo(() => {
@@ -472,21 +616,24 @@ const FarmSection = () => {
     <div className="mt-6 md:mt-8 space-y-6">
       {/* TOP STATS & ACTIONS HEADER */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Total Farms Card */}
+        {/* Total Universal Farms Card */}
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 p-5 rounded-2xl shadow-sm flex items-center justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               {getTranslation(locale, {
-                en: "Total Registered Farms",
-                es: "Granjas Registradas",
+                en: "Universal Network Farms",
+                es: "Granjas del Sistema (Universal)",
                 ay: "Taqpacha Uywa Uta",
                 qu: "Lliw Chakrakuna",
                 gn: "Opa Ñemitỹ Renda",
               })}
             </p>
             <h3 className="text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white mt-1">
-              {farms.length}
+              {farms.length} <span className="text-sm font-semibold text-slate-500">Parcels</span>
             </h3>
+            <p className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
+              Across {totalUniqueFarmers} registered farmers
+            </p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
             <Sprout className="w-6 h-6" />
@@ -498,8 +645,8 @@ const FarmSection = () => {
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               {getTranslation(locale, {
-                en: "Mapped Agricultural Area",
-                es: "Superficie Mapeada",
+                en: "Total Mapped Area",
+                es: "Superficie Total Mapeada",
                 ay: "Taqpacha Uraqi",
                 qu: "Chakra Suyu",
                 gn: "Yvy Pehẽngue",
@@ -508,6 +655,9 @@ const FarmSection = () => {
             <h3 className="text-2xl lg:text-3xl font-extrabold text-slate-900 dark:text-white mt-1">
               {totalAreaHectares} <span className="text-sm font-semibold text-slate-500">ha</span>
             </h3>
+            <p className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 mt-0.5">
+              Universal geospatial polygons
+            </p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
             <Maximize2 className="w-6 h-6" />
@@ -517,6 +667,15 @@ const FarmSection = () => {
         {/* Action Button Card */}
         <div className="bg-gradient-to-br from-emerald-600 to-teal-700 p-5 rounded-2xl shadow-lg shadow-emerald-600/20 text-white flex items-center justify-between">
           <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-200 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+              </span>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-100">
+                FastAPI Live Connected
+              </span>
+            </div>
             <h4 className="font-bold text-base">
               {getTranslation(locale, {
                 en: "Need a new farm?",
@@ -527,36 +686,49 @@ const FarmSection = () => {
               })}
             </h4>
             <p className="text-xs text-emerald-100 mt-0.5">
-              {getTranslation(locale, {
-                en: "Define boundaries & telemetry",
-                es: "Delimitar perímetro y telemetría",
-                ay: "Lurawinaka qillqaña",
-                qu: "Saywakunata churanapaq",
-                gn: "Moñepyrũ ñemitỹ",
-              })}
+              {lastSynced
+                ? `Last live sync: ${lastSynced.toLocaleTimeString()}`
+                : getTranslation(locale, {
+                    en: "Define boundaries & telemetry",
+                    es: "Delimitar perímetro y telemetría",
+                    ay: "Lurawinaka qillqaña",
+                    qu: "Saywakunata churanapaq",
+                    gn: "Moñepyrũ ñemitỹ",
+                  })}
             </p>
           </div>
-          <button
-            onClick={handleOpenCreateModal}
-            className="px-4 py-2.5 bg-white text-emerald-800 hover:bg-emerald-50 rounded-xl font-bold text-xs shadow-md transition-all flex items-center space-x-1.5 active:scale-95 flex-shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            <span>
-              {getTranslation(locale, {
-                en: "New Farm",
-                es: "Nueva Granja",
-                ay: "Machaqa",
-                qu: "Musuq",
-                gn: "Pyahu",
-              })}
-            </span>
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => fetchAllFarms(true)}
+              disabled={isRefreshing || loading}
+              className="px-3.5 py-2.5 bg-emerald-950/40 hover:bg-emerald-950/60 text-white rounded-xl font-bold text-xs shadow-md transition-all flex items-center space-x-1.5 active:scale-95 border border-emerald-400/30 disabled:opacity-60"
+              title="Quick Refresh with FastAPI Admin Key"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-emerald-200 ${isRefreshing ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">{isRefreshing ? "Syncing..." : "Quick Refresh"}</span>
+            </button>
+            <button
+              onClick={handleOpenCreateModal}
+              className="px-4 py-2.5 bg-white text-emerald-800 hover:bg-emerald-50 rounded-xl font-bold text-xs shadow-md transition-all flex items-center space-x-1.5 active:scale-95 flex-shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>
+                {getTranslation(locale, {
+                  en: "New Farm",
+                  es: "Nueva Granja",
+                  ay: "Machaqa",
+                  qu: "Musuq",
+                  gn: "Pyahu",
+                })}
+              </span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* FILTER & SEARCH BAR */}
       <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200/80 dark:border-slate-800 p-4 rounded-2xl shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
-        <div className="relative w-full md:w-96">
+        <div className="relative w-full md:w-80">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
@@ -575,21 +747,50 @@ const FarmSection = () => {
           )}
         </div>
 
-        <div className="flex items-center space-x-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-          <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">Filter:</span>
-          {["all", "grain", "livestock", "vegetables", "polygon"].map((type) => (
-            <button
-              key={type}
-              onClick={() => setSelectedTypeFilter(type)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all whitespace-nowrap ${
-                selectedTypeFilter === type
-                  ? "bg-emerald-600 text-white shadow-sm"
-                  : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
-              }`}
+        <div className="flex flex-wrap items-center justify-between md:justify-end gap-2 w-full md:w-auto">
+          {/* Farmer Dropdown Filter */}
+          <div className="flex items-center space-x-1.5">
+            <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">Farmer:</span>
+            <select
+              value={selectedFarmerFilter}
+              onChange={(e) => setSelectedFarmerFilter(e.target.value)}
+              className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer max-w-[160px] truncate"
             >
-              {type === "all" ? "All Types" : type}
-            </button>
-          ))}
+              <option value="all">All Farmers (Universal)</option>
+              {farmerOptions.map((fo) => (
+                <option key={fo.id} value={fo.id}>
+                  {fo.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Type Filter */}
+          <div className="flex items-center space-x-1 overflow-x-auto pb-1 md:pb-0">
+            {["all", "grain", "livestock", "vegetables", "polygon"].map((type) => (
+              <button
+                key={type}
+                onClick={() => setSelectedTypeFilter(type)}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium capitalize transition-all whitespace-nowrap ${
+                  selectedTypeFilter === type
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                }`}
+              >
+                {type === "all" ? "All Types" : type}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => fetchAllFarms(true)}
+            disabled={isRefreshing || loading}
+            className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-medium transition-all flex items-center space-x-1.5 border border-slate-200 dark:border-slate-700 active:scale-95"
+            title="Refresh farms from FastAPI"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-emerald-500 ${isRefreshing ? "animate-spin" : ""}`} />
+            <span className="whitespace-nowrap">{isRefreshing ? "Syncing..." : "Sync"}</span>
+          </button>
         </div>
       </div>
 

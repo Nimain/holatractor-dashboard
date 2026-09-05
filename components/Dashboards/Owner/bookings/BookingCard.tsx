@@ -43,6 +43,11 @@ export function BookingCard({
   const [ticket, setTicket] = useState(ticketProps);
   const [loading, setLoading] = useState(false);
 
+  const paymentList = Array.isArray(ticket?.payment) ? ticket.payment : [];
+  const hasPayments = paymentList.length > 0;
+  const firstPayment = hasPayments ? paymentList[0] : null;
+  const paymentStatus = firstPayment?.status ? String(firstPayment.status) : "";
+
   async function fetchBooking(id: string) {
     setLoading(true);
     const response = await renderInstance.get(`/booking/${id}`);
@@ -374,12 +379,13 @@ export function BookingCard({
                     <p className="text-sm text-white">
                       <TranslatedText
                         greetings={ownerBookingsTranslation.reportAt}
-                      />{" "}
-                      ${new Date(ticket.createdAt).toLocaleDateString()}
+                      />
                     </p>
                   </div>
                 </div>
+              </div>
 
+              <div className="space-y-6 py-4">
                 {/* Timeline */}
                 <div className="space-y-6">
                   <div className="flex gap-3">
@@ -394,16 +400,13 @@ export function BookingCard({
                           ticket.bookingStatus === BookingStatus.Started ||
                           ticket.bookingStatus === BookingStatus.Stopped ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` ===
-                              "FarmerPENDING") ||
+                            paymentStatus === "FarmerPENDING") ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` ===
-                              "FarmerCONFIRMED") ||
+                            paymentStatus === "FarmerCONFIRMED") ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` ===
-                              "OwnerREJECTED") ||
+                            paymentStatus === "OwnerREJECTED") ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` === "COMPLETED")
+                            paymentStatus === "COMPLETED")
                             ? "bg-green-500"
                             : "bg-yellow-400"
                         }`}
@@ -414,9 +417,7 @@ export function BookingCard({
                       <div className="flex justify-between">
                         <p className="font-medium">
                           <TranslatedText
-                            greetings={
-                              ownerBookingsTranslation.confirmedBooking
-                            }
+                            greetings={ownerBookingsTranslation.confirmedBooking}
                           />
                         </p>
                       </div>
@@ -427,7 +428,7 @@ export function BookingCard({
                       <AssignOperator
                         selectedRequest={ticket.id}
                         storeId={ticket.store_id}
-                    />
+                      />
                     )}
                   <div className="flex gap-3">
                     <div className="flex flex-col items-center">
@@ -439,16 +440,13 @@ export function BookingCard({
                           ticket.bookingStatus === BookingStatus.Started ||
                           ticket.bookingStatus === BookingStatus.Stopped ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` ===
-                              "FarmerPENDING") ||
+                            paymentStatus === "FarmerPENDING") ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` ===
-                              "FarmerCONFIRMED") ||
+                            paymentStatus === "FarmerCONFIRMED") ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` ===
-                              "OwnerREJECTED") ||
+                            paymentStatus === "OwnerREJECTED") ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` === "COMPLETED")
+                            paymentStatus === "COMPLETED")
                             ? "bg-green-500"
                             : "bg-yellow-400"
                         }`}
@@ -459,9 +457,7 @@ export function BookingCard({
                       <div className="flex justify-between">
                         <p className="font-medium">
                           <TranslatedText
-                            greetings={
-                              ownerBookingsTranslation.operatorAccepted
-                            }
+                            greetings={ownerBookingsTranslation.operatorAccepted}
                           />
                         </p>
                       </div>
@@ -476,16 +472,13 @@ export function BookingCard({
                           ticket.bookingStatus === BookingStatus.Started ||
                           ticket.bookingStatus === BookingStatus.Stopped ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` ===
-                              "FarmerPENDING") ||
+                            paymentStatus === "FarmerPENDING") ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` ===
-                              "FarmerCONFIRMED") ||
+                            paymentStatus === "FarmerCONFIRMED") ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` ===
-                              "OwnerREJECTED") ||
+                            paymentStatus === "OwnerREJECTED") ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` === "COMPLETED")
+                            paymentStatus === "COMPLETED")
                             ? "bg-green-500"
                             : "bg-yellow-400"
                         }`}
@@ -496,9 +489,7 @@ export function BookingCard({
                       <div className="flex justify-between">
                         <p className="font-medium">
                           <TranslatedText
-                            greetings={
-                              ownerBookingsTranslation.leftForDestination
-                            }
+                            greetings={ownerBookingsTranslation.leftForDestination}
                           />
                         </p>
                       </div>
@@ -512,16 +503,13 @@ export function BookingCard({
                           ticket.bookingStatus === BookingStatus.Started ||
                           ticket.bookingStatus === BookingStatus.Stopped ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` ===
-                              "FarmerPENDING") ||
+                            paymentStatus === "FarmerPENDING") ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` ===
-                              "FarmerCONFIRMED") ||
+                            paymentStatus === "FarmerCONFIRMED") ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` ===
-                              "OwnerREJECTED") ||
+                            paymentStatus === "OwnerREJECTED") ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` === "COMPLETED")
+                            paymentStatus === "COMPLETED")
                             ? "bg-green-500"
                             : "bg-yellow-400"
                         }`}
@@ -532,9 +520,7 @@ export function BookingCard({
                       <div className="flex justify-between">
                         <p className="font-medium">
                           <TranslatedText
-                            greetings={
-                              ownerBookingsTranslation.arrivedAtDestination
-                            }
+                            greetings={ownerBookingsTranslation.arrivedAtDestination}
                           />
                         </p>
                       </div>
@@ -547,16 +533,13 @@ export function BookingCard({
                           ticket.bookingStatus === BookingStatus.Started ||
                           ticket.bookingStatus === BookingStatus.Stopped ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` ===
-                              "FarmerPENDING") ||
+                            paymentStatus === "FarmerPENDING") ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` ===
-                              "FarmerCONFIRMED") ||
+                            paymentStatus === "FarmerCONFIRMED") ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` ===
-                              "OwnerREJECTED") ||
+                            paymentStatus === "OwnerREJECTED") ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` === "COMPLETED")
+                            paymentStatus === "COMPLETED")
                             ? "bg-green-500"
                             : "bg-yellow-400"
                         }`}
@@ -578,16 +561,13 @@ export function BookingCard({
                       <div
                         className={`w-3 h-3 rounded-full ${
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` ===
-                              "FarmerPENDING") ||
+                            paymentStatus === "FarmerPENDING") ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` ===
-                              "FarmerCONFIRMED") ||
+                            paymentStatus === "FarmerCONFIRMED") ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` ===
-                              "OwnerREJECTED") ||
+                            paymentStatus === "OwnerREJECTED") ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` === "COMPLETED")
+                            paymentStatus === "COMPLETED")
                             ? "bg-green-500"
                             : "bg-yellow-400"
                         }`}
@@ -598,9 +578,7 @@ export function BookingCard({
                       <div className="flex justify-between">
                         <p className="font-medium">
                           <TranslatedText
-                            greetings={
-                              ownerBookingsTranslation.waitingForPayment
-                            }
+                            greetings={ownerBookingsTranslation.waitingForPayment}
                           />
                         </p>
                       </div>
@@ -611,13 +589,11 @@ export function BookingCard({
                       <div
                         className={`w-3 h-3 rounded-full ${
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` ===
-                              "FarmerCONFIRMED") ||
+                            paymentStatus === "FarmerCONFIRMED") ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` ===
-                              "OwnerREJECTED") ||
+                            paymentStatus === "OwnerREJECTED") ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` === "COMPLETED")
+                            paymentStatus === "COMPLETED")
                             ? "bg-green-500"
                             : "bg-yellow-400"
                         }`}
@@ -628,9 +604,7 @@ export function BookingCard({
                       <div className="flex justify-between">
                         <p className="font-medium">
                           <TranslatedText
-                            greetings={
-                              ownerBookingsTranslation.farmerSubmittedPayment
-                            }
+                            greetings={ownerBookingsTranslation.farmerSubmittedPayment}
                           />
                         </p>
                       </div>
@@ -641,10 +615,9 @@ export function BookingCard({
                       <div
                         className={`w-3 h-3 rounded-full ${
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` ===
-                              "OwnerREJECTED") ||
+                            paymentStatus === "OwnerREJECTED") ||
                           (ticket.bookingStatus === BookingStatus.Finished &&
-                            `${ticket.payment[0].status}` === "COMPLETED")
+                            paymentStatus === "COMPLETED")
                             ? "bg-green-500"
                             : "bg-yellow-400"
                         }`}
@@ -666,7 +639,7 @@ export function BookingCard({
                       <div
                         className={`w-3 h-3 rounded-full ${
                           ticket.bookingStatus === BookingStatus.Finished &&
-                          `${ticket.payment[0].status}` === "COMPLETED"
+                          paymentStatus === "COMPLETED"
                             ? "bg-green-500"
                             : "bg-yellow-400"
                         }`}
@@ -677,9 +650,7 @@ export function BookingCard({
                       <div className="flex justify-between">
                         <p className="font-medium">
                           <TranslatedText
-                            greetings={
-                              ownerBookingsTranslation.completedPayment
-                            }
+                            greetings={ownerBookingsTranslation.completedPayment}
                           />
                         </p>
                       </div>
@@ -688,20 +659,20 @@ export function BookingCard({
                 </div>
               </div>
 
-              {ticket.payment.length > 0 &&
-                ticket.payment[0].status === PaymentStatus.FarmerCONFIRMED && (
+              {hasPayments &&
+                firstPayment?.status === PaymentStatus.FarmerCONFIRMED && (
                   <PaymentReview
                     referenceNumber={
-                      ticket.payment[0].transaction_reference[
-                        ticket.payment[0].transaction_reference.length - 1
-                      ]
+                      firstPayment?.transaction_reference?.[
+                        (firstPayment?.transaction_reference?.length || 1) - 1
+                      ] || ""
                     }
                     screenshotUrl={
-                      ticket.payment[0].screenshots[
-                        ticket.payment[0].screenshots.length - 1
-                      ]
+                      firstPayment?.screenshots?.[
+                        (firstPayment?.screenshots?.length || 1) - 1
+                      ] || ""
                     }
-                    paymentId={ticket.payment[0].id}
+                    paymentId={firstPayment?.id || ""}
                   />
                 )}
             </SheetContent>

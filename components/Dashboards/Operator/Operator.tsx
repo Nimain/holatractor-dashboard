@@ -21,17 +21,22 @@ const OperatorDashboardPage = () => {
     const [bookings, setBookings] = useState<Booking[]>([])
   
     const { cookie } = useCookie()
-    const user = cookie.get("user")
+    const rawUser = cookie.get("user")
+    const parsedUser = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser); } catch { return null; } })() : rawUser
+    const user = parsedUser || {}
+    const currentUserId = user?.userId || getAuthUserId()
   
     function fetchOperator(){
       setFetchingOperatorDetails(true)
+      const targetId = currentUserId || getAuthUserId();
+      const endpoint = targetId ? `/operator/getOperator/${targetId}` : `/operator/getOperator`;
   
-      renderInstance.get(`/operator/getOperator/${user.userId}`)
+      renderInstance.get(endpoint)
       .then((res)=>{
         setOperator(res.data.details)
         setBookings(res.data.bookings)
       }).catch((err)=>{
-        errorMessage("Error fetching user detaild")
+        console.error("Error fetching operator details:", err)
       }).finally(()=>{
         setFetchingOperatorDetails(false)
       })

@@ -629,10 +629,10 @@ export default function SubscriptionsPage() {
               </CardHeader>
               <CardContent className="flex-grow">
                 <p className="text-2xl font-bold mb-2">
-                  ${subscription.actual_cost.toFixed(2)}
+                  ${(Number(subscription.actual_cost) || 0).toFixed(2)}
                 </p>
                 <p className="text-sm text-muted-foreground mb-4">
-                  <s>${subscription.actual_cost.toFixed(2)}</s> •{" "}
+                  <s>${(Number(subscription.actual_cost) || 0).toFixed(2)}</s> •{" "}
                   {subscription.total_days} days
                 </p>
                 <ul className="list-disc list-inside my-2">

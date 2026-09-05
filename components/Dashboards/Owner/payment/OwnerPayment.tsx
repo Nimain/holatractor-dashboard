@@ -38,6 +38,7 @@ import {
 } from "@/utils/Types/types";
 import { Input } from "@/components/ui/input";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
+import { getAuthUserId } from "@/utils/auth/clientAuth";
 import { NestJsBaseURL, renderInstance } from "@/utils/Axios/RenderInstance";
 import { uploadFileToS3 } from "@/utils/AWS/FileUpload";
 import { useCookie } from "next-cookie";
@@ -99,7 +100,10 @@ const OwnerPayment = () => {
   const [senderPayments, setSenderPayments] = useState<Payment[]>([]);
 
   const { cookie } = useCookie();
-  const user: user = cookie.get("user");
+  const rawUser = cookie.get("user");
+  const parsedUser = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser); } catch { return null; } })() : rawUser;
+  const user: user = parsedUser || {};
+  const currentUserId = user?.userId || getAuthUserId();
 
   const bookingFilters = [
     {
@@ -145,17 +149,17 @@ const OwnerPayment = () => {
   };
 
   const getSelectedPaymentsAndBookings = () => {
-    if (!ownerDetails) {
+    if (!ownerDetails || !ownerDetails.user) {
       return { payments: [], bookings: [] };
     }
 
     const payments = [
-      ...ownerDetails.user.paymentReciever,
-      ...ownerDetails.user.paymentSender,
+      ...(ownerDetails.user.paymentReciever || []),
+      ...(ownerDetails.user.paymentSender || []),
     ].filter((payment) => selectedPayments.includes(payment.id));
     const bookings = payments
       .map((payment) =>
-        ownerDetails.user.Booking.find(
+        (ownerDetails.user.Booking || []).find(
           (booking) => booking.id === payment.booking_id
         )
       )
@@ -165,9 +169,13 @@ const OwnerPayment = () => {
 
   function fetchPageDetails() {
     setIsFetching(true);
+    const targetId = currentUserId || getAuthUserId();
+    const endpoint = targetId
+      ? `/owner/get-owner-payment-page-details/${targetId}`
+      : `/owner/get-owner-payment-page-details`;
 
     renderInstance
-      .get(`/owner/get-owner-payment-page-details/${user.userId}`)
+      .get(endpoint)
       .then((res) => {
         setOwnerDetails(res.data.ownerDetails);
         setReceiverPayments(res.data.ownerDetails.user.paymentReciever);
@@ -187,9 +195,10 @@ const OwnerPayment = () => {
 
   useEffect(() => {
     // Connect to the socket server
+    const targetId = currentUserId || getAuthUserId();
     const newSocket: Socket = io(NestJsBaseURL, {
       query: {
-        userId: user.userId,
+        userId: targetId,
       },
     });
 
@@ -396,13 +405,13 @@ const OwnerPayment = () => {
               </div>
               <div className="mb-4">
                 <span className="text-xl font-semibold">
-                  ${subscription.actual_cost.toFixed(2)} USD
+                  ${(Number(subscription.actual_cost) || 0).toFixed(2)} USD
                 </span>
                 <span className="text-white text-sm ml-2">
                   {subscriptionActive
                     ? `Expires on ${addDays(
-                        new Date(subscription.createdAt),
-                        subscription.total_days
+                        new Date(subscription.createdAt || Date.now()),
+                        subscription.total_days || 0
                       )}`
                     : `Subscription expired.`}
                 </span>
@@ -439,9 +448,9 @@ const OwnerPayment = () => {
                 <h2 className="text-xl font-semibold mb-4">
                   Saved Payment Method
                 </h2>
-                {ownerDetails.user.BankAccount.length === 0 &&
-                  ownerDetails.user.PayPal.length === 0 &&
-                  ownerDetails.user.UPI.length === 0 && (
+                {(ownerDetails?.user?.BankAccount?.length || 0) === 0 &&
+                  (ownerDetails?.user?.PayPal?.length || 0) === 0 &&
+                  (ownerDetails?.user?.UPI?.length || 0) === 0 && (
                     <Dialog
                       open={isAddModalOpen}
                       onOpenChange={setIsAddModalOpen}
@@ -604,8 +613,8 @@ const OwnerPayment = () => {
                   greetings={ownerPaymentHistoryTranslations.paymentHistory}
                 />{" "}
                 (
-                {ownerDetails.user.paymentReciever.length +
-                  ownerDetails.user.paymentSender.length}
+                {(ownerDetails?.user?.paymentReciever?.length || 0) +
+                  (ownerDetails?.user?.paymentSender?.length || 0)}
                 )
               </h2>
               <p>
@@ -830,7 +839,9 @@ function BankAccountForm({
 
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
-  const user = cookie.get("user");
+  const rawUser = cookie.get("user");
+  const parsedUser = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser); } catch { return null; } })() : rawUser;
+  const authUserId = parsedUser?.userId || getAuthUserId();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -842,7 +853,7 @@ function BankAccountForm({
     renderInstance
       .post(
         "/bank-account",
-        { ...formData, ownerId: user.userId },
+        { ...formData, ownerId: authUserId },
         {
           headers: {
             Authorization: `Bearer ${access_token}`,

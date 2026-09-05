@@ -110,6 +110,9 @@ const Sidebar = () => {
     "/Category": "Category",
     "/SingleOperator": "Operators",
     "/Operators": "Operators",
+    "/SingleMechanic": "Mechanics",
+    "/Mechanic": "Mechanics",
+    "/Mechanics": "Mechanics",
     "/Farms": "Farms",
     "/Agents": "Agents",
     "/Bookings": "Bookings",
@@ -544,6 +547,17 @@ const Sidebar = () => {
         gn: "Omoñangáva",
       }),
       route: "/Operator",
+    },
+    {
+      icon: <Wrench className="w-[20px] h-[20px] text-rose-600" />,
+      name: getTranslation(locale, {
+        en: "Mechanics",
+        es: "Mecánicos",
+        ay: "Mecánico",
+        qu: "Allichaq",
+        gn: "Mecánico",
+      }),
+      route: "/Mechanic",
     },
     {
       icon: <ShieldCheck className="w-[20px] h-[20px] text-red-600" />,

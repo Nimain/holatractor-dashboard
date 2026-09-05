@@ -235,6 +235,22 @@ const WithoutStoreBooking = () => {
   }
 
   const formatCurrency = (amount: any) => {
+    try {
+      const num = Number(amount || 0);
+      if (typeof window !== "undefined") {
+        const savedCurr = sessionStorage.getItem("@farmer_active_currency");
+        if (savedCurr) {
+          const parsed = JSON.parse(savedCurr);
+          if (parsed.rate && parsed.symbol) {
+            return `${parsed.symbol}${(num * parsed.rate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+          }
+        }
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+        if (tz.includes("Calcutta") || tz.includes("Kolkata") || tz.includes("Colombo")) {
+          return `₹${(num * 94.0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+      }
+    } catch {}
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
@@ -271,9 +287,10 @@ const WithoutStoreBooking = () => {
     const start_date = BookingHours === "more" ? date?.from : startDate;
     let booking;
 
+    const effectiveUserId = userId || user.userId || getAuthUserId();
     if (BookingHours === "more") {
       booking = {
-        user_id: user.userId,
+        user_id: effectiveUserId,
         farm_id: selectedFarm,
         start_date: start_date,
         end_date: BookingHours === "more" ? date?.to : new Date(),
@@ -282,7 +299,7 @@ const WithoutStoreBooking = () => {
       };
     } else {
       booking = {
-        user_id: user.userId,
+        user_id: effectiveUserId,
         farm_id: selectedFarm,
         start_date: start_date,
         booking_hours: BookingHours,
