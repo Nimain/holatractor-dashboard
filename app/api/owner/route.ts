@@ -81,7 +81,7 @@ async function getOwnersFromDB() {
         l.lan as location_lan
       FROM "Owner" o
       LEFT JOIN "User" u ON u.id = o.user_id
-      LEFT JOIN "Location" l ON (l.id = o.loaction_id OR l.id = u.location_id)
+      LEFT JOIN "Location" l ON l.id = COALESCE(o.loaction_id, u.location_id)
       ORDER BY COALESCE(o."createdAt", u."createdAt") DESC
     `);
 
@@ -228,6 +228,15 @@ export async function GET(request: NextRequest) {
           lng: loc.lng || loc.lan || "NA",
         },
       };
+    });
+
+    // Ensure distinct owners by ID (prevent any duplicate profile display)
+    const seenOwnerIds = new Set<string>();
+    normalized = normalized.filter((o: any) => {
+      const key = String(o.id || o.user_id);
+      if (!key || seenOwnerIds.has(key)) return false;
+      seenOwnerIds.add(key);
+      return true;
     });
 
     // Apply filtering
@@ -436,6 +445,16 @@ export async function PATCH(request: NextRequest) {
                 locParams
               );
             }
+
+            // Ensure both User.location_id and Owner.loaction_id match exactly
+            await client.query(
+              `UPDATE "User" SET location_id = $1, "updatedAt" = NOW() WHERE (id = $2 OR id IN (SELECT user_id FROM "Owner" WHERE id = $2)) AND (location_id IS NULL OR location_id != $1)`,
+              [existingLocId, targetUserId]
+            );
+            await client.query(
+              `UPDATE "Owner" SET loaction_id = $1, "updatedAt" = NOW() WHERE (user_id = $2 OR id = $2) AND (loaction_id IS NULL OR loaction_id != $1)`,
+              [existingLocId, targetUserId]
+            );
           } else {
             // Create new Location and link
             const newLocId = `loc_${Math.random().toString(36).substring(2, 11)}`;

@@ -73,7 +73,7 @@ const ROLE_DB_QUERIES: Record<UserRole, string> = {
       ) AS location
     FROM "Owner" o
     LEFT JOIN "User" u ON u.id = o.user_id
-    LEFT JOIN "Location" l ON (l.id = o.loaction_id OR l.id = u.location_id)
+    LEFT JOIN "Location" l ON l.id = COALESCE(o.loaction_id, u.location_id)
     ORDER BY COALESCE(o."createdAt", u."createdAt") DESC
     LIMIT 500
   `,
@@ -380,6 +380,15 @@ export async function GET(request: NextRequest) {
         users = [];
       }
     }
+
+    // Deduplicate users by ID
+    const seenUserKeys = new Set<string>();
+    users = users.filter((u) => {
+      const key = String(u.id || u.user_id);
+      if (!key || seenUserKeys.has(key)) return false;
+      seenUserKeys.add(key);
+      return true;
+    });
 
     // Search filter (client-side on the full fetched list)
     if (search) {

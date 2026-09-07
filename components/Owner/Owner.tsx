@@ -125,7 +125,14 @@ const OwnerSection = () => {
 
   // ── Filtered & Sorted Owners ───────────────────────────────────────────────
   const filteredUsers = useMemo(() => {
-    let list = [...users];
+    // Deduplicate owners by unique ID
+    const seen = new Set<string>();
+    let list = users.filter((u) => {
+      const key = String(u.id || u.user_id || "");
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 
     // Status filter
     if (statusFilter === "active") {
