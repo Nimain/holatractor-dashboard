@@ -5,23 +5,24 @@ import { getFastApiAuthHeaders } from "@/utils/auth/serverAuth";
 
 export const dynamic = "force-dynamic";
 
-const FASTAPI_CANDIDATES = [
-  "http://127.0.0.1:8000",
-  "http://localhost:8000",
-  (process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "").replace(/\/$/, ""),
-  (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, ""),
-  "https://tractorai.sinsignal.com",
-].filter(Boolean);
+const FASTAPI_CANDIDATES = Array.from(
+  new Set(
+    [
+      (process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "").replace(/\/$/, ""),
+      (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, ""),
+      "https://tractorai.sinsignal.com",
+    ].filter((url) => Boolean(url) && !url.includes("localhost") && !url.includes("127.0.0.1"))
+  )
+);
 
 const MECHANIC_ROLE_ID = "cmgop840100001gubpwc5ru0j";
 
-async function fetchFromFastAPI(endpoint: string, headers: any, timeout = 3000) {
+async function fetchFromFastAPI(endpoint: string, headers: any, timeout = 4000) {
   for (const base of FASTAPI_CANDIDATES) {
     try {
-      const isLocal = base.includes("127.0.0.1") || base.includes("localhost");
       const res = await axios.get(`${base}${endpoint}`, {
         headers,
-        timeout: isLocal ? 2500 : timeout,
+        timeout,
       });
       if (res.data) return { data: res.data, base };
     } catch {
@@ -31,13 +32,12 @@ async function fetchFromFastAPI(endpoint: string, headers: any, timeout = 3000) 
   return null;
 }
 
-async function patchToFastAPI(endpoint: string, payload: any, headers: any, timeout = 3000) {
+async function patchToFastAPI(endpoint: string, payload: any, headers: any, timeout = 4000) {
   for (const base of FASTAPI_CANDIDATES) {
     try {
-      const isLocal = base.includes("127.0.0.1") || base.includes("localhost");
       const res = await axios.patch(`${base}${endpoint}`, payload, {
         headers,
-        timeout: isLocal ? 2500 : timeout,
+        timeout,
       });
       if (res.data) return { data: res.data, base };
     } catch {
@@ -92,29 +92,14 @@ export async function GET(request: NextRequest) {
 
     let mechanics: any[] = [];
 
-    // 1. Try local FastAPI first (lightning fast sub-10ms)
+    // 1. Try FastAPI live API
     try {
-      const res = await axios.get("http://127.0.0.1:8000/api/v1/admin/mechanics", {
-        timeout: 2500,
-      });
-      if (Array.isArray(res.data) && res.data.length > 0) {
-        mechanics = res.data;
+      const fastApiResult = await fetchFromFastAPI("/api/v1/admin/mechanics", headers, 4000);
+      if (fastApiResult && Array.isArray(fastApiResult.data) && fastApiResult.data.length > 0) {
+        mechanics = fastApiResult.data;
       }
     } catch {
-      try {
-        const res = await axios.get("http://127.0.0.1:8000/api/v1/admin/mechanics", {
-          headers,
-          timeout: 2500,
-        });
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          mechanics = res.data;
-        }
-      } catch {
-        const fastApiResult = await fetchFromFastAPI("/api/v1/admin/mechanics", headers, 2000);
-        if (fastApiResult && Array.isArray(fastApiResult.data) && fastApiResult.data.length > 0) {
-          mechanics = fastApiResult.data;
-        }
-      }
+      // fallback to DB
     }
 
     // 2. Direct PostgreSQL fallback

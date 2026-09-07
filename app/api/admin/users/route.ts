@@ -5,7 +5,11 @@ import { getFastApiAuthHeaders } from "@/utils/auth/serverAuth";
 
 export const dynamic = "force-dynamic";
 
-const LOCAL_BASE = "http://127.0.0.1:8000";
+const DYNAMIC_API_BASE = (
+  process.env.NEXT_PUBLIC_TRACTOR_AI_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://tractorai.sinsignal.com"
+).replace(/\/$/, "");
 
 type UserRole = "farmer" | "owner" | "agent" | "dealer" | "operator" | "mechanic" | "admin";
 
@@ -243,21 +247,21 @@ export async function GET(request: NextRequest) {
 
     let users: Record<string, any>[] = [];
 
-    // 1. Try local FastAPI first (sub-second when running)
+    // 1. Try dynamic FastAPI endpoint
     try {
       const endpoint = FASTAPI_ENDPOINTS[role];
       let res: any = null;
       try {
-        res = await axios.get(`${LOCAL_BASE}${endpoint}`, {
+        res = await axios.get(`${DYNAMIC_API_BASE}${endpoint}`, {
           headers: fastApiHeaders,
-          timeout: 3500,
+          timeout: 4000,
         });
       } catch (err) {
         if (role === "owner") {
           try {
-            res = await axios.get(`${LOCAL_BASE}/owners`, {
+            res = await axios.get(`${DYNAMIC_API_BASE}/owners`, {
               headers: fastApiHeaders,
-              timeout: 3000,
+              timeout: 3500,
             });
           } catch {}
         }
@@ -402,7 +406,7 @@ export async function PATCH(request: NextRequest) {
 
     // 3. Notify FastAPI
     try {
-      await axios.patch(`http://127.0.0.1:8000/api/v1/admin/users/${targetUserId}`, body, { timeout: 3000 });
+      await axios.patch(`${DYNAMIC_API_BASE}/api/v1/admin/users/${targetUserId}`, body, { timeout: 4000 });
     } catch {}
 
     return NextResponse.json({ success: true, message: "User updated successfully" });

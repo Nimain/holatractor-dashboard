@@ -105,23 +105,7 @@ export async function POST(request: NextRequest) {
         pushDispatched = true;
       }
     } catch (remoteErr: any) {
-      // Local fallback only if remote primary endpoint failed
-      try {
-        const resLocal = await axios.post(
-          "http://localhost:8000/api/v1/auth/push-challenge/create",
-          {
-            email,
-            challenge_id: challengeId,
-            match_number: matchNumber,
-            options,
-            device_info: deviceInfo,
-          },
-          { timeout: 2000 }
-        );
-        if (resLocal.data?.success || resLocal.data?.challenge_id) {
-          pushDispatched = true;
-        }
-      } catch (_) {}
+      console.warn("[push-challenge] Remote push notification error:", remoteErr?.message);
     }
 
     return NextResponse.json({

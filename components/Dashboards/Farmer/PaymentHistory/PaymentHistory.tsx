@@ -281,19 +281,15 @@ export default function PaymentHistory() {
     try {
       const results = await Promise.allSettled([
         axios.get(`${fastApiBase}/simple-booking/list/${userId}`, { timeout: 3500 }),
-        axios.get(`http://127.0.0.1:8000/simple-booking/list/${userId}`, { timeout: 1500 }),
         renderInstance.get(`/farmer/paymentPage/${userId}?filter=all&page=1&limit=50`, { headers, timeout: 3500 }),
         axios.get(`/api/booking?farmer_id=${userId}`, { timeout: 3000 }),
       ]);
 
-      const [remoteFastRes, localFastRes, renderRes, localApiRes] = results;
+      const [remoteFastRes, renderRes, localApiRes] = results;
 
       const rawFastBookings: any[] = [];
       if (remoteFastRes.status === "fulfilled" && Array.isArray(remoteFastRes.value.data)) {
         rawFastBookings.push(...remoteFastRes.value.data);
-      }
-      if (localFastRes.status === "fulfilled" && Array.isArray(localFastRes.value.data)) {
-        rawFastBookings.push(...localFastRes.value.data);
       }
       if (localApiRes.status === "fulfilled" && Array.isArray(localApiRes.value.data)) {
         rawFastBookings.push(...localApiRes.value.data);

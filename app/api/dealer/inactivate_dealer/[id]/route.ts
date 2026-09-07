@@ -4,13 +4,15 @@ import axios from "axios";
 
 export const dynamic = "force-dynamic";
 
-const FASTAPI_CANDIDATES = [
-  "http://127.0.0.1:8000",
-  "http://localhost:8000",
-  (process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "").replace(/\/$/, ""),
-  (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, ""),
-  "https://tractorai.sinsignal.com",
-].filter(Boolean);
+const FASTAPI_CANDIDATES = Array.from(
+  new Set(
+    [
+      (process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "").replace(/\/$/, ""),
+      (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, ""),
+      "https://tractorai.sinsignal.com",
+    ].filter((url) => Boolean(url) && !url.includes("localhost") && !url.includes("127.0.0.1"))
+  )
+);
 
 export async function PATCH(
   request: NextRequest,

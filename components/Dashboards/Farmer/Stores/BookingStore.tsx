@@ -163,9 +163,10 @@ const BookingStore = () => {
   const fetchFarms = useCallback(async () => {
     setFetchingFarms(true);
     try {
+      const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
       const [localRes, fastRes, renderRes] = await Promise.all([
         axios.get(`/api/farm${userId ? `?owner_id=${userId}` : ""}`, { timeout: 3500 }).catch(() => null),
-        axios.get(`http://127.0.0.1:8000/farm${userId ? `?owner_id=${userId}` : ""}`, { timeout: 3500 }).catch(() => null),
+        axios.get(`${fastApiBase}/farm${userId ? `?owner_id=${userId}` : ""}`, { timeout: 3500 }).catch(() => null),
         renderInstance.get(`/farm/get-with-user-id/${userId || "farmer_demo_01"}`).catch(() => null),
       ]);
 
@@ -203,14 +204,14 @@ const BookingStore = () => {
       }
     } catch {}
 
-    // 2. Fetch from localhost FastAPI or TractorAI live API
+    // 2. Fetch from TractorAI live API or local Next.js proxy
     if (!foundStore) {
+      const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
       const storeUrls = [
-        `http://127.0.0.1:8000/store/${slug}`,
-        `http://127.0.0.1:8000/store/by-id/${slug}`,
         `/api/store/${slug}`,
-        `http://127.0.0.1:8000/api/v1/owner/stores`,
-        `${(TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "")}/api/v1/owner/stores`,
+        `${fastApiBase}/store/${slug}`,
+        `${fastApiBase}/store/by-id/${slug}`,
+        `${fastApiBase}/api/v1/owner/stores`,
       ];
 
       for (const url of storeUrls) {
@@ -251,14 +252,11 @@ const BookingStore = () => {
       if (dynamicAttachments.length === 0) {
         try {
           const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
-          const [localFastRes, remoteFastRes, localAttRes] = await Promise.all([
-            axios.get(`http://127.0.0.1:8000/attachment`, { timeout: 3000 }).catch(() => null),
+          const [remoteFastRes, localAttRes] = await Promise.all([
             axios.get(`${fastApiBase}/attachment`, { timeout: 3000 }).catch(() => null),
             axios.get(`/api/attachment`, { timeout: 3000 }).catch(() => null),
           ]);
-          const fastAttList = Array.isArray(localFastRes?.data)
-            ? localFastRes.data
-            : Array.isArray(remoteFastRes?.data)
+          const fastAttList = Array.isArray(remoteFastRes?.data)
             ? remoteFastRes.data
             : Array.isArray(remoteFastRes?.data?.data)
             ? remoteFastRes.data.data
@@ -298,14 +296,11 @@ const BookingStore = () => {
     let dynamicAttachments: any[] = [];
     try {
       const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
-      const [localFastRes, remoteFastRes, localAttRes] = await Promise.all([
-        axios.get(`http://127.0.0.1:8000/attachment`, { timeout: 3000 }).catch(() => null),
+      const [remoteFastRes, localAttRes] = await Promise.all([
         axios.get(`${fastApiBase}/attachment`, { timeout: 3000 }).catch(() => null),
         axios.get(`/api/attachment`, { timeout: 3000 }).catch(() => null),
       ]);
-      const fastAttList = Array.isArray(localFastRes?.data)
-        ? localFastRes.data
-        : Array.isArray(remoteFastRes?.data)
+      const fastAttList = Array.isArray(remoteFastRes?.data)
         ? remoteFastRes.data
         : Array.isArray(remoteFastRes?.data?.data)
         ? remoteFastRes.data.data

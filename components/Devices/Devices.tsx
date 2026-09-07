@@ -611,7 +611,7 @@ export default function DeviceSection() {
         console.warn("Local proxy options fallback:", errProxy)
       }
 
-      // 2. Direct FastAPI localhost /api/v1/admin/devices/options
+      // 2. Direct FastAPI live /api/v1/admin/devices/options
       if (!loaded) {
         try {
           const fastApiUrl = `${(TractorAIBaseURL || "https://tractorai.sinsignal.com/").replace(/\/$/, "")}/api/v1/admin/devices/options?${queryParams.toString()}`

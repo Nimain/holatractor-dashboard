@@ -131,7 +131,7 @@ export default function FarmerDashboard() {
       const [renderRes, localFarmsRes, fastFarmsRes] = await Promise.all([
         renderInstance.get(targetEndpoint).catch(() => null),
         axios.get(`/api/farm${activeId ? `?owner_id=${activeId}` : ""}`, { timeout: 4000 }).catch(() => null),
-        axios.get(`http://127.0.0.1:8000/farm${activeId ? `?owner_id=${activeId}` : ""}`, { timeout: 4000 }).catch(() => null),
+        axios.get(`${(TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "")}/farm${activeId ? `?owner_id=${activeId}` : ""}`, { timeout: 4000 }).catch(() => null),
       ]);
 
       const dynamicFarms = Array.isArray(localFarmsRes?.data) && localFarmsRes.data.length > 0

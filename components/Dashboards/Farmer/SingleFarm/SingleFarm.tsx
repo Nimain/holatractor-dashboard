@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import axios from "axios";
 import dynamic from "next/dynamic";
-import { renderInstance } from "@/utils/Axios/RenderInstance";
+import { renderInstance, TractorAIBaseURL } from "@/utils/Axios/RenderInstance";
 import { errorMessage } from "@/utils/Toastify/Messages";
 import { Farm } from "@/utils/Types/types";
 import {
@@ -129,10 +129,10 @@ export default function SingleFarm() {
   async function fetchFarmer() {
     setFetching(true);
     try {
-      // 1. Try local Next.js /api/farm/[slug] & FastAPI http://127.0.0.1:8000/farm/[slug]
+      // 1. Try local Next.js /api/farm/[slug] & live FastAPI
       const [localRes, fastRes, renderRes] = await Promise.all([
         axios.get(`/api/farm/${slug}`).catch(() => null),
-        axios.get(`http://127.0.0.1:8000/farm/${slug}`).catch(() => null),
+        axios.get(`${(TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "")}/farm/${slug}`).catch(() => null),
         renderInstance.get(`/farm/${slug}`).catch(() => null),
       ]);
 

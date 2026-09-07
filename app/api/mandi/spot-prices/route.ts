@@ -3,12 +3,15 @@ import axios from "axios";
 
 export const dynamic = "force-dynamic";
 
-const FastApiEndpoints = [
-  "http://127.0.0.1:8000",
-  process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "",
-  process.env.NEXT_PUBLIC_API_URL || "",
-  "https://tractorai.sinsignal.com",
-].filter(Boolean);
+const FastApiEndpoints = Array.from(
+  new Set(
+    [
+      (process.env.NEXT_PUBLIC_TRACTOR_AI_URL || "").replace(/\/$/, ""),
+      (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, ""),
+      "https://tractorai.sinsignal.com",
+    ].filter((url) => Boolean(url) && !url.includes("localhost") && !url.includes("127.0.0.1"))
+  )
+);
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,7 +19,7 @@ export async function GET(request: NextRequest) {
     const countryCode = searchParams.get("country_code") || searchParams.get("country") || "IN";
     const city = searchParams.get("city") || "";
 
-    // 1. Try FastAPI endpoints (localhost first)
+    // 1. Try FastAPI live endpoints
     for (const baseUrl of FastApiEndpoints) {
       try {
         const cleanBase = baseUrl.replace(/\/$/, "");

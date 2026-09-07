@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
     let optionsData: any[] = [];
     let baseTractorsList: any[] = [...BASE_TRACTORS_CATALOG];
 
-    // 1. Attempt FastAPI localhost / remote /api/v1/admin/devices/options with valid JWT
+    // 1. Attempt dynamic FastAPI /api/v1/admin/devices/options with valid JWT
     try {
       const base = (FastApiBaseURL || "https://tractorai.sinsignal.com/").replace(/\/$/, "");
       const params = new URLSearchParams();

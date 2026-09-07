@@ -184,7 +184,6 @@ export default function FarmerStores() {
       axios.get(`/api/store`, { headers, timeout: 2500 }).catch(() => null),
       axios.get(`${fastApiBase}/api/v1/owner/stores`, { headers, timeout: 2500 }).catch(() => null),
       axios.get(`${fastApiBase}/store/all_stores/with_in_distance${queryParams}`, { headers, timeout: 2500 }).catch(() => null),
-      axios.get(`http://127.0.0.1:8000/store/all_stores/with_in_distance${queryParams}`, { headers, timeout: 1500 }).catch(() => null),
       renderInstance.get(`/store`, { headers }).catch(() => null),
     ];
 

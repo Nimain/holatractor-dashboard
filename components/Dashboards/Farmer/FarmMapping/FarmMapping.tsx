@@ -265,33 +265,20 @@ export default function FarmMapping() {
         createdRecord = res.data;
       }
     } catch (err1: any) {
-      console.warn("Proxy POST /api/farm failed, attempting direct localhost FastAPI:", err1?.response?.data || err1?.message);
+      console.warn("Proxy POST /api/farm failed, attempting remote FastAPI:", err1?.response?.data || err1?.message);
 
-      // 2. Direct FastAPI POST http://127.0.0.1:8000/farm fallback
+      // 2. Remote FastAPI fallback
       try {
-        const resFast = await axios.post("http://127.0.0.1:8000/farm", payload, {
+        const fastApiUrl = `${FastApiBaseURL.replace(/\/$/, "")}/farm`;
+        const resRemote = await axios.post(fastApiUrl, payload, {
           headers: access_token ? { Authorization: `Bearer ${access_token}` } : {},
           timeout: 10000,
         });
-        if (resFast.data) {
-          createdRecord = resFast.data;
+        if (resRemote.data) {
+          createdRecord = resRemote.data;
         }
-      } catch (err2: any) {
-        console.warn("Direct localhost FastAPI POST /farm failed, attempting remote:", err2?.response?.data || err2?.message);
-
-        // 3. Remote FastAPI fallback
-        try {
-          const fastApiUrl = `${FastApiBaseURL.replace(/\/$/, "")}/farm`;
-          const resRemote = await axios.post(fastApiUrl, payload, {
-            headers: access_token ? { Authorization: `Bearer ${access_token}` } : {},
-            timeout: 10000,
-          });
-          if (resRemote.data) {
-            createdRecord = resRemote.data;
-          }
-        } catch (err3: any) {
-          console.warn("Direct Remote FastAPI POST /farm failed:", err3?.message);
-        }
+      } catch (err3: any) {
+        console.warn("Direct Remote FastAPI POST /farm failed:", err3?.message);
       }
     }
 

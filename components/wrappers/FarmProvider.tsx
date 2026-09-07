@@ -1,5 +1,5 @@
 import { changeFarm } from '@/redux/ActiveFarm/ActiveFarm';
-import { renderInstance } from '@/utils/Axios/RenderInstance';
+import { renderInstance, TractorAIBaseURL } from '@/utils/Axios/RenderInstance';
 import { errorMessage } from '@/utils/Toastify/Messages';
 import { Farm } from '@/utils/Types/types';
 import { getAuthUserId } from '@/utils/auth/clientAuth';
@@ -60,7 +60,7 @@ export const FarmProvider = ({ children }: { children: ReactNode }) => {
             // 1. Primary: Direct dynamic fetch from /api/farm (which proxies to FastAPI & PostgreSQL)
             const [localRes, fastRes] = await Promise.all([
                 axios.get(`/api/farm${userId ? `?owner_id=${userId}` : ''}`, { timeout: 4000 }).catch(() => null),
-                axios.get(`http://127.0.0.1:8000/farm${userId ? `?owner_id=${userId}` : ''}`, { timeout: 4000 }).catch(() => null),
+                axios.get(`${(TractorAIBaseURL || 'https://tractorai.sinsignal.com').replace(/\/$/, '')}/farm${userId ? `?owner_id=${userId}` : ''}`, { timeout: 4000 }).catch(() => null),
             ]);
 
             const dynamicFarms = Array.isArray(localRes?.data) && localRes.data.length > 0

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import axios from "axios";
+import { TractorAIBaseURL } from "@/utils/Axios/RenderInstance";
 import {
   TrendingUp,
   TrendingDown,
@@ -86,7 +87,7 @@ export default function MandiSpotPrices() {
 
   const fetchSpotPrices = async (countryCode: string, city: string) => {
     try {
-      // 1. Try local Next.js /api/mandi/spot-prices (which proxies to localhost FastAPI)
+      // 1. Try local Next.js /api/mandi/spot-prices (which proxies to live FastAPI)
       const res = await axios.get(
         `/api/mandi/spot-prices?country_code=${countryCode}&city=${encodeURIComponent(city)}`,
         { timeout: 5000 }
@@ -96,10 +97,11 @@ export default function MandiSpotPrices() {
         return;
       }
     } catch (err) {
-      // Fallback directly to localhost FastAPI
+      // Fallback directly to live FastAPI
       try {
+        const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
         const fastRes = await axios.get(
-          `http://127.0.0.1:8000/mandi/spot-prices?country_code=${countryCode}&city=${encodeURIComponent(city)}`,
+          `${fastApiBase}/mandi/spot-prices?country_code=${countryCode}&city=${encodeURIComponent(city)}`,
           { timeout: 4000 }
         );
         if (fastRes.data && fastRes.data.items && fastRes.data.items.length > 0) {

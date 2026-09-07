@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import NullImage from "@/assets/AnimateIcons/Owner.svg";
-import { renderInstance } from "@/utils/Axios/RenderInstance";
+import { renderInstance, TractorAIBaseURL } from "@/utils/Axios/RenderInstance";
 import { successMessage, errorMessage } from "@/utils/Toastify/Messages";
 import {
   Dialog,
@@ -205,16 +205,13 @@ const FarmSection = () => {
         headers["x-api-key"] = adminToken;
       }
 
-      // Fire all three sources concurrently:
-      //  1. Local FastAPI (fastest — same machine)
-      //  2. Next.js /api/farm (queries "Farm" table directly + FastAPI merge)
-      //  3. Remote FastAPI (backup)
-      const localFastApiUrl = "http://127.0.0.1:8000/farm/all";
+      // Fire dynamic sources concurrently:
+      //  1. Next.js /api/farm (queries "Farm" table directly + FastAPI merge)
+      //  2. Live FastAPI
       const serverApiUrl = `/api/farm?refresh=true&t=${Date.now()}`;
-      const remoteFastApiUrl = "https://tractorai.sinsignal.com/farm/all";
+      const remoteFastApiUrl = `${(TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "")}/farm/all`;
 
-      const [localRes, serverRes, remoteRes] = await Promise.allSettled([
-        axios.get(localFastApiUrl, { headers, timeout: 3000 }),
+      const [serverRes, remoteRes] = await Promise.allSettled([
         axios.get(serverApiUrl, { headers, timeout: 5000 }),
         axios.get(remoteFastApiUrl, { headers, timeout: 6000 }),
       ]);
@@ -281,13 +278,6 @@ const FarmSection = () => {
         serverRes.value.data.forEach((fm: any) => {
           const id = String(fm.id || "");
           if (id) farmMap.set(id, fm); // Already normalized by /api/farm route
-        });
-      }
-
-      if (localRes.status === "fulfilled") {
-        normalizeFarmList(localRes.value.data).forEach((fm: any) => {
-          const id = String(fm.id || "");
-          if (id) farmMap.set(id, normalizeFastApiFarm(fm));
         });
       }
 

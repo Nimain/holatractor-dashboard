@@ -85,7 +85,7 @@ renderInstance.interceptors.request.use(
   }
 );
 
-// Fallback response synthesizer prioritizing FastAPI localhost for instant live updates
+// Fallback response synthesizer prioritizing live FastAPI for instant updates
 renderInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -106,7 +106,7 @@ renderInstance.interceptors.response.use(
         const token = getCookie("access_token");
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-        // 1. Try localhost FastAPI first for instant 3,400+ farmers from Render DB
+        // 1. Try live FastAPI first for instant 3,400+ farmers from Render DB
         try {
           const fastApiRes = await axios.get(
             `${TractorAIBaseURL.replace(/\/$/, "")}/api/v1/admin/farmers`,
@@ -239,7 +239,7 @@ renderInstance.interceptors.response.use(
         const token = getCookie("access_token");
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-        // 1. Try localhost FastAPI first for instant counts directly from Render DB
+        // 1. Try live FastAPI first for instant counts directly from Render DB
         try {
           const fastApiRes = await axios.get(
             `${TractorAIBaseURL.replace(/\/$/, "")}/api/v1/admin/dashboard-counts`,
@@ -359,7 +359,7 @@ renderInstance.interceptors.response.use(
           const [bookingsRes, farmsLocalRes, farmsFastRes, farmerProfileRes] = await Promise.all([
             axios.get(`${fastApiBase}/simple-booking/list/${farmerIdOrUserId}`, { headers, timeout: 6000 }).catch(() => null),
             axios.get(`/api/farm${farmerIdOrUserId ? `?owner_id=${farmerIdOrUserId}` : ''}`, { timeout: 3500 }).catch(() => null),
-            axios.get(`http://127.0.0.1:8000/farm${farmerIdOrUserId ? `?owner_id=${farmerIdOrUserId}` : ''}`, { timeout: 3500 }).catch(() => null),
+            axios.get(`${fastApiBase}/farm${farmerIdOrUserId ? `?owner_id=${farmerIdOrUserId}` : ''}`, { headers, timeout: 3500 }).catch(() => null),
             axios.get(`${fastApiBase}/user/farmer-profile`, { headers, timeout: 6000 }).catch(() => null),
           ]);
 
@@ -460,7 +460,7 @@ renderInstance.interceptors.response.use(
 
         const [localRes, fastRes] = await Promise.all([
           axios.get("/api/farm", { timeout: 3500 }).catch(() => null),
-          axios.get("http://127.0.0.1:8000/farm", { headers, timeout: 3500 }).catch(() => null),
+          axios.get(`${fastApiBase}/farm`, { headers, timeout: 3500 }).catch(() => null),
         ]);
 
         const fData = Array.isArray(localRes?.data)
@@ -491,13 +491,11 @@ renderInstance.interceptors.response.use(
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const fastApiBase = TractorAIBaseURL.replace(/\/$/, "");
 
-        // 1. Try localhost FastAPI first
+        // Try dynamic FastAPI
         const fastApiEndpoints = [
-          "http://127.0.0.1:8000/store/all_stores/with_in_distance",
-          "http://127.0.0.1:8000/api/v1/owner/stores",
-          "http://127.0.0.1:8000/store",
           `${fastApiBase}/api/v1/owner/stores`,
           `${fastApiBase}/store/all_stores/with_in_distance`,
+          `${fastApiBase}/store`,
         ];
 
         for (const ep of fastApiEndpoints) {

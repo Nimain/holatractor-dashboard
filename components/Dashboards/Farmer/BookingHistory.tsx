@@ -308,18 +308,14 @@ export default function FarmerBookingHistory() {
     try {
       const results = await Promise.allSettled([
         axios.get(`${fastApiBase}/simple-booking/list/${userId}`, { timeout: 3500 }),
-        axios.get(`http://127.0.0.1:8000/simple-booking/list/${userId}`, { timeout: 2000 }),
         renderInstance.get(`/farmer/${userId}`, { timeout: 3500 }),
         axios.get(`/api/booking?farmer_id=${userId}`, { timeout: 3000 }),
       ]);
 
-      const [remoteFastRes, localFastRes, renderRes, localApiRes] = results;
+      const [remoteFastRes, renderRes, localApiRes] = results;
 
       if (remoteFastRes.status === "fulfilled" && Array.isArray(remoteFastRes.value.data)) {
         simpleBookings.push(...remoteFastRes.value.data);
-      }
-      if (localFastRes.status === "fulfilled" && Array.isArray(localFastRes.value.data)) {
-        simpleBookings.push(...localFastRes.value.data);
       }
       if (renderRes.status === "fulfilled" && Array.isArray(renderRes.value.data?.bookings)) {
         standardBookings.push(...renderRes.value.data.bookings);
