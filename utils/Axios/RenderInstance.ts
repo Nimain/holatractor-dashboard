@@ -1,9 +1,14 @@
 import axios, { AxiosResponse } from "axios";
 
-export const TractorAIBaseURL =
+const rawTractorUrl =
   process.env.NEXT_PUBLIC_TRACTOR_AI_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
   "https://tractorai.sinsignal.com/";
+
+export const TractorAIBaseURL =
+  rawTractorUrl.includes("localhost") || rawTractorUrl.includes("127.0.0.1")
+    ? "https://tractorai.sinsignal.com/"
+    : rawTractorUrl;
 export const NestJsBaseURL = TractorAIBaseURL;
 export const DeviceBaseURL = "https://device.holatractor.com/";
 export const FastApiBaseURL = TractorAIBaseURL;

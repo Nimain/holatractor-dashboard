@@ -5,11 +5,13 @@ import { getFastApiAuthHeaders } from "@/utils/auth/serverAuth";
 
 export const dynamic = "force-dynamic";
 
-const DYNAMIC_API_BASE = (
-  process.env.NEXT_PUBLIC_TRACTOR_AI_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://tractorai.sinsignal.com"
-).replace(/\/$/, "");
+const DYNAMIC_API_BASE = [
+  process.env.NEXT_PUBLIC_TRACTOR_AI_URL,
+  process.env.NEXT_PUBLIC_API_URL,
+  "https://tractorai.sinsignal.com",
+]
+  .map((u) => (u || "").replace(/\/$/, ""))
+  .find((u) => Boolean(u) && !u.includes("localhost") && !u.includes("127.0.0.1")) || "https://tractorai.sinsignal.com";
 
 type UserRole = "farmer" | "owner" | "agent" | "dealer" | "operator" | "mechanic" | "admin";
 
