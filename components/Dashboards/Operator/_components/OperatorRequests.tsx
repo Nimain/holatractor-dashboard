@@ -47,11 +47,15 @@ const OperatorRequests = () => {
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {allRequests
                         .map((request) => {
-                          return (
-                            <Card key={request.id} className="drop-shadow-md">
-                              <CardHeader>
-                                <CardTitle>{request.store.owner ? `${request.store.owner.user.first_name} ${request.store.owner.user.middle_name ?? ""} ${request.store.owner.user.last_name}` : `${request.store.agentOwner.user.first_name} ${request.store.agentOwner.user.middle_name ?? ""} ${request.store.agentOwner.user.last_name}`}</CardTitle>
-                              </CardHeader>
+                            const ownerUser = request.store?.owner?.user || request.store?.agentOwner?.user;
+                            const title = ownerUser
+                              ? `${ownerUser.first_name || ""} ${ownerUser.middle_name ?? ""} ${ownerUser.last_name || ""}`.replace(/\s+/g, " ").trim()
+                              : (request.store?.name || "Store Owner");
+                            return (
+                              <Card key={request.id} className="drop-shadow-md">
+                                <CardHeader>
+                                  <CardTitle>{title}</CardTitle>
+                                </CardHeader>
                               <CardFooter className="flex justify-end space-x-2">
                                 <AcceptanceForm id={request.id} store_id={request.store_id} />
                               </CardFooter>

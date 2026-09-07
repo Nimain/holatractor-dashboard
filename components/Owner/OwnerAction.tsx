@@ -135,6 +135,27 @@ const OwnerAction = ({
   const [gender, setGender] = useState(user?.gender || "male");
   const [status, setStatus] = useState<number>(initialStatus);
 
+  // Helper to sanitize location values (convert null/undefined/"N/A"/"NA"/"—" to empty string for inputs)
+  const sanitizeLocationValue = (val?: string | null) => {
+    if (!val || val === "N/A" || val === "NA" || val === "null" || val === "undefined" || val === "—") return "";
+    return val;
+  };
+
+  const sanitizeCountryValue = (val?: string | null) => {
+    if (!val || val === "N/A" || val === "NA" || val === "null" || val === "undefined") return "";
+    return val;
+  };
+
+  // Editable Location Form State (Dynamic - never static Bolivia)
+  const [locationName, setLocationName] = useState(sanitizeLocationValue(location?.name));
+  const [locationAddress, setLocationAddress] = useState(sanitizeLocationValue(location?.address));
+  const [locationCity, setLocationCity] = useState(sanitizeLocationValue(location?.city));
+  const [locationState, setLocationState] = useState(sanitizeLocationValue(location?.state));
+  const [locationZip, setLocationZip] = useState(sanitizeLocationValue(location?.zip_code));
+  const [locationCountry, setLocationCountry] = useState(sanitizeCountryValue(location?.country));
+  const [locationLat, setLocationLat] = useState(sanitizeLocationValue(location?.lat));
+  const [locationLng, setLocationLng] = useState(sanitizeLocationValue(location?.lng));
+
   // Operation States
   const [isSaving, setIsSaving] = useState(false);
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
@@ -151,7 +172,16 @@ const OwnerAction = ({
     setCountryCode(user?.country_code || "+591");
     setGender(user?.gender || "male");
     setStatus(initialStatus);
-  }, [user, name, email, initialStatus]);
+
+    setLocationName(sanitizeLocationValue(location?.name));
+    setLocationAddress(sanitizeLocationValue(location?.address));
+    setLocationCity(sanitizeLocationValue(location?.city));
+    setLocationState(sanitizeLocationValue(location?.state));
+    setLocationZip(sanitizeLocationValue(location?.zip_code));
+    setLocationCountry(sanitizeCountryValue(location?.country));
+    setLocationLat(sanitizeLocationValue(location?.lat));
+    setLocationLng(sanitizeLocationValue(location?.lng));
+  }, [user, name, email, initialStatus, location]);
 
   const { language: locale } = useSelector(
     (root: RootState) => root.ActiveLanguage
@@ -167,7 +197,7 @@ const OwnerAction = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // ── Save Profile Changes via FastAPI ───────────────────────────
+  // ── Save Profile & Location Changes via FastAPI ───────────────────────────
   const handleSaveChanges = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setIsSaving(true);
@@ -186,6 +216,16 @@ const OwnerAction = ({
           country_code: countryCode,
           gender,
           status,
+          // Location info (Dynamic with FastAPI - defaults to NA if empty, never static Bolivia)
+          location_name: locationName.trim() || "NA",
+          address: locationAddress.trim() || "NA",
+          city: locationCity.trim() || "NA",
+          state: locationState.trim() || "NA",
+          zip_code: locationZip.trim() || "NA",
+          country: locationCountry.trim() ? locationCountry.trim() : "NA",
+          lat: locationLat.trim() || "NA",
+          lng: locationLng.trim() || "NA",
+          lan: locationLng.trim() || "NA",
         },
         {
           headers: token
@@ -201,11 +241,11 @@ const OwnerAction = ({
       if (res.data?.success) {
         successMessage(
           getTranslation(locale, {
-            en: "Owner updated successfully in FastAPI!",
-            es: "¡Propietario actualizado exitosamente en FastAPI!",
-            ay: "Jilata suma askichata FastAPI-pi!",
-            qu: "Dueño allinta musuqchasqa FastAPI-pi!",
-            gn: "Jára oñemboheko porã FastAPI-pe!",
+            en: "Owner profile & location updated successfully!",
+            es: "¡Perfil y ubicación del propietario actualizados exitosamente!",
+            ay: "Jilata uñt'ayawi ukhamaraki chiqanchawi askichata!",
+            qu: "Dueño allichasqa kachkan!",
+            gn: "Jára heko ha tenda oñemboheko porã!",
           })
         );
         onUpdate?.();
@@ -561,6 +601,27 @@ const OwnerAction = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
+                  <Label className="text-xs font-semibold text-gray-700">Country (Defaults to NA if empty)</Label>
+                  <Input
+                    value={locationCountry}
+                    onChange={(e) => setLocationCountry(e.target.value)}
+                    placeholder="e.g. India, Peru, Bolivia"
+                    className="mt-1 text-sm bg-gray-50/80 focus:bg-white border-gray-200 rounded-xl"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-gray-700">City / Location</Label>
+                  <Input
+                    value={locationCity}
+                    onChange={(e) => setLocationCity(e.target.value)}
+                    placeholder="e.g. Santa Cruz, Baripada"
+                    className="mt-1 text-sm bg-gray-50/80 focus:bg-white border-gray-200 rounded-xl"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
                   <Label className="text-xs font-semibold text-gray-700">Gender</Label>
                   <select
                     value={gender.toLowerCase()}
@@ -596,7 +657,7 @@ const OwnerAction = ({
                   <span className="font-mono">{updateDate}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="font-medium text-slate-400">FastAPI Sync:</span>
+                  <span className="font-medium text-slate-400">Sync Status:</span>
                   <span className="font-semibold text-emerald-600">● Live Connected</span>
                 </div>
               </div>
@@ -676,35 +737,148 @@ const OwnerAction = ({
 
           {activeTab === "location" && (
             <div className="space-y-4">
+              {/* Live Preview Summary Card */}
               <div className="p-4 bg-gray-50 border border-gray-100 rounded-2xl space-y-3">
-                <h4 className="font-bold text-sm text-gray-800 flex items-center gap-2">
-                  <MapPin size={16} className="text-cyan-600" />
-                  Address & Coordinates
-                </h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-sm text-gray-800 flex items-center gap-2">
+                    <MapPin size={16} className="text-cyan-600" />
+                    Live Location Summary
+                  </h4>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-800 border border-cyan-200">
+                    Live Synced
+                  </span>
+                </div>
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between py-1.5 border-b border-gray-100">
                     <span className="text-gray-500 font-medium">Facility / Yard:</span>
-                    <span className="font-semibold text-gray-800">{location?.name || "Main Yard"}</span>
+                    <span className="font-semibold text-gray-800">{locationName.trim() || "NA"}</span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-gray-100">
                     <span className="text-gray-500 font-medium">Street Address:</span>
-                    <span className="font-semibold text-gray-800">{location?.address || "N/A"}</span>
+                    <span className="font-semibold text-gray-800">{locationAddress.trim() || "NA"}</span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-gray-100">
                     <span className="text-gray-500 font-medium">City / State:</span>
                     <span className="font-semibold text-gray-800">
-                      {location?.city || "N/A"}, {location?.state || "N/A"}
+                      {locationCity.trim() || "NA"}, {locationState.trim() || "NA"}
                     </span>
                   </div>
                   <div className="flex justify-between py-1.5 border-b border-gray-100">
                     <span className="text-gray-500 font-medium">Country:</span>
-                    <span className="font-semibold text-gray-800">{location?.country || "Bolivia"}</span>
+                    <span className="font-semibold text-gray-800">
+                      {locationCountry.trim() ? locationCountry.trim() : "NA"}
+                    </span>
                   </div>
                   <div className="flex justify-between py-1.5">
                     <span className="text-gray-500 font-medium">GPS Coordinates:</span>
                     <span className="font-mono text-gray-700">
-                      {location?.lat || "—"}, {location?.lng || "—"}
+                      {locationLat.trim() || "NA"}, {locationLng.trim() || "NA"}
                     </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Editable Location Form */}
+              <div className="p-4 bg-white border border-gray-200 rounded-2xl space-y-3 shadow-sm">
+                <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                  <h4 className="font-bold text-sm text-gray-800">Edit Location Details</h4>
+                  <span className="text-[11px] text-gray-400">Admin can update location</span>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-xs font-semibold text-gray-700">Facility / Yard Name</Label>
+                    <Input
+                      value={locationName}
+                      onChange={(e) => setLocationName(e.target.value)}
+                      placeholder="e.g. Central Machinery Yard (or leave blank for NA)"
+                      className="mt-1 text-sm bg-gray-50/80 focus:bg-white border-gray-200 rounded-xl"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs font-semibold text-gray-700">Street Address</Label>
+                    <Input
+                      value={locationAddress}
+                      onChange={(e) => setLocationAddress(e.target.value)}
+                      placeholder="e.g. Av. Banzer Km 8 (or leave blank for NA)"
+                      className="mt-1 text-sm bg-gray-50/80 focus:bg-white border-gray-200 rounded-xl"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-700">City</Label>
+                      <Input
+                        value={locationCity}
+                        onChange={(e) => setLocationCity(e.target.value)}
+                        placeholder="e.g. Santa Cruz, Baripada, Tarapoto"
+                        className="mt-1 text-sm bg-gray-50/80 focus:bg-white border-gray-200 rounded-xl"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-700">State / Region</Label>
+                      <Input
+                        value={locationState}
+                        onChange={(e) => setLocationState(e.target.value)}
+                        placeholder="e.g. Santa Cruz, Odisha, San Martin"
+                        className="mt-1 text-sm bg-gray-50/80 focus:bg-white border-gray-200 rounded-xl"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-700">Country (Defaults to NA if empty)</Label>
+                      <Input
+                        value={locationCountry}
+                        onChange={(e) => setLocationCountry(e.target.value)}
+                        placeholder="e.g. India, Peru, Bolivia"
+                        className="mt-1 text-sm bg-gray-50/80 focus:bg-white border-gray-200 rounded-xl"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-700">Zip / Postal Code</Label>
+                      <Input
+                        value={locationZip}
+                        onChange={(e) => setLocationZip(e.target.value)}
+                        placeholder="e.g. 757001 (or NA)"
+                        className="mt-1 text-sm bg-gray-50/80 focus:bg-white border-gray-200 rounded-xl"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-700">Latitude</Label>
+                      <Input
+                        value={locationLat}
+                        onChange={(e) => setLocationLat(e.target.value)}
+                        placeholder="e.g. 21.9366 or -17.7833"
+                        className="mt-1 text-sm bg-gray-50/80 focus:bg-white border-gray-200 rounded-xl font-mono"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-700">Longitude</Label>
+                      <Input
+                        value={locationLng}
+                        onChange={(e) => setLocationLng(e.target.value)}
+                        placeholder="e.g. 86.7440 or -63.1821"
+                        className="mt-1 text-sm bg-gray-50/80 focus:bg-white border-gray-200 rounded-xl font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <Button
+                      type="button"
+                      onClick={() => handleSaveChanges()}
+                      disabled={isSaving}
+                      className="bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-xs h-9 px-4 gap-1.5 font-semibold shadow-sm transition-all"
+                    >
+                      {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                      Save Location
+                    </Button>
                   </div>
                 </div>
               </div>

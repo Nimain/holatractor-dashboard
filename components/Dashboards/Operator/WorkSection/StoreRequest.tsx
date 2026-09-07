@@ -126,7 +126,10 @@ const StoreRequest = ({ fetchPageDetails }: { fetchPageDetails?: () => void }) =
                 <div className='w-full grid grid-cols-2'>
                     {
                         fetchingRequests ? <div><TranslatedText greetings={operatorWorkPageTranslations.loading} />...</div> : allRequests.length === 0 ? <div><TranslatedText greetings={operatorWorkPageTranslations.noRequestsAvailable} /></div> : allRequests.map((request, index) => {
-                            const storeOwnerName = `${request.store.owner.user.first_name} ${request.store.owner.user.middle_name ?? ""} ${request.store.owner.user.last_name}`
+                            const ownerUser = request.store?.owner?.user || request.store?.agentOwner?.user;
+                            const storeOwnerName = ownerUser
+                                ? `${ownerUser.first_name || ""} ${ownerUser.middle_name ?? ""} ${ownerUser.last_name || ""}`.replace(/\s+/g, " ").trim()
+                                : (request.store?.name || "Store Owner");
                             return (
                                 <Card key={request.id}>
                                     <CardHeader>

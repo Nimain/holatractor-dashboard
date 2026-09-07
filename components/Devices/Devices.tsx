@@ -94,6 +94,8 @@ interface Device {
   status: string
   hasGps?: boolean
   region: string
+  country?: string
+  countryCode?: string
   model: string
   hourlyPrice: number
   storeImage: string | null
@@ -132,39 +134,120 @@ const fixCoordinates = (lat: number, lon: number, region: string): [number, numb
   return [fixedLat, fixedLon]
 }
 
-const filterGPSByTimeRange = (history: GPSLocation[], filterType: string): GPSLocation[] => {
-  if (!Array.isArray(history) || history.length === 0) return []
-  const now = new Date()
-  let startDate: Date
+const parseTimestamp = (val: any): number => {
+  if (!val) return 0
+  if (typeof val === "number") {
+    return val < 1e11 ? val * 1000 : val
+  }
+  const str = String(val).trim()
+  const num = Number(str)
+  if (!isNaN(num) && str.length >= 10 && !str.includes("-") && !str.includes(":")) {
+    return num < 1e11 ? num * 1000 : num
+  }
+  const parsed = new Date(str).getTime()
+  return isNaN(parsed) ? 0 : parsed
+}
 
-  switch (filterType) {
-    case "today":
-      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      break
-    case "yesterday": {
-      const yesterday = new Date(now)
-      yesterday.setDate(yesterday.getDate() - 1)
-      startDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate())
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      const filtered = history.filter((h) => {
-        const hDate = new Date(h.timestamp || h.created_at)
-        return hDate >= startDate && hDate < todayStart
-      })
-      return filtered.length > 0 ? filtered : history.slice(0, 50)
-    }
-    case "week":
-      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      break
-    case "month":
-      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-      break
-    case "all":
-    default:
-      return history
+const parsePointTime = (p: DeviceLocationData): number => {
+  return parseTimestamp(p.timestamp || (p as any).created_at || (p as any).time || (p as any).datetime)
+}
+
+const filterHistoryByRange = (
+  points: DeviceLocationData[],
+  filterVal: string,
+  startD?: string,
+  endD?: string
+): DeviceLocationData[] => {
+  if (!Array.isArray(points) || points.length === 0) return []
+  if (filterVal === "all") return points
+
+  const now = new Date()
+
+  // Find latest recorded timestamp in the dataset
+  const latestTimestamp = points.reduce((max, p) => {
+    const t = parsePointTime(p)
+    return t > max ? t : max
+  }, 0)
+
+  const anchorTime = latestTimestamp > 0 ? latestTimestamp : now.getTime()
+  const anchorDate = new Date(anchorTime)
+
+  if (filterVal === "today") {
+    // 1. Try actual calendar today
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).getTime()
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).getTime()
+    const liveToday = points.filter((p) => {
+      const t = parsePointTime(p)
+      return t >= todayStart && t <= todayEnd
+    })
+    if (liveToday.length > 0) return liveToday
+
+    // 2. Fallback: Latest active calendar day of activity
+    const anchorStart = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate(), 0, 0, 0).getTime()
+    const anchorEnd = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate(), 23, 59, 59).getTime()
+    const anchorDayPoints = points.filter((p) => {
+      const t = parsePointTime(p)
+      return t >= anchorStart && t <= anchorEnd
+    })
+    return anchorDayPoints.length > 0 ? anchorDayPoints : points.slice(-100)
   }
 
-  const filtered = history.filter((h) => new Date(h.timestamp || h.created_at) >= startDate)
-  return filtered.length > 0 ? filtered : history.slice(0, 50)
+  if (filterVal === "yesterday") {
+    // 1. Try actual calendar yesterday
+    const yest = new Date(now)
+    yest.setDate(yest.getDate() - 1)
+    const yestStart = new Date(yest.getFullYear(), yest.getMonth(), yest.getDate(), 0, 0, 0).getTime()
+    const yestEnd = new Date(yest.getFullYear(), yest.getMonth(), yest.getDate(), 23, 59, 59).getTime()
+    const liveYest = points.filter((p) => {
+      const t = parsePointTime(p)
+      return t >= yestStart && t <= yestEnd
+    })
+    if (liveYest.length > 0) return liveYest
+
+    // 2. Fallback: Day before latest active calendar day
+    const prevAnchor = new Date(anchorDate)
+    prevAnchor.setDate(prevAnchor.getDate() - 1)
+    const prevStart = new Date(prevAnchor.getFullYear(), prevAnchor.getMonth(), prevAnchor.getDate(), 0, 0, 0).getTime()
+    const prevEnd = new Date(prevAnchor.getFullYear(), prevAnchor.getMonth(), prevAnchor.getDate(), 23, 59, 59).getTime()
+    const prevDayPoints = points.filter((p) => {
+      const t = parsePointTime(p)
+      return t >= prevStart && t <= prevEnd
+    })
+    return prevDayPoints.length > 0 ? prevDayPoints : points.slice(-50)
+  }
+
+  if (filterVal === "week") {
+    // Last 7 days
+    const weekStartNow = now.getTime() - 7 * 24 * 60 * 60 * 1000
+    const liveWeek = points.filter((p) => parsePointTime(p) >= weekStartNow)
+    if (liveWeek.length > 0) return liveWeek
+
+    const anchorWeekStart = anchorTime - 7 * 24 * 60 * 60 * 1000
+    const anchorWeek = points.filter((p) => parsePointTime(p) >= anchorWeekStart)
+    return anchorWeek.length > 0 ? anchorWeek : points.slice(-300)
+  }
+
+  if (filterVal === "month") {
+    // Last 30 days
+    const monthStartNow = now.getTime() - 30 * 24 * 60 * 60 * 1000
+    const liveMonth = points.filter((p) => parsePointTime(p) >= monthStartNow)
+    if (liveMonth.length > 0) return liveMonth
+
+    const anchorMonthStart = anchorTime - 30 * 24 * 60 * 60 * 1000
+    const anchorMonth = points.filter((p) => parsePointTime(p) >= anchorMonthStart)
+    return anchorMonth.length > 0 ? anchorMonth : points.slice(-1000)
+  }
+
+  if (filterVal === "custom" && startD && endD) {
+    const sTime = new Date(`${startD}T00:00:00`).getTime()
+    const eTime = new Date(`${endD}T23:59:59`).getTime()
+    return points.filter((p) => {
+      const t = parsePointTime(p)
+      return t >= sTime && t <= eTime
+    })
+  }
+
+  return points
 }
 
 // Load Google Maps Script
@@ -224,15 +307,30 @@ export default function DeviceSection() {
   const [pinging, setPinging] = useState<boolean>(false)
 
   // Route history, filter, and map style state on main map
-  const [selectedFilter, setSelectedFilter] = useState<string>("today")
+  const [selectedFilter, setSelectedFilter] = useState<string>("all")
   const [customStartDate, setCustomStartDate] = useState<string>(DeviceLocationService.getTodayDate())
   const [customEndDate, setCustomEndDate] = useState<string>(DeviceLocationService.getTodayDate())
   const [motionFilter, setMotionFilter] = useState<"all" | "moving" | "stopped">("all")
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false)
   const [showRoutePath, setShowRoutePath] = useState<boolean>(true)
-  const [mapType, setMapType] = useState<"roadmap" | "satellite" | "hybrid">("hybrid")
+  const [mapType, setMapType] = useState<string>("hybrid")
   const [historyLoading, setHistoryLoading] = useState<boolean>(false)
-  const [historyLocations, setHistoryLocations] = useState<DeviceLocationData[]>([])
+  const [rawHistoryPoints, setRawHistoryPoints] = useState<DeviceLocationData[]>([])
+  const deviceHistoryCacheRef = useRef<Record<string, DeviceLocationData[]>>({})
+
+  // Instant in-memory time filtering across rawHistoryPoints (0 ms latency!)
+  const historyLocations = useMemo(() => {
+    return filterHistoryByRange(rawHistoryPoints, selectedFilter, customStartDate, customEndDate)
+  }, [rawHistoryPoints, selectedFilter, customStartDate, customEndDate])
+
+  const [showOnlySelectedTractor, setShowOnlySelectedTractor] = useState<boolean>(true)
+  const [selectedCountry, setSelectedCountry] = useState<string>("ALL")
+
+  // Filter devices list based on selected country
+  const visibleDevices = useMemo(() => {
+    if (selectedCountry === "ALL") return devices
+    return devices.filter((d) => (d.countryCode || "BO") === selectedCountry)
+  }, [devices, selectedCountry])
   const historyPolylineRef = useRef<google.maps.Polyline | null>(null)
   const startMarkerRef = useRef<google.maps.Marker | null>(null)
   const waypointMarkersRef = useRef<google.maps.Marker[]>([])
@@ -405,55 +503,53 @@ export default function DeviceSection() {
   }, [])
 
 
-  // Load main map route for selected tractor with current filter
-  const loadMainMapRoute = async (
-    deviceImei: string,
-    filterVal = selectedFilter,
-    startD = customStartDate,
-    endD = customEndDate
-  ) => {
+  // Fetch device route history for selected tractor (cached in-memory for instant 0ms time filtering)
+  const fetchTractorHistory = async (deviceImei: string, forceRefresh = false) => {
     if (!deviceImei) return
+
+    // If already cached and not forcing refresh, use in-memory points instantly!
+    if (!forceRefresh && deviceHistoryCacheRef.current[deviceImei]?.length > 0) {
+      setRawHistoryPoints(deviceHistoryCacheRef.current[deviceImei])
+      return
+    }
+
     setHistoryLoading(true)
     try {
       const dev = devices.find((d) => d.id === deviceImei)
-      const devRegion = dev?.region || "SW"
+      const devRegion = dev?.region || (dev?.countryCode === "IN" ? "NE" : "SW")
 
-      console.log("[Devices Main Map] Loading route history for:", deviceImei, "Filter:", filterVal, "Region:", devRegion, "Dates:", startD, endD)
-
-      const params: any = {}
-      if (filterVal === "custom") {
-        params.start_date = startD
-        params.end_date = endD
-        params.range = undefined
-        params.filter = undefined
-      } else if (filterVal !== "all") {
-        params.range = filterVal
-        params.filter = filterVal
-      }
+      console.log("[Devices Main Map] Fetching route history for:", deviceImei, "Region:", devRegion, "ForceRefresh:", forceRefresh)
 
       const historyData = await DeviceLocationService.getDeviceLocationHistory(
         deviceImei,
-        params,
+        { range: "all" },
         devRegion
       )
 
-      setHistoryLocations(historyData || [])
+      const points = historyData || []
+      deviceHistoryCacheRef.current[deviceImei] = points
+      setRawHistoryPoints(points)
     } catch (err) {
       console.warn("[Devices Main Map] Error loading route history:", err)
-      setHistoryLocations([])
+      setRawHistoryPoints([])
     } finally {
       setHistoryLoading(false)
     }
   }
 
-  // Reload main map route whenever selected tractor or filter changes
+  // Alias for manual refreshes / pings
+  const loadMainMapRoute = async (deviceImei: string, _filterVal?: string, _startD?: string, _endD?: string) => {
+    return fetchTractorHistory(deviceImei, true)
+  }
+
+  // Load route history when selected tractor changes
   useEffect(() => {
     if (selectedTractor) {
-      loadMainMapRoute(selectedTractor, selectedFilter, customStartDate, customEndDate)
+      fetchTractorHistory(selectedTractor)
     } else {
-      setHistoryLocations([])
+      setRawHistoryPoints([])
     }
-  }, [selectedTractor, selectedFilter, customStartDate, customEndDate])
+  }, [selectedTractor])
 
 
   // Socket.IO Real-time Motion Tracking Connection to device.holatractor.com
@@ -1024,7 +1120,34 @@ export default function DeviceSection() {
 
           const rawLat = Number.parseFloat(String(device.lat ?? st.location?.lat ?? "-17.7589"))
           const rawLon = Number.parseFloat(String(device.lng ?? device.lon ?? st.location?.lan ?? "-63.1063"))
-          const region = device.device_region || "SW"
+          const cleanImei = String(device.device_imei || device.id || "").trim()
+
+          // Dynamic Country & Coordinate Calibration Logic
+          const isIndia =
+            cleanImei === "0867010070133765" ||
+            device.country_code === "IN" ||
+            device.country === "India" ||
+            (rawLat > 6.0 && rawLon > 68.0 && rawLon < 98.0)
+
+          const calibratedLat = isIndia
+            ? Math.abs(rawLat)
+            : (rawLat > 0 ? -Math.abs(rawLat) : rawLat)
+          const calibratedLon = isIndia
+            ? Math.abs(rawLon)
+            : (rawLon > 0 ? -Math.abs(rawLon) : rawLon)
+
+          // Peru dynamic applied logic requested by user:
+          const isPeru =
+            !isIndia &&
+            (cleanImei === "0869066066315350" ||
+              cleanImei === "0869066066317174" ||
+              device.country_code === "PE" ||
+              device.country === "Peru" ||
+              (-11.0 < calibratedLat && calibratedLat < -3.0 && -80.0 < calibratedLon && calibratedLon < -72.0))
+
+          const cName = isIndia ? "India" : isPeru ? "Peru" : "Bolivia"
+          const cCode = isIndia ? "IN" : isPeru ? "PE" : "BO"
+          const region = isIndia ? "NE" : "SW"
           const isOnline = Boolean(device.online || device.base?.status === 1)
 
           const tImages = bt.images
@@ -1041,16 +1164,18 @@ export default function DeviceSection() {
           return {
             id: String(device.device_imei || device.id),
             name: bt.name || `Tractor IMEI ${device.device_imei || device.id}`,
-            lat: isNaN(rawLat) || rawLat === 0 ? -17.7589 : rawLat,
-            lng: isNaN(rawLon) || rawLon === 0 ? -63.1063 : rawLon,
+            lat: isNaN(calibratedLat) || calibratedLat === 0 ? -17.7589 : calibratedLat,
+            lng: isNaN(calibratedLon) || calibratedLon === 0 ? -63.1063 : calibratedLon,
             speed: Number(device.speed) || 0,
             course: Number(device.course) || 0,
             battery: device.battery || (isOnline ? 100 : 85),
             lastSeen: device.last_seen || device.updatedAt || new Date().toISOString(),
-            field: st.name || "Santa Cruz Fleet",
+            field: st.name || (isPeru ? "San Martín Fleet" : "Santa Cruz Fleet"),
             status: isOnline ? "Active" : "Not Connected",
             hasGps: true,
             region: region,
+            country: cName,
+            countryCode: cCode,
             model: bt.model || "Standard 4WD",
             hourlyPrice: Number(tis.hourly_price) || 35,
             storeImage: st.image || null,
@@ -1197,10 +1322,47 @@ export default function DeviceSection() {
 
   const handleMarkerClick = (deviceId: string) => {
     setSelectedTractor(deviceId)
+    setShowOnlySelectedTractor(true)
     const device = devices.find((d) => d.id === deviceId)
     if (device && googleMapRef.current) {
       googleMapRef.current.panTo({ lat: device.lat, lng: device.lng })
       googleMapRef.current.setZoom(16)
+    }
+  }
+
+  const handleCountryChange = (countryCode: string) => {
+    setSelectedCountry(countryCode)
+    const matching =
+      countryCode === "ALL"
+        ? devices
+        : devices.filter((d) => (d.countryCode || "BO") === countryCode)
+
+    if (matching.length > 0 && googleMapRef.current && typeof window !== "undefined" && window.google) {
+      if (!selectedTractor || !matching.some((d) => d.id === selectedTractor)) {
+        const first = matching.find((d) => d.lat !== 0 && d.lng !== 0) || matching[0]
+        if (first) {
+          setSelectedTractor(first.id)
+        }
+      }
+
+      if (countryCode === "BO") {
+        googleMapRef.current.panTo({ lat: -17.7833, lng: -63.1821 })
+        googleMapRef.current.setZoom(10)
+      } else if (countryCode === "PE") {
+        googleMapRef.current.panTo({ lat: -6.5080, lng: -76.3495 })
+        googleMapRef.current.setZoom(11)
+      } else if (countryCode === "IN") {
+        googleMapRef.current.panTo({ lat: 21.9367, lng: 86.7440 })
+        googleMapRef.current.setZoom(12)
+      } else {
+        const bounds = new window.google.maps.LatLngBounds()
+        matching.forEach((d) => {
+          if (d.lat && d.lng && d.lat !== 0 && d.lng !== 0) {
+            bounds.extend({ lat: d.lat, lng: d.lng })
+          }
+        })
+        googleMapRef.current.fitBounds(bounds, { top: 80, right: 60, bottom: 80, left: 60 })
+      }
     }
   }
 
@@ -1237,7 +1399,19 @@ export default function DeviceSection() {
 
     if (!devices || devices.length === 0) return
 
-    devices.forEach((dev) => {
+    // Filter by selected country
+    const countryFilteredDevices =
+      selectedCountry === "ALL"
+        ? devices
+        : devices.filter((d) => (d.countryCode || "BO") === selectedCountry)
+
+    // When a tractor is selected and showOnlySelectedTractor is enabled, only show that selected tractor
+    const devicesToRender =
+      selectedTractor && showOnlySelectedTractor
+        ? countryFilteredDevices.filter((d) => d.id === selectedTractor)
+        : countryFilteredDevices
+
+    devicesToRender.forEach((dev) => {
       if (!dev.lat || !dev.lng || dev.lat === 0 || dev.lng === 0) return
 
       const isSelected = dev.id === selectedTractor
@@ -1265,6 +1439,7 @@ export default function DeviceSection() {
             <div style="display: flex; gap: 4px; margin-bottom: 6px;">
               <span style="font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: ${dev.status === "Active" ? "#DCFCE7; color: #166534;" : "#FEF3C7; color: #92400E;"}">${dev.status}</span>
               <span style="font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: #F1F5F9; color: #475569;">${dev.region}</span>
+              <span style="font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: #E0E7FF; color: #3730A3;">${dev.countryCode === "IN" ? "🇮🇳 India" : dev.countryCode === "PE" ? "🇵🇪 Peru" : "🇧🇴 Bolivia"}</span>
             </div>
             <div style="font-size: 11px; color: #334155; line-height: 1.4;">
               <strong>Speed:</strong> ${(dev.speed || 0).toFixed(1)} km/h<br/>
@@ -1283,7 +1458,7 @@ export default function DeviceSection() {
 
       markersRef.current.set(dev.id, marker)
     })
-  }, [devices, mapsLoaded, selectedTractor, isSocketConnected])
+  }, [devices, mapsLoaded, selectedTractor, isSocketConnected, showOnlySelectedTractor, selectedCountry])
 
   // Draw Route History Polyline directly on the Main Map for selected tractor
   useEffect(() => {
@@ -1314,7 +1489,15 @@ export default function DeviceSection() {
       return
     }
 
-    const path = displayHistoryLocations.map((loc) => ({ lat: loc.lat, lng: loc.lon }))
+    const validLocations = displayHistoryLocations.filter(
+      (loc) => loc.lat && loc.lon && !isNaN(loc.lat) && !isNaN(loc.lon) && loc.lat !== 0 && loc.lon !== 0
+    )
+
+    const isIndiaDev = selectedDev?.countryCode === "IN" || selectedDev?.region === "NE"
+    const path = validLocations.map((loc) => ({
+      lat: isIndiaDev ? Math.abs(loc.lat) : loc.lat > 0 ? -loc.lat : loc.lat,
+      lng: isIndiaDev ? Math.abs(loc.lon) : loc.lon > 0 ? -loc.lon : loc.lon,
+    }))
 
     if (path.length > 0) {
       // Draw smooth blue route polyline
@@ -1322,15 +1505,15 @@ export default function DeviceSection() {
         path,
         geodesic: true,
         strokeColor: "#3B82F6",
-        strokeOpacity: 0.85,
-        strokeWeight: 4,
+        strokeOpacity: 0.9,
+        strokeWeight: 4.5,
         map: googleMapRef.current,
       })
 
-      // Add Start Point Marker (oldest point at path.length - 1)
+      // Add Start Point Marker (oldest point is at index 0 in chronological order)
       if (path.length > 1) {
-        const startPoint = path[path.length - 1]
-        const startLoc = displayHistoryLocations[displayHistoryLocations.length - 1]
+        const startPoint = path[0]
+        const startLoc = validLocations[0]
         startMarkerRef.current = new window.google.maps.Marker({
           position: startPoint,
           map: googleMapRef.current,
@@ -1352,7 +1535,7 @@ export default function DeviceSection() {
         const step = Math.max(1, Math.floor(path.length / 25))
         for (let i = 1; i < path.length - 1; i += step) {
           const pt = path[i]
-          const loc = displayHistoryLocations[i]
+          const loc = validLocations[i]
           const wpMarker = new window.google.maps.Marker({
             position: pt,
             map: googleMapRef.current,
@@ -1383,7 +1566,7 @@ export default function DeviceSection() {
       if (path.length > 1 && (latDiff > 0.0003 || lngDiff > 0.0003)) {
         googleMapRef.current.fitBounds(bounds, { top: 80, right: 60, bottom: 90, left: 60 })
       } else {
-        googleMapRef.current.panTo(path[0])
+        googleMapRef.current.panTo(path[path.length - 1])
         googleMapRef.current.setZoom(16)
       }
     }
@@ -1546,6 +1729,21 @@ export default function DeviceSection() {
                 </div>
               )}
 
+              {selectedDevice && (
+                <button
+                  onClick={() => setShowOnlySelectedTractor(!showOnlySelectedTractor)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold backdrop-blur-md border shadow-xl flex items-center gap-1.5 transition-all ${
+                    showOnlySelectedTractor
+                      ? "bg-blue-600/90 hover:bg-blue-500 text-white border-blue-400/60 shadow-blue-500/20"
+                      : "bg-slate-900/90 hover:bg-slate-800 text-slate-300 border-slate-700/80"
+                  }`}
+                  title="Toggle between showing only the selected tractor or all fleet tractors on map"
+                >
+                  <Truck className="w-3.5 h-3.5" />
+                  <span>{showOnlySelectedTractor ? "Selected Tractor Only (Show All)" : "Showing All Fleet (Isolate)"}</span>
+                </button>
+              )}
+
               <div
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold backdrop-blur-md border shadow-xl flex items-center gap-2 ${
                   isSocketConnected
@@ -1565,6 +1763,54 @@ export default function DeviceSection() {
 
             {/* Right: History Time Filter Tabs & Map Style Switcher */}
             <div className="flex items-center gap-1.5 pointer-events-auto bg-slate-900/90 p-1 rounded-xl backdrop-blur-md border border-slate-700/80 shadow-xl flex-wrap">
+              {/* Country Filter Switcher */}
+              <div className="flex items-center gap-1 border-r border-slate-700/80 pr-1.5 mr-0.5">
+                <button
+                  onClick={() => handleCountryChange("ALL")}
+                  className={`px-2 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                    selectedCountry === "ALL"
+                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                      : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  }`}
+                  title="Show all fleet"
+                >
+                  🌐 All
+                </button>
+                <button
+                  onClick={() => handleCountryChange("BO")}
+                  className={`px-2 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                    selectedCountry === "BO"
+                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                      : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  }`}
+                  title="Filter to Bolivia fleet"
+                >
+                  🇧🇴 Bolivia ({devices.filter((d) => (d.countryCode || "BO") === "BO").length})
+                </button>
+                <button
+                  onClick={() => handleCountryChange("PE")}
+                  className={`px-2 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                    selectedCountry === "PE"
+                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                      : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  }`}
+                  title="Filter to Peru fleet"
+                >
+                  🇵🇪 Peru ({devices.filter((d) => d.countryCode === "PE").length})
+                </button>
+                <button
+                  onClick={() => handleCountryChange("IN")}
+                  className={`px-2 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                    selectedCountry === "IN"
+                      ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                      : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  }`}
+                  title="Filter to India device"
+                >
+                  🇮🇳 India ({devices.filter((d) => d.countryCode === "IN").length})
+                </button>
+              </div>
+
               {/* Map Type Switcher */}
               <div className="flex items-center gap-1 border-r border-slate-700/80 pr-1.5 mr-0.5">
                 <button
@@ -1912,16 +2158,61 @@ export default function DeviceSection() {
 
               {/* Active Tractors */}
               <div>
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-2.5">
                   <h3 className="text-white font-semibold flex items-center text-sm">
-                    <Truck className="w-4 h-4 mr-2 text-emerald-400" /> Active Fleet ({devices.length})
+                    <Truck className="w-4 h-4 mr-2 text-emerald-400" /> Active Fleet ({visibleDevices.length}{selectedCountry !== "ALL" ? `/${devices.length}` : ""})
                   </h3>
                   <button onClick={fetchDevices} className="text-xs text-slate-400 hover:text-white flex items-center transition-colors">
                     <RefreshCw className="w-3 h-3 mr-1" /> Refresh
                   </button>
                 </div>
+
+                {/* Country Filter Pills in Sidebar */}
+                <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/10 mb-3 flex-wrap">
+                  <button
+                    onClick={() => handleCountryChange("ALL")}
+                    className={`flex-1 min-w-[50px] py-1.5 rounded-lg text-xs font-medium transition-all text-center ${
+                      selectedCountry === "ALL"
+                        ? "bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/30"
+                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    All ({devices.length})
+                  </button>
+                  <button
+                    onClick={() => handleCountryChange("BO")}
+                    className={`flex-1 min-w-[70px] py-1.5 rounded-lg text-xs font-medium transition-all text-center flex items-center justify-center gap-1 ${
+                      selectedCountry === "BO"
+                        ? "bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/30"
+                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <span>🇧🇴</span> BO ({devices.filter((d) => (d.countryCode || "BO") === "BO").length})
+                  </button>
+                  <button
+                    onClick={() => handleCountryChange("PE")}
+                    className={`flex-1 min-w-[70px] py-1.5 rounded-lg text-xs font-medium transition-all text-center flex items-center justify-center gap-1 ${
+                      selectedCountry === "PE"
+                        ? "bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/30"
+                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <span>🇵🇪</span> PE ({devices.filter((d) => d.countryCode === "PE").length})
+                  </button>
+                  <button
+                    onClick={() => handleCountryChange("IN")}
+                    className={`flex-1 min-w-[70px] py-1.5 rounded-lg text-xs font-medium transition-all text-center flex items-center justify-center gap-1 ${
+                      selectedCountry === "IN"
+                        ? "bg-indigo-600 text-white font-bold shadow-md shadow-indigo-600/30"
+                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <span>🇮🇳</span> IN ({devices.filter((d) => d.countryCode === "IN").length})
+                  </button>
+                </div>
+
                 <div className="space-y-2">
-                  {devices.map((device) => {
+                  {visibleDevices.map((device) => {
                     const isSelected = selectedTractor === device.id
                     return (
                       <div
@@ -1960,7 +2251,13 @@ export default function DeviceSection() {
                             >
                               {device.status === "Active" || device.hasGps ? "Connected" : "Not Connected"}
                             </span>
-                            <span className="text-[10px] text-gray-400 uppercase font-mono">{device.region}</span>
+                            <span className="text-[10px] text-gray-300 font-mono flex items-center justify-end gap-1">
+                              {device.countryCode === "IN"
+                                ? "🇮🇳 India"
+                                : device.countryCode === "PE"
+                                ? "🇵🇪 Peru"
+                                : "🇧🇴 Bolivia"}
+                            </span>
                           </div>
                         </div>
                       </div>

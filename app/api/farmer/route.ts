@@ -54,6 +54,16 @@ function sanitizeImageUrl(img?: string | null): string {
   return t;
 }
 
+// In-memory cache for farmers list to ensure instantaneous sub-10ms subsequent responses
+let cachedFarmersList: any[] | null = null;
+let lastFarmersCacheTime = 0;
+const CACHE_TTL_MS = 60 * 1000; // 60s TTL
+
+export function invalidateFarmersCache() {
+  cachedFarmersList = null;
+  lastFarmersCacheTime = 0;
+}
+
 // ── GET: List Farmers ────────────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
   try {
@@ -66,24 +76,18 @@ export async function GET(request: NextRequest) {
       searchParams.has("page") ||
       searchParams.has("per_page") ||
       searchParams.get("format") === "paginated";
+    const forceRefresh = searchParams.get("refresh") === "true";
 
     const headers = getFastApiAuthHeaders(request);
 
     let farmers: any[] = [];
 
-    // 1. Try FastAPI candidates first
-    let fastApiResult = await fetchFromFastAPI("/api/v1/admin/farmers", headers, 5000);
-    if (!fastApiResult || !Array.isArray(fastApiResult.data) || fastApiResult.data.length === 0) {
-      fastApiResult = await fetchFromFastAPI("/admin/farmers", headers, 5000);
-    }
-    if (!fastApiResult || !Array.isArray(fastApiResult.data) || fastApiResult.data.length === 0) {
-      fastApiResult = await fetchFromFastAPI("/farmers", headers, 5000);
-    }
-    if (fastApiResult && Array.isArray(fastApiResult.data) && fastApiResult.data.length > 0) {
-      farmers = fastApiResult.data;
+    // 1. Check in-memory cache if available and fresh
+    if (!forceRefresh && cachedFarmersList && cachedFarmersList.length > 0 && Date.now() - lastFarmersCacheTime < CACHE_TTL_MS) {
+      farmers = cachedFarmersList;
     }
 
-    // 2. Direct PostgreSQL fallback if FastAPI is empty
+    // 2. Direct PostgreSQL query (Render DB - fast ~1-2s for all 3,400+ farmers)
     if (!farmers.length) {
       try {
         const client = await pool.connect();
@@ -122,39 +126,65 @@ export async function GET(request: NextRequest) {
             ORDER BY COALESCE(f."createdAt", u."createdAt") DESC
           `);
 
-          farmers = res.rows.map((r: any) => ({
-            id: String(r.farmer_id),
-            user_id: String(r.user_id),
-            role_id: String(r.role_id),
-            created_by: r.created_by ? String(r.created_by) : null,
-            Status: Number(r.Status || 1),
-            base_id: String(r.base_id),
-            device_type: r.device_type ? String(r.device_type) : null,
-            device_id: r.device_id ? String(r.device_id) : null,
-            home_location_id: r.home_location_id ? String(r.home_location_id) : null,
-            farm_location_id: r.farm_location_id ? String(r.farm_location_id) : null,
-            currency: String(r.currency),
-            currency_code: String(r.currency_code),
-            createdAt: r.createdAt ? String(r.createdAt) : null,
-            updatedAt: r.updatedAt ? String(r.updatedAt) : null,
-            user: {
-              id: String(r.user_id),
-              first_name: String(r.first_name || "Farmer"),
-              middle_name: String(r.middle_name || ""),
-              last_name: String(r.last_name || ""),
-              authType: String(r.authType || "EMAIL"),
-              gender: String(r.gender || "male"),
-              emailVerified: r.emailVerified !== null ? Boolean(r.emailVerified) : true,
-              image: sanitizeImageUrl(r.image),
-              mobile: r.mobile ? String(r.mobile) : null,
-              country_code: String(r.country_code || "+591"),
-            },
-          }));
+          if (res.rows.length > 0) {
+            farmers = res.rows.map((r: any) => ({
+              id: String(r.farmer_id),
+              user_id: String(r.user_id),
+              role_id: String(r.role_id),
+              created_by: r.created_by ? String(r.created_by) : null,
+              Status: Number(r.Status || 1),
+              base_id: String(r.base_id),
+              device_type: r.device_type ? String(r.device_type) : null,
+              device_id: r.device_id ? String(r.device_id) : null,
+              home_location_id: r.home_location_id ? String(r.home_location_id) : null,
+              farm_location_id: r.farm_location_id ? String(r.farm_location_id) : null,
+              currency: String(r.currency),
+              currency_code: String(r.currency_code),
+              createdAt: r.createdAt ? String(r.createdAt) : null,
+              updatedAt: r.updatedAt ? String(r.updatedAt) : null,
+              user: {
+                id: String(r.user_id),
+                first_name: String(r.first_name || "Farmer"),
+                middle_name: String(r.middle_name || ""),
+                last_name: String(r.last_name || ""),
+                authType: String(r.authType || "EMAIL"),
+                gender: String(r.gender || "male"),
+                emailVerified: r.emailVerified !== null ? Boolean(r.emailVerified) : true,
+                image: sanitizeImageUrl(r.image),
+                mobile: r.mobile ? String(r.mobile) : null,
+                country_code: String(r.country_code || "+591"),
+              },
+            }));
+
+            cachedFarmersList = farmers;
+            lastFarmersCacheTime = Date.now();
+          }
         } finally {
           client.release();
         }
       } catch (dbErr: any) {
-        console.warn("[/api/farmer] DB fallback error:", dbErr?.message);
+        console.warn("[/api/farmer] DB query error:", dbErr?.message);
+      }
+    }
+
+    // 3. Fallback to FastAPI live API if DB query returned nothing or failed
+    if (!farmers.length) {
+      try {
+        const fastApiResult = await fetchFromFastAPI("/api/v1/admin/farmers", headers, 8000);
+        const rawList = Array.isArray(fastApiResult?.data)
+          ? fastApiResult.data
+          : Array.isArray(fastApiResult?.data?.farmers)
+          ? fastApiResult.data.farmers
+          : Array.isArray(fastApiResult?.data?.data)
+          ? fastApiResult.data.data
+          : [];
+        if (rawList.length > 0) {
+          farmers = rawList;
+          cachedFarmersList = farmers;
+          lastFarmersCacheTime = Date.now();
+        }
+      } catch (fErr: any) {
+        console.warn("[/api/farmer] FastAPI fallback error:", fErr?.message);
       }
     }
 
@@ -326,6 +356,9 @@ export async function PATCH(request: NextRequest) {
             [Number(status), targetUserId]
           );
         }
+
+        // Invalidate in-memory cache
+        invalidateFarmersCache();
 
         return NextResponse.json({
           success: true,

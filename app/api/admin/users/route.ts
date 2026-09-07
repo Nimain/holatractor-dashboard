@@ -23,6 +23,11 @@ const FASTAPI_ENDPOINTS: Record<UserRole, string> = {
   admin:    "/api/v1/admin/farmers",
 };
 
+// In-memory cache for farmer role to avoid repeating large DB query / FastAPI timeout
+let cachedFarmerUsers: Record<string, any>[] | null = null;
+let lastFarmerUsersCacheTime = 0;
+const FARMER_CACHE_TTL = 60 * 1000;
+
 // Exact column names confirmed from DB schema inspection
 const ROLE_DB_QUERIES: Record<UserRole, string> = {
   farmer: `
@@ -51,9 +56,22 @@ const ROLE_DB_QUERIES: Record<UserRole, string> = {
       u."emailVerified", u."authType",
       COALESCE(o."createdAt", u."createdAt") AS "createdAt",
       COALESCE(o."updatedAt", u."updatedAt") AS "updatedAt",
-      COALESCE(o.status, 1)         AS "Status"
+      COALESCE(o.status, 1)         AS "Status",
+      json_build_object(
+        'id', l.id,
+        'name', COALESCE(NULLIF(l.name, ''), 'NA'),
+        'address', COALESCE(NULLIF(l.address, ''), 'NA'),
+        'city', COALESCE(NULLIF(l.city, ''), 'NA'),
+        'state', COALESCE(NULLIF(l.state, ''), 'NA'),
+        'zip_code', COALESCE(NULLIF(l.zip_code, ''), 'NA'),
+        'country', COALESCE(NULLIF(l.country, ''), 'NA'),
+        'lat', l.lat,
+        'lan', l.lan,
+        'lng', l.lan
+      ) AS location
     FROM "Owner" o
     LEFT JOIN "User" u ON u.id = o.user_id
+    LEFT JOIN "Location" l ON (l.id = o.loaction_id OR l.id = u.location_id)
     ORDER BY COALESCE(o."createdAt", u."createdAt") DESC
     LIMIT 500
   `,
@@ -196,6 +214,29 @@ function normalizeRow(r: Record<string, any>, role: UserRole): Record<string, an
     license_number: r.license_number ? String(r.license_number) : null,
     is_available: r.is_available !== undefined ? Boolean(r.is_available) : true,
     dealer_id: r.dealer_id ? String(r.dealer_id) : null,
+    location: r.location && typeof r.location === "object" ? {
+      id: r.location.id || null,
+      name: r.location.name && r.location.name !== "null" ? r.location.name : "NA",
+      address: r.location.address && r.location.address !== "null" ? r.location.address : "NA",
+      city: r.location.city && r.location.city !== "null" ? r.location.city : "NA",
+      state: r.location.state && r.location.state !== "null" ? r.location.state : "NA",
+      zip_code: r.location.zip_code && r.location.zip_code !== "null" ? r.location.zip_code : "NA",
+      country: r.location.country && r.location.country !== "null" ? r.location.country : "NA",
+      lat: r.location.lat ?? null,
+      lan: r.location.lan ?? r.location.lng ?? null,
+      lng: r.location.lan ?? r.location.lng ?? null,
+    } : {
+      id: null,
+      name: "NA",
+      address: "NA",
+      city: "NA",
+      state: "NA",
+      zip_code: "NA",
+      country: "NA",
+      lat: null,
+      lan: null,
+      lng: null,
+    },
   };
 }
 
@@ -224,6 +265,7 @@ function normalizeFastApiUser(u: any, role: UserRole): Record<string, any> {
       license_number: u.license_number || user.license_number,
       is_available: u.is_available ?? user.is_available,
       dealer_id: u.dealer_id || user.dealer_id,
+      location: u.location || user.location,
     },
     role
   );
@@ -247,36 +289,65 @@ export async function GET(request: NextRequest) {
 
     let users: Record<string, any>[] = [];
 
-    // 1. Try dynamic FastAPI endpoint
-    try {
-      const endpoint = FASTAPI_ENDPOINTS[role];
-      let res: any = null;
-      try {
-        res = await axios.get(`${DYNAMIC_API_BASE}${endpoint}`, {
-          headers: fastApiHeaders,
-          timeout: 4000,
-        });
-      } catch (err) {
-        if (role === "owner") {
-          try {
-            res = await axios.get(`${DYNAMIC_API_BASE}/owners`, {
-              headers: fastApiHeaders,
-              timeout: 3500,
-            });
-          } catch {}
-        }
-      }
-      const rawList = Array.isArray(res?.data)
-        ? res.data
-        : Array.isArray(res?.data?.data) ? res.data.data : [];
-      if (rawList.length > 0) {
-        users = rawList.map((u: any) => normalizeFastApiUser(u, role));
-      }
-    } catch (e: any) {
-      // FastAPI not available or auth failed — fall through to DB
+    // For farmer, check cache first to ensure instant response (< 5ms)
+    if (role === "farmer" && cachedFarmerUsers && cachedFarmerUsers.length > 0 && Date.now() - lastFarmerUsersCacheTime < FARMER_CACHE_TTL) {
+      users = [...cachedFarmerUsers];
     }
 
-    // 2. PostgreSQL direct query fallback
+    // 1. Try dynamic FastAPI endpoint for non-farmer roles
+    // Note: For 'farmer', FastAPI /api/v1/admin/farmers streams 2.1MB unpaginated taking 15+ seconds over WAN,
+    // which always times out a 4000ms window. DB query for farmer takes only ~1.5s.
+    if (users.length === 0 && role !== "farmer") {
+      try {
+        const endpoint = FASTAPI_ENDPOINTS[role];
+        let res: any = null;
+        try {
+          res = await axios.get(`${DYNAMIC_API_BASE}${endpoint}`, {
+            headers: fastApiHeaders,
+            timeout: 4000,
+          });
+        } catch (err) {
+          if (role === "owner") {
+            try {
+              res = await axios.get(`${DYNAMIC_API_BASE}/owners`, {
+                headers: fastApiHeaders,
+                timeout: 3500,
+              });
+            } catch {}
+          }
+        }
+        const rawList = Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res?.data?.data) ? res.data.data : [];
+        if (rawList.length > 0) {
+          users = rawList.map((u: any) => normalizeFastApiUser(u, role));
+          // If owner role, enrich missing locations from DB
+          if (role === "owner") {
+            try {
+              const dbRes = await pool.query(ROLE_DB_QUERIES.owner);
+              const dbLocMap = new Map<string, any>();
+              dbRes.rows.forEach((r: any) => {
+                if (r.location && r.location.country && r.location.country !== "NA" && r.location.country !== "Bolivia") {
+                  dbLocMap.set(String(r.id), r.location);
+                  dbLocMap.set(String(r.user_id), r.location);
+                }
+              });
+              users = users.map((u: any) => {
+                const matched = dbLocMap.get(String(u.id)) || dbLocMap.get(String(u.user_id));
+                if (matched && (!u.location || !u.location.country || u.location.country === "NA" || u.location.country === "Bolivia")) {
+                  return { ...u, location: matched };
+                }
+                return u;
+              });
+            } catch {}
+          }
+        }
+      } catch (e: any) {
+        // FastAPI not available or auth failed — fall through to DB
+      }
+    }
+
+    // 2. PostgreSQL direct query fallback (or primary for farmer)
     if (users.length === 0) {
       try {
         let query = ROLE_DB_QUERIES[role];
@@ -297,6 +368,10 @@ export async function GET(request: NextRequest) {
         }
 
         users = rows.map((r) => normalizeRow(r, role));
+        if (role === "farmer" && users.length > 0) {
+          cachedFarmerUsers = users;
+          lastFarmerUsersCacheTime = Date.now();
+        }
       } catch (err: any) {
         console.warn(`[/api/admin/users] DB error for role=${role}:`, err?.message?.slice(0, 120));
         // Last resort: return an empty paginated response rather than 500
@@ -400,13 +475,90 @@ export async function PATCH(request: NextRequest) {
           await client.query(`UPDATE "Farmer" SET "Status" = $1, "updatedAt" = NOW() WHERE user_id = $2 OR id = $2`, [stNum, targetUserId]);
         }
       }
+
+      // 3. Update Location if provided
+      const locObj = body.location || {};
+      const locName = body.location_name !== undefined ? body.location_name : locObj.name;
+      const locAddr = body.address !== undefined ? body.address : locObj.address;
+      const locCity = body.city !== undefined ? body.city : locObj.city;
+      const locState = body.state !== undefined ? body.state : locObj.state;
+      const locCountry = body.country !== undefined ? body.country : locObj.country;
+      const locZip = body.zip_code !== undefined ? body.zip_code : locObj.zip_code;
+      const locLat = body.lat !== undefined ? body.lat : locObj.lat;
+      const locLan = body.lan !== undefined ? body.lan : (body.lng !== undefined ? body.lng : (locObj.lan ?? locObj.lng));
+
+      const hasLocationUpdate =
+        locName !== undefined ||
+        locAddr !== undefined ||
+        locCity !== undefined ||
+        locState !== undefined ||
+        locCountry !== undefined ||
+        locZip !== undefined ||
+        locLat !== undefined ||
+        locLan !== undefined;
+
+      if (hasLocationUpdate) {
+        const locCheck = await client.query(
+          `SELECT location_id FROM "User" WHERE id = $1 UNION SELECT loaction_id FROM "Owner" WHERE user_id = $1 OR id = $1`,
+          [targetUserId]
+        );
+        let existingLocId = locCheck.rows.find((r) => r.location_id || r.loaction_id)?.location_id ||
+          locCheck.rows.find((r) => r.location_id || r.loaction_id)?.loaction_id;
+
+        const safeCountry = locCountry === undefined || locCountry === null || String(locCountry).trim() === "" ? "NA" : String(locCountry).trim();
+
+        if (existingLocId) {
+          const locUpdates: string[] = [];
+          const locParams: any[] = [];
+          let lIdx = 1;
+
+          if (locName !== undefined) { locUpdates.push(`name = $${lIdx++}`); locParams.push(locName); }
+          if (locAddr !== undefined) { locUpdates.push(`address = $${lIdx++}`); locParams.push(locAddr); }
+          if (locCity !== undefined) { locUpdates.push(`city = $${lIdx++}`); locParams.push(locCity); }
+          if (locState !== undefined) { locUpdates.push(`state = $${lIdx++}`); locParams.push(locState); }
+          if (locCountry !== undefined) { locUpdates.push(`country = $${lIdx++}`); locParams.push(safeCountry); }
+          if (locZip !== undefined) { locUpdates.push(`zip_code = $${lIdx++}`); locParams.push(locZip); }
+          if (locLat !== undefined) { locUpdates.push(`lat = $${lIdx++}`); locParams.push(locLat ? Number(locLat) : null); }
+          if (locLan !== undefined) { locUpdates.push(`lan = $${lIdx++}`); locParams.push(locLan ? Number(locLan) : null); }
+
+          if (locUpdates.length > 0) {
+            locUpdates.push(`"updatedAt" = NOW()`);
+            locParams.push(existingLocId);
+            await client.query(`UPDATE "Location" SET ${locUpdates.join(", ")} WHERE id = $${lIdx}`, locParams);
+          }
+          await client.query(`UPDATE "User" SET location_id = $1, "updatedAt" = NOW() WHERE id = $2 AND (location_id IS NULL OR location_id != $1)`, [existingLocId, targetUserId]);
+          await client.query(`UPDATE "Owner" SET loaction_id = $1, "updatedAt" = NOW() WHERE (user_id = $2 OR id = $2) AND (loaction_id IS NULL OR loaction_id != $1)`, [existingLocId, targetUserId]);
+        } else {
+          const newLocId = `loc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+          await client.query(
+            `INSERT INTO "Location" (id, name, address, city, state, zip_code, country, lat, lan, "createdAt", "updatedAt")
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())`,
+            [
+              newLocId,
+              locName || "NA",
+              locAddr || "NA",
+              locCity || "NA",
+              locState || "NA",
+              locZip || "NA",
+              safeCountry,
+              locLat ? Number(locLat) : null,
+              locLan ? Number(locLan) : null,
+            ]
+          );
+          await client.query(`UPDATE "User" SET location_id = $1, "updatedAt" = NOW() WHERE id = $2`, [newLocId, targetUserId]);
+          await client.query(`UPDATE "Owner" SET loaction_id = $1, "updatedAt" = NOW() WHERE user_id = $2 OR id = $2`, [newLocId, targetUserId]);
+        }
+      }
     } finally {
       client.release();
     }
 
-    // 3. Notify FastAPI
+    // 4. Notify FastAPI
     try {
       await axios.patch(`${DYNAMIC_API_BASE}/api/v1/admin/users/${targetUserId}`, body, { timeout: 4000 });
+    } catch {}
+    try {
+      await axios.patch(`${DYNAMIC_API_BASE}/owner-profile-patch/${targetUserId}`, body, { timeout: 4000 });
     } catch {}
 
     return NextResponse.json({ success: true, message: "User updated successfully" });

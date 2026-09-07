@@ -27,6 +27,7 @@ import {
   FilterIcon,
   SortAsc,
   SortDesc,
+  MapPin,
 } from "lucide-react";
 import { getAuthToken } from "@/utils/auth/clientAuth";
 
@@ -312,6 +313,9 @@ function UserDetailModal({
   const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
   const [status, setStatus] = useState<number>(1);
+  const [city, setCity] = useState("");
+  const [country, setCountry] = useState("");
+  const [address, setAddress] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -321,6 +325,13 @@ function UserDetailModal({
       setEmail(user.email || "");
       setMobile(user.mobile || "");
       setStatus(user.Status ?? 1);
+      const loc = user.location || {};
+      const safeCity = loc.city && loc.city !== "NA" && loc.city !== "null" ? loc.city : "";
+      const safeCountry = loc.country && loc.country !== "NA" && loc.country !== "null" ? loc.country : "";
+      const safeAddr = loc.address && loc.address !== "NA" && loc.address !== "null" ? loc.address : "";
+      setCity(safeCity);
+      setCountry(safeCountry);
+      setAddress(safeAddr);
       setIsEditing(false);
     }
   }, [user]);
@@ -358,6 +369,9 @@ function UserDetailModal({
           email,
           mobile,
           status,
+          city: city.trim() || "NA",
+          country: country.trim() || "NA",
+          address: address.trim() || "NA",
         },
         {
           headers: token
@@ -430,8 +444,8 @@ function UserDetailModal({
           {isEditing ? (
             <form onSubmit={handleSave} className="space-y-3.5">
               <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-3 text-xs text-blue-800">
-                <p className="font-semibold">Editing Owner Profile (FastAPI Live Sync)</p>
-                <p className="text-[11px] text-blue-600 mt-0.5">Changes will be updated in FastAPI and PostgreSQL database immediately.</p>
+                <p className="font-semibold">Editing Profile</p>
+                <p className="text-[11px] text-blue-600 mt-0.5">Changes will be updated in database immediately.</p>
               </div>
 
               <div className="grid grid-cols-2 gap-2.5">
@@ -491,6 +505,46 @@ function UserDetailModal({
                 </div>
               </div>
 
+              {/* Dynamic Location Inputs */}
+              <div className="pt-2 border-t border-gray-100">
+                <p className="text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <MapPin size={12} className="text-blue-600" />
+                  Location Information
+                </p>
+                <div className="grid grid-cols-2 gap-2.5 mb-2.5">
+                  <div>
+                    <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider block mb-1">Country</label>
+                    <input
+                      type="text"
+                      value={country}
+                      placeholder="e.g. India, Peru (or NA)"
+                      onChange={(e) => setCountry(e.target.value)}
+                      className="w-full text-xs font-medium px-3 py-2 border border-gray-200 rounded-xl outline-none focus:border-blue-500 bg-gray-50/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider block mb-1">City</label>
+                    <input
+                      type="text"
+                      value={city}
+                      placeholder="e.g. Lima, Santa Cruz (or NA)"
+                      onChange={(e) => setCity(e.target.value)}
+                      className="w-full text-xs font-medium px-3 py-2 border border-gray-200 rounded-xl outline-none focus:border-blue-500 bg-gray-50/50"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-gray-600 uppercase tracking-wider block mb-1">Street Address</label>
+                  <input
+                    type="text"
+                    value={address}
+                    placeholder="e.g. Yard 1, Main Road (or NA)"
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="w-full text-xs font-medium px-3 py-2 border border-gray-200 rounded-xl outline-none focus:border-blue-500 bg-gray-50/50"
+                  />
+                </div>
+              </div>
+
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
                 <button
                   type="button"
@@ -505,7 +559,7 @@ function UserDetailModal({
                   disabled={saving}
                   className="px-4 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-sm"
                 >
-                  {saving ? "Saving to FastAPI..." : "Save to FastAPI"}
+                  {saving ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </form>
@@ -546,6 +600,25 @@ function UserDetailModal({
                   ))}
                 </div>
               )}
+
+              {/* Location Card (Dynamic - NA fallback, never static Bolivia) */}
+              <div className="bg-gray-50 border border-gray-100 rounded-xl divide-y divide-gray-100">
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <div className="w-7 h-7 rounded-lg bg-white border border-gray-200 flex items-center justify-center flex-shrink-0">
+                    <MapPin size={13} className="text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Location / Country</p>
+                    <p className="text-sm font-medium text-gray-800 truncate">
+                      {user.location?.country && user.location.country !== "null" ? user.location.country : "NA"}
+                      {user.location?.city && user.location.city !== "NA" && user.location.city !== "null" ? ` • ${user.location.city}` : ""}
+                    </p>
+                    {user.location?.address && user.location.address !== "NA" && user.location.address !== "null" && (
+                      <p className="text-xs text-gray-500 truncate mt-0.5">{user.location.address}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
 
               {/* Contact */}
               <div className="bg-gray-50 border border-gray-100 rounded-xl divide-y divide-gray-100">

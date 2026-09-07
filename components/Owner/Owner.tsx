@@ -197,7 +197,7 @@ const OwnerSection = () => {
             <div className="flex items-center gap-2 mb-2">
               <span className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-400/30 flex items-center gap-1.5">
                 <Tractor size={13} />
-                FastAPI Direct Integration
+                Fleet Owners
               </span>
               <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
                 ● Live Database Sync
@@ -214,11 +214,11 @@ const OwnerSection = () => {
             </h1>
             <p className="text-sm text-slate-300 mt-1 max-w-xl">
               {getTranslation(locale, {
-                en: "Manage and update fleet tractor owners, assign stores, verify KYC documents, and monitor live account statuses directly with FastAPI.",
-                es: "Gestione y actualice propietarios de tractores, asigne tiendas, verifique documentos KYC y supervise estados en vivo directamente con FastAPI.",
-                ay: "Tractor jilatanakaru uñjaña, yatiyawinak askichaña FastAPI tuqi.",
-                qu: "Tractor dueñokunata allichay, qillqakuna qhawariy FastAPI nisqawan.",
-                gn: "Eñangareko ha emboheko tractor járakuerape FastAPI rupi.",
+                en: "Manage and update fleet tractor owners, assign stores, verify KYC documents, and monitor live account statuses.",
+                es: "Gestione y actualice propietarios de tractores, asigne tiendas, verifique documentos KYC y supervise estados en vivo.",
+                ay: "Tractor jilatanakaru uñjaña, yatiyawinak askichaña.",
+                qu: "Tractor dueñokunata allichay, qillqakuna qhawariy.",
+                gn: "Eñangareko ha emboheko tractor járakuerape.",
               })}
             </p>
           </div>
@@ -231,7 +231,7 @@ const OwnerSection = () => {
               className="bg-white/10 hover:bg-white/20 text-white border-white/20 rounded-xl px-4 py-2 text-xs font-semibold backdrop-blur-sm transition-all"
             >
               <RefreshCw size={14} className={`mr-2 ${refreshing ? "animate-spin" : ""}`} />
-              {refreshing ? "Syncing..." : "Sync FastAPI"}
+              {refreshing ? "Syncing..." : "Sync Owners"}
             </Button>
 
             {/* Register New Owner Dialog */}
@@ -258,7 +258,7 @@ const OwnerSection = () => {
               >
                 <div className="bg-slate-900 p-6 text-white">
                   <p className="text-xs uppercase tracking-wider font-semibold text-blue-400 mb-1">
-                    FastAPI Registration
+                    Owner Registration
                   </p>
                   <h2 className="text-xl font-bold">Register New Owner</h2>
                   <p className="text-xs text-slate-300 mt-1">
@@ -511,7 +511,7 @@ const OwnerSection = () => {
                   <td colSpan={7} className="py-12 text-center text-gray-500">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <RefreshCw size={24} className="animate-spin text-blue-600" />
-                      <p className="text-sm font-semibold">Connecting to FastAPI and loading owners...</p>
+                      <p className="text-sm font-semibold">Loading owners...</p>
                     </div>
                   </td>
                 </tr>
@@ -678,7 +678,7 @@ const OwnerSection = () => {
         {loading ? (
           <div className="text-center py-8 text-gray-500">
             <RefreshCw size={24} className="animate-spin text-blue-600 mx-auto mb-2" />
-            <p className="text-xs font-semibold">Loading owners from FastAPI...</p>
+            <p className="text-xs font-semibold">Loading owners...</p>
           </div>
         ) : paginatedUsers.length === 0 ? (
           <div className="text-center py-10 bg-white rounded-2xl border border-gray-200 p-6">

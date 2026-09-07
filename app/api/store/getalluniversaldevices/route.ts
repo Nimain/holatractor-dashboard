@@ -76,33 +76,78 @@ export async function GET(request: NextRequest) {
 
     if (liveGpsDevices.length > 0) {
       const enrichedDevices = liveGpsDevices.map((d: any, idx: number) => {
-        const dbRow =
-          dbMap.get(String(d.imei).trim()) ||
-          (dbDeviceLinks.length > 0 ? dbDeviceLinks[idx % dbDeviceLinks.length] : null);
+        const dbRow = dbMap.get(String(d.imei).trim()) || null;
 
-        const lat =
+        let lat =
           d.lat && !isNaN(d.lat) && d.lat !== 0
             ? Number(d.lat)
             : dbRow?.default_lat
-            ? Number(dbRow.default_lat)
-            : -17.7589;
+              ? Number(dbRow.default_lat)
+              : -17.7589;
 
-        const lon =
+        let lon =
           d.lon && !isNaN(d.lon) && d.lon !== 0
             ? Number(d.lon)
             : dbRow?.default_lng
-            ? Number(dbRow.default_lng)
-            : -63.1063;
+              ? Number(dbRow.default_lng)
+              : -63.1063;
+
+        const cleanImei = String(d.imei).trim();
+        const absLat = Math.abs(lat);
+        const absLon = Math.abs(lon);
+
+        // Exactly 1 device in India: 0867010070133765
+        const isIndia = cleanImei === "0867010070133765";
+
+        let countryName = "Bolivia";
+        let countryCode = "BO";
+        let deviceRegion = "SW";
+
+        if (isIndia) {
+          countryName = "India";
+          countryCode = "IN";
+          deviceRegion = "NE";
+          lat = Math.abs(lat);
+          lon = Math.abs(lon);
+        } else {
+          // South American coordinates (Bolivia and Peru) are strictly negative
+          if (lat > 0) lat = -Math.abs(lat);
+          if (lon > 0) lon = -Math.abs(lon);
+
+          // Peru fleet: Tarapoto / San Martin region (lat: ~ -6.5, lon: ~ -76.3)
+          const isPeru =
+            cleanImei === "0869066066315350" ||
+            cleanImei === "0869066066317174" ||
+            (-11.0 < lat && lat < -3.0 && -80.0 < lon && lon < -72.0);
+
+          if (isPeru) {
+            countryName = "Peru";
+            countryCode = "PE";
+          } else {
+            countryName = "Bolivia";
+            countryCode = "BO";
+          }
+        }
+
+        const isLinked = Boolean(dbRow);
+        const tractorName = isLinked
+          ? (dbRow.tractor_name || dbRow.tractor_model || "Fleet Machinery")
+          : `GPS Device ${String(d.imei).slice(-6)}`;
+        const tractorModel = isLinked
+          ? (dbRow.tractor_model || "Standard")
+          : `IMEI: ${d.imei}`;
 
         const tractorImages =
           Array.isArray(dbRow?.tractor_images) && dbRow?.tractor_images.length > 0
             ? dbRow.tractor_images
-            : ["https://holadashboard.s3.amazonaws.com/1749554183435-Kioti%20RX%207320%20-%2075%20HP.webp"];
+            : [];
 
         return {
           id: d.imei,
           device_imei: d.imei,
-          device_region: d.direction || dbRow?.device_region || "SW",
+          device_region: deviceRegion,
+          country: countryName,
+          country_code: countryCode,
           base: { status: d.online ? 1 : 0 },
           lat: lat,
           lng: lon,
@@ -112,20 +157,20 @@ export async function GET(request: NextRequest) {
           online: Boolean(d.online),
           tractor_store: {
             id: dbRow?.tractor_store_id || `ts_${d.imei}`,
-            hourly_price: Number(dbRow?.hourly_price || 30.0),
+            hourly_price: Number(dbRow?.hourly_price || 25.0),
             tractor: {
-              name: dbRow?.tractor_name || dbRow?.tractor_model || "Fleet Machinery",
-              model: dbRow?.tractor_model || "Heavy-Duty",
+              name: tractorName,
+              model: tractorModel,
               images: tractorImages,
             },
             store: {
-              id: dbRow?.store_id || "store_scz",
-              name: dbRow?.store_name || "Central Agro Hub",
+              id: dbRow?.store_id || "unassigned_store",
+              name: dbRow?.store_name || (isLinked ? "Assigned Store" : "Unassigned Devices"),
               image:
                 dbRow?.store_image ||
                 "https://holadashboard.s3.amazonaws.com/1743436650571-d7edd764-d050-42e9-866a-7368017b7b69.png",
               user: {
-                first_name: dbRow?.owner_first_name || "Agro",
+                first_name: dbRow?.owner_first_name || "Fleet",
                 last_name: dbRow?.owner_last_name || "Manager",
                 email: dbRow?.owner_email || "",
                 mobile: dbRow?.owner_mobile || "",
@@ -140,37 +185,59 @@ export async function GET(request: NextRequest) {
 
     // 3. If GPS server returned 0 or timed out, return direct Render DB devices
     if (dbDeviceLinks.length > 0) {
-      const fallbackFromDb = dbDeviceLinks.map((r: any) => ({
-        id: r.device_imei,
-        device_imei: r.device_imei,
-        device_region: r.device_region || "SW",
-        base: { status: 1 },
-        lat: Number(r.default_lat || -17.7833),
-        lng: Number(r.default_lng || -63.1821),
-        speed: 0,
-        battery: 100,
-        online: true,
-        tractor_store: {
-          id: r.tractor_store_id,
-          hourly_price: Number(r.hourly_price || 30.0),
-          tractor: {
-            name: r.tractor_name || r.tractor_model || "Fleet Machinery",
-            model: r.tractor_model || "Heavy-Duty",
-            images: Array.isArray(r.tractor_images) ? r.tractor_images : [],
-          },
-          store: {
-            id: r.store_id,
-            name: r.store_name || "Hola Store",
-            image: r.store_image || "",
-            user: {
-              first_name: r.owner_first_name || "Owner",
-              last_name: r.owner_last_name || "",
-              email: r.owner_email || "",
-              mobile: r.owner_mobile || "",
+      const fallbackFromDb = dbDeviceLinks.map((r: any) => {
+        const cleanImei = String(r.device_imei || "").trim();
+        const rawLat = Number(r.default_lat || -17.7833);
+        const rawLng = Number(r.default_lng || -63.1821);
+
+        const isIndia = cleanImei === "0867010070133765" || (rawLat > 6.0 && rawLng > 68.0 && rawLng < 98.0);
+        const calLat = isIndia ? Math.abs(rawLat) : (rawLat > 0 ? -Math.abs(rawLat) : rawLat);
+        const calLng = isIndia ? Math.abs(rawLng) : (rawLng > 0 ? -Math.abs(rawLng) : rawLng);
+
+        const isPeru =
+          !isIndia &&
+          (cleanImei === "0869066066315350" ||
+            cleanImei === "0869066066317174" ||
+            (-11.0 < calLat && calLat < -3.0 && -80.0 < calLng && calLng < -72.0));
+
+        const country = isIndia ? "India" : isPeru ? "Peru" : "Bolivia";
+        const countryCode = isIndia ? "IN" : isPeru ? "PE" : "BO";
+        const deviceRegion = isIndia ? "NE" : "SW";
+
+        return {
+          id: r.device_imei,
+          device_imei: r.device_imei,
+          device_region: deviceRegion,
+          country,
+          country_code: countryCode,
+          base: { status: 1 },
+          lat: calLat,
+          lng: calLng,
+          speed: 0,
+          battery: 100,
+          online: true,
+          tractor_store: {
+            id: r.tractor_store_id,
+            hourly_price: Number(r.hourly_price || 30.0),
+            tractor: {
+              name: r.tractor_name || r.tractor_model || "Fleet Machinery",
+              model: r.tractor_model || "Heavy-Duty",
+              images: Array.isArray(r.tractor_images) ? r.tractor_images : [],
+            },
+            store: {
+              id: r.store_id,
+              name: r.store_name || "Hola Store",
+              image: r.store_image || "",
+              user: {
+                first_name: r.owner_first_name || "Owner",
+                last_name: r.owner_last_name || "",
+                email: r.owner_email || "",
+                mobile: r.owner_mobile || "",
+              },
             },
           },
-        },
-      }));
+        };
+      });
 
       return NextResponse.json(fallbackFromDb);
     }

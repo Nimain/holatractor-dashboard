@@ -450,13 +450,14 @@ const FarmerSection = () => {
     return translations[locale] || translations["en"];
   };
 
-  // ── Fetch Farmers from FastAPI / Next.js API Route ─────────
+  // ── Fetch Farmers from Next.js API Route ─────────
   const fetchAllFarmers = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
 
     try {
-      const res = await axios.get("/api/farmer", { timeout: 8000 });
+      const url = isRefresh ? "/api/farmer?refresh=true" : "/api/farmer";
+      const res = await axios.get(url, { timeout: 20000 });
       let list: FarmerItem[] = [];
 
       if (Array.isArray(res.data)) {
@@ -468,7 +469,7 @@ const FarmerSection = () => {
       setAllFarmers(list);
     } catch (err) {
       console.error("Error fetching farmers list:", err);
-      errorMessage("Failed to load farmers from FastAPI");
+      errorMessage("Failed to load farmers");
     } finally {
       setLoading(false);
       setRefreshing(false);

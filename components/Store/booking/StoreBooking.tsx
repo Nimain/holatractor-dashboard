@@ -12,6 +12,7 @@ import Image from "next/image";
 import { useCookie } from "next-cookie";
 import { Backdrop, CircularProgress } from "@mui/material";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
+import axios from "axios";
 import { useParams } from "next/navigation";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { AttachmentInStore, Booking, City, Country, Farmer, TractorInStore } from "@/utils/Types/types";
@@ -293,11 +294,23 @@ const StoreBooking = () => {
   }
 
   function fetchFarmer() {
-    setFetchingFarmers(true)
-    renderInstance.get('/farmer')
-      .then((res) => { setAllFarmers(res.data) })
-      .catch(() => { errorMessage("Error fetching farmers") })
-      .finally(() => { setFetchingFarmers(false) })
+    setFetchingFarmers(true);
+    axios.get("/api/farmer")
+      .then((res) => {
+        let list: any[] = [];
+        if (Array.isArray(res.data)) {
+          list = res.data;
+        } else if (res.data?.farmers && Array.isArray(res.data.farmers)) {
+          list = res.data.farmers;
+        }
+        setAllFarmers(list);
+      })
+      .catch((err) => {
+        console.error("Error fetching farmers in StoreBooking:", err);
+        errorMessage("Error fetching farmers");
+        setAllFarmers([]);
+      })
+      .finally(() => { setFetchingFarmers(false); });
   }
 
   const formatDateToDDMMYYYY = (date: string | Date): string => {
@@ -454,7 +467,7 @@ const StoreBooking = () => {
             !isFarmer && fetchingFarmers ?
               <p>Getting all farmers list</p>
               :
-              allFarmers.length === 0 ?
+              !Array.isArray(allFarmers) || allFarmers.length === 0 ?
                 <p>No farmers are available</p>
                 :
                 <div className="space-y-1">
@@ -469,33 +482,40 @@ const StoreBooking = () => {
                           className="w-full justify-between"
                         >
                           {farmerName
-                            ? allFarmers.find((country) => `${country.user.first_name} ${country.user.middle_name ? country.user.middle_name : ''} ${country.user.last_name}` === farmerName) && farmerName
+                            ? (Array.isArray(allFarmers) && allFarmers.find((f: any) => {
+                                const fName = f?.user
+                                  ? `${f.user.first_name || ''} ${f.user.middle_name || ''} ${f.user.last_name || ''}`.replace(/\s+/g, ' ').trim()
+                                  : `${f?.first_name || ''} ${f?.last_name || ''}`.replace(/\s+/g, ' ').trim();
+                                return fName === farmerName;
+                              }) && farmerName)
                             : "Select farmer..."}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-full p-0">
                         <Command>
-                          <CommandInput placeholder="Search country..." />
+                          <CommandInput placeholder="Search farmer..." />
                           <CommandList>
                             <CommandEmpty>No farmer found.</CommandEmpty>
                             <CommandGroup className='w-full'>
-                              {allFarmers.map((country) => {
-                                const name = `${country.user.first_name} ${country.user.middle_name ? country.user.middle_name : ''} ${country.user.last_name}`
+                              {Array.isArray(allFarmers) && allFarmers.map((f: any) => {
+                                const name = f?.user
+                                  ? `${f.user.first_name || ''} ${f.user.middle_name || ''} ${f.user.last_name || ''}`.replace(/\s+/g, ' ').trim()
+                                  : `${f?.first_name || ''} ${f?.last_name || ''}`.replace(/\s+/g, ' ').trim() || "Farmer";
                                 return (
                                   <CommandItem
-                                    key={country.id}
-                                    value={country.id}
-                                    onSelect={(currentValue) => {
+                                    key={f.id}
+                                    value={f.id}
+                                    onSelect={() => {
                                       setFarmerName(name)
-                                      setFarmerId(country.id)
+                                      setFarmerId(f.id)
                                       setPopoverOpen(false)
                                     }}
                                   >
                                     <Check
                                       className={cn(
                                         "mr-2 h-4 w-4",
-                                        countryName === name ? "opacity-100" : "opacity-0"
+                                        farmerName === name ? "opacity-100" : "opacity-0"
                                       )}
                                     />
                                     {name}

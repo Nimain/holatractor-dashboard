@@ -81,7 +81,10 @@ const NewLease = () => {
               <CommandEmpty>No store found.</CommandEmpty>
               <CommandGroup className='w-full'>
                 {allStores.map((details, index) => {
-                  const name = details.agentOwner ?  `${details.agentOwner.user.first_name} ${details.agentOwner.user.middle_name ?? ""} ${details.agentOwner.user.last_name}` : `${details.owner.user.first_name} ${details.owner.user.middle_name ?? ""} ${details.owner.user.last_name}`
+                  const ownerUser = details.agentOwner?.user || details.owner?.user;
+                  const name = ownerUser
+                    ? `${ownerUser.first_name || ""} ${ownerUser.middle_name ?? ""} ${ownerUser.last_name || ""}`.replace(/\s+/g, " ").trim()
+                    : (details.name || "Store Owner");
                   return (
                     <CommandItem
                       key={index}

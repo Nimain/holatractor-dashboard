@@ -105,7 +105,15 @@ export function DeviceMapModal({
   const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false)
   const [googleMapsError, setGoogleMapsError] = useState(false)
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null)
-  const [deviceLocations, setDeviceLocations] = useState<DeviceLocationData[]>([])
+  const [rawDeviceLocations, setRawDeviceLocations] = useState<DeviceLocationData[]>([])
+  const deviceLocations = React.useMemo(() => {
+    return DeviceLocationService.filterHistoryByRange(
+      rawDeviceLocations,
+      selectedFilter,
+      customStartDate,
+      customEndDate
+    )
+  }, [rawDeviceLocations, selectedFilter, customStartDate, customEndDate])
   const [currentLocation, setCurrentLocation] = useState<DeviceLocationData | null>(null)
   const [locationLoading, setLocationLoading] = useState(false)
   const [deviceLoading, setDeviceLoading] = useState(false)
@@ -341,7 +349,7 @@ export function DeviceMapModal({
           }
 
           setCurrentLocation(newLocation)
-          setDeviceLocations((prev) => [newLocation, ...prev.slice(0, 99)])
+          setRawDeviceLocations((prev) => [newLocation, ...prev.slice(0, 499)])
           setLiveLocationCount((prev) => prev + 1)
 
           if (mapInstanceRef.current && adjustedData.lat && adjustedData.lon) {
@@ -378,43 +386,15 @@ export function DeviceMapModal({
     )
   }
 
-  // Load device location history
+  // Load device location history (cached in-memory for instant 0ms date filtering)
   const loadDeviceLocationWithFilter = useCallback(async () => {
     if (!device || !deviceImei) return
 
     setDeviceLoading(true)
     try {
-      let params: LocationHistoryParams = {}
-      switch (selectedFilter) {
-        case "today":
-          params = { filter: "today" }
-          break
-        case "yesterday":
-          params = { filter: "yesterday" }
-          break
-        case "week":
-          params = { filter: "week" }
-          break
-        case "month":
-          params = { filter: "month" }
-          break
-        case "all":
-          params = {}
-          break
-        case "custom":
-          if (customStartDate && customEndDate) {
-            params = { start_date: customStartDate, end_date: customEndDate }
-          } else {
-            params = { filter: "today" }
-          }
-          break
-        default:
-          params = { filter: "today" }
-      }
-
       const [current, history] = await Promise.all([
         DeviceLocationService.getCurrentDeviceLocation(deviceImei, deviceRegion),
-        DeviceLocationService.getDeviceLocationHistory(deviceImei, params, deviceRegion),
+        DeviceLocationService.getDeviceLocationHistory(deviceImei, { range: "all" }, deviceRegion),
       ])
 
       if (
@@ -441,18 +421,18 @@ export function DeviceMapModal({
             !isNaN(Number(loc.lat)) &&
             !isNaN(Number(loc.lon))
         )
-        setDeviceLocations(validLocations)
+        setRawDeviceLocations(validLocations)
       } else {
-        setDeviceLocations([])
+        setRawDeviceLocations([])
       }
     } catch (error) {
       console.error("[DeviceMapModal] Error loading device location:", error)
-      setDeviceLocations([])
+      setRawDeviceLocations([])
       setCurrentLocation(null)
     } finally {
       setDeviceLoading(false)
     }
-  }, [device, deviceImei, deviceRegion, selectedFilter, customStartDate, customEndDate])
+  }, [device, deviceImei, deviceRegion])
 
   // Initialize modal data when opened
   useEffect(() => {

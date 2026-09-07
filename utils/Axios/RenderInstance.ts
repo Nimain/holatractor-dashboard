@@ -127,7 +127,7 @@ renderInstance.interceptors.response.use(
         // 2. Try Next.js internal API route
         try {
           if (typeof window !== "undefined") {
-            const localApiRes = await axios.get("/api/farmer", { headers, timeout: 4000 });
+            const localApiRes = await axios.get("/api/farmer", { headers, timeout: 10000 });
             if (Array.isArray(localApiRes.data) && localApiRes.data.length > 0) {
               return {
                 ...error.response,
@@ -662,6 +662,103 @@ renderInstance.interceptors.response.use(
         }
       } catch (catServiceErr) {
         console.error("Category/Service fallback error:", catServiceErr);
+      }
+    }
+
+    // If backend returns error on /lease
+    const isLease =
+      url === "/lease" ||
+      url === "lease" ||
+      url.startsWith("/lease") ||
+      url.startsWith("lease") ||
+      url.includes("/lease");
+
+    if (isLease) {
+      try {
+        const token = getCookie("access_token");
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const method = (error.config?.method || "get").toLowerCase();
+        const data = error.config?.data
+          ? typeof error.config.data === "string"
+            ? JSON.parse(error.config.data)
+            : error.config.data
+          : undefined;
+
+        // 1. Try FastAPI directly
+        try {
+          const fastApiUrl = `${FastApiBaseURL.replace(/\/$/, "")}/lease`;
+          const fastRes = await axios({
+            method,
+            url: fastApiUrl,
+            data,
+            headers,
+            timeout: 6000,
+          });
+          if (fastRes.data) {
+            return {
+              ...error.response,
+              data: fastRes.data,
+              status: fastRes.status,
+              statusText: fastRes.statusText || "OK",
+              headers: fastRes.headers || {},
+              config: error.config,
+            } as AxiosResponse;
+          }
+        } catch {}
+
+        // 2. Try Next.js internal /api/lease
+        if (typeof window !== "undefined") {
+          const localRes = await axios({
+            method,
+            url: "/api/lease",
+            data,
+            headers,
+            timeout: 6000,
+          });
+          if (localRes.data) {
+            return {
+              ...error.response,
+              data: localRes.data,
+              status: localRes.status,
+              statusText: localRes.statusText || "OK",
+              headers: localRes.headers || {},
+              config: error.config,
+            } as AxiosResponse;
+          }
+        }
+      } catch (leaseErr) {
+        console.error("Lease fallback error:", leaseErr);
+      }
+    }
+
+    // If backend returns error on /store/.../get_available_tractors or get_available_attachments
+    if (url.includes("get_available_tractors") || url.includes("get_available_attachments")) {
+      try {
+        const token = getCookie("access_token");
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        
+        let cleanPath = url;
+        if (cleanPath.startsWith(TractorAIBaseURL)) {
+          cleanPath = cleanPath.slice(TractorAIBaseURL.length);
+        }
+        if (!cleanPath.startsWith("/")) cleanPath = `/${cleanPath}`;
+        if (!cleanPath.startsWith("/api/")) cleanPath = `/api${cleanPath}`;
+
+        if (typeof window !== "undefined") {
+          const localRes = await axios.get(cleanPath, { headers, timeout: 6000 });
+          if (localRes.data) {
+            return {
+              ...error.response,
+              data: localRes.data,
+              status: 200,
+              statusText: "OK",
+              headers: localRes.headers || {},
+              config: error.config,
+            } as AxiosResponse;
+          }
+        }
+      } catch (itemsErr) {
+        console.error("Available items fallback error:", itemsErr);
       }
     }
 

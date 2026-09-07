@@ -146,17 +146,27 @@ class DeviceLocationService {
   public static adjustCoordinatesForRegion(
     lat: number,
     lon: number,
-    deviceRegion: string
+    deviceRegion = "SW"
   ): { lat: number; lon: number } {
     let adjustedLat = Number(lat || 0);
     let adjustedLon = Number(lon || 0);
 
-    if (deviceRegion === "SW") {
+    const regionUpper = String(deviceRegion || "SW").toUpperCase();
+
+    // India or North-East hemisphere: lat > 0, lon > 0
+    if (regionUpper === "NE" || regionUpper === "IN" || regionUpper === "INDIA") {
+      return {
+        lat: Math.abs(adjustedLat),
+        lon: Math.abs(adjustedLon),
+      };
+    }
+
+    // Bolivia / South America fleet operates strictly in South-West hemisphere (-lat, -lon)
+    if (adjustedLat > 0) {
       adjustedLat = -Math.abs(adjustedLat);
+    }
+    if (adjustedLon > 0) {
       adjustedLon = -Math.abs(adjustedLon);
-    } else if (deviceRegion === "NE") {
-      adjustedLat = Math.abs(adjustedLat);
-      adjustedLon = Math.abs(adjustedLon);
     }
 
     return { lat: adjustedLat, lon: adjustedLon };
@@ -576,6 +586,119 @@ class DeviceLocationService {
     monthAgo.setMonth(monthAgo.getMonth() - 1);
     return this.formatDate(monthAgo);
   }
+
+  static parseTimestamp(val: any): number {
+    if (!val) return 0;
+    if (typeof val === "number") {
+      return val < 1e11 ? val * 1000 : val;
+    }
+    const str = String(val).trim();
+    const num = Number(str);
+    if (!isNaN(num) && str.length >= 10 && !str.includes("-") && !str.includes(":")) {
+      return num < 1e11 ? num * 1000 : num;
+    }
+    const parsed = new Date(str).getTime();
+    return isNaN(parsed) ? 0 : parsed;
+  }
+
+  static parsePointTime(p: any): number {
+    return this.parseTimestamp(p.timestamp || p.created_at || p.time || p.datetime);
+  }
+
+  static filterHistoryByRange(
+    points: DeviceLocationData[],
+    filterVal: string,
+    startD?: string,
+    endD?: string
+  ): DeviceLocationData[] {
+    if (!Array.isArray(points) || points.length === 0) return [];
+    if (filterVal === "all") return points;
+
+    const now = new Date();
+
+    // Find latest recorded timestamp in the dataset
+    const latestTimestamp = points.reduce((max, p) => {
+      const t = this.parsePointTime(p);
+      return t > max ? t : max;
+    }, 0);
+
+    const anchorTime = latestTimestamp > 0 ? latestTimestamp : now.getTime();
+    const anchorDate = new Date(anchorTime);
+
+    if (filterVal === "today") {
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).getTime();
+      const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).getTime();
+      const liveToday = points.filter((p) => {
+        const t = this.parsePointTime(p);
+        return t >= todayStart && t <= todayEnd;
+      });
+      if (liveToday.length > 0) return liveToday;
+
+      // Fallback: Latest active calendar day of activity
+      const anchorStart = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate(), 0, 0, 0).getTime();
+      const anchorEnd = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate(), 23, 59, 59).getTime();
+      const anchorDayPoints = points.filter((p) => {
+        const t = this.parsePointTime(p);
+        return t >= anchorStart && t <= anchorEnd;
+      });
+      return anchorDayPoints.length > 0 ? anchorDayPoints : points.slice(-100);
+    }
+
+    if (filterVal === "yesterday") {
+      const yest = new Date(now);
+      yest.setDate(yest.getDate() - 1);
+      const yestStart = new Date(yest.getFullYear(), yest.getMonth(), yest.getDate(), 0, 0, 0).getTime();
+      const yestEnd = new Date(yest.getFullYear(), yest.getMonth(), yest.getDate(), 23, 59, 59).getTime();
+      const liveYest = points.filter((p) => {
+        const t = this.parsePointTime(p);
+        return t >= yestStart && t <= yestEnd;
+      });
+      if (liveYest.length > 0) return liveYest;
+
+      // Fallback: Day before latest active calendar day
+      const prevAnchor = new Date(anchorDate);
+      prevAnchor.setDate(prevAnchor.getDate() - 1);
+      const prevStart = new Date(prevAnchor.getFullYear(), prevAnchor.getMonth(), prevAnchor.getDate(), 0, 0, 0).getTime();
+      const prevEnd = new Date(prevAnchor.getFullYear(), prevAnchor.getMonth(), prevAnchor.getDate(), 23, 59, 59).getTime();
+      const prevDayPoints = points.filter((p) => {
+        const t = this.parsePointTime(p);
+        return t >= prevStart && t <= prevEnd;
+      });
+      return prevDayPoints.length > 0 ? prevDayPoints : points.slice(-50);
+    }
+
+    if (filterVal === "week") {
+      const weekStartNow = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+      const liveWeek = points.filter((p) => this.parsePointTime(p) >= weekStartNow);
+      if (liveWeek.length > 0) return liveWeek;
+
+      const anchorWeekStart = anchorTime - 7 * 24 * 60 * 60 * 1000;
+      const anchorWeek = points.filter((p) => this.parsePointTime(p) >= anchorWeekStart);
+      return anchorWeek.length > 0 ? anchorWeek : points.slice(-300);
+    }
+
+    if (filterVal === "month") {
+      const monthStartNow = now.getTime() - 30 * 24 * 60 * 60 * 1000;
+      const liveMonth = points.filter((p) => this.parsePointTime(p) >= monthStartNow);
+      if (liveMonth.length > 0) return liveMonth;
+
+      const anchorMonthStart = anchorTime - 30 * 24 * 60 * 60 * 1000;
+      const anchorMonth = points.filter((p) => this.parsePointTime(p) >= anchorMonthStart);
+      return anchorMonth.length > 0 ? anchorMonth : points.slice(-1000);
+    }
+
+    if (filterVal === "custom" && startD && endD) {
+      const sTime = new Date(`${startD}T00:00:00`).getTime();
+      const eTime = new Date(`${endD}T23:59:59`).getTime();
+      return points.filter((p) => {
+        const t = this.parsePointTime(p);
+        return t >= sTime && t <= eTime;
+      });
+    }
+
+    return points;
+  }
 }
 
+export const filterHistoryByRange = DeviceLocationService.filterHistoryByRange.bind(DeviceLocationService);
 export default DeviceLocationService;
