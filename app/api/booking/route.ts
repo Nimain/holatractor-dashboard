@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
 
         const params: any[] = [];
         if (bookingType === "store") {
-          query += ` WHERE b."bookingType" = 'store' OR (b.store_id IS NOT NULL AND b.store_id != '')`;
+          query += ` WHERE (b."bookingType" = 'store' OR (b.store_id IS NOT NULL AND b.store_id != '')) AND b.task_type IS NULL AND b.checkin_otp IS NULL AND b."bookingType"::text NOT IN ('simple', '3tap')`;
         } else if (bookingType === "standalone_tractor") {
           query += ` 
             INNER JOIN "BookingStandaloneTractor" bst ON bst."bookingId" = b.id
@@ -91,6 +91,8 @@ export async function GET(request: NextRequest) {
             INNER JOIN "BookingStandaloneAttachment" bsa ON bsa."bookingId" = b.id
             WHERE b."bookingType" = 'standalone'
           `;
+        } else if (bookingType === "3tap" || bookingType === "simple_booking") {
+          query += ` WHERE b.task_type IS NOT NULL OR b.checkin_otp IS NOT NULL OR b."bookingType"::text IN ('simple', '3tap')`;
         }
 
         query += ` ORDER BY b."createdAt" DESC LIMIT 300`;
@@ -250,8 +252,43 @@ export async function GET(request: NextRequest) {
     // 2. FastAPI fallback
     try {
       const headers = getFastApiAuthHeaders(request);
+      const cleanBase = FastApiBaseURL.replace(/\/$/, "");
+
+      if (bookingType === "3tap" || bookingType === "simple_booking") {
+        const simpleRes = await axios.get(`${cleanBase}/simple-booking/list/all`, { headers, timeout: 6000 }).catch(() => null)
+          || await axios.get(`${cleanBase}/simple-booking/farmer`, { headers, timeout: 6000 }).catch(() => null);
+
+        const list = simpleRes?.data?.bookings || (Array.isArray(simpleRes?.data) ? simpleRes.data : []);
+        if (list.length > 0) {
+          const mapped = list.map((item: any) => ({
+            id: item.id || `simple_${item.booking_id || Math.random().toString(36).substring(7)}`,
+            user_id: item.user_id || item.farmer_id || "farmer_id",
+            store_id: item.store_id || null,
+            start_date: item.start_date || item.scheduled_date || new Date().toISOString(),
+            end_date: item.end_date || null,
+            booking_hours: item.booking_hours || "three_hours",
+            total_cost: item.total_cost || item.total_amount || 0,
+            bookingStatus: item.bookingStatus || item.status || "Open",
+            bookingType: "simple_3tap",
+            task_type: item.task_type || item.task_name || "Agricultural Task",
+            checkin_otp: item.checkin_otp || item.otp || null,
+            createdAt: item.createdAt || item.created_at || new Date().toISOString(),
+            user: {
+              id: item.user_id || item.farmer_id || "farmer_id",
+              first_name: item.farmer_name || item.user?.first_name || "Farmer",
+              last_name: item.user?.last_name || "",
+              email: item.user?.email || "farmer@holatractor.com",
+              mobile: item.user?.mobile || "",
+            },
+            store: item.store_name ? { name: item.store_name } : null,
+            farm: { name: item.farm_name || "Direct Field Parcel", area_sqm: (item.hectares || 3) * 10000 },
+          }));
+          return NextResponse.json(mapped);
+        }
+      }
+
       const fastApiRes = await axios.get(
-        `${FastApiBaseURL.replace(/\/$/, "")}/api/v1/admin/bookings`,
+        `${cleanBase}/api/v1/admin/bookings`,
         { headers, timeout: 6000 }
       );
       if (Array.isArray(fastApiRes.data) && fastApiRes.data.length > 0) {

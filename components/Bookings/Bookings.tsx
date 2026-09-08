@@ -13,16 +13,23 @@ import NewBooking from "./NewBooking";
 import Image from "next/image";
 import NullImage from "@/assets/AnimateIcons/Tractor.svg";
 import axios from "axios";
+import { TractorAIBaseURL } from "@/utils/Axios/RenderInstance";
 
-type BookingCategoryTab = "store" | "standalone_tractor" | "standalone_attachment";
+export type BookingCategoryTab = "store" | "standalone_tractor" | "standalone_attachment" | "simple_3tap";
 
 const Bookings = () => {
   const [activeCategory, setActiveCategory] = useState<BookingCategoryTab>("store");
   const [allBookings, setAllBookings] = useState<Booking[]>([]);
-  const [counts, setCounts] = useState<{ store: number; standalone_tractor: number; standalone_attachment: number }>({
+  const [counts, setCounts] = useState<{
+    store: number;
+    standalone_tractor: number;
+    standalone_attachment: number;
+    simple_3tap: number;
+  }>({
     store: 0,
     standalone_tractor: 0,
     standalone_attachment: 0,
+    simple_3tap: 0,
   });
   const [loading, setLoading] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
@@ -37,15 +44,25 @@ const Bookings = () => {
 
   async function fetchCounts() {
     try {
-      const [stRes, tractorRes, attachRes] = await Promise.all([
-        axios.get("/api/booking?type=store"),
-        axios.get("/api/booking?type=standalone_tractor"),
-        axios.get("/api/booking?type=standalone_attachment"),
+      const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
+      const [stRes, tractorRes, attachRes, tapRes] = await Promise.all([
+        axios.get("/api/booking?type=store").catch(() => ({ data: [] })),
+        axios.get("/api/booking?type=standalone_tractor").catch(() => ({ data: [] })),
+        axios.get("/api/booking?type=standalone_attachment").catch(() => ({ data: [] })),
+        axios.get("/api/booking?type=3tap").catch(() => ({ data: [] })),
       ]);
+
+      const tapList = Array.isArray(tapRes.data)
+        ? tapRes.data
+        : Array.isArray(tapRes.data?.bookings)
+        ? tapRes.data.bookings
+        : [];
+
       setCounts({
         store: Array.isArray(stRes.data) ? stRes.data.length : 0,
         standalone_tractor: Array.isArray(tractorRes.data) ? tractorRes.data.length : 0,
         standalone_attachment: Array.isArray(attachRes.data) ? attachRes.data.length : 0,
+        simple_3tap: tapList.length,
       });
     } catch {}
   }
@@ -53,8 +70,57 @@ const Bookings = () => {
   async function fetchBookings(category: BookingCategoryTab) {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/booking?type=${category}`);
-      const data = Array.isArray(res.data) ? res.data : [];
+      let data: any[] = [];
+      const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
+
+      if (category === "simple_3tap") {
+        try {
+          const res = await axios.get(`/api/booking?type=3tap`);
+          if (Array.isArray(res.data) && res.data.length > 0) {
+            data = res.data;
+          }
+        } catch {}
+
+        // Dynamic FastAPI fallback if DB returns empty
+        if (data.length === 0) {
+          try {
+            const fastRes = await axios.get(`${fastApiBase}/simple-booking/list/all`, { timeout: 6000 })
+              .catch(() => axios.get(`${fastApiBase}/simple-booking/farmer`, { timeout: 6000 }));
+            const list = Array.isArray(fastRes?.data?.bookings)
+              ? fastRes.data.bookings
+              : Array.isArray(fastRes?.data)
+              ? fastRes.data
+              : [];
+            data = list.map((item: any) => ({
+              id: item.id || `simple_${item.booking_id || Math.random().toString(36).substring(7)}`,
+              user_id: item.user_id || item.farmer_id || "farmer_id",
+              store_id: item.store_id || null,
+              start_date: item.start_date || item.scheduled_date || new Date().toISOString(),
+              end_date: item.end_date || null,
+              booking_hours: item.booking_hours || "three_hours",
+              total_cost: item.total_cost || item.total_amount || 0,
+              bookingStatus: item.bookingStatus || item.status || "Open",
+              bookingType: "simple_3tap",
+              task_type: item.task_type || item.task_name || "Agricultural Task",
+              checkin_otp: item.checkin_otp || item.otp || null,
+              createdAt: item.createdAt || item.created_at || new Date().toISOString(),
+              user: {
+                id: item.user_id || item.farmer_id || "farmer_id",
+                first_name: item.farmer_name || item.user?.first_name || "Farmer",
+                last_name: item.user?.last_name || "",
+                email: item.user?.email || "farmer@holatractor.com",
+                mobile: item.user?.mobile || "",
+              },
+              store: item.store_name ? { name: item.store_name } : null,
+              farm: { name: item.farm_name || "Direct Field Parcel", area_sqm: (item.hectares || 3) * 10000 },
+            }));
+          } catch {}
+        }
+      } else {
+        const res = await axios.get(`/api/booking?type=${category}`);
+        data = Array.isArray(res.data) ? res.data : [];
+      }
+
       const sortedBookings = [...data].sort((a, b) => {
         const dateA = new Date(a.createdAt || a.start_date).getTime();
         const dateB = new Date(b.createdAt || b.start_date).getTime();
@@ -227,18 +293,39 @@ const Bookings = () => {
         <NewBooking />
       </div>
 
-      {/* 3-Tab Booking Category Selector */}
+      {/* 4-Category Booking Selector */}
       <div className="bg-slate-100 p-1.5 rounded-2xl flex flex-wrap gap-2 mb-6 border border-slate-200">
         <button
+          onClick={() => setActiveCategory("simple_3tap")}
+          className={`flex-1 min-w-[170px] py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 shadow-sm ${
+            activeCategory === "simple_3tap"
+              ? "bg-slate-900 text-white shadow-md scale-[1.01]"
+              : "bg-white text-slate-700 hover:bg-slate-50"
+          }`}
+        >
+          <span className="text-base">⚡</span>
+          <span>3-Tap Direct Bookings</span>
+          <span
+            className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+              activeCategory === "simple_3tap"
+                ? "bg-emerald-500 text-white"
+                : "bg-slate-200 text-slate-800"
+            }`}
+          >
+            {counts.simple_3tap}
+          </span>
+        </button>
+
+        <button
           onClick={() => setActiveCategory("store")}
-          className={`flex-1 min-w-[180px] py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2.5 shadow-sm ${
+          className={`flex-1 min-w-[170px] py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 shadow-sm ${
             activeCategory === "store"
               ? "bg-slate-900 text-white shadow-md scale-[1.01]"
               : "bg-white text-slate-700 hover:bg-slate-50"
           }`}
         >
           <span className="text-base">🏪</span>
-          <span>Store Machinery Bookings</span>
+          <span>Store Machinery</span>
           <span
             className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
               activeCategory === "store"
@@ -252,7 +339,7 @@ const Bookings = () => {
 
         <button
           onClick={() => setActiveCategory("standalone_tractor")}
-          className={`flex-1 min-w-[180px] py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2.5 shadow-sm ${
+          className={`flex-1 min-w-[170px] py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 shadow-sm ${
             activeCategory === "standalone_tractor"
               ? "bg-slate-900 text-white shadow-md scale-[1.01]"
               : "bg-white text-slate-700 hover:bg-slate-50"
@@ -273,7 +360,7 @@ const Bookings = () => {
 
         <button
           onClick={() => setActiveCategory("standalone_attachment")}
-          className={`flex-1 min-w-[180px] py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2.5 shadow-sm ${
+          className={`flex-1 min-w-[170px] py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 shadow-sm ${
             activeCategory === "standalone_attachment"
               ? "bg-slate-900 text-white shadow-md scale-[1.01]"
               : "bg-white text-slate-700 hover:bg-slate-50"
@@ -299,7 +386,7 @@ const Bookings = () => {
           <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by ID, farmer, store..."
+            placeholder="Search by ID, farmer, task, store..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -334,7 +421,13 @@ const Bookings = () => {
         <p className="w-12 text-center">#</p>
         <p className="w-40">Booking ID</p>
         <p className="w-44">Farmer / Customer</p>
-        <p className="w-44">{activeCategory === "store" ? "Assigned Store" : "Equipment / Parcel"}</p>
+        <p className="w-48">
+          {activeCategory === "simple_3tap"
+            ? "Task & Service"
+            : activeCategory === "store"
+            ? "Assigned Store"
+            : "Equipment / Parcel"}
+        </p>
         <p className="w-28 text-center">Start Date</p>
         <p className="w-24 text-center">Duration</p>
         <p className="w-28 text-center">Status</p>
@@ -381,16 +474,31 @@ const Bookings = () => {
                       </p>
                       <p className="text-xs text-slate-400 truncate">{details.user?.email || details.user?.mobile}</p>
                     </div>
-                    <div className="w-44 truncate">
-                      <p className="font-medium text-slate-700 truncate">
-                        {details.store?.name || details.farm?.name || "Independent"}
+                    <div className="w-48 truncate">
+                      <p className="font-semibold text-slate-800 truncate flex items-center gap-1.5">
+                        {details.task_type && (
+                          <span className="text-emerald-700 font-bold text-[11px] bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 shrink-0">
+                            ⚡ 3-Tap
+                          </span>
+                        )}
+                        <span className="truncate capitalize">
+                          {details.task_type ? `${details.task_type} Service` : (details.store?.name || details.farm?.name || "Independent")}
+                        </span>
                       </p>
-                      <p className="text-xs text-slate-400 truncate">
-                        {details.BookingStandaloneTractor?.[0]?.name ||
-                          details.BookingStandaloneAttachment?.[0]?.name ||
-                          details.BookingTractor?.[0]?.name ||
-                          details.task_type ||
-                          "Standard Parcel"}
+                      <p className="text-xs text-slate-500 truncate flex items-center gap-1.5 mt-0.5">
+                        {details.checkin_otp ? (
+                          <span className="font-mono text-emerald-800 font-bold bg-emerald-100 px-1.5 py-0.5 rounded text-[11px] shrink-0">
+                            🔐 OTP: {details.checkin_otp}
+                          </span>
+                        ) : null}
+                        <span className="truncate">
+                          {details.store?.name ? `🏪 ${details.store.name}` : ""}
+                          {details.BookingStandaloneTractor?.[0]?.name ? ` • 🚜 ${details.BookingStandaloneTractor[0].name}` : ""}
+                          {details.BookingTractor?.[0]?.name ? ` • 🚜 ${details.BookingTractor[0].name}` : ""}
+                          {details.BookingStandaloneAttachment?.[0]?.name ? ` • ⚙️ ${details.BookingStandaloneAttachment[0].name}` : ""}
+                          {details.BookingAttachment?.[0]?.name ? ` • ⚙️ ${details.BookingAttachment[0].name}` : ""}
+                          {!details.store?.name && !details.BookingTractor?.[0]?.name && (details.farm?.area_sqm ? `${(details.farm.area_sqm / 10000).toFixed(1)} ha parcel` : "Standard Parcel")}
+                        </span>
                       </p>
                     </div>
                     <div className="w-28 text-center text-xs font-medium text-slate-600">
@@ -429,7 +537,19 @@ const Bookings = () => {
                         <p className="text-base font-bold text-slate-900 mt-1">
                           {details.user?.first_name} {details.user?.last_name}
                         </p>
-                        <p className="text-xs text-slate-500">{details.store?.name || "Direct Booking"}</p>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                          {details.task_type && (
+                            <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                              ⚡ {details.task_type}
+                            </span>
+                          )}
+                          {details.checkin_otp && (
+                            <span className="text-[11px] font-mono font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded">
+                              🔐 {details.checkin_otp}
+                            </span>
+                          )}
+                          <span className="text-xs text-slate-500">{details.store?.name ? `🏪 ${details.store.name}` : (details.farm?.name || "Direct Booking")}</span>
+                        </div>
                       </div>
                       <div className="text-right">
                         <span
@@ -576,6 +696,28 @@ const Bookings = () => {
                   {/* Tab 1: Overview */}
                   {modalTab === "booking" && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {(selectedBooking.task_type || selectedBooking.checkin_otp) && (
+                        <div className="bg-gradient-to-r from-emerald-900 via-slate-900 to-slate-900 text-white p-5 rounded-2xl md:col-span-2 shadow-lg border border-emerald-500/30">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <span className="text-3xl p-2.5 bg-emerald-500/20 rounded-xl border border-emerald-400/30">⚡</span>
+                              <div>
+                                <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">FastAPI 3-Tap Dispatch</span>
+                                <h3 className="text-lg font-bold text-white">{selectedBooking.task_type || "Agricultural Machinery Service"}</h3>
+                                <p className="text-xs text-slate-300">Automated AI machinery dispatch with verified field operator</p>
+                              </div>
+                            </div>
+                            {selectedBooking.checkin_otp && (
+                              <div className="bg-emerald-500/20 border border-emerald-400/40 px-4 py-2 rounded-xl text-right">
+                                <span className="text-[10px] text-emerald-300 uppercase tracking-wider font-semibold block">Field Check-in OTP</span>
+                                <span className="font-mono text-xl font-black text-emerald-300 tracking-wider">
+                                  {selectedBooking.checkin_otp}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                       <div className="bg-white p-4 rounded-2xl border border-slate-200">
                         <p className="text-xs font-semibold text-slate-400 uppercase">Reservation Schedule</p>
                         <p className="text-sm font-bold text-slate-900 mt-1">
@@ -618,6 +760,18 @@ const Bookings = () => {
                           </p>
                         )}
                       </div>
+
+                      {selectedBooking.store && (
+                        <div className="bg-white p-4 rounded-2xl border border-slate-200 md:col-span-2">
+                          <p className="text-xs font-semibold text-slate-400 uppercase">Assigned Store Machinery Hub</p>
+                          <p className="text-base font-bold text-slate-900 mt-1 flex items-center gap-2">
+                            <span>🏪</span> {selectedBooking.store.name}
+                          </p>
+                          {selectedBooking.store.description && (
+                            <p className="text-xs text-slate-500 mt-0.5">{selectedBooking.store.description}</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
 
