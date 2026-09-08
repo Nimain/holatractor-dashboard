@@ -26,6 +26,10 @@ import {
   MapPin,
   Shield,
   Trash2,
+  Play,
+  Pause,
+  RotateCcw,
+  PlayCircle,
 } from "lucide-react"
 import { renderInstance, TractorAIBaseURL } from "@/utils/Axios/RenderInstance"
 import { useCookie } from "next-cookie"
@@ -40,6 +44,29 @@ import DeviceLocationService, {
 } from "@/utils/Axios/DeviceLocationService"
 import { getGoogleMapsTractorIcon } from "@/utils/map/tractorIcon"
 import { io, type Socket } from "socket.io-client"
+import { cleanAndSegmentRoute, haversineMeters, calculateBearing, type TripSegment, type CleanRouteResult } from "@/utils/gps/routeCleaner"
+
+declare global {
+  interface Window {
+    google: any
+  }
+}
+declare var google: any
+
+declare namespace google {
+  namespace maps {
+    type Map = any
+    type Marker = any
+    type Polyline = any
+    type LatLng = any
+    type Circle = any
+    type DirectionsResult = any
+    type Icon = any
+    type OverlayView = any
+    type Size = any
+    type Point = any
+  }
+}
 
 // Google Maps API Key - Replace with your actual API key
 const GOOGLE_MAPS_API_KEY = "AIzaSyDjMCI0xj2Q-WTc9J7yWX-Mvh0DBM7oHbg"
@@ -307,7 +334,8 @@ export default function DeviceSection() {
   const [pinging, setPinging] = useState<boolean>(false)
 
   // Route history, filter, and map style state on main map
-  const [selectedFilter, setSelectedFilter] = useState<string>("all")
+  const [selectedFilter, setSelectedFilter] = useState<string>("today")
+  const [selectedTripId, setSelectedTripId] = useState<string>("all")
   const [customStartDate, setCustomStartDate] = useState<string>(DeviceLocationService.getTodayDate())
   const [customEndDate, setCustomEndDate] = useState<string>(DeviceLocationService.getTodayDate())
   const [motionFilter, setMotionFilter] = useState<"all" | "moving" | "stopped">("all")
@@ -331,9 +359,20 @@ export default function DeviceSection() {
     if (selectedCountry === "ALL") return devices
     return devices.filter((d) => (d.countryCode || "BO") === selectedCountry)
   }, [devices, selectedCountry])
-  const historyPolylineRef = useRef<google.maps.Polyline | null>(null)
-  const startMarkerRef = useRef<google.maps.Marker | null>(null)
-  const waypointMarkersRef = useRef<google.maps.Marker[]>([])
+  const historyPolylineRef = useRef<any>(null)
+  const historyPolylinesRef = useRef<any[]>([])
+  const startMarkerRef = useRef<any>(null)
+  const endMarkerRef = useRef<any>(null)
+  const waypointMarkersRef = useRef<any[]>([])
+
+  // Live Movement Animation & Simulation states
+  const [isSimulating, setIsSimulating] = useState<boolean>(false)
+  const [simulationSpeed, setSimulationSpeed] = useState<number>(2)
+  const simulationIndexRef = useRef<number>(0)
+  const simulationTimerRef = useRef<any>(null)
+  const markerAnimationFramesRef = useRef<Record<string, number>>({})
+  const roadRouteCacheRef = useRef<Map<string, { lat: number; lng: number }[]>>(new Map())
+  const activeRoadLineRef = useRef<google.maps.Polyline | null>(null)
 
   // Geofence management state
   const [geofences, setGeofences] = useState<GeofenceItem[]>([])
@@ -359,54 +398,41 @@ export default function DeviceSection() {
     return historyLocations
   }, [historyLocations, motionFilter])
 
+  // Run road & field route cleaning, outlier rejection, stationary jitter compression, and trip segmentation
+  const cleanedRouteResult = useMemo(() => {
+    if (!selectedTractor || displayHistoryLocations.length === 0) return null
+    const selectedDev = devices.find((d) => d.id === selectedTractor)
+    const isIndia = selectedDev?.countryCode === "IN" || selectedDev?.region === "NE"
+    return cleanAndSegmentRoute(displayHistoryLocations, { isIndia })
+  }, [displayHistoryLocations, selectedTractor, devices])
+
   // Calculate live route telemetry analytics for the filtered history
   const routeStats = useMemo(() => {
-    if (!displayHistoryLocations || displayHistoryLocations.length === 0) {
-      return { distanceKm: 0, maxSpeed: 0, avgSpeed: 0, count: 0, movingPoints: 0, stoppedPoints: 0 }
-    }
-
-    let totalDist = 0
-    let maxSpeed = 0
-    let sumSpeed = 0
-    let moving = 0
-    let stopped = 0
-
-    for (let i = 0; i < displayHistoryLocations.length; i++) {
-      const pt = displayHistoryLocations[i]
-      const sp = Number(pt.speed || 0)
-      if (sp > maxSpeed) maxSpeed = sp
-      sumSpeed += sp
-      if (sp > 0) moving++
-      else stopped++
-
-      if (i > 0) {
-        const prev = displayHistoryLocations[i - 1]
-        const R = 6371 // km
-        const dLat = (pt.lat - prev.lat) * (Math.PI / 180)
-        const dLon = (pt.lon - prev.lon) * (Math.PI / 180)
-        const a =
-          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-          Math.cos(prev.lat * (Math.PI / 180)) *
-            Math.cos(pt.lat * (Math.PI / 180)) *
-            Math.sin(dLon / 2) *
-            Math.sin(dLon / 2)
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-        const d = R * c
-        if (!isNaN(d) && d < 150) {
-          totalDist += d
-        }
+    if (cleanedRouteResult) {
+      return {
+        distanceKm: cleanedRouteResult.totalDistanceKm,
+        maxSpeed: cleanedRouteResult.maxSpeedKmH,
+        avgSpeed: cleanedRouteResult.avgSpeedKmH,
+        count: cleanedRouteResult.allCleanPoints.length,
+        movingPoints: cleanedRouteResult.movingPointsCount,
+        stoppedPoints: cleanedRouteResult.stoppedPointsCount,
+        tripsCount: cleanedRouteResult.trips.length,
+        stopsCount: cleanedRouteResult.stopsCount,
+        outliersDropped: cleanedRouteResult.outliersDropped,
       }
     }
-
     return {
-      distanceKm: Number(totalDist.toFixed(2)),
-      maxSpeed: Math.round(maxSpeed),
-      avgSpeed: Math.round(sumSpeed / displayHistoryLocations.length),
-      count: displayHistoryLocations.length,
-      movingPoints: moving,
-      stoppedPoints: stopped,
+      distanceKm: 0,
+      maxSpeed: 0,
+      avgSpeed: 0,
+      count: 0,
+      movingPoints: 0,
+      stoppedPoints: 0,
+      tripsCount: 0,
+      stopsCount: 0,
+      outliersDropped: 0,
     }
-  }, [displayHistoryLocations])
+  }, [cleanedRouteResult])
 
 
   // Add Device Stepped Modal states
@@ -545,12 +571,309 @@ export default function DeviceSection() {
   // Load route history when selected tractor changes
   useEffect(() => {
     if (selectedTractor) {
+      setSelectedTripId("all")
       fetchTractorHistory(selectedTractor)
     } else {
       setRawHistoryPoints([])
     }
   }, [selectedTractor])
 
+
+  // Google Maps Directions Service Route Snapping (tractor motion always on the road)
+  const fetchRoadRoute = async (
+    fromPos: { lat: number; lng: number },
+    toPos: { lat: number; lng: number }
+  ): Promise<{ lat: number; lng: number }[]> => {
+    const dist = haversineMeters(fromPos.lat, fromPos.lng, toPos.lat, toPos.lng)
+    // If points are very close (< 12m), segment is already on road
+    if (dist < 12 || typeof window === "undefined" || !window.google?.maps?.DirectionsService) {
+      return [fromPos, toPos]
+    }
+
+    const cacheKey = `${fromPos.lat.toFixed(5)},${fromPos.lng.toFixed(5)}->${toPos.lat.toFixed(5)},${toPos.lng.toFixed(5)}`
+    if (roadRouteCacheRef.current.has(cacheKey)) {
+      return roadRouteCacheRef.current.get(cacheKey)!
+    }
+
+    try {
+      const directionsService = new window.google.maps.DirectionsService()
+      const res = await new Promise<any>((resolve) => {
+        directionsService.route(
+          {
+            origin: new window.google.maps.LatLng(fromPos.lat, fromPos.lng),
+            destination: new window.google.maps.LatLng(toPos.lat, toPos.lng),
+            travelMode: window.google.maps.TravelMode.DRIVING,
+          },
+          (result: any, status: any) => {
+            if (status === window.google.maps.DirectionsStatus.OK && result) {
+              resolve(result)
+            } else {
+              resolve(null)
+            }
+          }
+        )
+      })
+
+      if (res && res.routes?.[0]) {
+        const route = res.routes[0]
+        const roadPoints: { lat: number; lng: number }[] = []
+        const steps = route.legs?.[0]?.steps
+        if (steps && steps.length > 0) {
+          steps.forEach((step: any) => {
+            const pts = step.lat_lngs || step.path || []
+            pts.forEach((p: any) => {
+              const lat = typeof p.lat === "function" ? p.lat() : p.lat
+              const lng = typeof p.lng === "function" ? p.lng() : p.lng
+              if (typeof lat === "number" && typeof lng === "number" && !isNaN(lat) && !isNaN(lng)) {
+                roadPoints.push({ lat, lng })
+              }
+            })
+          })
+        }
+        if (roadPoints.length === 0 && route.overview_path) {
+          route.overview_path.forEach((p: any) => {
+            const lat = typeof p.lat === "function" ? p.lat() : p.lat
+            const lng = typeof p.lng === "function" ? p.lng() : p.lng
+            if (typeof lat === "number" && typeof lng === "number" && !isNaN(lat) && !isNaN(lng)) {
+              roadPoints.push({ lat, lng })
+            }
+          })
+        }
+
+        if (roadPoints.length >= 2) {
+          const clean: { lat: number; lng: number }[] = [roadPoints[0]]
+          for (let i = 1; i < roadPoints.length; i++) {
+            const prev = clean[clean.length - 1]
+            if (haversineMeters(prev.lat, prev.lng, roadPoints[i].lat, roadPoints[i].lng) >= 1.5) {
+              clean.push(roadPoints[i])
+            }
+          }
+          roadRouteCacheRef.current.set(cacheKey, clean)
+          return clean
+        }
+      }
+    } catch (err) {
+      console.warn("[Devices] DirectionsService road snap error:", err)
+    }
+
+    const fallback = [fromPos, toPos]
+    roadRouteCacheRef.current.set(cacheKey, fallback)
+    return fallback
+  }
+
+  // Smooth Road-Following Marker Animation Engine with Slow-Motion Real Wheel Motion
+  const animateMarkerMovement = async (opts: {
+    deviceId: string
+    fromPos: { lat: number; lng: number }
+    toPos: { lat: number; lng: number }
+    speed?: number
+    course?: number
+    durationMs?: number
+    snapToRoad?: boolean
+    onFinish?: (finalCourse: number) => void
+  }) => {
+    const { deviceId, fromPos, toPos, speed = 12, course, durationMs, snapToRoad = true, onFinish } = opts
+    const marker = markersRef.current.get(deviceId)
+    if (!marker || !window.google) {
+      onFinish?.(course || 0)
+      return
+    }
+
+    if (markerAnimationFramesRef.current[deviceId]) {
+      cancelAnimationFrame(markerAnimationFramesRef.current[deviceId])
+      delete markerAnimationFramesRef.current[deviceId]
+    }
+
+    // Retrieve road vertices along the actual road network
+    const roadPoints = snapToRoad ? await fetchRoadRoute(fromPos, toPos) : [fromPos, toPos]
+
+    // Compute cumulative distances along the road path
+    const segDists: number[] = [0]
+    let totalRoadDist = 0
+    for (let i = 1; i < roadPoints.length; i++) {
+      const d = haversineMeters(roadPoints[i - 1].lat, roadPoints[i - 1].lng, roadPoints[i].lat, roadPoints[i].lng)
+      totalRoadDist += d
+      segDists.push(totalRoadDist)
+    }
+
+    const firstSegmentBearing =
+      roadPoints.length >= 2
+        ? calculateBearing(roadPoints[0], roadPoints[1])
+        : calculateBearing(fromPos, toPos)
+
+    if (totalRoadDist < 0.5) {
+      marker.setPosition(new window.google.maps.LatLng(toPos.lat, toPos.lng))
+      onFinish?.(firstSegmentBearing)
+      return
+    }
+
+    // Realistic slow-motion tractor speed: 7.5 - 10.5 km/h (~2.0 - 2.9 m/s)
+    const effectiveSpeedKmH = Math.max(6, Math.min(speed > 0 ? speed : 8.5, 11))
+    const calculatedDuration = Math.round((totalRoadDist / (effectiveSpeedKmH / 3.6)) * 1000)
+    const animDurationMs = durationMs ? Math.max(durationMs, calculatedDuration) : Math.max(3500, calculatedDuration)
+
+    const isSelected = selectedTractor === deviceId
+
+    // Start heading: if course is explicitly passed and non-zero, start from it; otherwise face initial road segment directly
+    let currentHeading =
+      typeof course === "number" && course !== 0
+        ? course
+        : firstSegmentBearing
+
+    let lastRenderedCourse = Math.round(currentHeading)
+    let lastRenderedSteer = 0
+
+    // Set initial marker icon with rotated heading and slow-motion active rolling wheels
+    marker.setIcon(
+      getGoogleMapsTractorIcon({
+        course: lastRenderedCourse,
+        steerAngle: 0,
+        isSelected,
+        isLive: true,
+        isMoving: true,
+        status: "Active",
+        size: isSelected ? 64 : 48,
+      })
+    )
+
+    // Render active road trail polyline on map if selected
+    if (isSelected && googleMapRef.current && roadPoints.length > 2) {
+      if (activeRoadLineRef.current) {
+        activeRoadLineRef.current.setMap(null)
+      }
+      activeRoadLineRef.current = new window.google.maps.Polyline({
+        path: roadPoints,
+        geodesic: true,
+        strokeColor: "#10B981",
+        strokeOpacity: 0.85,
+        strokeWeight: 4,
+        map: googleMapRef.current,
+        zIndex: 50,
+      })
+    }
+
+    const startTime = performance.now()
+
+    function frame(now: number) {
+      const elapsed = now - startTime
+      const progress = Math.min(1, elapsed / animDurationMs)
+
+      // Natural vehicle motion: smooth start, steady cruising crawl, gentle stop
+      let eased = progress
+      if (progress < 0.12) {
+        eased = (progress / 0.12) * (progress / 0.12) * 0.12
+      } else if (progress > 0.88) {
+        const p = (1 - progress) / 0.12
+        eased = 1 - p * p * 0.12
+      }
+
+      const targetDist = totalRoadDist * eased
+
+      // Locate current road segment
+      let segIdx = 0
+      while (segIdx < roadPoints.length - 2 && segDists[segIdx + 1] < targetDist) {
+        segIdx++
+      }
+
+      const p1 = roadPoints[segIdx]
+      const p2 = roadPoints[segIdx + 1] || p1
+      const segSpan = (segDists[segIdx + 1] ?? 0) - segDists[segIdx]
+      const segRatio = segSpan > 0 ? Math.max(0, Math.min(1, (targetDist - segDists[segIdx]) / segSpan)) : 0
+
+      const curLat = p1.lat + (p2.lat - p1.lat) * segRatio
+      const curLng = p1.lng + (p2.lng - p1.lng) * segRatio
+
+      // Determine road segment heading cleanly (guard against identical points returning 0)
+      let targetBearing = currentHeading
+      for (let k = segIdx + 1; k < roadPoints.length; k++) {
+        if (haversineMeters(p1.lat, p1.lng, roadPoints[k].lat, roadPoints[k].lng) >= 1.0) {
+          targetBearing = calculateBearing(p1, roadPoints[k])
+          break
+        }
+      }
+      if (segIdx >= roadPoints.length - 2 && roadPoints.length >= 2) {
+        const prevP = roadPoints[roadPoints.length - 2]
+        const lastP = roadPoints[roadPoints.length - 1]
+        if (haversineMeters(prevP.lat, prevP.lng, lastP.lat, lastP.lng) >= 1.0) {
+          targetBearing = calculateBearing(prevP, lastP)
+        }
+      }
+
+      // Shortest angular difference between current heading and target road direction (-180° to +180°)
+      const angleDiff = ((targetBearing - currentHeading + 540) % 360) - 180
+
+      // Dynamic rotation step:
+      // Turn quickly to align with road (~4° - 6° per frame), smooth out on subtle turns (~2.2° per frame)
+      const turnStepRate = Math.max(2.2, Math.min(6.0, Math.abs(angleDiff) * 0.14))
+      if (Math.abs(angleDiff) > 0.4) {
+        const turnStep = Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), turnStepRate)
+        currentHeading = (currentHeading + turnStep + 360) % 360
+      } else {
+        currentHeading = targetBearing
+      }
+
+      // Dynamic steering deflection for front wheels: steer into the turn (-16° to +16°)
+      const currentSteer = Math.max(-16, Math.min(16, angleDiff * 0.65))
+
+      const renderedCourse = Math.round(currentHeading)
+      const renderedSteer = Math.round(currentSteer)
+
+      const activeMarker = markersRef.current.get(deviceId) || marker
+
+      // Re-render icon smoothly as tractor head rotates towards road direction
+      if (renderedCourse !== lastRenderedCourse || renderedSteer !== lastRenderedSteer) {
+        lastRenderedCourse = renderedCourse
+        lastRenderedSteer = renderedSteer
+        activeMarker.setIcon(
+          getGoogleMapsTractorIcon({
+            course: renderedCourse,
+            steerAngle: renderedSteer,
+            isSelected,
+            isLive: true,
+            isMoving: true,
+            status: "Active",
+            size: isSelected ? 64 : 48,
+          })
+        )
+      }
+
+      if (window.google?.maps) {
+        const latLng = new window.google.maps.LatLng(curLat, curLng)
+        activeMarker.setPosition(latLng)
+        if (isSelected && googleMapRef.current) {
+          googleMapRef.current.panTo(latLng)
+        }
+      }
+
+      if (progress < 1) {
+        markerAnimationFramesRef.current[deviceId] = requestAnimationFrame(frame)
+      } else {
+        delete markerAnimationFramesRef.current[deviceId]
+        if (activeRoadLineRef.current) {
+          activeRoadLineRef.current.setMap(null)
+          activeRoadLineRef.current = null
+        }
+        if (window.google?.maps) {
+          activeMarker.setPosition(new window.google.maps.LatLng(toPos.lat, toPos.lng))
+        }
+        // When stopped: tractor is Idle, wheels rest straight and stationary, facing final road direction!
+        activeMarker.setIcon(
+          getGoogleMapsTractorIcon({
+            course: lastRenderedCourse,
+            steerAngle: 0,
+            isSelected,
+            isLive: true,
+            isMoving: false,
+            status: "Idle",
+            size: isSelected ? 64 : 48,
+          })
+        )
+        onFinish?.(lastRenderedCourse)
+      }
+    }
+
+    markerAnimationFramesRef.current[deviceId] = requestAnimationFrame(frame)
+  }
 
   // Socket.IO Real-time Motion Tracking Connection to device.holatractor.com
   useEffect(() => {
@@ -605,22 +928,41 @@ export default function DeviceSection() {
         const speedVal = typeof data.speed === "number" ? data.speed : Number(data.speed || 0)
         const courseVal = typeof data.course === "number" ? data.course : Number(data.course || 0)
         const batteryVal = data.battery_level || target.battery || 85
+        const isMoving = speedVal > 0.5
+        const deviceStatus = isMoving ? "Active" : "Idle"
 
         // Smoothly animate Google Maps marker position and heading rotation
         const marker = markersRef.current.get(data.imei)
         if (marker && window.google) {
-          const newPos = new window.google.maps.LatLng(fixedLat, fixedLon)
-          marker.setPosition(newPos)
-          marker.setIcon(
-            getGoogleMapsTractorIcon({
-              course: courseVal,
-              isSelected: selectedTractor === data.imei,
-              isLive: true,
-              isMoving: speedVal > 0.5,
-              status: "Active",
-              size: 72,
-            })
-          )
+          const prevPos = marker.getPosition()
+          if (prevPos) {
+            const from = { lat: prevPos.lat(), lng: prevPos.lng() }
+            const to = { lat: fixedLat, lng: fixedLon }
+            const dMeters = haversineMeters(from.lat, from.lng, to.lat, to.lng)
+
+            if (dMeters > 0.8 && isMoving) {
+              animateMarkerMovement({
+                deviceId: data.imei,
+                fromPos: from,
+                toPos: to,
+                speed: speedVal,
+                course: courseVal,
+                durationMs: Math.min(2500, Math.max(800, (dMeters / (speedVal / 3.6)) * 1000)),
+              })
+            } else {
+              marker.setPosition(new window.google.maps.LatLng(fixedLat, fixedLon))
+              marker.setIcon(
+                getGoogleMapsTractorIcon({
+                  course: courseVal,
+                  isSelected: selectedTractor === data.imei,
+                  isLive: true,
+                  isMoving: false,
+                  status: "Idle",
+                  size: selectedTractor === data.imei ? 64 : 48,
+                })
+              )
+            }
+          }
         }
 
         // Update live breadcrumb trail
@@ -640,7 +982,7 @@ export default function DeviceSection() {
                 course: courseVal,
                 battery: batteryVal,
                 lastSeen: data.timestamp || data.created_at || new Date().toISOString(),
-                status: "Active",
+                status: deviceStatus,
               }
             : d
         )
@@ -1273,44 +1615,390 @@ export default function DeviceSection() {
       // 2. Fetch fresh real-time coordinates and telemetry from /api/device/:imei
       const latest = await DeviceLocationService.getCurrentDeviceLocation(dev.id, dev.region)
       if (latest && latest.lat && latest.lon && latest.lat !== 0 && latest.lon !== 0) {
+        const speedVal = Number(latest.speed || 0)
+        const isMoving = speedVal > 0.5
+        const deviceStatus = isMoving ? "Active" : "Idle"
+        const newLat = Number(latest.lat)
+        const newLng = Number(latest.lon)
+
+        const marker = markersRef.current.get(dev.id)
+        if (marker && window.google) {
+          const prevPos = marker.getPosition()
+          if (prevPos) {
+            const from = { lat: prevPos.lat(), lng: prevPos.lng() }
+            const to = { lat: newLat, lng: newLng }
+            const dMeters = haversineMeters(from.lat, from.lng, to.lat, to.lng)
+
+            if (dMeters > 0.8 && isMoving) {
+              animateMarkerMovement({
+                deviceId: dev.id,
+                fromPos: from,
+                toPos: to,
+                speed: speedVal,
+                course: latest.course || dev.course,
+                durationMs: 1500,
+              })
+            } else {
+              marker.setPosition(new window.google.maps.LatLng(newLat, newLng))
+              marker.setIcon(
+                getGoogleMapsTractorIcon({
+                  course: latest.course || dev.course || 0,
+                  isSelected: true,
+                  isLive: true,
+                  isMoving: false,
+                  status: "Idle",
+                  size: 64,
+                })
+              )
+            }
+          }
+        }
+
         setDevices((prev) =>
           prev.map((d) =>
             d.id === dev.id
               ? {
                   ...d,
-                  lat: Number(latest.lat),
-                  lng: Number(latest.lon),
-                  speed: latest.speed || d.speed,
+                  lat: newLat,
+                  lng: newLng,
+                  speed: speedVal,
                   course: latest.course || d.course,
                   battery: latest.battery_level || d.battery,
-                  lastSeen: latest.timestamp || latest.created_at,
-                  status: "Active",
+                  lastSeen: latest.timestamp || latest.created_at || new Date().toISOString(),
+                  status: deviceStatus,
                   hasGps: true,
                 }
               : d
           )
         )
         if (googleMapRef.current) {
-          googleMapRef.current.panTo({ lat: Number(latest.lat), lng: Number(latest.lon) })
-          googleMapRef.current.setZoom(16)
+          googleMapRef.current.panTo({ lat: newLat, lng: newLng })
+          googleMapRef.current.setZoom(17)
         }
         // Refresh route history as well
         loadMainMapRoute(dev.id, selectedFilter, customStartDate, customEndDate)
-        successMessage(`✅ Ping successful: ${latest.speed || 0} km/h • Battery ${latest.battery_level || 85}% • Lat ${latest.lat.toFixed(4)}, Lon ${latest.lon.toFixed(4)}`)
+        if (isMoving) {
+          successMessage(`✅ Ping successful: In Motion at ${speedVal.toFixed(1)} km/h • Battery ${latest.battery_level || 85}%`)
+        } else {
+          successMessage(`✅ Ping successful: Tractor is Idle (Parked) • Battery ${latest.battery_level || 85}% • Lat ${newLat.toFixed(4)}, Lon ${newLng.toFixed(4)}`)
+        }
       } else {
+        // Device is not responding -> Set state to Idle!
         setDevices((prev) =>
-          prev.map((d) => (d.id === dev.id ? { ...d, status: "Not Connected", hasGps: false } : d))
+          prev.map((d) => (d.id === dev.id ? { ...d, status: "Idle", hasGps: false, speed: 0 } : d))
         )
-        errorMessage("Device is offline / No GPS response received.")
+        const m = markersRef.current.get(dev.id)
+        if (m) {
+          m.setIcon(
+            getGoogleMapsTractorIcon({
+              course: dev.course || 0,
+              isSelected: true,
+              isLive: false,
+              isMoving: false,
+              status: "Idle",
+              size: 64,
+            })
+          )
+        }
+        errorMessage("Device did not respond. Tractor status set to Idle.")
       }
     } catch (err: any) {
       setDevices((prev) =>
-        prev.map((d) => (d.id === dev.id ? { ...d, status: "Not Connected", hasGps: false } : d))
+        prev.map((d) => (d.id === dev.id ? { ...d, status: "Idle", hasGps: false, speed: 0 } : d))
       )
-      errorMessage(err?.message || "Device ping timed out.")
+      errorMessage(err?.message || "Device did not respond. Status set to Idle.")
     } finally {
       setPinging(false)
     }
+  }
+
+  // Live Movement Simulation / Route Replay Player
+  const startLiveSimulation = () => {
+    const dev = getSelectedDevice()
+    if (!dev) return
+
+    // Get points to simulate along (selected trip or all clean points)
+    const pointsToRun =
+      selectedTripId !== "all" && cleanedRouteResult
+        ? cleanedRouteResult.trips.find((t) => t.id === selectedTripId)?.points || []
+        : cleanedRouteResult?.allCleanPoints || []
+
+    if (pointsToRun.length < 2) {
+      errorMessage("Not enough path points available to simulate live movement.")
+      return
+    }
+
+    setIsSimulating(true)
+    simulationIndexRef.current = 0
+    successMessage(`🚜 Starting live movement simulation (${pointsToRun.length} waypoints at ${simulationSpeed}x speed)...`)
+
+    // Position marker at start of simulation
+    const first = pointsToRun[0]
+    const marker = markersRef.current.get(dev.id)
+    if (marker && window.google) {
+      marker.setPosition(new window.google.maps.LatLng(first.lat, first.lng))
+    }
+    if (googleMapRef.current) {
+      googleMapRef.current.panTo({ lat: first.lat, lng: first.lng })
+      googleMapRef.current.setZoom(18)
+    }
+
+    const runNextStep = () => {
+      const idx = simulationIndexRef.current
+      if (idx >= pointsToRun.length - 1) {
+        // Finished simulation: settle into Idle!
+        setIsSimulating(false)
+        const lastPt = pointsToRun[pointsToRun.length - 1]
+        setDevices((prev) =>
+          prev.map((d) =>
+            d.id === dev.id
+              ? {
+                  ...d,
+                  lat: lastPt.lat,
+                  lng: lastPt.lng,
+                  speed: 0,
+                  status: "Idle",
+                }
+              : d
+          )
+        )
+        const m = markersRef.current.get(dev.id)
+        if (m) {
+          m.setIcon(
+            getGoogleMapsTractorIcon({
+              course: lastPt.course || 0,
+              isSelected: true,
+              isLive: true,
+              isMoving: false,
+              status: "Idle",
+              size: 64,
+            })
+          )
+        }
+        successMessage("🏁 Simulation complete. Tractor has stopped and is now Idle.")
+        return
+      }
+
+      const curr = pointsToRun[idx]
+      const next = pointsToRun[idx + 1]
+      simulationIndexRef.current = idx + 1
+
+      const dist = haversineMeters(curr.lat, curr.lng, next.lat, next.lng)
+      const simSpeedKmH = Math.max(8, next.speed > 0 ? next.speed : 14)
+      const stepDuration = Math.max(350, Math.min(2200, (dist / (simSpeedKmH / 3.6)) * 1000 / simulationSpeed))
+      const isStopPoint = next.isStop || next.speed <= 0.5
+      const currentSpeed = isStopPoint ? 0 : simSpeedKmH
+      const stepBearing = next.course || calculateBearing(curr, next)
+
+      setDevices((prev) =>
+        prev.map((d) =>
+          d.id === dev.id
+            ? {
+                ...d,
+                lat: next.lat,
+                lng: next.lng,
+                speed: currentSpeed,
+                course: stepBearing || d.course,
+                status: isStopPoint ? "Idle" : "Active",
+              }
+            : d
+        )
+      )
+
+      animateMarkerMovement({
+        deviceId: dev.id,
+        fromPos: { lat: curr.lat, lng: curr.lng },
+        toPos: { lat: next.lat, lng: next.lng },
+        speed: currentSpeed,
+        course: stepBearing,
+        durationMs: stepDuration,
+        onFinish: () => {
+          if (isStopPoint) {
+            // Idle pause at stop
+            simulationTimerRef.current = setTimeout(runNextStep, 900 / simulationSpeed)
+          } else {
+            simulationTimerRef.current = setTimeout(runNextStep, 80)
+          }
+        },
+      })
+    }
+
+    runNextStep()
+  }
+
+  const stopLiveSimulation = () => {
+    setIsSimulating(false)
+    if (simulationTimerRef.current) {
+      clearTimeout(simulationTimerRef.current)
+      simulationTimerRef.current = null
+    }
+    const dev = getSelectedDevice()
+    if (dev) {
+      if (markerAnimationFramesRef.current[dev.id]) {
+        cancelAnimationFrame(markerAnimationFramesRef.current[dev.id])
+        delete markerAnimationFramesRef.current[dev.id]
+      }
+      setDevices((prev) =>
+        prev.map((d) => (d.id === dev.id ? { ...d, speed: 0, status: "Idle" } : d))
+      )
+      const m = markersRef.current.get(dev.id)
+      if (m) {
+        m.setIcon(
+          getGoogleMapsTractorIcon({
+            course: dev.course || 0,
+            isSelected: true,
+            isLive: true,
+            isMoving: false,
+            status: "Idle",
+            size: 64,
+          })
+        )
+      }
+    }
+    successMessage("⏹ Simulation paused. Tractor is Idle.")
+  }
+
+  // Instant Test Live Move (+50 meters)
+  // Road-Snapped Test Live Move (~60-80m forward along the road)
+  const handleTestLiveMove = async () => {
+    const dev = getSelectedDevice()
+    if (!dev) return
+
+    const initialHeading = dev.course || 45
+    const headingRad = (initialHeading * Math.PI) / 180
+    const dMeters = 75 // advance ~75 meters
+    const deltaLat = (dMeters * Math.cos(headingRad)) / 111320
+    const deltaLng = (dMeters * Math.sin(headingRad)) / (111320 * Math.cos(dev.lat * (Math.PI / 180)))
+
+    const fromPos = { lat: dev.lat, lng: dev.lng }
+    const rawTarget = { lat: dev.lat + deltaLat, lng: dev.lng + deltaLng }
+
+    const roadPoints = await fetchRoadRoute(fromPos, rawTarget)
+    const destination = roadPoints[roadPoints.length - 1] || rawTarget
+    const moveSpeed = 8.5 // km/h realistic slow motion tractor speed
+
+    const firstSegmentBearing =
+      roadPoints.length >= 2
+        ? calculateBearing(roadPoints[0], roadPoints[1])
+        : calculateBearing(fromPos, destination)
+
+    successMessage(`🚜 Live Road Move: Tractor traveling forward on the road in slow motion (${moveSpeed} km/h)...`)
+
+    setDevices((prev) =>
+      prev.map((d) => (d.id === dev.id ? { ...d, speed: moveSpeed, status: "Active", course: firstSegmentBearing } : d))
+    )
+
+    animateMarkerMovement({
+      deviceId: dev.id,
+      fromPos,
+      toPos: destination,
+      speed: moveSpeed,
+      course: dev.course && dev.course !== 0 ? dev.course : firstSegmentBearing,
+      snapToRoad: true,
+      onFinish: (finalCourse) => {
+        setDevices((prev) =>
+          prev.map((d) =>
+            d.id === dev.id
+              ? {
+                  ...d,
+                  lat: destination.lat,
+                  lng: destination.lng,
+                  course: finalCourse,
+                  speed: 0,
+                  status: "Idle",
+                }
+              : d
+          )
+        )
+        const m = markersRef.current.get(dev.id)
+        if (m) {
+          m.setIcon(
+            getGoogleMapsTractorIcon({
+              course: finalCourse,
+              isSelected: true,
+              isLive: true,
+              isMoving: false,
+              status: "Idle",
+              size: 64,
+            })
+          )
+        }
+        successMessage("⏸ Arrived on road. Tractor is now Idle (Parked).")
+      },
+    })
+  }
+
+  // Random Road Point Navigation (Between two responding points randomly on road with turning direction)
+  const handleRandomRoadMove = async () => {
+    const dev = getSelectedDevice()
+    if (!dev) return
+
+    // Pick a random distance (180m - 350m) and random heading (0 - 360 deg)
+    const randomAngle = Math.random() * 2 * Math.PI
+    const randomDist = 180 + Math.random() * 180 // meters
+    const randLat = dev.lat + (randomDist * Math.cos(randomAngle)) / 111320
+    const randLng = dev.lng + (randomDist * Math.sin(randomAngle)) / (111320 * Math.cos(dev.lat * (Math.PI / 180)))
+
+    const fromPos = { lat: dev.lat, lng: dev.lng }
+    const rawTarget = { lat: randLat, lng: randLng }
+
+    successMessage("🗺️ Calculating road path to random responding point via Google Directions...")
+
+    const roadPoints = await fetchRoadRoute(fromPos, rawTarget)
+    if (!roadPoints || roadPoints.length < 2) {
+      errorMessage("Could not find a navigable road path to that point. Please try again.")
+      return
+    }
+
+    const destination = roadPoints[roadPoints.length - 1]
+    const moveSpeed = 8.5 // slow motion tractor speed in km/h
+
+    const firstSegmentBearing = calculateBearing(roadPoints[0], roadPoints[1])
+
+    successMessage(`🚜 Random Road Run: Tractor moving forward on the road with slow-motion wheel roll...`)
+
+    setDevices((prev) =>
+      prev.map((d) => (d.id === dev.id ? { ...d, speed: moveSpeed, status: "Active", course: firstSegmentBearing } : d))
+    )
+
+    animateMarkerMovement({
+      deviceId: dev.id,
+      fromPos,
+      toPos: destination,
+      speed: moveSpeed,
+      course: dev.course && dev.course !== 0 ? dev.course : firstSegmentBearing,
+      snapToRoad: true,
+      onFinish: (finalCourse) => {
+        setDevices((prev) =>
+          prev.map((d) =>
+            d.id === dev.id
+              ? {
+                  ...d,
+                  lat: destination.lat,
+                  lng: destination.lng,
+                  course: finalCourse,
+                  speed: 0,
+                  status: "Idle",
+                }
+              : d
+          )
+        )
+        const m = markersRef.current.get(dev.id)
+        if (m) {
+          m.setIcon(
+            getGoogleMapsTractorIcon({
+              course: finalCourse,
+              isSelected: true,
+              isLive: true,
+              isMoving: false,
+              status: "Idle",
+              size: 64,
+            })
+          )
+        }
+        successMessage("🏁 Arrived at destination road point. Tractor is now Idle.")
+      },
+    })
   }
 
 
@@ -1393,11 +2081,11 @@ export default function DeviceSection() {
   useEffect(() => {
     if (!googleMapRef.current || !mapsLoaded || typeof window === "undefined" || !window.google?.maps?.Marker) return
 
-    // Clear existing markers
-    markersRef.current.forEach((marker) => marker.setMap(null))
-    markersRef.current.clear()
-
-    if (!devices || devices.length === 0) return
+    if (!devices || devices.length === 0) {
+      markersRef.current.forEach((marker) => marker.setMap(null))
+      markersRef.current.clear()
+      return
+    }
 
     // Filter by selected country
     const countryFilteredDevices =
@@ -1411,52 +2099,84 @@ export default function DeviceSection() {
         ? countryFilteredDevices.filter((d) => d.id === selectedTractor)
         : countryFilteredDevices
 
+    const activeIds = new Set<string>()
+
     devicesToRender.forEach((dev) => {
       if (!dev.lat || !dev.lng || dev.lat === 0 || dev.lng === 0) return
+      activeIds.add(dev.id)
 
       const isSelected = dev.id === selectedTractor
-      const marker = new window.google.maps.Marker({
-        position: { lat: dev.lat, lng: dev.lng },
-        map: googleMapRef.current,
-        icon: getGoogleMapsTractorIcon({
-          course: dev.course || 0,
-          isSelected,
-          isLive: isSocketConnected && isSelected,
-          isMoving: (dev.speed || 0) > 0.5,
-          status: dev.status,
-          size: isSelected ? 64 : 48,
-        }),
-        title: `${dev.name} (IMEI: ${dev.id})`,
-        zIndex: isSelected ? 200 : 100,
-      })
+      const isAnimating = !!markerAnimationFramesRef.current[dev.id]
+      const existingMarker = markersRef.current.get(dev.id)
 
-      const infoWindow = new window.google.maps.InfoWindow({
-        content: `
-          <div style="color: #000; padding: 8px; font-family: system-ui, -apple-system, sans-serif; max-width: 220px;">
-            ${dev.tractorImage ? `<img src="${dev.tractorImage}" style="width: 100%; height: 90px; object-fit: cover; border-radius: 6px; margin-bottom: 8px;" />` : ""}
-            <div style="font-weight: 700; font-size: 14px; color: #0F172A; margin-bottom: 2px;">${dev.name}</div>
-            <div style="font-size: 12px; color: #475569; margin-bottom: 4px;">${dev.field}</div>
-            <div style="display: flex; gap: 4px; margin-bottom: 6px;">
-              <span style="font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: ${dev.status === "Active" ? "#DCFCE7; color: #166534;" : "#FEF3C7; color: #92400E;"}">${dev.status}</span>
-              <span style="font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: #F1F5F9; color: #475569;">${dev.region}</span>
-              <span style="font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: #E0E7FF; color: #3730A3;">${dev.countryCode === "IN" ? "🇮🇳 India" : dev.countryCode === "PE" ? "🇵🇪 Peru" : "🇧🇴 Bolivia"}</span>
+      if (existingMarker) {
+        // If marker is actively animating along a road, do not disrupt its real-time frame loop
+        if (!isAnimating) {
+          existingMarker.setPosition({ lat: dev.lat, lng: dev.lng })
+          existingMarker.setIcon(
+            getGoogleMapsTractorIcon({
+              course: dev.course || 0,
+              isSelected,
+              isLive: isSocketConnected && isSelected,
+              isMoving: (dev.speed || 0) > 0.5,
+              status: dev.status,
+              size: isSelected ? 64 : 48,
+            })
+          )
+        }
+        existingMarker.setZIndex(isSelected ? 200 : 100)
+      } else {
+        const marker = new window.google.maps.Marker({
+          position: { lat: dev.lat, lng: dev.lng },
+          map: googleMapRef.current,
+          icon: getGoogleMapsTractorIcon({
+            course: dev.course || 0,
+            isSelected,
+            isLive: isSocketConnected && isSelected,
+            isMoving: (dev.speed || 0) > 0.5,
+            status: dev.status,
+            size: isSelected ? 64 : 48,
+          }),
+          title: `${dev.name} (IMEI: ${dev.id})`,
+          zIndex: isSelected ? 200 : 100,
+        })
+
+        const infoWindow = new window.google.maps.InfoWindow({
+          content: `
+            <div style="color: #000; padding: 8px; font-family: system-ui, -apple-system, sans-serif; max-width: 220px;">
+              ${dev.tractorImage ? `<img src="${dev.tractorImage}" style="width: 100%; height: 90px; object-fit: cover; border-radius: 6px; margin-bottom: 8px;" />` : ""}
+              <div style="font-weight: 700; font-size: 14px; color: #0F172A; margin-bottom: 2px;">${dev.name}</div>
+              <div style="font-size: 12px; color: #475569; margin-bottom: 4px;">${dev.field}</div>
+              <div style="display: flex; gap: 4px; margin-bottom: 6px;">
+                <span style="font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: ${dev.status === "Active" ? "#DCFCE7; color: #166534;" : "#FEF3C7; color: #92400E;"}">${dev.status}</span>
+                <span style="font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: #F1F5F9; color: #475569;">${dev.region}</span>
+                <span style="font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: #E0E7FF; color: #3730A3;">${dev.countryCode === "IN" ? "🇮🇳 India" : dev.countryCode === "PE" ? "🇵🇪 Peru" : "🇧🇴 Bolivia"}</span>
+              </div>
+              <div style="font-size: 11px; color: #334155; line-height: 1.4;">
+                <strong>Speed:</strong> ${(dev.speed || 0).toFixed(1)} km/h<br/>
+                <strong>Heading:</strong> ${dev.course || 0}°<br/>
+                <strong>Battery:</strong> ${dev.battery || 85}%<br/>
+                <span style="font-size: 10px; color: #64748B; font-family: monospace;">Lat: ${dev.lat.toFixed(5)}, Lon: ${dev.lng.toFixed(5)}</span>
+              </div>
             </div>
-            <div style="font-size: 11px; color: #334155; line-height: 1.4;">
-              <strong>Speed:</strong> ${(dev.speed || 0).toFixed(1)} km/h<br/>
-              <strong>Heading:</strong> ${dev.course || 0}°<br/>
-              <strong>Battery:</strong> ${dev.battery || 85}%<br/>
-              <span style="font-size: 10px; color: #64748B; font-family: monospace;">Lat: ${dev.lat.toFixed(5)}, Lon: ${dev.lng.toFixed(5)}</span>
-            </div>
-          </div>
-        `,
-      })
+          `,
+        })
 
-      marker.addListener("click", () => {
-        handleMarkerClick(dev.id)
-        infoWindow.open(googleMapRef.current, marker)
-      })
+        marker.addListener("click", () => {
+          handleMarkerClick(dev.id)
+          infoWindow.open(googleMapRef.current, marker)
+        })
 
-      markersRef.current.set(dev.id, marker)
+        markersRef.current.set(dev.id, marker)
+      }
+    })
+
+    // Clean up markers that are no longer in devicesToRender
+    markersRef.current.forEach((marker, id) => {
+      if (!activeIds.has(id)) {
+        marker.setMap(null)
+        markersRef.current.delete(id)
+      }
     })
   }, [devices, mapsLoaded, selectedTractor, isSocketConnected, showOnlySelectedTractor, selectedCountry])
 
@@ -1464,14 +2184,21 @@ export default function DeviceSection() {
   useEffect(() => {
     if (!googleMapRef.current || !mapsLoaded || !window.google) return
 
-    // Clear previous route polyline and markers
+    // Clear previous route polylines and markers
     if (historyPolylineRef.current) {
       historyPolylineRef.current.setMap(null)
       historyPolylineRef.current = null
     }
+    historyPolylinesRef.current.forEach((p) => p.setMap(null))
+    historyPolylinesRef.current = []
+
     if (startMarkerRef.current) {
       startMarkerRef.current.setMap(null)
       startMarkerRef.current = null
+    }
+    if (endMarkerRef.current) {
+      endMarkerRef.current.setMap(null)
+      endMarkerRef.current = null
     }
     waypointMarkersRef.current.forEach((m) => m.setMap(null))
     waypointMarkersRef.current = []
@@ -1480,7 +2207,7 @@ export default function DeviceSection() {
 
     const selectedDev = devices.find((d) => d.id === selectedTractor)
 
-    if (!showRoutePath || displayHistoryLocations.length === 0) {
+    if (!showRoutePath || !cleanedRouteResult || cleanedRouteResult.trips.length === 0) {
       // If no route points for this filter, focus on device current position
       if (selectedDev && selectedDev.lat !== 0 && selectedDev.lng !== 0) {
         googleMapRef.current.panTo({ lat: selectedDev.lat, lng: selectedDev.lng })
@@ -1489,88 +2216,147 @@ export default function DeviceSection() {
       return
     }
 
-    const validLocations = displayHistoryLocations.filter(
-      (loc) => loc.lat && loc.lon && !isNaN(loc.lat) && !isNaN(loc.lon) && loc.lat !== 0 && loc.lon !== 0
-    )
+    // Determine trips to render: all or selected individual trip
+    const tripsToRender =
+      selectedTripId === "all"
+        ? cleanedRouteResult.trips
+        : cleanedRouteResult.trips.filter((t) => t.id === selectedTripId)
 
-    const isIndiaDev = selectedDev?.countryCode === "IN" || selectedDev?.region === "NE"
-    const path = validLocations.map((loc) => ({
-      lat: isIndiaDev ? Math.abs(loc.lat) : loc.lat > 0 ? -loc.lat : loc.lat,
-      lng: isIndiaDev ? Math.abs(loc.lon) : loc.lon > 0 ? -loc.lon : loc.lon,
-    }))
+    const effectiveTrips = tripsToRender.length > 0 ? tripsToRender : cleanedRouteResult.trips
+    const allRenderedCoords: { lat: number; lng: number }[] = []
 
-    if (path.length > 0) {
-      // Draw smooth blue route polyline
-      historyPolylineRef.current = new window.google.maps.Polyline({
-        path,
+    effectiveTrips.forEach((trip, tripIndex) => {
+      if (trip.path.length < 2) return
+
+      // Distinct vibrant color if multiple trips
+      const tripColor =
+        effectiveTrips.length === 1
+          ? "#2563EB"
+          : tripIndex % 4 === 0
+          ? "#2563EB" // royal blue
+          : tripIndex % 4 === 1
+          ? "#059669" // emerald green
+          : tripIndex % 4 === 2
+          ? "#D97706" // amber
+          : "#7C3AED" // violet
+
+      // 1. High-contrast dark casing outline for satellite field clarity
+      const casing = new window.google.maps.Polyline({
+        path: trip.path,
         geodesic: true,
-        strokeColor: "#3B82F6",
-        strokeOpacity: 0.9,
-        strokeWeight: 4.5,
+        strokeColor: "#0F172A",
+        strokeOpacity: 0.7,
+        strokeWeight: 6.5,
         map: googleMapRef.current,
+        zIndex: 35 + tripIndex,
       })
+      historyPolylinesRef.current.push(casing)
 
-      // Add Start Point Marker (oldest point is at index 0 in chronological order)
-      if (path.length > 1) {
-        const startPoint = path[0]
-        const startLoc = validLocations[0]
-        startMarkerRef.current = new window.google.maps.Marker({
-          position: startPoint,
-          map: googleMapRef.current,
-          icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            scale: 8,
-            fillColor: "#10B981",
-            fillOpacity: 1,
-            strokeColor: "#FFFFFF",
-            strokeWeight: 2,
+      // 2. Core route line with directional forward arrows along the road / field swath
+      const mainPolyline = new window.google.maps.Polyline({
+        path: trip.path,
+        geodesic: true,
+        strokeColor: tripColor,
+        strokeOpacity: 0.95,
+        strokeWeight: 4,
+        icons: [
+          {
+            icon: {
+              path: window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+              scale: 2.2,
+              strokeColor: "#FFFFFF",
+              fillColor: tripColor,
+              fillOpacity: 1,
+              strokeWeight: 1,
+            },
+            offset: "35px",
+            repeat: "70px",
           },
-          title: `Start Point (${new Date(startLoc.timestamp).toLocaleTimeString()})`,
-          zIndex: 50,
-        })
-      }
+        ],
+        map: googleMapRef.current,
+        zIndex: 36 + tripIndex,
+      })
+      historyPolylinesRef.current.push(mainPolyline)
 
-      // Add small waypoint dots for intermediate locations
-      if (path.length > 2) {
-        const step = Math.max(1, Math.floor(path.length / 25))
-        for (let i = 1; i < path.length - 1; i += step) {
-          const pt = path[i]
-          const loc = validLocations[i]
-          const wpMarker = new window.google.maps.Marker({
-            position: pt,
+      // Add to bounds collection
+      trip.path.forEach((pt) => allRenderedCoords.push(pt))
+
+      // 3. Start Point Marker (A / Origin)
+      const startPoint = trip.path[0]
+      const sMarker = new window.google.maps.Marker({
+        position: startPoint,
+        map: googleMapRef.current,
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 7.5,
+          fillColor: "#10B981",
+          fillOpacity: 1,
+          strokeColor: "#FFFFFF",
+          strokeWeight: 2,
+        },
+        title: `Trip ${tripIndex + 1} Start • ${new Date(trip.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+        zIndex: 55,
+      })
+      waypointMarkersRef.current.push(sMarker)
+
+      // 4. End Point Marker (B / Finish)
+      const endPoint = trip.path[trip.path.length - 1]
+      const eMarker = new window.google.maps.Marker({
+        position: endPoint,
+        map: googleMapRef.current,
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 7.5,
+          fillColor: "#EF4444",
+          fillOpacity: 1,
+          strokeColor: "#FFFFFF",
+          strokeWeight: 2,
+        },
+        title: `Trip ${tripIndex + 1} Finish • ${new Date(trip.endTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} • ${trip.distanceKm} km`,
+        zIndex: 55,
+      })
+      waypointMarkersRef.current.push(eMarker)
+
+      // 5. Significant Stops / Dwell markers along the trip
+      trip.points.forEach((pt) => {
+        if (pt.isStop && (pt.dwellMinutes || 0) >= 3) {
+          const stopM = new window.google.maps.Marker({
+            position: { lat: pt.lat, lng: pt.lng },
             map: googleMapRef.current,
             icon: {
               path: window.google.maps.SymbolPath.CIRCLE,
-              scale: 3.5,
-              fillColor: "#60A5FA",
+              scale: 4.5,
+              fillColor: "#F59E0B",
               fillOpacity: 0.9,
               strokeColor: "#FFFFFF",
-              strokeWeight: 1,
+              strokeWeight: 1.5,
             },
-            title: `Waypoint #${i + 1} • ${(loc.speed || 0).toFixed(1)} km/h • ${new Date(loc.timestamp).toLocaleTimeString()}`,
-            zIndex: 30,
+            title: `Stopped: ${pt.dwellMinutes}m • ${new Date(pt.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+            zIndex: 48,
           })
-          waypointMarkersRef.current.push(wpMarker)
+          waypointMarkersRef.current.push(stopM)
         }
-      }
+      })
+    })
 
-      // Fit map bounds to show complete tractor route and adjust zoom dynamically
+    // Fit map bounds smoothly around clean path
+    if (allRenderedCoords.length > 0) {
       const bounds = new window.google.maps.LatLngBounds()
-      path.forEach((p) => bounds.extend(p))
+      allRenderedCoords.forEach((p) => bounds.extend(p))
 
       const ne = bounds.getNorthEast()
       const sw = bounds.getSouthWest()
       const latDiff = Math.abs(ne.lat() - sw.lat())
       const lngDiff = Math.abs(ne.lng() - sw.lng())
 
-      if (path.length > 1 && (latDiff > 0.0003 || lngDiff > 0.0003)) {
+      if (allRenderedCoords.length > 1 && (latDiff > 0.0003 || lngDiff > 0.0003)) {
         googleMapRef.current.fitBounds(bounds, { top: 80, right: 60, bottom: 90, left: 60 })
       } else {
-        googleMapRef.current.panTo(path[path.length - 1])
+        googleMapRef.current.panTo(allRenderedCoords[allRenderedCoords.length - 1])
         googleMapRef.current.setZoom(16)
       }
     }
-  }, [displayHistoryLocations, showRoutePath, selectedTractor, mapsLoaded, devices])
+  }, [cleanedRouteResult, selectedTripId, showRoutePath, selectedTractor, mapsLoaded, devices])
 
 
   // Draw real-time motion trail for the selected device
@@ -1719,12 +2505,18 @@ export default function DeviceSection() {
                   <span className="text-[11px] text-slate-400 font-mono">IMEI: {selectedDevice.id}</span>
                   <span
                     className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                      selectedDevice.hasGps || selectedDevice.status === "Active"
+                      (selectedDevice.speed || 0) > 0.5
                         ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                        : selectedDevice.status === "Idle" || selectedDevice.hasGps || selectedDevice.status === "Active"
+                        ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
                         : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
                     }`}
                   >
-                    {selectedDevice.hasGps || selectedDevice.status === "Active" ? "Connected" : "Not Connected"}
+                    {(selectedDevice.speed || 0) > 0.5
+                      ? `🟢 In Motion (${selectedDevice.speed?.toFixed(1)} km/h)`
+                      : selectedDevice.status === "Idle" || selectedDevice.hasGps || selectedDevice.status === "Active"
+                      ? "⏸ Idle (Parked)"
+                      : "⚪ Not Connected"}
                   </span>
                 </div>
               )}
@@ -1811,29 +2603,29 @@ export default function DeviceSection() {
                 </button>
               </div>
 
-              {/* Map Type Switcher */}
+              {/* Map Type Switcher: Field Map vs Road Map */}
               <div className="flex items-center gap-1 border-r border-slate-700/80 pr-1.5 mr-0.5">
                 <button
                   onClick={() => setMapType("hybrid")}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                     mapType === "hybrid" || mapType === "satellite"
                       ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
                       : "text-slate-400 hover:text-white hover:bg-slate-800"
                   }`}
-                  title="Satellite View with Road Overlays"
+                  title="Field Map: High-detail Satellite view with agricultural field boundaries, crop plots & farm roads"
                 >
-                  🛰️ Satellite
+                  <span>🌾</span> Field Map
                 </button>
                 <button
                   onClick={() => setMapType("roadmap")}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                     mapType === "roadmap"
-                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
+                      ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
                       : "text-slate-400 hover:text-white hover:bg-slate-800"
                   }`}
-                  title="Standard Street Map"
+                  title="Road Map: Clean street network and highway navigation view"
                 >
-                  🗺️ Map
+                  <span>🛣️</span> Road Map
                 </button>
               </div>
 
@@ -1979,12 +2771,12 @@ export default function DeviceSection() {
           {/* Route History Telemetry Statistics Bar (Floating HUD under controls) */}
           {selectedDevice && (
             <div className="absolute top-14 left-3 z-[998] flex items-center gap-2 flex-wrap pointer-events-none">
-              <div className="px-3 py-1 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700/80 shadow-lg text-[11px] text-slate-300 flex items-center gap-3 font-semibold pointer-events-auto">
+              <div className="px-3 py-1 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700/80 shadow-lg text-[11px] text-slate-300 flex items-center gap-2.5 font-semibold pointer-events-auto">
                 <span className="flex items-center gap-1 text-blue-300">
                   <Route className="w-3.5 h-3.5" />
                   {historyLoading ? (
                     <span className="flex items-center gap-1">
-                      <RefreshCw className="w-3 h-3 animate-spin text-blue-400" /> Querying route...
+                      <RefreshCw className="w-3 h-3 animate-spin text-blue-400" /> Aligning route...
                     </span>
                   ) : (
                     <span>{routeStats.count} Waypoints</span>
@@ -1993,14 +2785,34 @@ export default function DeviceSection() {
 
                 <span className="text-slate-600">•</span>
 
-                <span className="flex items-center gap-1 text-emerald-300">
+                <span className="flex items-center gap-1 text-emerald-300" title="Total clean distance traveled">
                   <span>🛣️</span>
                   <span>{routeStats.distanceKm} km</span>
                 </span>
 
+                {routeStats.tripsCount > 0 && (
+                  <>
+                    <span className="text-slate-600">•</span>
+                    <span className="flex items-center gap-1 text-amber-300" title="Separate work sessions / trips">
+                      <span>🌾</span>
+                      <span>{routeStats.tripsCount} {routeStats.tripsCount === 1 ? "Trip" : "Trips"}</span>
+                    </span>
+                  </>
+                )}
+
+                {routeStats.stopsCount > 0 && (
+                  <>
+                    <span className="text-slate-600">•</span>
+                    <span className="flex items-center gap-1 text-yellow-400" title="Stationary stops / dwell clusters">
+                      <span>🛑</span>
+                      <span>{routeStats.stopsCount} Stops</span>
+                    </span>
+                  </>
+                )}
+
                 <span className="text-slate-600">•</span>
 
-                <span className="flex items-center gap-1 text-amber-300">
+                <span className="flex items-center gap-1 text-sky-300">
                   <span>🚀 Max:</span>
                   <span>{routeStats.maxSpeed} km/h</span>
                 </span>
@@ -2020,6 +2832,90 @@ export default function DeviceSection() {
                     </span>
                   </>
                 )}
+              </div>
+
+              {/* Trip Session Selector Pills if multiple trips exist */}
+              {cleanedRouteResult && cleanedRouteResult.trips.length > 1 && (
+                <div className="px-2 py-1 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700/80 shadow-lg text-[10px] text-slate-300 flex items-center gap-1 pointer-events-auto max-w-[90vw] overflow-x-auto">
+                  <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px] px-1">Trip:</span>
+                  <button
+                    onClick={() => setSelectedTripId("all")}
+                    className={`px-2 py-0.5 rounded-md font-bold transition-all ${
+                      selectedTripId === "all"
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800"
+                    }`}
+                  >
+                    All ({cleanedRouteResult.trips.length})
+                  </button>
+                  {cleanedRouteResult.trips.slice(0, 6).map((t, idx) => (
+                    <button
+                      key={t.id}
+                      onClick={() => setSelectedTripId(t.id)}
+                      className={`px-2 py-0.5 rounded-md font-bold transition-all whitespace-nowrap flex items-center gap-1 ${
+                        selectedTripId === t.id
+                          ? "bg-emerald-600 text-white shadow-sm"
+                          : "text-slate-400 hover:text-white hover:bg-slate-800"
+                      }`}
+                      title={`${new Date(t.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${new Date(t.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                    >
+                      Trip {idx + 1} ({t.distanceKm}km)
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Live Movement Animation / Simulation Pill */}
+              <div className="px-2 py-1 rounded-xl bg-slate-900/90 backdrop-blur-md border border-slate-700/80 shadow-lg text-[10px] text-slate-300 flex items-center gap-1.5 pointer-events-auto">
+                <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px] px-1 flex items-center gap-1">
+                  <PlayCircle className="w-3 h-3 text-emerald-400" /> Animation:
+                </span>
+                {!isSimulating ? (
+                  <button
+                    onClick={startLiveSimulation}
+                    className="px-2.5 py-0.5 rounded-md font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm flex items-center gap-1 transition-all active:scale-95"
+                    title="Play live movement animation along the route"
+                  >
+                    <Play className="w-2.5 h-2.5 fill-current" /> Play Move
+                  </button>
+                ) : (
+                  <button
+                    onClick={stopLiveSimulation}
+                    className="px-2.5 py-0.5 rounded-md font-bold bg-amber-600 hover:bg-amber-500 text-white shadow-sm flex items-center gap-1 transition-all active:scale-95 animate-pulse"
+                    title="Pause live simulation"
+                  >
+                    <Pause className="w-2.5 h-2.5 fill-current" /> Pause
+                  </button>
+                )}
+                <div className="flex items-center gap-0.5 bg-slate-800 rounded-md p-0.5">
+                  {[1, 2, 5].map((spd) => (
+                    <button
+                      key={spd}
+                      onClick={() => setSimulationSpeed(spd)}
+                      className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                        simulationSpeed === spd
+                          ? "bg-emerald-500 text-white"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      {spd}x
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={handleTestLiveMove}
+                  className="px-2 py-0.5 rounded-md font-bold bg-indigo-600/80 hover:bg-indigo-600 text-white shadow-sm flex items-center gap-1 transition-all active:scale-95 text-[10px]"
+                  title="Simulate a live move forward along the road with slow-motion wheel roll"
+                >
+                  🧪 Road Move (+75m)
+                </button>
+                <button
+                  onClick={handleRandomRoadMove}
+                  className="px-2 py-0.5 rounded-md font-bold bg-purple-600/80 hover:bg-purple-600 text-white shadow-sm flex items-center gap-1 transition-all active:scale-95 text-[10px]"
+                  title="Pick a random responding destination and navigate between the points strictly on the road"
+                >
+                  🎲 Random Road Run
+                </button>
               </div>
             </div>
           )}
@@ -2083,19 +2979,25 @@ export default function DeviceSection() {
                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Status</span>
                     <span
                       className={`text-xs font-bold px-2 py-0.5 rounded block ${
-                        selectedDevice.hasGps || selectedDevice.status === "Active"
+                        (selectedDevice.speed || 0) > 0.5
                           ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                          : selectedDevice.status === "Idle" || selectedDevice.hasGps || selectedDevice.status === "Active"
+                          ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
                           : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
                       }`}
                     >
-                      {selectedDevice.hasGps || selectedDevice.status === "Active" ? "GPS Active" : "Not Connected"}
+                      {(selectedDevice.speed || 0) > 0.5
+                        ? "🟢 In Motion"
+                        : selectedDevice.status === "Idle" || selectedDevice.hasGps || selectedDevice.status === "Active"
+                        ? "⏸ Idle (Parked)"
+                        : "⚪ Not Connected"}
                     </span>
                   </div>
 
                   <div>
                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Speed</span>
                     <span className={`text-sm font-bold font-mono ${
-                      (selectedDevice.speed || 0) > 0 ? "text-emerald-400" : "text-white"
+                      (selectedDevice.speed || 0) > 0.5 ? "text-emerald-400" : "text-white"
                     }`}>
                       {(selectedDevice.speed || 0).toFixed(1)} km/h
                     </span>
@@ -2340,21 +3242,103 @@ export default function DeviceSection() {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className={`text-xl font-bold font-mono ${
-                          (selectedDevice.speed || 0) > 0 ? "text-emerald-400 animate-pulse" : "text-white"
+                          (selectedDevice.speed || 0) > 0.5 ? "text-emerald-400 animate-pulse" : "text-white"
                         }`}>
                           {(selectedDevice.speed || 0).toFixed(1)} km/h
                         </span>
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                          (selectedDevice.speed || 0) > 0
+                          (selectedDevice.speed || 0) > 0.5
                             ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                            : selectedDevice.status === "Idle" || selectedDevice.hasGps || selectedDevice.status === "Active"
+                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
                             : "bg-slate-700 text-slate-300"
                         }`}>
-                          {(selectedDevice.speed || 0) > 0 ? "In Motion" : "Stationary"}
+                          {(selectedDevice.speed || 0) > 0.5
+                            ? "🟢 In Motion"
+                            : selectedDevice.status === "Idle" || selectedDevice.hasGps || selectedDevice.status === "Active"
+                            ? "⏸ Idle (Parked)"
+                            : "⚪ Offline / Idle"}
                         </span>
                       </div>
                     </div>
                   </div>
                 </>
+              )}
+
+              {/* LIVE MOVEMENT ANIMATION & SIMULATION CONTROLLER */}
+              {selectedDevice && (
+                <div className="bg-slate-900/85 p-4 rounded-xl border border-slate-700/80 space-y-3 shadow-xl">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <PlayCircle className="w-4 h-4 text-emerald-400" />
+                      <span className="text-xs font-bold text-white uppercase tracking-wider">Live Movement Animation</span>
+                    </div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      (selectedDevice.speed || 0) > 0.5
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse"
+                        : "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                    }`}>
+                      {(selectedDevice.speed || 0) > 0.5 ? "🟢 MOVING" : "⏸ IDLE"}
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Tractor smoothly glides and rotates towards responded coordinates in real-time. If the device does not respond or is stopped, it stays in <strong className="text-amber-300 font-semibold">Idle</strong> mode.
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {!isSimulating ? (
+                      <button
+                        onClick={startLiveSimulation}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all active:scale-95"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-current" /> Play Live Run
+                      </button>
+                    ) : (
+                      <button
+                        onClick={stopLiveSimulation}
+                        className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-1.5 shadow-md shadow-amber-600/20 transition-all active:scale-95 animate-pulse"
+                      >
+                        <Pause className="w-3.5 h-3.5 fill-current" /> Pause Run
+                      </button>
+                    )}
+
+                    <button
+                      onClick={handleTestLiveMove}
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20 transition-all active:scale-95"
+                      title="Simulate a live move forward along the road with slow-motion wheel roll"
+                    >
+                      🧪 Road Move (+75m)
+                    </button>
+                    <button
+                      onClick={handleRandomRoadMove}
+                      className="col-span-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-1.5 shadow-md shadow-purple-600/25 transition-all active:scale-95"
+                      title="Pick a random responding destination and navigate between the points strictly on the road with dynamic steering"
+                    >
+                      🎲 Random Road Run (Between Points)
+                    </button>
+                  </div>
+
+                  {/* Playback Speed Multiplier */}
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-800 text-xs">
+                    <span className="text-slate-400 text-[11px]">Animation Speed:</span>
+                    <div className="flex items-center gap-1 bg-slate-800/80 p-0.5 rounded-lg">
+                      {[1, 2, 5].map((spd) => (
+                        <button
+                          key={spd}
+                          onClick={() => setSimulationSpeed(spd)}
+                          className={`px-2 py-0.5 rounded text-xs font-bold transition-all ${
+                            simulationSpeed === spd
+                              ? "bg-emerald-500 text-white shadow-sm"
+                              : "text-slate-400 hover:text-white"
+                          }`}
+                        >
+                          {spd}x
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               )}
 
               {/* ACTION BUTTONS */}

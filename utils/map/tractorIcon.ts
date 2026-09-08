@@ -8,8 +8,11 @@
  * - Slow subtle engine idle vibration and beacon pulse animations
  */
 
+declare var google: any
+
 export interface TractorIconOptions {
   course?: number // Course / heading angle in degrees (0 = North, 90 = East, 180 = South, etc.)
+  steerAngle?: number // Front wheel steering angle (-18° to +18°)
   isSelected?: boolean
   isLive?: boolean
   isMoving?: boolean
@@ -22,6 +25,7 @@ export interface TractorIconOptions {
  */
 export function getTractorSvgString({
   course = 0,
+  steerAngle = 0,
   isSelected = true,
   isLive = true,
   isMoving = false,
@@ -30,6 +34,12 @@ export function getTractorSvgString({
 }: TractorIconOptions = {}): string {
   const isConnected = status === "Active" || (isLive && status !== "Not Connected" && status !== "Offline")
   const activeMoving = isConnected && isMoving
+
+  // Ensure safe numerical values for rotation & steering (guarded against NaN or out-of-range values)
+  const numCourse = Number(course)
+  const safeCourse = Number.isFinite(numCourse) ? Math.round(((numCourse % 360) + 360) % 360) : 0
+  const numSteer = Number(steerAngle)
+  const safeSteer = Number.isFinite(numSteer) ? Math.round(Math.max(-20, Math.min(20, numSteer))) : 0
 
   // Authentic Agricultural John Deere / Modern Farm Tractor Color Palette
   const bodyPrimary = isConnected ? "#16A34A" : "#64748B"
@@ -69,73 +79,30 @@ export function getTractorSvgString({
           <stop offset="0%" stop-color="#10B981" stop-opacity="0" />
           <stop offset="100%" stop-color="#10B981" stop-opacity="0.6" />
         </linearGradient>
+
+        <!-- Clip Paths for Real Wheel Tires to contain continuous rolling chevron treads -->
+        <clipPath id="rear-tire-left-clip-${size}">
+          <rect x="18" y="47" width="14" height="34" rx="5" />
+        </clipPath>
+        <clipPath id="rear-tire-right-clip-${size}">
+          <rect x="68" y="47" width="14" height="34" rx="5" />
+        </clipPath>
+        <clipPath id="front-tire-left-clip-${size}">
+          <rect x="23" y="21" width="9.5" height="19" rx="3.5" />
+        </clipPath>
+        <clipPath id="front-tire-right-clip-${size}">
+          <rect x="67.5" y="21" width="9.5" height="19" rx="3.5" />
+        </clipPath>
       </defs>
 
       <!-- Rotation around center (50, 50) according to tractor course / heading -->
-      <g transform="rotate(${course}, 50, 50)">
-
-        ${
-          activeMoving
-            ? `
-          <!-- ACTIVE MOTION: Speed Propulsion Ripple Waves behind tractor -->
-          <g opacity="0.75">
-            <path d="M38 78 C44 86, 56 86, 62 78" stroke="#10B981" stroke-width="2.5" stroke-linecap="round" fill="none">
-              <animate attributeName="d" values="M38 78 C44 86, 56 86, 62 78; M34 88 C44 98, 56 98, 66 88; M30 96 C44 108, 56 108, 70 96" dur="0.8s" repeatCount="indefinite" />
-              <animate attributeName="opacity" values="0.8;0.3;0" dur="0.8s" repeatCount="indefinite" />
-            </path>
-            <path d="M42 74 C46 80, 54 80, 58 74" stroke="#34D399" stroke-width="2" stroke-linecap="round" fill="none">
-              <animate attributeName="d" values="M42 74 C46 80, 54 80, 58 74; M38 84 C44 94, 56 94, 62 84; M34 92 C44 102, 56 102, 66 92" dur="0.8s" begin="0.25s" repeatCount="indefinite" />
-              <animate attributeName="opacity" values="0.8;0.3;0" dur="0.8s" begin="0.25s" repeatCount="indefinite" />
-            </path>
-          </g>
-
-          <!-- ACTIVE MOTION: Live Radar Pulse Wave -->
-          <circle cx="50" cy="50" r="42" stroke="#10B981" stroke-width="1.8" stroke-dasharray="6 4" opacity="0.65">
-            <animate attributeName="r" values="32;46;32" dur="1.8s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0.75;0.1;0.75" dur="1.8s" repeatCount="indefinite" />
-          </circle>
-        `
-            : isConnected
-            ? `
-          <!-- CALM IDLE: Slow Gentle Status Wave -->
-          <circle cx="50" cy="50" r="40" stroke="#3B82F6" stroke-width="1.2" stroke-dasharray="4 4" opacity="0.4">
-            <animate attributeName="r" values="36;42;36" dur="3.8s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0.5;0.1;0.5" dur="3.8s" repeatCount="indefinite" />
-          </circle>
-        `
-            : ""
-        }
+      <g transform="rotate(${safeCourse}, 50, 50)">
 
         <!-- Forward Heading Direction Arrow -->
         <polygon points="50,2 58,14 50,10 42,14" fill="#EF4444" stroke="#FFFFFF" stroke-width="1.2" />
 
-        <!-- Tractor Chassis Group (with motion-dependent engine vibration) -->
+        <!-- Tractor Chassis Group (Completely Stable, Pure Forward Movement) -->
         <g>
-          ${
-            activeMoving
-              ? `
-            <!-- Fast engine vibration when in motion -->
-            <animateTransform
-              attributeName="transform"
-              type="translate"
-              values="0,0; 0,-0.8; 0,0; 0,0.8; 0,0"
-              dur="0.6s"
-              repeatCount="indefinite"
-            />
-          `
-              : isConnected
-              ? `
-            <!-- Gentle engine breathing when idle -->
-            <animateTransform
-              attributeName="transform"
-              type="translate"
-              values="0,0; 0,-0.4; 0,0; 0,0.4; 0,0"
-              dur="3.4s"
-              repeatCount="indefinite"
-            />
-          `
-              : ""
-          }
 
           <!-- REAR HITCH & 3-POINT LINKAGE ARMS -->
           <rect x="30" y="60" width="40" height="7" rx="2" fill="#27272A" stroke="#09090B" stroke-width="1" />
@@ -154,51 +121,159 @@ export function getTractorSvgString({
           <!-- FRONT HEAVY STEERING AXLE -->
           <rect x="32" y="27" width="36" height="5" rx="2" fill="#27272A" stroke="#09090B" stroke-width="1" />
 
-          <!-- ================= LEFT REAR HEAVY TIRE ================= -->
-          <rect x="18" y="47" width="14" height="34" rx="5" fill="url(#tire-rubber-grad-${size})" stroke="#09090B" stroke-width="1.4" />
-          <!-- Deep Chevron Tire Lugs -->
-          <g>
-            ${
-              activeMoving
-                ? `<animateTransform attributeName="transform" type="translate" values="0,0; 0,-5; 0,0" dur="0.5s" repeatCount="indefinite" />`
-                : ""
-            }
-            <path d="M19 52 L26 56 M19 58 L26 62 M19 64 L26 68 M19 70 L26 74 M19 76 L26 80" stroke="#71717A" stroke-width="2" stroke-linecap="round" />
+          <!-- ================= LEFT REAR HEAVY TIRE (Slow-Motion Rolling Treads) ================= -->
+          <g clip-path="url(#rear-tire-left-clip-${size})">
+            <!-- Tire Rubber Body -->
+            <rect x="18" y="47" width="14" height="34" rx="5" fill="url(#tire-rubber-grad-${size})" stroke="#09090B" stroke-width="1.4" />
+            <!-- Continuous Slow-Motion Chevron Lugs (Translates 7px seamlessly in 2.4s) -->
+            <g>
+              ${
+                activeMoving
+                  ? `<animateTransform attributeName="transform" type="translate" from="0, 0" to="0, -7" dur="2.4s" repeatCount="indefinite" />`
+                  : ""
+              }
+              <path
+                d="
+                  M18.5 33 L26.5 37.5 M26.5 37.5 L31.5 35
+                  M18.5 40 L26.5 44.5 M26.5 44.5 L31.5 42
+                  M18.5 47 L26.5 51.5 M26.5 51.5 L31.5 49
+                  M18.5 54 L26.5 58.5 M26.5 58.5 L31.5 56
+                  M18.5 61 L26.5 65.5 M26.5 65.5 L31.5 63
+                  M18.5 68 L26.5 72.5 M26.5 72.5 L31.5 70
+                  M18.5 75 L26.5 79.5 M26.5 79.5 L31.5 77
+                  M18.5 82 L26.5 86.5 M26.5 86.5 L31.5 84
+                  M18.5 89 L26.5 93.5 M26.5 93.5 L31.5 91
+                  M18.5 96 L26.5 100.5 M26.5 100.5 L31.5 98
+                "
+                stroke="#A1A1AA"
+                stroke-width="2.2"
+                stroke-linecap="round"
+              />
+            </g>
           </g>
+          <!-- Tire Outer Perimeter Border -->
+          <rect x="18" y="47" width="14" height="34" rx="5" fill="none" stroke="#09090B" stroke-width="1.4" />
           <!-- Yellow Center Wheel Rim Hub & Wheel Nuts -->
           <rect x="23" y="56" width="6" height="16" rx="2.5" fill="${rimColor}" stroke="${rimDark}" stroke-width="0.8" />
-          <circle cx="26" cy="64" r="1.8" fill="#18181B" />
-          <circle cx="26" cy="60" r="0.8" fill="#FFFFFF" />
-          <circle cx="26" cy="68" r="0.8" fill="#FFFFFF" />
+          <circle cx="26" cy="64" r="2" fill="#18181B" stroke="#52525B" stroke-width="0.6" />
+          <circle cx="26" cy="60" r="0.9" fill="#FFFFFF" />
+          <circle cx="26" cy="68" r="0.9" fill="#FFFFFF" />
+          <circle cx="24.5" cy="64" r="0.7" fill="#FEF08A" />
+          <circle cx="27.5" cy="64" r="0.7" fill="#FEF08A" />
 
-          <!-- ================= RIGHT REAR HEAVY TIRE ================= -->
-          <rect x="68" y="47" width="14" height="34" rx="5" fill="url(#tire-rubber-grad-${size})" stroke="#09090B" stroke-width="1.4" />
-          <!-- Deep Chevron Tire Lugs -->
-          <g>
-            ${
-              activeMoving
-                ? `<animateTransform attributeName="transform" type="translate" values="0,0; 0,-5; 0,0" dur="0.5s" repeatCount="indefinite" />`
-                : ""
-            }
-            <path d="M81 52 L74 56 M81 58 L74 62 M81 64 L74 68 M81 70 L74 74 M81 76 L74 80" stroke="#71717A" stroke-width="2" stroke-linecap="round" />
+          <!-- ================= RIGHT REAR HEAVY TIRE (Slow-Motion Rolling Treads) ================= -->
+          <g clip-path="url(#rear-tire-right-clip-${size})">
+            <!-- Tire Rubber Body -->
+            <rect x="68" y="47" width="14" height="34" rx="5" fill="url(#tire-rubber-grad-${size})" stroke="#09090B" stroke-width="1.4" />
+            <!-- Continuous Slow-Motion Chevron Lugs (Translates 7px seamlessly in 2.4s) -->
+            <g>
+              ${
+                activeMoving
+                  ? `<animateTransform attributeName="transform" type="translate" from="0, 0" to="0, -7" dur="2.4s" repeatCount="indefinite" />`
+                  : ""
+              }
+              <path
+                d="
+                  M81.5 33 L73.5 37.5 M73.5 37.5 L68.5 35
+                  M81.5 40 L73.5 44.5 M73.5 44.5 L68.5 42
+                  M81.5 47 L73.5 51.5 M73.5 51.5 L68.5 49
+                  M81.5 54 L73.5 58.5 M73.5 58.5 L68.5 56
+                  M81.5 61 L73.5 65.5 M73.5 65.5 L68.5 63
+                  M81.5 68 L73.5 72.5 M73.5 72.5 L68.5 70
+                  M81.5 75 L73.5 79.5 M73.5 79.5 L68.5 77
+                  M81.5 82 L73.5 86.5 M73.5 86.5 L68.5 84
+                  M81.5 89 L73.5 93.5 M73.5 93.5 L68.5 91
+                  M81.5 96 L73.5 100.5 M73.5 100.5 L68.5 98
+                "
+                stroke="#A1A1AA"
+                stroke-width="2.2"
+                stroke-linecap="round"
+              />
+            </g>
           </g>
+          <!-- Tire Outer Perimeter Border -->
+          <rect x="68" y="47" width="14" height="34" rx="5" fill="none" stroke="#09090B" stroke-width="1.4" />
           <!-- Yellow Center Wheel Rim Hub & Wheel Nuts -->
           <rect x="71" y="56" width="6" height="16" rx="2.5" fill="${rimColor}" stroke="${rimDark}" stroke-width="0.8" />
-          <circle cx="74" cy="64" r="1.8" fill="#18181B" />
-          <circle cx="74" cy="60" r="0.8" fill="#FFFFFF" />
-          <circle cx="74" cy="68" r="0.8" fill="#FFFFFF" />
+          <circle cx="74" cy="64" r="2" fill="#18181B" stroke="#52525B" stroke-width="0.6" />
+          <circle cx="74" cy="60" r="0.9" fill="#FFFFFF" />
+          <circle cx="74" cy="68" r="0.9" fill="#FFFFFF" />
+          <circle cx="72.5" cy="64" r="0.7" fill="#FEF08A" />
+          <circle cx="75.5" cy="64" r="0.7" fill="#FEF08A" />
 
           <!-- ================= LEFT FRONT STEERING TIRE & MUDGUARD ================= -->
-          <path d="M23 20 C23 18, 32 18, 32 20" stroke="${bodyDark}" stroke-width="2.5" stroke-linecap="round" fill="none" />
-          <rect x="23" y="21" width="9.5" height="19" rx="3.5" fill="url(#tire-rubber-grad-${size})" stroke="#09090B" stroke-width="1.2" />
-          <path d="M24 25 L30 27 M24 30 L30 32 M24 35 L30 37" stroke="#71717A" stroke-width="1.5" stroke-linecap="round" />
-          <rect x="27" y="26.5" width="4.5" height="8" rx="1.5" fill="${rimColor}" stroke="${rimDark}" stroke-width="0.6" />
+          <g transform="rotate(${safeSteer}, 27.75, 30.5)">
+            <path d="M23 20 C23 18, 32 18, 32 20" stroke="${bodyDark}" stroke-width="2.5" stroke-linecap="round" fill="none" />
+            <g clip-path="url(#front-tire-left-clip-${size})">
+              <rect x="23" y="21" width="9.5" height="19" rx="3.5" fill="url(#tire-rubber-grad-${size})" stroke="#09090B" stroke-width="1.2" />
+              <!-- Slow-Motion Front Rolling Tread Lugs (Translates 4.5px seamlessly in 2.4s) -->
+              <g>
+                ${
+                  activeMoving
+                    ? `<animateTransform attributeName="transform" type="translate" from="0, 0" to="0, -4.5" dur="2.4s" repeatCount="indefinite" />`
+                    : ""
+                }
+                <path
+                  d="
+                    M23.5 12 L28.5 14.5 M28.5 14.5 L32 13
+                    M23.5 16.5 L28.5 19 M28.5 19 L32 17.5
+                    M23.5 21 L28.5 23.5 M28.5 23.5 L32 22
+                    M23.5 25.5 L28.5 28 M28.5 28 L32 26.5
+                    M23.5 30 L28.5 32.5 M28.5 32.5 L32 31
+                    M23.5 34.5 L28.5 37 M28.5 37 L32 35.5
+                    M23.5 39 L28.5 41.5 M28.5 41.5 L32 40
+                    M23.5 43.5 L28.5 46 M28.5 46 L32 44.5
+                    M23.5 48 L28.5 50.5 M28.5 50.5 L32 49
+                  "
+                  stroke="#A1A1AA"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                />
+              </g>
+            </g>
+            <rect x="23" y="21" width="9.5" height="19" rx="3.5" fill="none" stroke="#09090B" stroke-width="1.2" />
+            <rect x="27" y="26.5" width="4.5" height="8" rx="1.5" fill="${rimColor}" stroke="${rimDark}" stroke-width="0.6" />
+            <circle cx="29.2" cy="30.5" r="1.1" fill="#18181B" />
+            <circle cx="29.2" cy="28.5" r="0.6" fill="#FFFFFF" />
+            <circle cx="29.2" cy="32.5" r="0.6" fill="#FFFFFF" />
+          </g>
 
           <!-- ================= RIGHT FRONT STEERING TIRE & MUDGUARD ================= -->
-          <path d="M68 20 C68 18, 77 18, 77 20" stroke="${bodyDark}" stroke-width="2.5" stroke-linecap="round" fill="none" />
-          <rect x="67.5" y="21" width="9.5" height="19" rx="3.5" fill="url(#tire-rubber-grad-${size})" stroke="#09090B" stroke-width="1.2" />
-          <path d="M76 25 L70 27 M76 30 L70 32 M76 35 L70 37" stroke="#71717A" stroke-width="1.5" stroke-linecap="round" />
-          <rect x="68.5" y="26.5" width="4.5" height="8" rx="1.5" fill="${rimColor}" stroke="${rimDark}" stroke-width="0.6" />
+          <g transform="rotate(${safeSteer}, 72.25, 30.5)">
+            <path d="M68 20 C68 18, 77 18, 77 20" stroke="${bodyDark}" stroke-width="2.5" stroke-linecap="round" fill="none" />
+            <g clip-path="url(#front-tire-right-clip-${size})">
+              <rect x="67.5" y="21" width="9.5" height="19" rx="3.5" fill="url(#tire-rubber-grad-${size})" stroke="#09090B" stroke-width="1.2" />
+              <!-- Slow-Motion Front Rolling Tread Lugs (Translates 4.5px seamlessly in 2.4s) -->
+              <g>
+                ${
+                  activeMoving
+                    ? `<animateTransform attributeName="transform" type="translate" from="0, 0" to="0, -4.5" dur="2.4s" repeatCount="indefinite" />`
+                    : ""
+                }
+                <path
+                  d="
+                    M76.5 12 L71.5 14.5 M71.5 14.5 L68 13
+                    M76.5 16.5 L71.5 19 M71.5 19 L68 17.5
+                    M76.5 21 L71.5 23.5 M71.5 23.5 L68 22
+                    M76.5 25.5 L71.5 28 M71.5 28 L68 26.5
+                    M76.5 30 L71.5 32.5 M71.5 32.5 L68 31
+                    M76.5 34.5 L71.5 37 M71.5 37 L68 35.5
+                    M76.5 39 L71.5 41.5 M71.5 41.5 L68 40
+                    M76.5 43.5 L71.5 46 M71.5 46 L68 44.5
+                    M76.5 48 L71.5 50.5 M71.5 50.5 L68 49
+                  "
+                  stroke="#A1A1AA"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                />
+              </g>
+            </g>
+            <rect x="67.5" y="21" width="9.5" height="19" rx="3.5" fill="none" stroke="#09090B" stroke-width="1.2" />
+            <rect x="68.5" y="26.5" width="4.5" height="8" rx="1.5" fill="${rimColor}" stroke="${rimDark}" stroke-width="0.6" />
+            <circle cx="70.8" cy="30.5" r="1.1" fill="#18181B" />
+            <circle cx="70.8" cy="28.5" r="0.6" fill="#FFFFFF" />
+            <circle cx="70.8" cy="32.5" r="0.6" fill="#FFFFFF" />
+          </g>
 
           <!-- ================= ENGINE HOOD & BONNET ================= -->
           <path d="M38 21 Q50 18 62 21 L63 47 H37 Z" fill="url(#hood-grad-${size})" stroke="#09090B" stroke-width="1.4" />
@@ -286,35 +361,36 @@ export function getTractorSvgString({
 /**
  * Generates an SVG Data URI string for Google Maps markers with transparent background
  */
-export function getGoogleMapsTractorIcon(options: TractorIconOptions = {}): google.maps.Icon {
+export function getGoogleMapsTractorIcon(options: TractorIconOptions = {}): any {
   const size = options.size || 68
   const svgString = getTractorSvgString({ ...options, size })
   const encodedSvg = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svgString)}`
 
   return {
     url: encodedSvg,
-    scaledSize: typeof window !== "undefined" && window.google?.maps ? new window.google.maps.Size(size, size) : undefined,
-    anchor: typeof window !== "undefined" && window.google?.maps ? new window.google.maps.Point(size / 2, size / 2) : undefined,
-  } as google.maps.Icon
+    scaledSize: typeof window !== "undefined" && (window as any).google?.maps ? new (window as any).google.maps.Size(size, size) : undefined,
+    anchor: typeof window !== "undefined" && (window as any).google?.maps ? new (window as any).google.maps.Point(size / 2, size / 2) : undefined,
+  } as any
 }
 
 /**
  * Custom HTML Overlay View for Google Maps to render interactive animated SVG tractor with 100% transparency
  */
 export class GoogleMapsTractorOverlay {
-  private overlay: google.maps.OverlayView | null = null
+  private overlay: any = null
   private div: HTMLDivElement | null = null
-  private map: google.maps.Map | null = null
-  private position: google.maps.LatLng | null = null
+  private map: any = null
+  private position: any = null
   private options: TractorIconOptions
 
-  constructor(map: google.maps.Map, position: { lat: number; lng: number }, options: TractorIconOptions = {}) {
+  constructor(map: any, position: { lat: number; lng: number }, options: TractorIconOptions = {}) {
     this.map = map
-    this.position = new google.maps.LatLng(position.lat, position.lng)
+    this.position = typeof window !== "undefined" && (window as any).google?.maps ? new (window as any).google.maps.LatLng(position.lat, position.lng) : null
     this.options = options
 
     const self = this
-    this.overlay = new google.maps.OverlayView()
+    this.overlay = typeof window !== "undefined" && (window as any).google?.maps ? new (window as any).google.maps.OverlayView() : null
+    if (!this.overlay) return
     this.overlay.onAdd = function () {
       self.div = document.createElement("div")
       self.div.style.position = "absolute"
