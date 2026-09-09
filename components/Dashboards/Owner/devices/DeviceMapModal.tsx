@@ -112,8 +112,8 @@ export function DeviceMapModal({
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null)
   const [rawDeviceLocations, setRawDeviceLocations] = useState<DeviceLocationData[]>([])
 
-  // Date filtering state
-  const [selectedFilter, setSelectedFilter] = useState<DateFilter>("today")
+  // Date filtering state (default to last 30 days)
+  const [selectedFilter, setSelectedFilter] = useState<DateFilter>("month")
   const [customStartDate, setCustomStartDate] = useState(DeviceLocationService.getTodayDate())
   const [customEndDate, setCustomEndDate] = useState(DeviceLocationService.getTodayDate())
   const [showDatePicker, setShowDatePicker] = useState(false)

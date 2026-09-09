@@ -454,8 +454,8 @@ export default function DeviceSection() {
   const livePolylineRef = useRef<google.maps.Polyline | null>(null)
   const [pinging, setPinging] = useState<boolean>(false)
 
-  // Route history, filter, and map style state on main map
-  const [selectedFilter, setSelectedFilter] = useState<string>("today")
+  // Route history, filter, and map style state on main map (default to last 30 days)
+  const [selectedFilter, setSelectedFilter] = useState<string>("month")
   const [selectedTripId, setSelectedTripId] = useState<string>("all")
   const [customStartDate, setCustomStartDate] = useState<string>(DeviceLocationService.getTodayDate())
   const [customEndDate, setCustomEndDate] = useState<string>(DeviceLocationService.getTodayDate())
@@ -2516,6 +2516,26 @@ export default function DeviceSection() {
 
         trip.path.forEach((pt) => allRenderedCoords.push(pt))
       }
+    }
+
+    // If all trips were stationary (no polyline drawn), draw a clean stationary stop marker
+    if (historyPolylinesRef.current.length === 0 && allRenderedCoords.length > 0) {
+      const stopPt = allRenderedCoords[0]
+      const stopMarker = new window.google.maps.Marker({
+        position: stopPt,
+        map: googleMapRef.current,
+        title: `Stationary Location (${displayHistoryLocations.length} signals)`,
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 9,
+          fillColor: "#F59E0B",
+          fillOpacity: 0.9,
+          strokeColor: "#FFFFFF",
+          strokeWeight: 2.5,
+        },
+        zIndex: 50,
+      })
+      waypointMarkersRef.current.push(stopMarker)
     }
 
     // Fit map bounds smoothly around clean path
