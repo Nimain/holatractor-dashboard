@@ -4,50 +4,81 @@ import pool from "@/utils/Database/db";
 
 export const dynamic = "force-dynamic";
 
+// In-memory cache to make repeated API calls respond in 0ms
+let cachedDevicesResponse: any = null;
+let lastCacheTime = 0;
+const CACHE_TTL_MS = 15000; // 15 seconds
+
 export async function GET(request: NextRequest) {
   try {
+    const now = Date.now();
+    if (cachedDevicesResponse && now - lastCacheTime < CACHE_TTL_MS) {
+      return NextResponse.json(cachedDevicesResponse);
+    }
+
     const gpsKey =
       process.env.NEXT_PUBLIC_GPS_API_KEY || "gps_live_1a04718c33200072bbe";
 
-    // 1. Fetch real tractor/store/owner links from Render PostgreSQL
-    let dbDeviceLinks: any[] = [];
-    try {
-      const client = await pool.connect();
+    // 1. Fetch DB device links and Live GPS telemetry in PARALLEL for maximum speed
+    const dbPromise = (async () => {
       try {
-        const dbRes = await client.query(`
-          SELECT 
-            dit.id as device_link_id,
-            dit.device_imei,
-            dit.device_region,
-            dit.tractor_store_id,
-            tis.lat as default_lat,
-            tis.lan as default_lng,
-            tis.hourly_price,
-            t.name as tractor_name,
-            t.model as tractor_model,
-            t.images as tractor_images,
-            s.id as store_id,
-            s.name as store_name,
-            s.image as store_image,
-            u.id as owner_id,
-            u.first_name as owner_first_name,
-            u.last_name as owner_last_name,
-            u.email as owner_email,
-            u.mobile as owner_mobile
-          FROM "DeviceInTractor" dit
-          LEFT JOIN "TractorInStore" tis ON tis.id = dit.tractor_store_id
-          LEFT JOIN "Tractor" t ON t.id = tis."baseTractorId"
-          LEFT JOIN "Store" s ON s.id = tis.store_id
-          LEFT JOIN "User" u ON u.id = s.owner_user_id OR u.id = s.created_by
-          ORDER BY dit."createdAt" DESC
-        `);
-        dbDeviceLinks = dbRes.rows;
-      } finally {
-        client.release();
+        const client = await pool.connect();
+        try {
+          const dbRes = await client.query(`
+            SELECT 
+              dit.id as device_link_id,
+              dit.device_imei,
+              dit.device_region,
+              dit.tractor_store_id,
+              tis.lat as default_lat,
+              tis.lan as default_lng,
+              tis.hourly_price,
+              t.name as tractor_name,
+              t.model as tractor_model,
+              t.images as tractor_images,
+              s.id as store_id,
+              s.name as store_name,
+              s.image as store_image,
+              u.id as owner_id,
+              u.first_name as owner_first_name,
+              u.last_name as owner_last_name,
+              u.email as owner_email,
+              u.mobile as owner_mobile
+            FROM "DeviceInTractor" dit
+            LEFT JOIN "TractorInStore" tis ON tis.id = dit.tractor_store_id
+            LEFT JOIN "Tractor" t ON t.id = tis."baseTractorId"
+            LEFT JOIN "Store" s ON s.id = tis.store_id
+            LEFT JOIN "User" u ON u.id = s.owner_user_id OR u.id = s.created_by
+            ORDER BY dit."createdAt" DESC
+          `);
+          return dbRes.rows;
+        } finally {
+          client.release();
+        }
+      } catch (dbErr: any) {
+        console.warn("[getalluniversaldevices] Render DB query notice:", dbErr?.message);
+        return [];
       }
-    } catch (dbErr: any) {
-      console.warn("[getalluniversaldevices] Render DB query notice:", dbErr?.message);
-    }
+    })();
+
+    const gpsPromise = (async () => {
+      try {
+        const devRes = await axios.get("https://device.holatractor.com/api/devices", {
+          headers: {
+            Authorization: `Bearer ${gpsKey}`,
+            "X-API-Key": gpsKey,
+          },
+          params: { api_key: gpsKey },
+          timeout: 6000,
+        });
+        return Array.isArray(devRes.data) ? devRes.data : [];
+      } catch (e: any) {
+        console.warn("[getalluniversaldevices] Live GPS query notice:", e?.message);
+        return [];
+      }
+    })();
+
+    const [dbDeviceLinks, liveGpsDevices] = await Promise.all([dbPromise, gpsPromise]);
 
     const dbMap = new Map<string, any>();
     dbDeviceLinks.forEach((r) => {
@@ -55,24 +86,6 @@ export async function GET(request: NextRequest) {
         dbMap.set(String(r.device_imei).trim(), r);
       }
     });
-
-    // 2. Fetch live telemetry from GPS Server (device.holatractor.com)
-    let liveGpsDevices: any[] = [];
-    try {
-      const devRes = await axios.get("https://device.holatractor.com/api/devices", {
-        headers: {
-          Authorization: `Bearer ${gpsKey}`,
-          "X-API-Key": gpsKey,
-        },
-        params: { api_key: gpsKey },
-        timeout: 8000,
-      });
-      if (Array.isArray(devRes.data) && devRes.data.length > 0) {
-        liveGpsDevices = devRes.data;
-      }
-    } catch (e: any) {
-      console.warn("[getalluniversaldevices] Live GPS query notice:", e?.message);
-    }
 
     if (liveGpsDevices.length > 0) {
       const enrichedDevices = liveGpsDevices.map((d: any, idx: number) => {
@@ -180,6 +193,8 @@ export async function GET(request: NextRequest) {
         };
       });
 
+      cachedDevicesResponse = enrichedDevices;
+      lastCacheTime = Date.now();
       return NextResponse.json(enrichedDevices);
     }
 

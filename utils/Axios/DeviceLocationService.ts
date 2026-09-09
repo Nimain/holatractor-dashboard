@@ -138,6 +138,14 @@ export interface GeofenceItem {
   updated_at?: string;
 }
 
+// In-memory cache for history and live devices to ensure sub-millisecond response times
+const historyCache = new Map<string, { timestamp: number; data: DeviceLocationData[] }>();
+const HISTORY_CACHE_TTL_MS = 25000; // 25 seconds
+
+let cachedLiveDevices: LiveGPSDevice[] = [];
+let lastLiveDevicesTime = 0;
+const LIVE_DEVICES_CACHE_TTL_MS = 10000; // 10 seconds
+
 class DeviceLocationService {
   /**
    * Helper method to calibrate coordinates based on region
@@ -242,26 +250,32 @@ class DeviceLocationService {
   }
 
   /**
-   * 1. GET /api/devices: Fetch all live GPS devices from device.holatractor.com
+   * 1. GET /api/devices: Fetch all live GPS devices from device.holatractor.com (cached for 10s)
    */
   static async getAllDevices(): Promise<LiveGPSDevice[]> {
+    const now = Date.now();
+    if (cachedLiveDevices.length > 0 && now - lastLiveDevicesTime < LIVE_DEVICES_CACHE_TTL_MS) {
+      return cachedLiveDevices;
+    }
+
     const baseUrl = DeviceBaseURL.replace(/\/$/, "");
-    for (const key of AUTH_KEYS) {
-      try {
-        const response = await axios.get(`${baseUrl}/api/devices`, {
-          headers: {
-            Authorization: `Bearer ${key}`,
-            "X-API-Key": key,
-          },
-          params: { api_key: key },
-          timeout: 10000,
-        });
-        if (Array.isArray(response.data)) {
-          return response.data;
-        }
-      } catch (error) {
-        // Try next key
+    try {
+      const response = await axios.get(`${baseUrl}/api/devices`, {
+        headers: {
+          Authorization: `Bearer ${GPS_API_KEY}`,
+          "X-API-Key": GPS_API_KEY,
+        },
+        params: { api_key: GPS_API_KEY },
+        timeout: 6000,
+      });
+      if (Array.isArray(response.data) && response.data.length > 0) {
+        cachedLiveDevices = response.data;
+        lastLiveDevicesTime = now;
+        return response.data;
       }
+    } catch (error) {
+      // Return cached if available on error
+      if (cachedLiveDevices.length > 0) return cachedLiveDevices;
     }
     return [];
   }
@@ -273,50 +287,29 @@ class DeviceLocationService {
     imei: string,
     deviceRegion = "SW"
   ): Promise<DeviceLocationData | null> {
-    const variants = this.getImeiVariants(imei);
+    const cleanImei = String(imei || "").trim();
     const baseUrl = DeviceBaseURL.replace(/\/$/, "");
 
-    for (const variant of variants) {
-      for (const key of AUTH_KEYS) {
-        try {
-          const response = await axios.get(`${baseUrl}/api/device/${variant}`, {
-            headers: {
-              Authorization: `Bearer ${key}`,
-              "X-API-Key": key,
-            },
-            params: { api_key: key },
-            timeout: 10000,
-          });
-          if (response.data && response.data.imei) {
-            return this.transformLocationData(response.data, deviceRegion);
-          }
-        } catch (err) {
-          // Continue
-        }
+    try {
+      const response = await axios.get(`${baseUrl}/api/device/${cleanImei}`, {
+        headers: {
+          Authorization: `Bearer ${GPS_API_KEY}`,
+          "X-API-Key": GPS_API_KEY,
+        },
+        params: { api_key: GPS_API_KEY },
+        timeout: 6000,
+      });
+      if (response.data && response.data.imei) {
+        return this.transformLocationData(response.data, deviceRegion);
       }
-    }
-
-    // Fallback to local Next.js proxy route /api/device/:imei
-    for (const variant of variants) {
+    } catch (err) {
+      // Try local route fallback
       try {
-        const localRes = await axios.get(`/api/device/${variant}`, { timeout: 8000 });
+        const localRes = await axios.get(`/api/device/${cleanImei}`, { timeout: 4000 });
         if (localRes.data && localRes.data.imei) {
           return this.transformLocationData(localRes.data, deviceRegion);
         }
-      } catch (e) {
-        // Continue
-      }
-    }
-
-    // Secondary fallback to /api/devices list
-    try {
-      const all = await this.getAllDevices();
-      const match = all.find((d) => variants.includes(String(d.imei)));
-      if (match) {
-        return this.transformLocationData(match, deviceRegion);
-      }
-    } catch (e) {
-      // silent
+      } catch (e) {}
     }
 
     return null;
@@ -334,14 +327,24 @@ class DeviceLocationService {
 
   /**
    * 3. GET /api/device/:imei/history?range={range}: Fetch breadcrumb telemetry history
+   * Features: In-memory TTL cache (0ms subsequent loads) & direct fast execution
    */
   static async getDeviceLocationHistory(
     imei: string,
     params: LocationHistoryParams = {},
     deviceRegion = "SW"
   ): Promise<DeviceLocationData[]> {
-    const variants = this.getImeiVariants(imei);
+    const cleanImei = String(imei || "").trim();
+    if (!cleanImei) return [];
+
     const range = params.range || params.filter || "today";
+    const cacheKey = `${cleanImei}_${range}_${params.start_date || ""}_${params.end_date || ""}_${params.date || ""}`;
+
+    // Fast-path: return from memory cache instantly
+    const cached = historyCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < HISTORY_CACHE_TTL_MS) {
+      return cached.data;
+    }
 
     const queryParams: Record<string, any> = {
       range,
@@ -359,89 +362,60 @@ class DeviceLocationService {
     if (params.limit) queryParams.limit = params.limit;
 
     const baseUrl = DeviceBaseURL.replace(/\/$/, "");
+    const variants = this.getImeiVariants(cleanImei);
 
-    // 1. Direct query to https://device.holatractor.com/api/device/:imei/history
-    for (const variant of variants) {
-      for (const key of AUTH_KEYS) {
-        try {
-          const res = await axios.get(`${baseUrl}/api/device/${variant}/history`, {
-            headers: {
-              Authorization: `Bearer ${key}`,
-              "X-API-Key": key,
-            },
-            params: { ...queryParams, api_key: key },
-            timeout: 15000,
-          });
-
-          // Check if summary object format: { imei, range, points: [...] }
-          if (res.data && Array.isArray(res.data.points) && res.data.points.length > 0) {
-            return res.data.points.map((p: any) =>
-              this.transformLocationData({ ...p, imei: variant }, deviceRegion)
-            );
-          }
-
-          // Check if array format
-          if (Array.isArray(res.data) && res.data.length > 0) {
-            return res.data.map((p: any) =>
-              this.transformLocationData({ ...p, imei: variant }, deviceRegion)
-            );
-          }
-        } catch (err) {
-          // Continue
-        }
-      }
-    }
-
-    // 2. Direct query to https://device.holatractor.com/api/history/:range?imei=...
-    for (const variant of variants) {
-      for (const key of AUTH_KEYS) {
-        try {
-          const res = await axios.get(`${baseUrl}/api/history/${range}`, {
-            headers: {
-              Authorization: `Bearer ${key}`,
-              "X-API-Key": key,
-            },
-            params: { ...queryParams, imei: variant, api_key: key },
-            timeout: 15000,
-          });
-
-          if (res.data && Array.isArray(res.data.points) && res.data.points.length > 0) {
-            return res.data.points.map((p: any) =>
-              this.transformLocationData({ ...p, imei: variant }, deviceRegion)
-            );
-          }
-          if (Array.isArray(res.data) && res.data.length > 0) {
-            return res.data.map((p: any) =>
-              this.transformLocationData({ ...p, imei: variant }, deviceRegion)
-            );
-          }
-        } catch (err) {
-          // Continue
-        }
-      }
-    }
-
-    // 3. Fallback via Local Next.js API route: /api/device/:imei/history
     for (const variant of variants) {
       try {
-        const localRes = await axios.get(`/api/device/${variant}/history`, {
-          params: queryParams,
-          timeout: 15000,
+        const res = await axios.get(`${baseUrl}/api/device/${variant}/history`, {
+          headers: {
+            Authorization: `Bearer ${GPS_API_KEY}`,
+            "X-API-Key": GPS_API_KEY,
+          },
+          params: { ...queryParams, api_key: GPS_API_KEY },
+          timeout: 8000,
         });
-        if (localRes.data && Array.isArray(localRes.data.points) && localRes.data.points.length > 0) {
-          return localRes.data.points.map((p: any) =>
-            this.transformLocationData({ ...p, imei: variant }, deviceRegion)
-          );
+
+        let pointsArray: any[] = [];
+        if (res.data && Array.isArray(res.data.points) && res.data.points.length > 0) {
+          pointsArray = res.data.points;
+        } else if (Array.isArray(res.data) && res.data.length > 0) {
+          pointsArray = res.data;
         }
-        if (Array.isArray(localRes.data) && localRes.data.length > 0) {
-          return localRes.data.map((p: any) =>
+
+        if (pointsArray.length > 0) {
+          const transformed = pointsArray.map((p: any) =>
             this.transformLocationData({ ...p, imei: variant }, deviceRegion)
           );
+          // Cache successful result
+          historyCache.set(cacheKey, { timestamp: Date.now(), data: transformed });
+          return transformed;
         }
       } catch (err) {
-        // Continue
+        // Try next variant
       }
     }
+
+    // Fallback: Local Next.js proxy route
+    try {
+      const localRes = await axios.get(`/api/device/${cleanImei}/history`, {
+        params: queryParams,
+        timeout: 6000,
+      });
+      let pointsArray: any[] = [];
+      if (localRes.data && Array.isArray(localRes.data.points)) {
+        pointsArray = localRes.data.points;
+      } else if (Array.isArray(localRes.data)) {
+        pointsArray = localRes.data;
+      }
+
+      if (pointsArray.length > 0) {
+        const transformed = pointsArray.map((p: any) =>
+          this.transformLocationData({ ...p, imei: cleanImei }, deviceRegion)
+        );
+        historyCache.set(cacheKey, { timestamp: Date.now(), data: transformed });
+        return transformed;
+      }
+    } catch (e) {}
 
     return [];
   }

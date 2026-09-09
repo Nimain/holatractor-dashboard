@@ -33,6 +33,12 @@ import DeviceLocationService, {
 } from "@/utils/Axios/DeviceLocationService"
 import { getGoogleMapsTractorIcon } from "@/utils/map/tractorIcon"
 import { io, type Socket } from "socket.io-client"
+import {
+  cleanAndSegmentRoute,
+  computeConvexHull,
+  computePolygonAreaHectares,
+  getFieldOperatingPoints,
+} from "@/utils/gps/routeCleaner"
 
 const GOOGLE_MAPS_API_KEY =
   process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
@@ -95,25 +101,82 @@ export function DeviceMapModal({
   language = "en",
 }: DeviceMapModalProps) {
   const mapElementRef = useRef<HTMLDivElement>(null)
-  const mapInstanceRef = useRef<google.maps.Map | null>(null)
-  const deviceMarkerRef = useRef<google.maps.Marker | null>(null)
-  const userMarkerRef = useRef<google.maps.Marker | null>(null)
-  const polylineRef = useRef<google.maps.Polyline | null>(null)
-  const waypointMarkersRef = useRef<google.maps.Marker[]>([])
-  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null)
+  const mapInstanceRef = useRef<any>(null)
+  const deviceMarkerRef = useRef<any>(null)
+  const userMarkerRef = useRef<any>(null)
+  const polylinesRef = useRef<any[]>([])
+  const infoWindowRef = useRef<any>(null)
 
   const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false)
   const [googleMapsError, setGoogleMapsError] = useState(false)
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null)
   const [rawDeviceLocations, setRawDeviceLocations] = useState<DeviceLocationData[]>([])
+
+  // Date filtering state
+  const [selectedFilter, setSelectedFilter] = useState<DateFilter>("today")
+  const [customStartDate, setCustomStartDate] = useState(DeviceLocationService.getTodayDate())
+  const [customEndDate, setCustomEndDate] = useState(DeviceLocationService.getTodayDate())
+  const [showDatePicker, setShowDatePicker] = useState(false)
+
+  // In-memory caching & pool for instant (0 ms) date filtering
+  const deviceHistoryCacheRef = useRef<Record<string, DeviceLocationData[]>>({})
+  const masterHistoryPoolRef = useRef<Record<string, (DeviceLocationData & { _timeMs: number })[]>>({})
+
   const deviceLocations = React.useMemo(() => {
-    return DeviceLocationService.filterHistoryByRange(
-      rawDeviceLocations,
-      selectedFilter,
-      customStartDate,
-      customEndDate
-    )
+    if (selectedFilter === "custom") {
+      return DeviceLocationService.filterHistoryByRange(
+        rawDeviceLocations,
+        "custom",
+        customStartDate,
+        customEndDate
+      )
+    }
+    return rawDeviceLocations
   }, [rawDeviceLocations, selectedFilter, customStartDate, customEndDate])
+
+  const isIndia = device?.device_region === "NE" || (device as any)?.region === "NE"
+  const cleanedRouteResult = React.useMemo(() => {
+    if (!deviceLocations || deviceLocations.length === 0) return null
+    return cleanAndSegmentRoute(deviceLocations, { isIndia })
+  }, [deviceLocations, isIndia])
+
+  const routeStats = React.useMemo(() => {
+    if (cleanedRouteResult) {
+      const fieldPts = getFieldOperatingPoints(
+        cleanedRouteResult.workingFieldPoints && cleanedRouteResult.workingFieldPoints.length >= 3
+          ? cleanedRouteResult.workingFieldPoints
+          : cleanedRouteResult.allCleanPoints.map((p) => ({ lat: p.lat, lng: p.lng }))
+      )
+      const hull = fieldPts.length >= 3 ? computeConvexHull(fieldPts) : []
+      const polygonArea = hull.length >= 3 ? computePolygonAreaHectares(hull) : 0
+      const calculatedArea =
+        polygonArea > 0 ? polygonArea : Number((cleanedRouteResult.totalDistanceKm * 0.3).toFixed(1))
+
+      return {
+        distanceKm: cleanedRouteResult.totalDistanceKm,
+        maxSpeed: cleanedRouteResult.maxSpeedKmH,
+        avgSpeed: cleanedRouteResult.avgSpeedKmH,
+        count: cleanedRouteResult.allCleanPoints.length,
+        movingPoints: cleanedRouteResult.movingPointsCount,
+        stoppedPoints: cleanedRouteResult.stoppedPointsCount,
+        tripsCount: cleanedRouteResult.trips.length,
+        stopsCount: cleanedRouteResult.stopsCount,
+        workedAreaHa: calculatedArea,
+      }
+    }
+    return {
+      distanceKm: 0,
+      maxSpeed: 0,
+      avgSpeed: 0,
+      count: 0,
+      movingPoints: 0,
+      stoppedPoints: 0,
+      tripsCount: 0,
+      stopsCount: 0,
+      workedAreaHa: 0,
+    }
+  }, [cleanedRouteResult])
+
   const [currentLocation, setCurrentLocation] = useState<DeviceLocationData | null>(null)
   const [locationLoading, setLocationLoading] = useState(false)
   const [deviceLoading, setDeviceLoading] = useState(false)
@@ -123,12 +186,6 @@ export function DeviceMapModal({
   const [liveLocationCount, setLiveLocationCount] = useState(0)
   const [mapType, setMapType] = useState<GoogleMapType>("hybrid")
   const [isFullscreen, setIsFullscreen] = useState(false)
-
-  // Date filtering state
-  const [selectedFilter, setSelectedFilter] = useState<DateFilter>("today")
-  const [customStartDate, setCustomStartDate] = useState("")
-  const [customEndDate, setCustomEndDate] = useState("")
-  const [showDatePicker, setShowDatePicker] = useState(false)
 
   const translations = {
     en: {
@@ -164,6 +221,7 @@ export function DeviceMapModal({
       yesterday: "Yesterday",
       week: "This Week",
       month: "This Month",
+      all: "All",
       custom: "Custom Range",
       startDate: "Start Date",
       endDate: "End Date",
@@ -216,6 +274,7 @@ export function DeviceMapModal({
       yesterday: "Ayer",
       week: "Esta Semana",
       month: "Este Mes",
+      all: "Todo",
       custom: "Rango Personalizado",
       startDate: "Fecha de Inicio",
       endDate: "Fecha de Fin",
@@ -254,7 +313,7 @@ export function DeviceMapModal({
     (device as any)?.images?.[0]
   const hourlyPrice =
     device?.tractorInStore?.hourly_price ?? (device as any)?.hourly_price ?? 0
-  const deviceImei = device?.device_imei || (device as any)?.imei || ""
+  const deviceImei = device?.device_imei || (device as any)?.imei || (device as any)?.id || ""
   const deviceRegion = device?.device_region || (device as any)?.region || "SW"
 
   // Load Google Maps Script
@@ -387,14 +446,47 @@ export function DeviceMapModal({
   }
 
   // Load device location history (cached in-memory for instant 0ms date filtering)
-  const loadDeviceLocationWithFilter = useCallback(async () => {
+  const loadDeviceLocationWithFilter = useCallback(async (filterOverride?: DateFilter) => {
     if (!device || !deviceImei) return
+
+    const activeFilter = filterOverride || selectedFilter
+    const cacheKey = `${deviceImei}_${activeFilter}_${customStartDate}_${customEndDate}`
+
+    // 1. Instant Cache Hit (0 ms latency)
+    if (deviceHistoryCacheRef.current[cacheKey]?.length > 0) {
+      setRawDeviceLocations(deviceHistoryCacheRef.current[cacheKey])
+      setDeviceLoading(false)
+      return
+    }
+
+    // 2. Instant Derivation from Master Pool (0 ms)
+    const pool = masterHistoryPoolRef.current[deviceImei]
+    let hasInstant = false
+    if (pool && pool.length > 0) {
+      const derived = DeviceLocationService.filterHistoryByRange(pool, activeFilter, customStartDate, customEndDate)
+      if (derived.length > 0) {
+        setRawDeviceLocations(derived)
+        hasInstant = true
+      }
+    }
+
+    if (!hasInstant) {
+      setRawDeviceLocations([])
+    }
 
     setDeviceLoading(true)
     try {
       const [current, history] = await Promise.all([
         DeviceLocationService.getCurrentDeviceLocation(deviceImei, deviceRegion),
-        DeviceLocationService.getDeviceLocationHistory(deviceImei, { range: "all" }, deviceRegion),
+        DeviceLocationService.getDeviceLocationHistory(
+          deviceImei,
+          {
+            range: activeFilter,
+            start_date: activeFilter === "custom" ? customStartDate : undefined,
+            end_date: activeFilter === "custom" ? customEndDate : undefined,
+          },
+          deviceRegion
+        ),
       ])
 
       if (
@@ -411,8 +503,27 @@ export function DeviceMapModal({
         setCurrentLocation(null)
       }
 
-      if (Array.isArray(history) && history.length > 0) {
-        const validLocations = history.filter(
+      let historyList = Array.isArray(history) ? history : []
+
+      // If activeFilter ("today", etc.) returned no points, fetch all history as fallback
+      // so we can populate the master pool and derive the latest activity!
+      if (historyList.length === 0 && activeFilter !== "all" && activeFilter !== "custom") {
+        try {
+          const allHistory = await DeviceLocationService.getDeviceLocationHistory(
+            deviceImei,
+            { range: "all" },
+            deviceRegion
+          )
+          if (Array.isArray(allHistory) && allHistory.length > 0) {
+            historyList = allHistory
+          }
+        } catch (e) {
+          // ignore fallback error
+        }
+      }
+
+      if (historyList.length > 0) {
+        const validLocations = historyList.filter(
           (loc) =>
             loc.lat &&
             loc.lon &&
@@ -421,18 +532,44 @@ export function DeviceMapModal({
             !isNaN(Number(loc.lat)) &&
             !isNaN(Number(loc.lon))
         )
-        setRawDeviceLocations(validLocations)
+
+        // Merge into master pool
+        const existing = masterHistoryPoolRef.current[deviceImei] || []
+        const pMap = new Map<string, DeviceLocationData & { _timeMs: number }>()
+        for (const p of existing) {
+          const t = (p as any)._timeMs || new Date(p.timestamp || (p as any).created_at || Date.now()).getTime()
+          const lonVal = p.lon ?? (p as any).lng ?? p.longitude ?? 0
+          pMap.set(`${t}_${Number(p.lat).toFixed(5)}_${Number(lonVal).toFixed(5)}`, { ...p, _timeMs: t })
+        }
+        for (const p of validLocations) {
+          const t = (p as any)._timeMs || new Date(p.timestamp || (p as any).created_at || Date.now()).getTime()
+          const lonVal = p.lon ?? (p as any).lng ?? p.longitude ?? 0
+          pMap.set(`${t}_${Number(p.lat).toFixed(5)}_${Number(lonVal).toFixed(5)}`, { ...p, _timeMs: t })
+        }
+        const fullPool = Array.from(pMap.values()).sort((a, b) => a._timeMs - b._timeMs)
+        masterHistoryPoolRef.current[deviceImei] = fullPool
+
+        // Filter by selected range (will gracefully fallback to latest active day if no points today)
+        const filtered = DeviceLocationService.filterHistoryByRange(
+          fullPool,
+          activeFilter,
+          customStartDate,
+          customEndDate
+        )
+        const toShow = filtered.length > 0 ? filtered : validLocations
+        deviceHistoryCacheRef.current[cacheKey] = toShow
+        setRawDeviceLocations(toShow)
       } else {
-        setRawDeviceLocations([])
+        if (!hasInstant) setRawDeviceLocations([])
       }
     } catch (error) {
       console.error("[DeviceMapModal] Error loading device location:", error)
-      setRawDeviceLocations([])
+      if (!hasInstant) setRawDeviceLocations([])
       setCurrentLocation(null)
     } finally {
       setDeviceLoading(false)
     }
-  }, [device, deviceImei, deviceRegion])
+  }, [device, deviceImei, deviceRegion, selectedFilter, customStartDate, customEndDate])
 
   // Initialize modal data when opened
   useEffect(() => {
@@ -451,19 +588,6 @@ export function DeviceMapModal({
     }
   }, [open, device, loadDeviceLocationWithFilter])
 
-  // Compute Route Path Points
-  const routePoints = React.useMemo(() => {
-    if (!Array.isArray(deviceLocations) || deviceLocations.length === 0) {
-      return []
-    }
-    return deviceLocations
-      .filter((loc) => loc.lat && loc.lon && loc.lat !== 0 && loc.lon !== 0)
-      .map((loc) => ({
-        lat: Number(loc.lat),
-        lng: Number(loc.lon),
-      }))
-  }, [deviceLocations])
-
   // Compute Initial / Target Map Center
   const mapCenter = React.useMemo(() => {
     if (currentLocation && currentLocation.lat && currentLocation.lon) {
@@ -473,17 +597,28 @@ export function DeviceMapModal({
         return { lat, lng }
       }
     }
-    if (routePoints.length > 0) {
-      return routePoints[0]
+    if (cleanedRouteResult && cleanedRouteResult.allCleanPoints.length > 0) {
+      const last = cleanedRouteResult.allCleanPoints[cleanedRouteResult.allCleanPoints.length - 1]
+      return { lat: last.lat, lng: last.lng }
     }
-    if (userLocation) {
-      return { lat: userLocation.latitude, lng: userLocation.longitude }
+    if (deviceLocations && deviceLocations.length > 0) {
+      const last = deviceLocations[deviceLocations.length - 1]
+      if (last.lat && last.lon && !isNaN(Number(last.lat)) && !isNaN(Number(last.lon))) {
+        return { lat: Number(last.lat), lng: Number(last.lon) }
+      }
+    }
+    if (device?.tractorInStore?.lat && device?.tractorInStore?.lan) {
+      const lat = Number(device.tractorInStore.lat)
+      const lng = Number(device.tractorInStore.lan)
+      if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+        return { lat, lng }
+      }
     }
     if (deviceRegion === "SW") {
       return { lat: -17.7833, lng: -63.1821 } // Santa Cruz, Bolivia
     }
     return { lat: 21.9368, lng: 86.7441 }
-  }, [currentLocation, routePoints, userLocation, deviceRegion])
+  }, [currentLocation, cleanedRouteResult, deviceLocations, device, deviceRegion])
 
   // Initialize and Update Google Map
   useEffect(() => {
@@ -496,7 +631,7 @@ export function DeviceMapModal({
       if (!mapInstanceRef.current) {
         mapInstanceRef.current = new window.google.maps.Map(mapElementRef.current, {
           center: mapCenter,
-          zoom: 15,
+          zoom: 16,
           mapTypeId: mapType as any,
           disableDefaultUI: false,
           zoomControl: true,
@@ -550,8 +685,14 @@ export function DeviceMapModal({
       }
 
       // 3. Tractor Device Current Location Marker
-      const activeLat = Number(currentLocation?.lat || routePoints[0]?.lat)
-      const activeLng = Number(currentLocation?.lon || routePoints[0]?.lng)
+      const activeLat = Number(
+        currentLocation?.lat ||
+          cleanedRouteResult?.allCleanPoints?.[cleanedRouteResult.allCleanPoints.length - 1]?.lat
+      )
+      const activeLng = Number(
+        currentLocation?.lon ||
+          cleanedRouteResult?.allCleanPoints?.[cleanedRouteResult.allCleanPoints.length - 1]?.lng
+      )
 
       if (!isNaN(activeLat) && !isNaN(activeLng) && activeLat !== 0 && activeLng !== 0) {
         const tractorPos = { lat: activeLat, lng: activeLng }
@@ -601,53 +742,93 @@ export function DeviceMapModal({
         deviceMarkerRef.current.setMap(null)
       }
 
-      // 4. Route Polyline & Waypoints
-      if (polylineRef.current) {
-        polylineRef.current.setMap(null)
-        polylineRef.current = null
-      }
-      waypointMarkersRef.current.forEach((m) => m.setMap(null))
-      waypointMarkersRef.current = []
+      // 4. Route Polylines (Clean independent trips, uniform red, no river cuts)
+      polylinesRef.current.forEach((p) => p.setMap(null))
+      polylinesRef.current = []
 
-      if (showRoute && routePoints.length > 1) {
-        polylineRef.current = new window.google.maps.Polyline({
-          path: routePoints,
-          geodesic: true,
-          strokeColor: "#F97316",
-          strokeOpacity: 0.9,
-          strokeWeight: 5,
-          map: map,
+      if (showRoute && cleanedRouteResult && cleanedRouteResult.trips.length > 0) {
+        const allRenderedCoords: { lat: number; lng: number }[] = []
+
+        cleanedRouteResult.trips.forEach((trip) => {
+          if (trip.path && trip.path.length >= 2) {
+            const polyline = new window.google.maps.Polyline({
+              path: trip.path,
+              geodesic: false,
+              strokeColor: "#EF4444",
+              strokeOpacity: 0.95,
+              strokeWeight: 6,
+              map: map,
+              zIndex: 36,
+            })
+            polylinesRef.current.push(polyline)
+            trip.path.forEach((pt) => allRenderedCoords.push(pt))
+          } else if (trip.path && trip.path.length === 1) {
+            allRenderedCoords.push(trip.path[0])
+          }
         })
 
-        // Add small waypoint dots along the route
-        routePoints.slice(0, 20).forEach((point, idx) => {
-          const isLatest = idx === 0
-          const isStart = idx === routePoints.length - 1
-
-          const dotMarker = new window.google.maps.Marker({
-            position: point,
+        if (allRenderedCoords.length === 0 && cleanedRouteResult.continuousPath && cleanedRouteResult.continuousPath.length >= 2) {
+          const polyline = new window.google.maps.Polyline({
+            path: cleanedRouteResult.continuousPath,
+            geodesic: false,
+            strokeColor: "#EF4444",
+            strokeOpacity: 0.95,
+            strokeWeight: 6,
             map: map,
-            icon: {
-              path: window.google.maps.SymbolPath.CIRCLE,
-              scale: isLatest || isStart ? 6 : 4,
-              fillColor: isLatest ? "#EF4444" : isStart ? "#10B981" : "#F97316",
-              fillOpacity: 1,
-              strokeColor: "#FFFFFF",
-              strokeWeight: 2,
-            },
+            zIndex: 36,
           })
-          waypointMarkersRef.current.push(dotMarker)
-        })
-
-        // Auto-fit bounds to include the whole route
-        const bounds = new window.google.maps.LatLngBounds()
-        routePoints.forEach((p) => bounds.extend(p))
-        if (userLocation) {
-          bounds.extend({ lat: userLocation.latitude, lng: userLocation.longitude })
+          polylinesRef.current.push(polyline)
+          cleanedRouteResult.continuousPath.forEach((pt) => allRenderedCoords.push(pt))
         }
-        map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 })
+
+        // Fallback if segmented cleaner dropped points
+        if (allRenderedCoords.length === 0 && deviceLocations && deviceLocations.length >= 2) {
+          const rawPath = deviceLocations
+            .filter((p) => p.lat && p.lon && !isNaN(Number(p.lat)) && !isNaN(Number(p.lon)))
+            .map((p) => ({ lat: Number(p.lat), lng: Number(p.lon) }))
+          if (rawPath.length >= 2) {
+            const polyline = new window.google.maps.Polyline({
+              path: rawPath,
+              geodesic: false,
+              strokeColor: "#EF4444",
+              strokeOpacity: 0.95,
+              strokeWeight: 6,
+              map: map,
+              zIndex: 36,
+            })
+            polylinesRef.current.push(polyline)
+            rawPath.forEach((pt) => allRenderedCoords.push(pt))
+          }
+        }
+
+        // Fit map bounds strictly around tractor history route (do NOT include userLocation so map zooms in properly)
+        if (allRenderedCoords.length > 0) {
+          const bounds = new window.google.maps.LatLngBounds()
+          allRenderedCoords.forEach((p) => bounds.extend(p))
+
+          const ne = bounds.getNorthEast()
+          const sw = bounds.getSouthWest()
+          const latDiff = Math.abs(ne.lat() - sw.lat())
+          const lngDiff = Math.abs(ne.lng() - sw.lng())
+
+          if (allRenderedCoords.length > 1 && (latDiff > 0.0001 || lngDiff > 0.0001)) {
+            map.fitBounds(bounds, { top: 60, right: 60, bottom: 80, left: 60 })
+            const zoomListener = window.google.maps.event.addListenerOnce(map, "idle", () => {
+              const curZoom = map.getZoom()
+              if (curZoom > 18) {
+                map.setZoom(18)
+              } else if (curZoom < 15 && latDiff < 0.015 && lngDiff < 0.015) {
+                map.setZoom(16)
+              }
+            })
+          } else {
+            map.panTo(allRenderedCoords[allRenderedCoords.length - 1])
+            map.setZoom(17)
+          }
+        }
       } else if (!isNaN(activeLat) && !isNaN(activeLng) && activeLat !== 0) {
         map.panTo({ lat: activeLat, lng: activeLng })
+        map.setZoom(17)
       }
 
       return () => {
@@ -662,7 +843,7 @@ export function DeviceMapModal({
     mapCenter,
     mapType,
     currentLocation,
-    routePoints,
+    cleanedRouteResult,
     showRoute,
     userLocation,
     isLiveTracking,
@@ -689,6 +870,7 @@ export function DeviceMapModal({
     setSelectedFilter(filter)
     if (filter !== "custom") {
       setShowDatePicker(false)
+      loadDeviceLocationWithFilter(filter)
     } else {
       setShowDatePicker(true)
       if (!customStartDate) {
@@ -697,13 +879,25 @@ export function DeviceMapModal({
       if (!customEndDate) {
         setCustomEndDate(DeviceLocationService.getTodayDate())
       }
+      loadDeviceLocationWithFilter("custom")
     }
   }
 
   const handleRecenter = () => {
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.panTo(mapCenter)
-      mapInstanceRef.current.setZoom(16)
+    if (mapInstanceRef.current && window.google?.maps) {
+      if (cleanedRouteResult && cleanedRouteResult.allCleanPoints.length > 1) {
+        const bounds = new window.google.maps.LatLngBounds()
+        cleanedRouteResult.allCleanPoints.forEach((p) => bounds.extend({ lat: p.lat, lng: p.lng }))
+        mapInstanceRef.current.fitBounds(bounds, { top: 60, right: 60, bottom: 80, left: 60 })
+        const listener = window.google.maps.event.addListenerOnce(mapInstanceRef.current, "idle", () => {
+          if (mapInstanceRef.current.getZoom() > 18) {
+            mapInstanceRef.current.setZoom(18)
+          }
+        })
+      } else {
+        mapInstanceRef.current.panTo(mapCenter)
+        mapInstanceRef.current.setZoom(17)
+      }
     }
   }
 
@@ -780,22 +974,27 @@ export function DeviceMapModal({
             <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
               <Filter className="h-3.5 w-3.5" /> Filter:
             </span>
-            {(["today", "yesterday", "week", "month", "custom", "all"] as DateFilter[]).map(
-              (filter) => (
-                <Button
-                  key={filter}
-                  size="sm"
-                  variant={selectedFilter === filter ? "default" : "outline"}
-                  onClick={() => handleFilterChange(filter)}
-                  className={`text-xs h-7 px-2.5 rounded-full ${
-                    selectedFilter === filter
-                      ? "bg-orange-600 text-white hover:bg-orange-700"
-                      : "text-slate-600 dark:text-slate-300"
-                  }`}
-                >
-                  {t[filter as keyof typeof t] || filter}
-                </Button>
-              )
+            {(["today", "yesterday", "week", "month", "all", "custom"] as DateFilter[]).map(
+              (filter) => {
+                const isActive = selectedFilter === filter
+                const isBtnLoading = isActive && deviceLoading
+                return (
+                  <Button
+                    key={filter}
+                    size="sm"
+                    variant={isActive ? "default" : "outline"}
+                    onClick={() => handleFilterChange(filter)}
+                    className={`text-xs h-7 px-2.5 rounded-full flex items-center gap-1.5 transition-all ${
+                      isActive
+                        ? "bg-orange-600 text-white hover:bg-orange-700 shadow-sm"
+                        : "text-slate-600 dark:text-slate-300"
+                    }`}
+                  >
+                    {isBtnLoading && <RefreshCw className="w-3 h-3 animate-spin text-white" />}
+                    {t[filter as keyof typeof t] || filter}
+                  </Button>
+                )
+              }
             )}
           </div>
 
@@ -814,7 +1013,7 @@ export function DeviceMapModal({
             <Button
               size="sm"
               variant="outline"
-              onClick={loadDeviceLocationWithFilter}
+              onClick={() => loadDeviceLocationWithFilter()}
               disabled={deviceLoading}
               className="text-xs h-7 px-2.5 rounded-full"
             >
@@ -863,7 +1062,7 @@ export function DeviceMapModal({
             </div>
             <Button
               size="sm"
-              onClick={loadDeviceLocationWithFilter}
+              onClick={() => loadDeviceLocationWithFilter()}
               className="bg-orange-600 hover:bg-orange-700 text-white h-7 text-xs rounded-full px-3"
             >
               {t.applyFilter}
@@ -886,6 +1085,77 @@ export function DeviceMapModal({
             ) : (
               <>
                 <div ref={mapElementRef} className="w-full h-full" />
+
+                {/* Floating Telemetry HUD Bar */}
+                <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-slate-900/90 text-white backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700/80 shadow-lg text-[11px] font-semibold flex-wrap pointer-events-auto max-w-[calc(100%-180px)]">
+                  <span className="flex items-center gap-1 text-blue-300">
+                    <Route className="w-3.5 h-3.5" />
+                    {deviceLoading ? (
+                      <span className="flex items-center gap-1">
+                        <RefreshCw className="w-3 h-3 animate-spin text-blue-400" /> Aligning...
+                      </span>
+                    ) : (
+                      <span>{routeStats.count} Waypoints</span>
+                    )}
+                  </span>
+                  <span className="text-slate-600">•</span>
+                  <span className="flex items-center gap-1 text-emerald-300">
+                    <span>🛣️</span> {routeStats.distanceKm} km
+                  </span>
+                  {routeStats.tripsCount > 0 && (
+                    <>
+                      <span className="text-slate-600">•</span>
+                      <span className="flex items-center gap-1 text-amber-300">
+                        <span>🌾</span> {routeStats.tripsCount} {routeStats.tripsCount === 1 ? "Trip" : "Trips"}
+                      </span>
+                    </>
+                  )}
+                  {routeStats.stopsCount > 0 && (
+                    <>
+                      <span className="text-slate-600">•</span>
+                      <span className="flex items-center gap-1 text-yellow-400">
+                        <span>🛑</span> {routeStats.stopsCount} Stops
+                      </span>
+                    </>
+                  )}
+                  <span className="text-slate-600">•</span>
+                  <span className="flex items-center gap-1 text-sky-300">
+                    <span>🚀 Max:</span> {routeStats.maxSpeed} km/h
+                  </span>
+                  <span className="text-slate-600">•</span>
+                  <span className="flex items-center gap-1 text-purple-300">
+                    <span>⏱️ Avg:</span> {routeStats.avgSpeed} km/h
+                  </span>
+                  {routeStats.workedAreaHa > 0 && (
+                    <>
+                      <span className="text-slate-600">•</span>
+                      <span className="flex items-center gap-1 text-emerald-400">
+                        <span>🌾 Area:</span> {routeStats.workedAreaHa} ha
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* High-Visibility Map Loading Overlay */}
+                {deviceLoading && (
+                  <div className="absolute inset-0 z-30 pointer-events-none flex items-center justify-center bg-slate-950/40 backdrop-blur-[2px] transition-all duration-300">
+                    <div className="flex items-center gap-3.5 px-6 py-4 rounded-2xl bg-slate-900/95 border border-blue-500/50 shadow-2xl shadow-blue-500/20 text-white backdrop-blur-md animate-in fade-in zoom-in-95 duration-200">
+                      <div className="relative flex items-center justify-center w-9 h-9">
+                        <div className="absolute inset-0 rounded-full border-2 border-blue-500/30 border-t-blue-400 animate-spin" />
+                        <RefreshCw className="w-4 h-4 text-blue-400 animate-spin" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                          Loading GPS Route History
+                          <span className="inline-block w-2 h-2 rounded-full bg-blue-400 animate-ping" />
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium">
+                          Filtering and aligning map coordinates ({selectedFilter.toUpperCase()})...
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Floating Map Controls */}
                 <div className="absolute top-3 right-3 z-10 flex flex-col gap-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-1.5 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800">

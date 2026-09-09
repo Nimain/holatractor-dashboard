@@ -38,6 +38,8 @@ export interface TripSegment {
 export interface CleanRouteResult {
   trips: TripSegment[];
   allCleanPoints: CleanRoutePoint[];
+  continuousPath: { lat: number; lng: number }[];
+  workingFieldPoints: { lat: number; lng: number }[];
   totalDistanceKm: number;
   maxSpeedKmH: number;
   avgSpeedKmH: number;
@@ -91,6 +93,91 @@ export function parseGpsTime(val: any): number {
   return isNaN(parsed) ? 0 : parsed;
 }
 
+// Computes spherical polygon area in hectares (1 ha = 10,000 m²)
+export function computePolygonAreaHectares(coords: { lat: number; lng: number }[]): number {
+  if (!Array.isArray(coords) || coords.length < 3) return 0;
+  const R = 6378137; // Earth's mean radius in meters
+  let area = 0;
+  const len = coords.length;
+  for (let i = 0; i < len; i++) {
+    const j = (i + 1) % len;
+    const p1 = coords[i];
+    const p2 = coords[j];
+    const lat1 = (p1.lat * Math.PI) / 180;
+    const lat2 = (p2.lat * Math.PI) / 180;
+    const dLng = ((p2.lng - p1.lng) * Math.PI) / 180;
+    area += dLng * (2 + Math.sin(lat1) + Math.sin(lat2));
+  }
+  area = Math.abs((area * R * R) / 4);
+  const ha = area / 10000;
+  return Number(ha.toFixed(1));
+}
+
+// Andrew's Monotone Chain Convex Hull algorithm (O(N log N))
+export function computeConvexHull(pts: { lat: number; lng: number }[]): { lat: number; lng: number }[] {
+  const n = pts.length;
+  if (n < 3) return pts;
+
+  const seen = new Set<string>();
+  const unique: { lat: number; lng: number }[] = [];
+  for (let i = 0; i < n; i++) {
+    const key = `${pts[i].lat.toFixed(6)},${pts[i].lng.toFixed(6)}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(pts[i]);
+    }
+  }
+  if (unique.length < 3) return unique;
+
+  unique.sort((a, b) => (a.lat === b.lat ? a.lng - b.lng : a.lat - b.lat));
+
+  const cross = (o: { lat: number; lng: number }, a: { lat: number; lng: number }, b: { lat: number; lng: number }) =>
+    (a.lng - o.lng) * (b.lat - o.lat) - (a.lat - o.lat) * (b.lng - o.lng);
+
+  const lower: { lat: number; lng: number }[] = [];
+  for (let i = 0; i < unique.length; i++) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], unique[i]) <= 0) {
+      lower.pop();
+    }
+    lower.push(unique[i]);
+  }
+
+  const upper: { lat: number; lng: number }[] = [];
+  for (let i = unique.length - 1; i >= 0; i--) {
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], unique[i]) <= 0) {
+      upper.pop();
+    }
+    upper.push(unique[i]);
+  }
+
+  lower.pop();
+  upper.pop();
+
+  return lower.concat(upper);
+}
+
+// Extract only points belonging to the actual operating field (excluding long transit roads)
+export function getFieldOperatingPoints(pts: { lat: number; lng: number }[]): { lat: number; lng: number }[] {
+  if (pts.length < 6) return pts;
+
+  const threshold = 0.0025; // ~250m spatial cluster window
+  const counts = new Int32Array(pts.length);
+
+  for (let i = 0; i < pts.length; i++) {
+    for (let j = i + 1; j < pts.length; j++) {
+      const dLat = Math.abs(pts[i].lat - pts[j].lat);
+      const dLng = Math.abs(pts[i].lng - pts[j].lng);
+      if (dLat < threshold && dLng < threshold) {
+        counts[i]++;
+        counts[j]++;
+      }
+    }
+  }
+
+  const fieldPts = pts.filter((_, idx) => counts[idx] >= 3);
+  return fieldPts.length >= 3 ? fieldPts : pts;
+}
+
 // 3-point weighted moving average smoothing along road/field path
 export function smoothCoordinates(
   points: CleanRoutePoint[],
@@ -129,10 +216,10 @@ export function smoothCoordinates(
   return result;
 }
 
-// Douglas-Peucker path simplification
+// Fast non-recursive Douglas-Peucker path simplification
 export function simplifyPath(
   points: { lat: number; lng: number }[],
-  toleranceMeters = 2.0
+  toleranceMeters = 1.8
 ): { lat: number; lng: number }[] {
   if (points.length <= 2) return points;
 
@@ -159,41 +246,40 @@ export function simplifyPath(
       }
     }
 
-    // Convert degree distance to approximate meters squared
     const dLat = (p.lat - y) * 111320;
     const dLng = (p.lng - x) * 111320 * Math.cos((p.lat * Math.PI) / 180);
     return dLat * dLat + dLng * dLng;
   }
 
-  function simplifyDPStep(
-    pts: { lat: number; lng: number }[],
-    first: number,
-    last: number,
-    sqTol: number,
-    simplified: { lat: number; lng: number }[]
-  ) {
-    let maxSqDist = sqTol;
+  const stack: [number, number][] = [[0, points.length - 1]];
+  const keep = new Uint8Array(points.length);
+  keep[0] = 1;
+  keep[points.length - 1] = 1;
+
+  while (stack.length > 0) {
+    const [first, last] = stack.pop()!;
+    let maxSqDist = sqTolerance;
     let index = -1;
 
     for (let i = first + 1; i < last; i++) {
-      const sqDist = getSqDist(pts[i], pts[first], pts[last]);
+      const sqDist = getSqDist(points[i], points[first], points[last]);
       if (sqDist > maxSqDist) {
         index = i;
         maxSqDist = sqDist;
       }
     }
 
-    if (maxSqDist > sqTol && index !== -1) {
-      if (index - first > 1) simplifyDPStep(pts, first, index, sqTol, simplified);
-      simplified.push(pts[index]);
-      if (last - index > 1) simplifyDPStep(pts, index, last, sqTol, simplified);
+    if (index !== -1) {
+      keep[index] = 1;
+      if (index - first > 1) stack.push([first, index]);
+      if (last - index > 1) stack.push([index, last]);
     }
   }
 
-  const simplified: { lat: number; lng: number }[] = [points[0]];
-  simplifyDPStep(points, 0, points.length - 1, sqTolerance, simplified);
-  simplified.push(points[points.length - 1]);
-
+  const simplified: { lat: number; lng: number }[] = [];
+  for (let i = 0; i < points.length; i++) {
+    if (keep[i]) simplified.push(points[i]);
+  }
   return simplified;
 }
 
@@ -204,9 +290,9 @@ export function cleanAndSegmentRoute(
   rawPoints: DeviceLocationData[],
   options?: {
     isIndia?: boolean;
-    maxSpeedKmH?: number; // default 75 km/h
+    maxSpeedKmH?: number; // default 80 km/h
     tripGapMinutes?: number; // default 20 minutes
-    tripDistanceGapMeters?: number; // default 1500 meters
+    tripDistanceGapMeters?: number; // default 1800 meters
     stationarySpeedThresholdKmH?: number; // default 1.5 km/h
     stationaryRadiusMeters?: number; // default 18 meters
   }
@@ -222,6 +308,8 @@ export function cleanAndSegmentRoute(
     return {
       trips: [],
       allCleanPoints: [],
+      continuousPath: [],
+      workingFieldPoints: [],
       totalDistanceKm: 0,
       maxSpeedKmH: 0,
       avgSpeedKmH: 0,
@@ -246,9 +334,11 @@ export function cleanAndSegmentRoute(
     const lat = isIndia ? Math.abs(rawLat) : rawLat > 0 ? -Math.abs(rawLat) : rawLat;
     const lng = isIndia ? Math.abs(rawLon) : rawLon > 0 ? -Math.abs(rawLon) : rawLon;
 
-    const timeMs = parseGpsTime(
-      pt.timestamp || (pt as any).created_at || (pt as any).time || (pt as any).datetime
-    );
+    const timeMs =
+      (pt as any)._timeMs ||
+      parseGpsTime(
+        pt.timestamp || (pt as any).created_at || (pt as any).time || (pt as any).datetime
+      );
     const speed = Math.max(0, Number(pt.speed ?? 0));
     const course = Number(pt.course ?? 0);
 
@@ -272,11 +362,28 @@ export function cleanAndSegmentRoute(
   let stopsCount = 0;
 
   function finalizeTrip(points: CleanRoutePoint[]) {
-    if (points.length < 2) return;
+    if (points.length === 0) return;
+    if (points.length === 1) {
+      const p = points[0];
+      trips.push({
+        id: `trip_${trips.length + 1}_${p.timeMs}`,
+        points,
+        path: [{ lat: p.lat, lng: p.lng }],
+        startTime: p.timestamp,
+        endTime: p.timestamp,
+        distanceKm: 0,
+        avgSpeedKmH: Math.round(p.speed || 0),
+        maxSpeedKmH: Math.round(p.speed || 0),
+        durationMinutes: 1,
+        startPoint: p,
+        endPoint: p,
+      });
+      return;
+    }
 
     // Smooth and simplify path for this trip
     const smoothed = smoothCoordinates(points);
-    const simplified = simplifyPath(smoothed, 1.8);
+    const simplified = simplifyPath(smoothed, 1.6);
 
     let tripDistMeters = 0;
     let maxSp = 0;
@@ -314,11 +421,14 @@ export function cleanAndSegmentRoute(
     });
   }
 
+  const validCleanPoints: CleanRoutePoint[] = [];
+
   for (let i = 0; i < sanitized.length; i++) {
     const pt = sanitized[i];
 
     if (currentTripPoints.length === 0) {
       currentTripPoints.push(pt);
+      validCleanPoints.push(pt);
       continue;
     }
 
@@ -327,11 +437,28 @@ export function cleanAndSegmentRoute(
     const dtSeconds = Math.max(0.5, (pt.timeMs - prev.timeMs) / 1000);
     const impliedSpeedKmH = (distMeters / dtSeconds) * 3.6;
 
-    // Check for impossible teleportation spike (e.g. 600km jump to Lima or Peru->Bolivia in seconds)
-    if (impliedSpeedKmH > maxAllowedSpeed || (distMeters > 3000 && dtSeconds < 120)) {
-      // Look ahead to see if the device genuinely relocated (session split) or if it's an isolated glitch
+    // 1. Check for temporary spike / multipath bounce glitch (jumps into river or cell tower and returns back)
+    if (impliedSpeedKmH > maxAllowedSpeed || (distMeters > 500 && dtSeconds < 120)) {
+      let isBounceGlitch = false;
+      for (let k = 1; k <= 8 && i + k < sanitized.length; k++) {
+        const futurePt = sanitized[i + k];
+        const distBackToPrev = haversineMeters(prev.lat, prev.lng, futurePt.lat, futurePt.lng);
+        const dtFutureSec = Math.max(0.5, (futurePt.timeMs - prev.timeMs) / 1000);
+        // If within the next few points it is back near prev (< 250m or normal tractor speed < 45 km/h)
+        if (distBackToPrev < 250 || (distBackToPrev / dtFutureSec) * 3.6 < 45) {
+          isBounceGlitch = true;
+          break;
+        }
+      }
+
+      if (isBounceGlitch) {
+        outliersDropped++;
+        continue; // Reject temporary bounce glitch entirely
+      }
+
+      // If it does not return back, check if subsequent points confirm this genuine new location
       let lookaheadSimilar = 0;
-      for (let k = 1; k <= 3 && i + k < sanitized.length; k++) {
+      for (let k = 1; k <= 4 && i + k < sanitized.length; k++) {
         const nextPt = sanitized[i + k];
         const dNext = haversineMeters(pt.lat, pt.lng, nextPt.lat, nextPt.lng);
         if (dNext < 2000) {
@@ -339,10 +466,11 @@ export function cleanAndSegmentRoute(
         }
       }
 
-      if (lookaheadSimilar >= 2) {
-        // Genuine new location (e.g. transport to new farm) -> End current trip and start new trip!
+      if (lookaheadSimilar >= 2 || sanitized.length - i <= 2) {
+        // Genuine new location (e.g. transport to new farm/city) -> End current trip and start new trip!
         finalizeTrip(currentTripPoints);
         currentTripPoints = [pt];
+        validCleanPoints.push(pt);
         continue;
       } else {
         // Isolated single-point glitch -> drop outlier
@@ -351,17 +479,17 @@ export function cleanAndSegmentRoute(
       }
     }
 
-    // Check for trip break: long time gap (> 20 min) or distance break
-    if (pt.timeMs - prev.timeMs > tripGapMs || (distMeters > tripDistGapMeters && dtSeconds > 300)) {
+    // 2. Check for trip break: long time gap (> 15 min) AND moved distance (> 250m), or long distance break (> 800m).
+    // Pauses in the same field (< 150m) keep the route and working area continuous!
+    if ((pt.timeMs - prev.timeMs > tripGapMs && distMeters > 250) || (distMeters > tripDistGapMeters && dtSeconds > 120)) {
       finalizeTrip(currentTripPoints);
       currentTripPoints = [pt];
+      validCleanPoints.push(pt);
       continue;
     }
 
     // Stationary jitter compression (when parked/idling)
     if (distMeters < stationaryRadius && pt.speed < stationarySpeed && prev.speed < stationarySpeed) {
-      // Tractor is stationary; do NOT draw zigzag lines back and forth.
-      // Update dwell time on the anchor point
       const dwell = Math.round((pt.timeMs - prev.timeMs) / 60000);
       prev.isStop = true;
       prev.dwellMinutes = (prev.dwellMinutes || 0) + dwell;
@@ -372,11 +500,19 @@ export function cleanAndSegmentRoute(
     }
 
     currentTripPoints.push(pt);
+    validCleanPoints.push(pt);
   }
 
   // Finalize remaining trip
-  if (currentTripPoints.length >= 2) {
+  if (currentTripPoints.length >= 1) {
     finalizeTrip(currentTripPoints);
+  }
+
+  // Fallback: If trips is still empty but validCleanPoints or sanitized has points, ensure a trip exists
+  if (trips.length === 0 && validCleanPoints.length >= 1) {
+    finalizeTrip(validCleanPoints);
+  } else if (trips.length === 0 && sanitized.length >= 1) {
+    finalizeTrip(sanitized);
   }
 
   // Compute aggregate statistics across all clean trips
@@ -386,18 +522,52 @@ export function cleanAndSegmentRoute(
   let speedSum = 0;
   let movingCount = 0;
   let stoppedCount = 0;
-  const allCleanPoints: CleanRoutePoint[] = [];
+  const allCleanPoints: CleanRoutePoint[] = validCleanPoints.length > 0 ? validCleanPoints : sanitized;
 
   for (const trip of trips) {
     totalDistanceKm += trip.distanceKm;
     if (trip.maxSpeedKmH > overallMaxSpeed) overallMaxSpeed = trip.maxSpeedKmH;
+  }
 
-    for (const p of trip.points) {
-      allCleanPoints.push(p);
-      speedSum += p.speed;
-      totalSpeedPoints++;
-      if (p.speed > 1.0) movingCount++;
-      else stoppedCount++;
+  const continuousCoords: { lat: number; lng: number }[] = [];
+  const workingFieldPoints: { lat: number; lng: number }[] = [];
+
+  for (const p of allCleanPoints) {
+    speedSum += p.speed;
+    totalSpeedPoints++;
+    if (p.speed > 1.0) movingCount++;
+    else stoppedCount++;
+
+    continuousCoords.push({ lat: p.lat, lng: p.lng });
+
+    // Mark working field points: tractor working implement speed (0.3 km/h to 24 km/h)
+    if (p.speed >= 0.3 && p.speed <= 25) {
+      workingFieldPoints.push({ lat: p.lat, lng: p.lng });
+    }
+  }
+
+  // If no points had speed sensor data, use all coordinates for field marking
+  const effectiveFieldPoints =
+    workingFieldPoints.length >= 3 ? workingFieldPoints : continuousCoords.length >= 3 ? continuousCoords : [];
+
+  // Build unified continuous path from legitimate trips (never bridging across gaps > 250m)
+  let continuousPath: { lat: number; lng: number }[] = [];
+  if (trips.length === 1) {
+    continuousPath = trips[0].path;
+  } else if (trips.length > 1) {
+    for (let tIdx = 0; tIdx < trips.length; tIdx++) {
+      const tPath = trips[tIdx].path;
+      if (continuousPath.length === 0) {
+        continuousPath.push(...tPath);
+      } else {
+        const lastPt = continuousPath[continuousPath.length - 1];
+        const nextPt = tPath[0];
+        const gapDist = haversineMeters(lastPt.lat, lastPt.lng, nextPt.lat, nextPt.lng);
+        // Only bridge if points are in the same localized working area (< 250m)
+        if (gapDist < 250) {
+          continuousPath.push(...tPath);
+        }
+      }
     }
   }
 
@@ -406,6 +576,8 @@ export function cleanAndSegmentRoute(
   return {
     trips,
     allCleanPoints,
+    continuousPath,
+    workingFieldPoints: effectiveFieldPoints,
     totalDistanceKm: Number(totalDistanceKm.toFixed(2)),
     maxSpeedKmH: overallMaxSpeed,
     avgSpeedKmH: avgSpeed,

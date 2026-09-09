@@ -13,6 +13,7 @@ import {
   History,
   X,
   Plus,
+  Minus,
   Radio,
   Store,
   User as UserIcon,
@@ -30,6 +31,9 @@ import {
   Pause,
   RotateCcw,
   PlayCircle,
+  Crosshair,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react"
 import { renderInstance, TractorAIBaseURL } from "@/utils/Axios/RenderInstance"
 import { useCookie } from "next-cookie"
@@ -44,7 +48,7 @@ import DeviceLocationService, {
 } from "@/utils/Axios/DeviceLocationService"
 import { getGoogleMapsTractorIcon } from "@/utils/map/tractorIcon"
 import { io, type Socket } from "socket.io-client"
-import { cleanAndSegmentRoute, haversineMeters, calculateBearing, type TripSegment, type CleanRouteResult } from "@/utils/gps/routeCleaner"
+import { cleanAndSegmentRoute, haversineMeters, calculateBearing, computePolygonAreaHectares, type TripSegment, type CleanRouteResult } from "@/utils/gps/routeCleaner"
 
 declare global {
   interface Window {
@@ -176,9 +180,18 @@ const parseTimestamp = (val: any): number => {
 }
 
 const parsePointTime = (p: DeviceLocationData): number => {
-  return parseTimestamp(p.timestamp || (p as any).created_at || (p as any).time || (p as any).datetime)
+  return (p as any)._timeMs || parseTimestamp(p.timestamp || (p as any).created_at || (p as any).time || (p as any).datetime)
 }
 
+const normalizeHistoryPoints = (points: DeviceLocationData[]): (DeviceLocationData & { _timeMs: number })[] => {
+  if (!Array.isArray(points)) return []
+  return points.map((p) => {
+    const timeMs = (p as any)._timeMs || parsePointTime(p)
+    return { ...p, _timeMs: timeMs }
+  })
+}
+
+// Instant in-memory time range filtering across GPS history (0 ms latency)
 const filterHistoryByRange = (
   points: DeviceLocationData[],
   filterVal: string,
@@ -189,89 +202,120 @@ const filterHistoryByRange = (
   if (filterVal === "all") return points
 
   const now = new Date()
+  const nowMs = now.getTime()
 
   // Find latest recorded timestamp in the dataset
-  const latestTimestamp = points.reduce((max, p) => {
-    const t = parsePointTime(p)
-    return t > max ? t : max
-  }, 0)
+  let latestTimestamp = 0
+  for (let i = 0; i < points.length; i++) {
+    const t = (points[i] as any)._timeMs || parsePointTime(points[i])
+    if (t > latestTimestamp) latestTimestamp = t
+  }
 
-  const anchorTime = latestTimestamp > 0 ? latestTimestamp : now.getTime()
+  const anchorTime = latestTimestamp > 0 ? latestTimestamp : nowMs
   const anchorDate = new Date(anchorTime)
 
   if (filterVal === "today") {
     // 1. Try actual calendar today
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).getTime()
-    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).getTime()
-    const liveToday = points.filter((p) => {
-      const t = parsePointTime(p)
-      return t >= todayStart && t <= todayEnd
-    })
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime()
+    const liveToday: DeviceLocationData[] = []
+    for (let i = 0; i < points.length; i++) {
+      const t = (points[i] as any)._timeMs || parsePointTime(points[i])
+      if (t >= todayStart && t <= todayEnd) liveToday.push(points[i])
+    }
     if (liveToday.length > 0) return liveToday
 
-    // 2. Fallback: Latest active calendar day of activity
+    // 2. Or points within last 24 hours
+    const last24h = nowMs - 24 * 60 * 60 * 1000
+    const live24h: DeviceLocationData[] = []
+    for (let i = 0; i < points.length; i++) {
+      const t = (points[i] as any)._timeMs || parsePointTime(points[i])
+      if (t >= last24h) live24h.push(points[i])
+    }
+    if (live24h.length > 0) return live24h
+
+    // 3. Fallback: Latest active calendar day of activity
     const anchorStart = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate(), 0, 0, 0).getTime()
-    const anchorEnd = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate(), 23, 59, 59).getTime()
-    const anchorDayPoints = points.filter((p) => {
-      const t = parsePointTime(p)
-      return t >= anchorStart && t <= anchorEnd
-    })
-    return anchorDayPoints.length > 0 ? anchorDayPoints : points.slice(-100)
+    const anchorEnd = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate(), 23, 59, 59, 999).getTime()
+    const anchorDayPoints: DeviceLocationData[] = []
+    for (let i = 0; i < points.length; i++) {
+      const t = (points[i] as any)._timeMs || parsePointTime(points[i])
+      if (t >= anchorStart && t <= anchorEnd) anchorDayPoints.push(points[i])
+    }
+    return anchorDayPoints
   }
 
   if (filterVal === "yesterday") {
     // 1. Try actual calendar yesterday
-    const yest = new Date(now)
-    yest.setDate(yest.getDate() - 1)
+    const yest = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)
     const yestStart = new Date(yest.getFullYear(), yest.getMonth(), yest.getDate(), 0, 0, 0).getTime()
-    const yestEnd = new Date(yest.getFullYear(), yest.getMonth(), yest.getDate(), 23, 59, 59).getTime()
-    const liveYest = points.filter((p) => {
-      const t = parsePointTime(p)
-      return t >= yestStart && t <= yestEnd
-    })
+    const yestEnd = new Date(yest.getFullYear(), yest.getMonth(), yest.getDate(), 23, 59, 59, 999).getTime()
+    const liveYest: DeviceLocationData[] = []
+    for (let i = 0; i < points.length; i++) {
+      const t = (points[i] as any)._timeMs || parsePointTime(points[i])
+      if (t >= yestStart && t <= yestEnd) liveYest.push(points[i])
+    }
     if (liveYest.length > 0) return liveYest
 
-    // 2. Fallback: Day before latest active calendar day
-    const prevAnchor = new Date(anchorDate)
-    prevAnchor.setDate(prevAnchor.getDate() - 1)
+    // 2. Day before latest active calendar day
+    const prevAnchor = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate() - 1)
     const prevStart = new Date(prevAnchor.getFullYear(), prevAnchor.getMonth(), prevAnchor.getDate(), 0, 0, 0).getTime()
-    const prevEnd = new Date(prevAnchor.getFullYear(), prevAnchor.getMonth(), prevAnchor.getDate(), 23, 59, 59).getTime()
-    const prevDayPoints = points.filter((p) => {
-      const t = parsePointTime(p)
-      return t >= prevStart && t <= prevEnd
-    })
-    return prevDayPoints.length > 0 ? prevDayPoints : points.slice(-50)
+    const prevEnd = new Date(prevAnchor.getFullYear(), prevAnchor.getMonth(), prevAnchor.getDate(), 23, 59, 59, 999).getTime()
+    const prevDayPoints: DeviceLocationData[] = []
+    for (let i = 0; i < points.length; i++) {
+      const t = (points[i] as any)._timeMs || parsePointTime(points[i])
+      if (t >= prevStart && t <= prevEnd) prevDayPoints.push(points[i])
+    }
+    return prevDayPoints
   }
 
   if (filterVal === "week") {
     // Last 7 days
-    const weekStartNow = now.getTime() - 7 * 24 * 60 * 60 * 1000
-    const liveWeek = points.filter((p) => parsePointTime(p) >= weekStartNow)
+    const weekStartNow = nowMs - 7 * 24 * 60 * 60 * 1000
+    const liveWeek: DeviceLocationData[] = []
+    for (let i = 0; i < points.length; i++) {
+      const t = (points[i] as any)._timeMs || parsePointTime(points[i])
+      if (t >= weekStartNow) liveWeek.push(points[i])
+    }
     if (liveWeek.length > 0) return liveWeek
 
     const anchorWeekStart = anchorTime - 7 * 24 * 60 * 60 * 1000
-    const anchorWeek = points.filter((p) => parsePointTime(p) >= anchorWeekStart)
-    return anchorWeek.length > 0 ? anchorWeek : points.slice(-300)
+    const anchorWeek: DeviceLocationData[] = []
+    for (let i = 0; i < points.length; i++) {
+      const t = (points[i] as any)._timeMs || parsePointTime(points[i])
+      if (t >= anchorWeekStart) anchorWeek.push(points[i])
+    }
+    return anchorWeek
   }
 
   if (filterVal === "month") {
     // Last 30 days
-    const monthStartNow = now.getTime() - 30 * 24 * 60 * 60 * 1000
-    const liveMonth = points.filter((p) => parsePointTime(p) >= monthStartNow)
+    const monthStartNow = nowMs - 30 * 24 * 60 * 60 * 1000
+    const liveMonth: DeviceLocationData[] = []
+    for (let i = 0; i < points.length; i++) {
+      const t = (points[i] as any)._timeMs || parsePointTime(points[i])
+      if (t >= monthStartNow) liveMonth.push(points[i])
+    }
     if (liveMonth.length > 0) return liveMonth
 
     const anchorMonthStart = anchorTime - 30 * 24 * 60 * 60 * 1000
-    const anchorMonth = points.filter((p) => parsePointTime(p) >= anchorMonthStart)
-    return anchorMonth.length > 0 ? anchorMonth : points.slice(-1000)
+    const anchorMonth: DeviceLocationData[] = []
+    for (let i = 0; i < points.length; i++) {
+      const t = (points[i] as any)._timeMs || parsePointTime(points[i])
+      if (t >= anchorMonthStart) anchorMonth.push(points[i])
+    }
+    return anchorMonth
   }
 
   if (filterVal === "custom" && startD && endD) {
     const sTime = new Date(`${startD}T00:00:00`).getTime()
-    const eTime = new Date(`${endD}T23:59:59`).getTime()
-    return points.filter((p) => {
-      const t = parsePointTime(p)
-      return t >= sTime && t <= eTime
-    })
+    const eTime = new Date(`${endD}T23:59:59.999`).getTime()
+    const customPoints: DeviceLocationData[] = []
+    for (let i = 0; i < points.length; i++) {
+      const t = (points[i] as any)._timeMs || parsePointTime(points[i])
+      if (t >= sTime && t <= eTime) customPoints.push(points[i])
+    }
+    return customPoints
   }
 
   return points
@@ -314,12 +358,89 @@ const loadGoogleMapsScript = (callback: () => void) => {
   document.head.appendChild(script)
 }
 
+// ─── Fast Convex Hull (Andrew's Monotone Chain O(N log N)) ──────────────────
+// Efficiently computes the outermost boundary polygon of the operating field.
+const computeConvexHull = (pts: { lat: number; lng: number }[]): { lat: number; lng: number }[] => {
+  const n = pts.length
+  if (n < 3) return pts
+
+  // 1. Fast O(N) deduplication & quantization to eliminate redundant tight points
+  const seen = new Set<string>()
+  const unique: { lat: number; lng: number }[] = []
+  for (let i = 0; i < n; i++) {
+    const key = `${pts[i].lat.toFixed(6)},${pts[i].lng.toFixed(6)}`
+    if (!seen.has(key)) {
+      seen.add(key)
+      unique.push(pts[i])
+    }
+  }
+  if (unique.length < 3) return unique
+
+  // 2. Sort points by latitude, then longitude: O(N log N)
+  unique.sort((a, b) => (a.lat === b.lat ? a.lng - b.lng : a.lat - b.lat))
+
+  // Cross product of vectors OA and OB (returns > 0 for counter-clockwise turn)
+  const cross = (o: { lat: number; lng: number }, a: { lat: number; lng: number }, b: { lat: number; lng: number }) =>
+    (a.lng - o.lng) * (b.lat - o.lat) - (a.lat - o.lat) * (b.lng - o.lng)
+
+  // 3. Build lower hull
+  const lower: { lat: number; lng: number }[] = []
+  for (let i = 0; i < unique.length; i++) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], unique[i]) <= 0) {
+      lower.pop()
+    }
+    lower.push(unique[i])
+  }
+
+  // 4. Build upper hull
+  const upper: { lat: number; lng: number }[] = []
+  for (let i = unique.length - 1; i >= 0; i--) {
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], unique[i]) <= 0) {
+      upper.pop()
+    }
+    upper.push(unique[i])
+  }
+
+  // Remove duplicate last elements
+  lower.pop()
+  upper.pop()
+
+  return lower.concat(upper)
+}
+
+// Extract only points belonging to the actual operating field (excluding long transit roads)
+const getFieldOperatingPoints = (pts: { lat: number; lng: number }[]): { lat: number; lng: number }[] => {
+  if (pts.length < 6) return pts
+
+  const threshold = 0.0025 // ~250m spatial cluster window
+  const counts = new Int32Array(pts.length)
+
+  for (let i = 0; i < pts.length; i++) {
+    for (let j = i + 1; j < pts.length; j++) {
+      const dLat = Math.abs(pts[i].lat - pts[j].lat)
+      const dLng = Math.abs(pts[i].lng - pts[j].lng)
+      if (dLat < threshold && dLng < threshold) {
+        counts[i]++
+        counts[j]++
+      }
+    }
+  }
+
+  // Operating field points have repeated passes (> 3 neighbors within 250m)
+  const fieldPts = pts.filter((_, idx) => counts[idx] >= 3)
+  return fieldPts.length >= 3 ? fieldPts : pts
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 
 export default function DeviceSection() {
   const [selectedTractor, setSelectedTractor] = useState<string | null>(null)
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false)
   const [devices, setDevices] = useState<Device[]>([])
+  const devicesRef = useRef<Device[]>(devices)
+  useEffect(() => {
+    devicesRef.current = devices
+  }, [devices])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 40.7128, lng: -74.006 })
@@ -345,10 +466,14 @@ export default function DeviceSection() {
   const [historyLoading, setHistoryLoading] = useState<boolean>(false)
   const [rawHistoryPoints, setRawHistoryPoints] = useState<DeviceLocationData[]>([])
   const deviceHistoryCacheRef = useRef<Record<string, DeviceLocationData[]>>({})
+  const masterHistoryPoolRef = useRef<Record<string, (DeviceLocationData & { _timeMs: number })[]>>({})
 
-  // Instant in-memory time filtering across rawHistoryPoints (0 ms latency!)
+  // Instant authoritative points for the selected range (0 ms latency!)
   const historyLocations = useMemo(() => {
-    return filterHistoryByRange(rawHistoryPoints, selectedFilter, customStartDate, customEndDate)
+    if (selectedFilter === "custom") {
+      return filterHistoryByRange(rawHistoryPoints, "custom", customStartDate, customEndDate)
+    }
+    return rawHistoryPoints
   }, [rawHistoryPoints, selectedFilter, customStartDate, customEndDate])
 
   const [showOnlySelectedTractor, setShowOnlySelectedTractor] = useState<boolean>(true)
@@ -364,6 +489,7 @@ export default function DeviceSection() {
   const startMarkerRef = useRef<any>(null)
   const endMarkerRef = useRef<any>(null)
   const waypointMarkersRef = useRef<any[]>([])
+  const fieldPolygonRef = useRef<any>(null) // Operating field area boundary polygon
 
   // Live Movement Animation & Simulation states
   const [isSimulating, setIsSimulating] = useState<boolean>(false)
@@ -399,16 +525,30 @@ export default function DeviceSection() {
   }, [historyLocations, motionFilter])
 
   // Run road & field route cleaning, outlier rejection, stationary jitter compression, and trip segmentation
+  const selectedDevCountry = useMemo(() => {
+    const d = devices.find((x) => x.id === selectedTractor)
+    return d?.countryCode || d?.region || ""
+  }, [devices, selectedTractor])
+
   const cleanedRouteResult = useMemo(() => {
     if (!selectedTractor || displayHistoryLocations.length === 0) return null
-    const selectedDev = devices.find((d) => d.id === selectedTractor)
-    const isIndia = selectedDev?.countryCode === "IN" || selectedDev?.region === "NE"
+    const isIndia = selectedDevCountry === "IN" || selectedDevCountry === "NE"
     return cleanAndSegmentRoute(displayHistoryLocations, { isIndia })
-  }, [displayHistoryLocations, selectedTractor, devices])
+  }, [displayHistoryLocations, selectedTractor, selectedDevCountry])
 
   // Calculate live route telemetry analytics for the filtered history
   const routeStats = useMemo(() => {
     if (cleanedRouteResult) {
+      const fieldPts = getFieldOperatingPoints(
+        cleanedRouteResult.workingFieldPoints && cleanedRouteResult.workingFieldPoints.length >= 3
+          ? cleanedRouteResult.workingFieldPoints
+          : cleanedRouteResult.allCleanPoints.map((p) => ({ lat: p.lat, lng: p.lng }))
+      )
+      const hull = fieldPts.length >= 3 ? computeConvexHull(fieldPts) : []
+      const polygonArea = hull.length >= 3 ? computePolygonAreaHectares(hull) : 0
+      const calculatedArea =
+        polygonArea > 0 ? polygonArea : Number((cleanedRouteResult.totalDistanceKm * 0.3).toFixed(1))
+
       return {
         distanceKm: cleanedRouteResult.totalDistanceKm,
         maxSpeed: cleanedRouteResult.maxSpeedKmH,
@@ -419,6 +559,7 @@ export default function DeviceSection() {
         tripsCount: cleanedRouteResult.trips.length,
         stopsCount: cleanedRouteResult.stopsCount,
         outliersDropped: cleanedRouteResult.outliersDropped,
+        workedAreaHa: calculatedArea,
       }
     }
     return {
@@ -431,6 +572,7 @@ export default function DeviceSection() {
       tripsCount: 0,
       stopsCount: 0,
       outliersDropped: 0,
+      workedAreaHa: 0,
     }
   }, [cleanedRouteResult])
 
@@ -530,53 +672,100 @@ export default function DeviceSection() {
 
 
   // Fetch device route history for selected tractor (cached in-memory for instant 0ms time filtering)
-  const fetchTractorHistory = async (deviceImei: string, forceRefresh = false) => {
+  const fetchTractorHistory = async (
+    deviceImei: string,
+    forceRefresh = false,
+    rangeVal = selectedFilter,
+    startD = customStartDate,
+    endD = customEndDate
+  ) => {
     if (!deviceImei) return
 
-    // If already cached and not forcing refresh, use in-memory points instantly!
-    if (!forceRefresh && deviceHistoryCacheRef.current[deviceImei]?.length > 0) {
-      setRawHistoryPoints(deviceHistoryCacheRef.current[deviceImei])
+    const cacheKey = `${deviceImei}_${rangeVal}_${startD}_${endD}`
+
+    // 1. Instant Cache Hit: Return in-memory cached points immediately! (0 ms latency)
+    if (!forceRefresh && deviceHistoryCacheRef.current[cacheKey]?.length > 0) {
+      setRawHistoryPoints(deviceHistoryCacheRef.current[cacheKey])
+      setHistoryLoading(false)
       return
+    }
+
+    // 2. Instant Derivation from Master History Pool (if points exist for this device)
+    const pool = masterHistoryPoolRef.current[deviceImei]
+    let hasInstantPreview = false
+    if (!forceRefresh && pool && pool.length > 0) {
+      const derived = filterHistoryByRange(pool, rangeVal, startD, endD)
+      if (derived.length > 0) {
+        setRawHistoryPoints(derived)
+        hasInstantPreview = true
+      }
+    }
+
+    // If we have no preview or points for this tractor yet, clear stale points from previous tractor
+    if (!hasInstantPreview) {
+      setRawHistoryPoints([])
     }
 
     setHistoryLoading(true)
     try {
-      const dev = devices.find((d) => d.id === deviceImei)
+      const dev = devicesRef.current.find((d) => d.id === deviceImei) || devices.find((d) => d.id === deviceImei)
       const devRegion = dev?.region || (dev?.countryCode === "IN" ? "NE" : "SW")
 
-      console.log("[Devices Main Map] Fetching route history for:", deviceImei, "Region:", devRegion, "ForceRefresh:", forceRefresh)
+      console.log("[Devices Main Map] Fast-fetching route history for:", deviceImei, "Range:", rangeVal)
 
       const historyData = await DeviceLocationService.getDeviceLocationHistory(
         deviceImei,
-        { range: "all" },
+        {
+          range: rangeVal,
+          start_date: rangeVal === "custom" ? startD : undefined,
+          end_date: rangeVal === "custom" ? endD : undefined,
+        },
         devRegion
       )
 
-      const points = historyData || []
-      deviceHistoryCacheRef.current[deviceImei] = points
+      const points = normalizeHistoryPoints(historyData || [])
+      deviceHistoryCacheRef.current[cacheKey] = points
+
+      // Merge into master pool for instant local filtering on other ranges
+      if (points.length > 0) {
+        const existing = masterHistoryPoolRef.current[deviceImei] || []
+        const pMap = new Map<string, DeviceLocationData & { _timeMs: number }>()
+        for (const p of existing) {
+          const lngVal = p.lon ?? (p as any).lng ?? p.longitude ?? 0
+          pMap.set(`${p._timeMs}_${Number(p.lat).toFixed(5)}_${Number(lngVal).toFixed(5)}`, p)
+        }
+        for (const p of points) {
+          const lngVal = p.lon ?? (p as any).lng ?? p.longitude ?? 0
+          pMap.set(`${p._timeMs}_${Number(p.lat).toFixed(5)}_${Number(lngVal).toFixed(5)}`, p)
+        }
+        masterHistoryPoolRef.current[deviceImei] = Array.from(pMap.values()).sort((a, b) => a._timeMs - b._timeMs)
+      }
+
       setRawHistoryPoints(points)
     } catch (err) {
       console.warn("[Devices Main Map] Error loading route history:", err)
-      setRawHistoryPoints([])
+      if (!hasInstantPreview) {
+        setRawHistoryPoints([])
+      }
     } finally {
       setHistoryLoading(false)
     }
   }
 
   // Alias for manual refreshes / pings
-  const loadMainMapRoute = async (deviceImei: string, _filterVal?: string, _startD?: string, _endD?: string) => {
-    return fetchTractorHistory(deviceImei, true)
+  const loadMainMapRoute = async (deviceImei: string, filterVal?: string, startD?: string, endD?: string) => {
+    return fetchTractorHistory(deviceImei, true, filterVal || selectedFilter, startD || customStartDate, endD || customEndDate)
   }
 
-  // Load route history when selected tractor changes
+  // Load route history when selected tractor changes OR filter changes
   useEffect(() => {
     if (selectedTractor) {
       setSelectedTripId("all")
-      fetchTractorHistory(selectedTractor)
+      fetchTractorHistory(selectedTractor, false, selectedFilter)
     } else {
       setRawHistoryPoints([])
     }
-  }, [selectedTractor])
+  }, [selectedTractor, selectedFilter, customStartDate, customEndDate])
 
 
   // Google Maps Directions Service Route Snapping (tractor motion always on the road)
@@ -1529,11 +1718,14 @@ export default function DeviceSection() {
         setDevices(transformedDevices)
         if (transformedDevices.length > 0) {
           const firstWithGps = transformedDevices.find((d) => d.lat !== 0 && d.lng !== 0) || transformedDevices[0]
-          setSelectedTractor(firstWithGps.id)
-          setMapCenter({ lat: firstWithGps.lat, lng: firstWithGps.lng })
-          if (googleMapRef.current) {
-            googleMapRef.current.panTo({ lat: firstWithGps.lat, lng: firstWithGps.lng })
-          }
+          setSelectedTractor((prev) => {
+            if (prev) return prev // Retain user's chosen tractor! Do not overwrite or re-center away!
+            setMapCenter({ lat: firstWithGps.lat, lng: firstWithGps.lng })
+            if (googleMapRef.current) {
+              googleMapRef.current.panTo({ lat: firstWithGps.lat, lng: firstWithGps.lng })
+            }
+            return firstWithGps.id
+          })
         }
       }
     } catch (err: any) {
@@ -2192,6 +2384,12 @@ export default function DeviceSection() {
     historyPolylinesRef.current.forEach((p) => p.setMap(null))
     historyPolylinesRef.current = []
 
+    // Clear previous field-area polygon
+    if (fieldPolygonRef.current) {
+      fieldPolygonRef.current.setMap(null)
+      fieldPolygonRef.current = null
+    }
+
     if (startMarkerRef.current) {
       startMarkerRef.current.setMap(null)
       startMarkerRef.current = null
@@ -2205,9 +2403,9 @@ export default function DeviceSection() {
 
     if (!selectedTractor) return
 
-    const selectedDev = devices.find((d) => d.id === selectedTractor)
+    const selectedDev = devicesRef.current.find((d) => d.id === selectedTractor)
 
-    if (!showRoutePath || !cleanedRouteResult || cleanedRouteResult.trips.length === 0) {
+    if (!showRoutePath || !cleanedRouteResult || (cleanedRouteResult.trips.length === 0 && cleanedRouteResult.allCleanPoints.length === 0)) {
       // If no route points for this filter, focus on device current position
       if (selectedDev && selectedDev.lat !== 0 && selectedDev.lng !== 0) {
         googleMapRef.current.panTo({ lat: selectedDev.lat, lng: selectedDev.lng })
@@ -2216,128 +2414,64 @@ export default function DeviceSection() {
       return
     }
 
-    // Determine trips to render: all or selected individual trip
-    const tripsToRender =
-      selectedTripId === "all"
-        ? cleanedRouteResult.trips
-        : cleanedRouteResult.trips.filter((t) => t.id === selectedTripId)
-
-    const effectiveTrips = tripsToRender.length > 0 ? tripsToRender : cleanedRouteResult.trips
     const allRenderedCoords: { lat: number; lng: number }[] = []
 
-    effectiveTrips.forEach((trip, tripIndex) => {
-      if (trip.path.length < 2) return
-
-      // Distinct vibrant color if multiple trips
-      const tripColor =
-        effectiveTrips.length === 1
-          ? "#2563EB"
-          : tripIndex % 4 === 0
-          ? "#2563EB" // royal blue
-          : tripIndex % 4 === 1
-          ? "#059669" // emerald green
-          : tripIndex % 4 === 2
-          ? "#D97706" // amber
-          : "#7C3AED" // violet
-
-      // 1. High-contrast dark casing outline for satellite field clarity
-      const casing = new window.google.maps.Polyline({
-        path: trip.path,
-        geodesic: true,
-        strokeColor: "#0F172A",
-        strokeOpacity: 0.7,
-        strokeWeight: 6.5,
-        map: googleMapRef.current,
-        zIndex: 35 + tripIndex,
-      })
-      historyPolylinesRef.current.push(casing)
-
-      // 2. Core route line with directional forward arrows along the road / field swath
-      const mainPolyline = new window.google.maps.Polyline({
-        path: trip.path,
-        geodesic: true,
-        strokeColor: tripColor,
-        strokeOpacity: 0.95,
-        strokeWeight: 4,
-        icons: [
-          {
-            icon: {
-              path: window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-              scale: 2.2,
-              strokeColor: "#FFFFFF",
-              fillColor: tripColor,
-              fillOpacity: 1,
-              strokeWeight: 1,
-            },
-            offset: "35px",
-            repeat: "70px",
-          },
-        ],
-        map: googleMapRef.current,
-        zIndex: 36 + tripIndex,
-      })
-      historyPolylinesRef.current.push(mainPolyline)
-
-      // Add to bounds collection
-      trip.path.forEach((pt) => allRenderedCoords.push(pt))
-
-      // 3. Start Point Marker (A / Origin)
-      const startPoint = trip.path[0]
-      const sMarker = new window.google.maps.Marker({
-        position: startPoint,
-        map: googleMapRef.current,
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 7.5,
-          fillColor: "#10B981",
-          fillOpacity: 1,
-          strokeColor: "#FFFFFF",
-          strokeWeight: 2,
-        },
-        title: `Trip ${tripIndex + 1} Start • ${new Date(trip.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
-        zIndex: 55,
-      })
-      waypointMarkersRef.current.push(sMarker)
-
-      // 4. End Point Marker (B / Finish)
-      const endPoint = trip.path[trip.path.length - 1]
-      const eMarker = new window.google.maps.Marker({
-        position: endPoint,
-        map: googleMapRef.current,
-        icon: {
-          path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 7.5,
-          fillColor: "#EF4444",
-          fillOpacity: 1,
-          strokeColor: "#FFFFFF",
-          strokeWeight: 2,
-        },
-        title: `Trip ${tripIndex + 1} Finish • ${new Date(trip.endTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} • ${trip.distanceKm} km`,
-        zIndex: 55,
-      })
-      waypointMarkersRef.current.push(eMarker)
-
-      // 5. Significant Stops / Dwell markers along the trip
-      trip.points.forEach((pt) => {
-        if (pt.isStop && (pt.dwellMinutes || 0) >= 3) {
-          const stopM = new window.google.maps.Marker({
-            position: { lat: pt.lat, lng: pt.lng },
+    if (selectedTripId === "all") {
+      // ── Render Each Legitimate Trip Segment Independently ──────────────────
+      // Never draw a straight line across separate trips or teleportation gaps!
+      // This prevents artificial lines cutting through rivers, valleys, and terrain,
+      // and ensures real possible paths along roads and in fields are shown accurately.
+      cleanedRouteResult.trips.forEach((trip) => {
+        if (trip.path && trip.path.length >= 2) {
+          const polyline = new window.google.maps.Polyline({
+            path: trip.path,
+            geodesic: false,
+            strokeColor: "#EF4444",
+            strokeOpacity: 0.95,
+            strokeWeight: 6,
             map: googleMapRef.current,
-            icon: {
-              path: window.google.maps.SymbolPath.CIRCLE,
-              scale: 4.5,
-              fillColor: "#F59E0B",
-              fillOpacity: 0.9,
-              strokeColor: "#FFFFFF",
-              strokeWeight: 1.5,
-            },
-            title: `Stopped: ${pt.dwellMinutes}m • ${new Date(pt.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
-            zIndex: 48,
+            zIndex: 36,
           })
-          waypointMarkersRef.current.push(stopM)
+          historyPolylinesRef.current.push(polyline)
+
+          trip.path.forEach((pt) => allRenderedCoords.push(pt))
+        } else if (trip.path && trip.path.length === 1) {
+          allRenderedCoords.push(trip.path[0])
         }
       })
-    })
+
+      // Fallback: If no individual trip had >= 2 points, but continuousPath has points
+      if (allRenderedCoords.length === 0 && cleanedRouteResult.continuousPath && cleanedRouteResult.continuousPath.length >= 2) {
+        const polyline = new window.google.maps.Polyline({
+          path: cleanedRouteResult.continuousPath,
+          geodesic: false,
+          strokeColor: "#EF4444",
+          strokeOpacity: 0.95,
+          strokeWeight: 6,
+          map: googleMapRef.current,
+          zIndex: 36,
+        })
+        historyPolylinesRef.current.push(polyline)
+        cleanedRouteResult.continuousPath.forEach((pt) => allRenderedCoords.push(pt))
+      }
+    } else {
+      // ── Selected Individual Trip ──────────────────────────────────────────
+      const trip = cleanedRouteResult.trips.find((t) => t.id === selectedTripId)
+      if (trip && trip.path.length >= 2) {
+        const mainPolyline = new window.google.maps.Polyline({
+          path: trip.path,
+          geodesic: false,
+          strokeColor: "#EF4444",
+          strokeOpacity: 0.95,
+          strokeWeight: 6,
+          map: googleMapRef.current,
+          zIndex: 36,
+        })
+        historyPolylinesRef.current.push(mainPolyline)
+
+        trip.path.forEach((pt) => allRenderedCoords.push(pt))
+      }
+    }
 
     // Fit map bounds smoothly around clean path
     if (allRenderedCoords.length > 0) {
@@ -2350,13 +2484,14 @@ export default function DeviceSection() {
       const lngDiff = Math.abs(ne.lng() - sw.lng())
 
       if (allRenderedCoords.length > 1 && (latDiff > 0.0003 || lngDiff > 0.0003)) {
-        googleMapRef.current.fitBounds(bounds, { top: 80, right: 60, bottom: 90, left: 60 })
+        googleMapRef.current.fitBounds(bounds, { top: 70, right: 50, bottom: 80, left: 50 })
       } else {
         googleMapRef.current.panTo(allRenderedCoords[allRenderedCoords.length - 1])
         googleMapRef.current.setZoom(16)
       }
     }
-  }, [cleanedRouteResult, selectedTripId, showRoutePath, selectedTractor, mapsLoaded, devices])
+
+  }, [cleanedRouteResult, selectedTripId, showRoutePath, selectedTractor, mapsLoaded])
 
 
   // Draw real-time motion trail for the selected device
@@ -2639,22 +2774,27 @@ export default function DeviceSection() {
                 { label: "7D", value: "week" },
                 { label: "30D", value: "month" },
                 { label: "All", value: "all" },
-              ].map((f) => (
-                <button
-                  key={f.value}
-                  onClick={() => {
-                    setSelectedFilter(f.value)
-                    setShowDatePicker(false)
-                  }}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                    selectedFilter === f.value
-                      ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
-                      : "text-slate-400 hover:text-white hover:bg-slate-800"
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
+              ].map((f) => {
+                const isActive = selectedFilter === f.value
+                const isBtnLoading = isActive && historyLoading
+                return (
+                  <button
+                    key={f.value}
+                    onClick={() => {
+                      setSelectedFilter(f.value)
+                      setShowDatePicker(false)
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      isActive
+                        ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800"
+                    }`}
+                  >
+                    {isBtnLoading && <RefreshCw className="w-3 h-3 animate-spin text-white" />}
+                    {f.label}
+                  </button>
+                )
+              })}
 
               {/* Custom Date Range Toggle Button */}
               <button
@@ -2958,6 +3098,52 @@ export default function DeviceSection() {
             {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
           </button>
 
+          {/* Zoom Controls */}
+          <div className="absolute top-14 right-3 z-[1000] flex flex-col gap-1">
+            {/* Zoom In */}
+            <button
+              onClick={() => {
+                if (googleMapRef.current) {
+                  const currentZoom = googleMapRef.current.getZoom() ?? 14
+                  googleMapRef.current.setZoom(currentZoom + 1)
+                }
+              }}
+              className="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 hover:bg-slate-800 active:scale-95 text-white p-2 rounded-t-xl rounded-b-none border-b-slate-700/40 transition-all shadow-xl"
+              title="Zoom In"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </button>
+
+            {/* Zoom Out */}
+            <button
+              onClick={() => {
+                if (googleMapRef.current) {
+                  const currentZoom = googleMapRef.current.getZoom() ?? 14
+                  googleMapRef.current.setZoom(Math.max(1, currentZoom - 1))
+                }
+              }}
+              className="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 hover:bg-slate-800 active:scale-95 text-white p-2 rounded-none border-t-0 border-b-0 transition-all shadow-xl"
+              title="Zoom Out"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </button>
+
+            {/* Fit to Selected Device */}
+            <button
+              onClick={() => {
+                const dev = getSelectedDevice()
+                if (dev && googleMapRef.current && dev.lat !== 0 && dev.lng !== 0) {
+                  googleMapRef.current.panTo({ lat: dev.lat, lng: dev.lng })
+                  googleMapRef.current.setZoom(17)
+                }
+              }}
+              className="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 hover:bg-red-900/80 active:scale-95 text-white p-2 rounded-t-none rounded-b-xl border-t-0 transition-all shadow-xl"
+              title="Center on selected tractor"
+            >
+              <Crosshair className="w-4 h-4 text-red-400" />
+            </button>
+          </div>
+
           {/* FLOATING BOTTOM TELEMETRY HUD BAR FOR SELECTED TRACTOR */}
           {selectedDevice && (
             <div className="absolute bottom-4 left-4 right-4 z-[1000] pointer-events-none">
@@ -3015,8 +3201,21 @@ export default function DeviceSection() {
 
                   <div>
                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Route Path</span>
-                    <span className="text-sm font-bold text-blue-400 font-mono">
+                    <span className="text-sm font-bold text-red-400 font-mono">
                       {historyLoading ? "Loading..." : `${historyLocations.length} Waypoints`}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Worked Area</span>
+                    <span className="text-sm font-bold text-emerald-400 font-mono">
+                      {historyLoading
+                        ? "..."
+                        : (routeStats as any).workedAreaHa > 0
+                        ? `${(routeStats as any).workedAreaHa} ha`
+                        : routeStats.distanceKm > 0
+                        ? `${(routeStats.distanceKm * 0.3).toFixed(1)} ha`
+                        : "0 ha"}
                     </span>
                   </div>
 
@@ -3033,6 +3232,27 @@ export default function DeviceSection() {
 
           {/* Map Container */}
           <div ref={mapRef} style={{ width: "100%", height: "100%" }} />
+
+          {/* High-Visibility Map Loading Overlay */}
+          {historyLoading && (
+            <div className="absolute inset-0 z-30 pointer-events-none flex items-center justify-center bg-slate-950/40 backdrop-blur-[2px] transition-all duration-300">
+              <div className="flex items-center gap-3.5 px-6 py-4 rounded-2xl bg-slate-900/95 border border-blue-500/50 shadow-2xl shadow-blue-500/20 text-white backdrop-blur-md">
+                <div className="relative flex items-center justify-center w-9 h-9">
+                  <div className="absolute inset-0 rounded-full border-2 border-blue-500/30 border-t-blue-400 animate-spin" />
+                  <RefreshCw className="w-4 h-4 text-blue-400 animate-spin" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                    Loading GPS Route History
+                    <span className="inline-block w-2 h-2 rounded-full bg-blue-400 animate-ping" />
+                  </span>
+                  <span className="text-xs text-slate-400 font-medium">
+                    Filtering and aligning map coordinates ({selectedFilter.toUpperCase()})...
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* SIDEBAR CONTROL PANEL */}
@@ -3341,6 +3561,51 @@ export default function DeviceSection() {
                 </div>
               )}
 
+              {/* WORKED AREA SUMMARY — matches mobile Device Tracking */}
+              {selectedDevice && routeStats.distanceKm > 0 && (
+                <div className="bg-red-950/60 border border-red-500/30 rounded-xl p-4 space-y-2 shadow-lg">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Route className="w-4 h-4 text-red-400" />
+                    <span className="text-xs font-bold text-red-300 uppercase tracking-wider">History Path Summary</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-white/5 rounded-lg p-2.5 text-center">
+                      <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">Worked Area</p>
+                      <p className="text-lg font-bold text-emerald-400">
+                        {(routeStats as any).workedAreaHa > 0
+                          ? (routeStats as any).workedAreaHa
+                          : (routeStats.distanceKm * 0.3).toFixed(1)}
+                        <span className="text-xs text-slate-400 font-normal ml-1">ha</span>
+                      </p>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-2.5 text-center">
+                      <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">Distance</p>
+                      <p className="text-lg font-bold text-white">
+                        {routeStats.distanceKm.toFixed(2)}
+                        <span className="text-xs text-slate-400 font-normal ml-1">km</span>
+                      </p>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-2.5 text-center">
+                      <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">Max Speed</p>
+                      <p className="text-base font-bold text-amber-400">
+                        {routeStats.maxSpeed.toFixed(1)}
+                        <span className="text-xs text-slate-400 font-normal ml-1">km/h</span>
+                      </p>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-2.5 text-center">
+                      <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wide mb-0.5">Trips</p>
+                      <p className="text-base font-bold text-blue-400">
+                        {routeStats.tripsCount}
+                        <span className="text-xs text-slate-400 font-normal ml-1">runs</span>
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-500 text-center">
+                    IMEI: <span className="font-mono text-slate-400">{selectedDevice.id}</span>
+                  </p>
+                </div>
+              )}
+
               {/* ACTION BUTTONS */}
               <div className="space-y-3">
                 <button
@@ -3354,9 +3619,9 @@ export default function DeviceSection() {
                 <button
                   onClick={() => setShowRoutePath(!showRoutePath)}
                   disabled={!selectedDevice}
-                  className="w-full bg-gradient-to-r from-blue-500/80 to-blue-600/70 hover:from-blue-500 hover:to-blue-500 disabled:opacity-50 text-white font-medium py-3 px-4 rounded-xl flex items-center justify-center"
+                  className="w-full bg-gradient-to-r from-red-600/80 to-red-700/70 hover:from-red-600 hover:to-red-600 disabled:opacity-50 text-white font-medium py-3 px-4 rounded-xl flex items-center justify-center"
                 >
-                  <History className="w-5 h-5 mr-2" /> {showRoutePath ? "Hide Route on Map" : "Show Route on Map"}
+                  <Route className="w-5 h-5 mr-2" /> {showRoutePath ? "Hide History Path" : "Show History Path"}
                 </button>
                 <button
                   onClick={handleOpenAddDevice}
