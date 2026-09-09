@@ -242,7 +242,7 @@ const filterHistoryByRange = (
       const t = (points[i] as any)._timeMs || parsePointTime(points[i])
       if (t >= anchorStart && t <= anchorEnd) anchorDayPoints.push(points[i])
     }
-    return anchorDayPoints
+    return anchorDayPoints.length > 0 ? anchorDayPoints : points.slice(-300)
   }
 
   if (filterVal === "yesterday") {
@@ -266,7 +266,7 @@ const filterHistoryByRange = (
       const t = (points[i] as any)._timeMs || parsePointTime(points[i])
       if (t >= prevStart && t <= prevEnd) prevDayPoints.push(points[i])
     }
-    return prevDayPoints
+    return prevDayPoints.length > 0 ? prevDayPoints : points.slice(-150)
   }
 
   if (filterVal === "week") {
@@ -285,7 +285,7 @@ const filterHistoryByRange = (
       const t = (points[i] as any)._timeMs || parsePointTime(points[i])
       if (t >= anchorWeekStart) anchorWeek.push(points[i])
     }
-    return anchorWeek
+    return anchorWeek.length > 0 ? anchorWeek : points.slice(-600)
   }
 
   if (filterVal === "month") {
@@ -304,7 +304,7 @@ const filterHistoryByRange = (
       const t = (points[i] as any)._timeMs || parsePointTime(points[i])
       if (t >= anchorMonthStart) anchorMonth.push(points[i])
     }
-    return anchorMonth
+    return anchorMonth.length > 0 ? anchorMonth : points
   }
 
   if (filterVal === "custom" && startD && endD) {
@@ -713,7 +713,7 @@ export default function DeviceSection() {
 
       console.log("[Devices Main Map] Fast-fetching route history for:", deviceImei, "Range:", rangeVal)
 
-      const historyData = await DeviceLocationService.getDeviceLocationHistory(
+      let historyData = await DeviceLocationService.getDeviceLocationHistory(
         deviceImei,
         {
           range: rangeVal,
@@ -723,8 +723,25 @@ export default function DeviceSection() {
         devRegion
       )
 
+      // Fallback: If range query returned 0 points (e.g. tractor wasn't driven today),
+      // seamlessly fetch all history so the pool is populated and latest activity displays!
+      if ((!historyData || historyData.length === 0) && rangeVal !== "all" && rangeVal !== "custom") {
+        console.log(`[Devices Main Map] No points for ${rangeVal}, fetching all history fallback for ${deviceImei}...`)
+        try {
+          const allHistory = await DeviceLocationService.getDeviceLocationHistory(
+            deviceImei,
+            { range: "all" },
+            devRegion
+          )
+          if (Array.isArray(allHistory) && allHistory.length > 0) {
+            historyData = allHistory
+          }
+        } catch (e) {
+          console.warn("[Devices Main Map] Fallback allHistory failed:", e)
+        }
+      }
+
       const points = normalizeHistoryPoints(historyData || [])
-      deviceHistoryCacheRef.current[cacheKey] = points
 
       // Merge into master pool for instant local filtering on other ranges
       if (points.length > 0) {
@@ -738,10 +755,18 @@ export default function DeviceSection() {
           const lngVal = p.lon ?? (p as any).lng ?? p.longitude ?? 0
           pMap.set(`${p._timeMs}_${Number(p.lat).toFixed(5)}_${Number(lngVal).toFixed(5)}`, p)
         }
-        masterHistoryPoolRef.current[deviceImei] = Array.from(pMap.values()).sort((a, b) => a._timeMs - b._timeMs)
-      }
+        const fullPool = Array.from(pMap.values()).sort((a, b) => a._timeMs - b._timeMs)
+        masterHistoryPoolRef.current[deviceImei] = fullPool
 
-      setRawHistoryPoints(points)
+        // Filter by the requested range (e.g. "today" will intelligently extract the latest active operational day!)
+        const filtered = filterHistoryByRange(fullPool, rangeVal, startD, endD)
+        const toDisplay = filtered.length > 0 ? filtered : points
+        deviceHistoryCacheRef.current[cacheKey] = toDisplay
+        setRawHistoryPoints(toDisplay)
+      } else {
+        deviceHistoryCacheRef.current[cacheKey] = []
+        setRawHistoryPoints([])
+      }
     } catch (err) {
       console.warn("[Devices Main Map] Error loading route history:", err)
       if (!hasInstantPreview) {
@@ -2454,6 +2479,26 @@ export default function DeviceSection() {
         historyPolylinesRef.current.push(polyline)
         cleanedRouteResult.continuousPath.forEach((pt) => allRenderedCoords.push(pt))
       }
+
+      // Final fallback: Draw raw points if cleaner dropped them
+      if (allRenderedCoords.length === 0 && displayHistoryLocations && displayHistoryLocations.length >= 2) {
+        const rawPath = displayHistoryLocations
+          .filter((p) => p.lat && p.lon && !isNaN(Number(p.lat)) && !isNaN(Number(p.lon)))
+          .map((p) => ({ lat: Number(p.lat), lng: Number(p.lon) }))
+        if (rawPath.length >= 2) {
+          const polyline = new window.google.maps.Polyline({
+            path: rawPath,
+            geodesic: false,
+            strokeColor: "#EF4444",
+            strokeOpacity: 0.95,
+            strokeWeight: 6,
+            map: googleMapRef.current,
+            zIndex: 36,
+          })
+          historyPolylinesRef.current.push(polyline)
+          rawPath.forEach((pt) => allRenderedCoords.push(pt))
+        }
+      }
     } else {
       // ── Selected Individual Trip ──────────────────────────────────────────
       const trip = cleanedRouteResult.trips.find((t) => t.id === selectedTripId)
@@ -2483,11 +2528,16 @@ export default function DeviceSection() {
       const latDiff = Math.abs(ne.lat() - sw.lat())
       const lngDiff = Math.abs(ne.lng() - sw.lng())
 
-      if (allRenderedCoords.length > 1 && (latDiff > 0.0003 || lngDiff > 0.0003)) {
+      if (allRenderedCoords.length > 1 && (latDiff > 0.0001 || lngDiff > 0.0001)) {
         googleMapRef.current.fitBounds(bounds, { top: 70, right: 50, bottom: 80, left: 50 })
+        const listener = window.google.maps.event.addListenerOnce(googleMapRef.current, "idle", () => {
+          if (googleMapRef.current && googleMapRef.current.getZoom() > 18) {
+            googleMapRef.current.setZoom(18)
+          }
+        })
       } else {
         googleMapRef.current.panTo(allRenderedCoords[allRenderedCoords.length - 1])
-        googleMapRef.current.setZoom(16)
+        googleMapRef.current.setZoom(17)
       }
     }
 
