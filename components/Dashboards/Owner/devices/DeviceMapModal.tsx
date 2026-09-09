@@ -803,15 +803,24 @@ export function DeviceMapModal({
 
         // Fit map bounds strictly around tractor history route (do NOT include userLocation so map zooms in properly)
         if (allRenderedCoords.length > 0) {
+          const latestPt = allRenderedCoords[allRenderedCoords.length - 1]
+          // Cluster bounds within 3 degrees (~300km) of latest location to eliminate distant factory testing signals
+          const relevantCoords = allRenderedCoords.filter((p) => {
+            const dLat = Math.abs(p.lat - latestPt.lat)
+            const dLng = Math.abs(p.lng - latestPt.lng)
+            return dLat < 3.0 && dLng < 3.0
+          })
+
+          const coordsToFit = relevantCoords.length > 0 ? relevantCoords : allRenderedCoords
           const bounds = new window.google.maps.LatLngBounds()
-          allRenderedCoords.forEach((p) => bounds.extend(p))
+          coordsToFit.forEach((p) => bounds.extend(p))
 
           const ne = bounds.getNorthEast()
           const sw = bounds.getSouthWest()
           const latDiff = Math.abs(ne.lat() - sw.lat())
           const lngDiff = Math.abs(ne.lng() - sw.lng())
 
-          if (allRenderedCoords.length > 1 && (latDiff > 0.0001 || lngDiff > 0.0001)) {
+          if (coordsToFit.length > 1 && (latDiff > 0.0001 || lngDiff > 0.0001)) {
             map.fitBounds(bounds, { top: 60, right: 60, bottom: 80, left: 60 })
             const zoomListener = window.google.maps.event.addListenerOnce(map, "idle", () => {
               const curZoom = map.getZoom()
@@ -822,7 +831,7 @@ export function DeviceMapModal({
               }
             })
           } else {
-            map.panTo(allRenderedCoords[allRenderedCoords.length - 1])
+            map.panTo(latestPt)
             map.setZoom(17)
           }
         }

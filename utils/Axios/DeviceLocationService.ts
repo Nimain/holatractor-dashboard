@@ -28,7 +28,7 @@ export const deviceLocationInstance = axios.create({
     Authorization: `Bearer ${GPS_API_KEY}`,
     "X-API-Key": GPS_API_KEY,
   },
-  timeout: 15000,
+  timeout: 30000,
 });
 
 // Interceptor to attach API key query param as secondary fallback
@@ -372,7 +372,7 @@ class DeviceLocationService {
             "X-API-Key": GPS_API_KEY,
           },
           params: { ...queryParams, api_key: GPS_API_KEY },
-          timeout: 8000,
+          timeout: 30000,
         });
 
         let pointsArray: any[] = [];
@@ -399,7 +399,7 @@ class DeviceLocationService {
     try {
       const localRes = await axios.get(`/api/device/${cleanImei}/history`, {
         params: queryParams,
-        timeout: 6000,
+        timeout: 25000,
       });
       let pointsArray: any[] = [];
       if (localRes.data && Array.isArray(localRes.data.points)) {

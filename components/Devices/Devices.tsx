@@ -764,8 +764,10 @@ export default function DeviceSection() {
         deviceHistoryCacheRef.current[cacheKey] = toDisplay
         setRawHistoryPoints(toDisplay)
       } else {
-        deviceHistoryCacheRef.current[cacheKey] = []
-        setRawHistoryPoints([])
+        if (!hasInstantPreview) {
+          deviceHistoryCacheRef.current[cacheKey] = []
+          setRawHistoryPoints([])
+        }
       }
     } catch (err) {
       console.warn("[Devices Main Map] Error loading route history:", err)
@@ -2540,15 +2542,24 @@ export default function DeviceSection() {
 
     // Fit map bounds smoothly around clean path
     if (allRenderedCoords.length > 0) {
+      const latestPt = allRenderedCoords[allRenderedCoords.length - 1]
+      // Cluster bounds within 3 degrees (~300km) of latest location to eliminate distant factory testing signals
+      const relevantCoords = allRenderedCoords.filter((p) => {
+        const dLat = Math.abs(p.lat - latestPt.lat)
+        const dLng = Math.abs(p.lng - latestPt.lng)
+        return dLat < 3.0 && dLng < 3.0
+      })
+
+      const coordsToFit = relevantCoords.length > 0 ? relevantCoords : allRenderedCoords
       const bounds = new window.google.maps.LatLngBounds()
-      allRenderedCoords.forEach((p) => bounds.extend(p))
+      coordsToFit.forEach((p) => bounds.extend(p))
 
       const ne = bounds.getNorthEast()
       const sw = bounds.getSouthWest()
       const latDiff = Math.abs(ne.lat() - sw.lat())
       const lngDiff = Math.abs(ne.lng() - sw.lng())
 
-      if (allRenderedCoords.length > 1 && (latDiff > 0.0001 || lngDiff > 0.0001)) {
+      if (coordsToFit.length > 1 && (latDiff > 0.0001 || lngDiff > 0.0001)) {
         googleMapRef.current.fitBounds(bounds, { top: 70, right: 50, bottom: 80, left: 50 })
         const listener = window.google.maps.event.addListenerOnce(googleMapRef.current, "idle", () => {
           if (googleMapRef.current && googleMapRef.current.getZoom() > 18) {
@@ -2556,7 +2567,7 @@ export default function DeviceSection() {
           }
         })
       } else {
-        googleMapRef.current.panTo(allRenderedCoords[allRenderedCoords.length - 1])
+        googleMapRef.current.panTo(latestPt)
         googleMapRef.current.setZoom(17)
       }
     }
