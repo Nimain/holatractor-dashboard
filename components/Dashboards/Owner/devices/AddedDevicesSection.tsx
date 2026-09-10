@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Smartphone, ChevronRight, MapPin, Wifi, WifiOff, Truck } from "lucide-react"
 import DeviceApiService, { type Device } from "./Device"
 import { DeviceMapModal } from "./DeviceMapModal"
+import { getAuthUser } from "@/utils/auth/clientAuth"
 import Link from "next/link"
 
 interface AddedDevicesSectionProps {
@@ -54,7 +55,9 @@ export function AddedDevicesSection({ language = "en" }: AddedDevicesSectionProp
   const fetchDevices = async () => {
     try {
       setLoading(true)
-      const devicesData = await DeviceApiService.getAllDevices()
+      const user = getAuthUser()
+      const ownerId = user?.userId || user?.id
+      const devicesData = await DeviceApiService.getAllDevices(ownerId)
       setDevices(Array.isArray(devicesData) ? devicesData : [])
     } catch (error) {
       console.error("Error fetching devices:", error)

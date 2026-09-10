@@ -21,6 +21,7 @@ import DeviceApiService, { type Device } from "./Device";
 import { AddDeviceModal } from "./AddDeviceModal";
 import { DeviceMapModal } from "./DeviceMapModal";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
+import { getAuthUser } from "@/utils/auth/clientAuth";
 import Image from "next/image";
 
 interface DeviceListProps {
@@ -85,7 +86,9 @@ export function AllDeviceList({ language = "en" }: DeviceListProps) {
   const fetchDevices = async () => {
     try {
       setLoading(true);
-      const devicesData = await DeviceApiService.getAllDevices();
+      const user = getAuthUser();
+      const ownerId = user?.userId || user?.id;
+      const devicesData = await DeviceApiService.getAllDevices(ownerId);
       setDevices(Array.isArray(devicesData) ? devicesData : []);
     } catch (error) {
       console.error("Error fetching devices:", error);

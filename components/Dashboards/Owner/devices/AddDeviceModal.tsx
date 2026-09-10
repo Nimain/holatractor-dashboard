@@ -21,7 +21,7 @@ import {
   Loader2,
   ChevronLeft,
   Tractor,
-  Store,
+  Store as StoreIcon,
 } from "lucide-react";
 import DeviceApiService, { type Store, type TractorInStore } from "./Device";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
@@ -58,7 +58,7 @@ export function AddDeviceModal({
       title: "Add Device",
       selectStore: "Select Store",
       selectTractor: "Select Tractor",
-      // enterImei: "Enter IMEI Number",
+      enterImei: "Enter IMEI Number",
       noStores: "No stores available",
       noTractors: "This store has no available tractors",
       tractors: "tractors",
@@ -163,9 +163,12 @@ export function AddDeviceModal({
     setAdding(true);
 
     try {
+      const regionCode = deviceRegion === "northeast" ? "NE" : "SW";
       await DeviceApiService.addDeviceToTractor(
         imeiNumber.trim(),
-        selectedTractor.id
+        selectedTractor.id,
+        selectedStore?.id,
+        regionCode
       );
 
       successMessage(t.deviceAdded);
@@ -264,7 +267,7 @@ export function AddDeviceModal({
                               className="h-full w-full object-cover"
                             />
                           ) : (
-                            <Store className="h-12 w-12 text-pink-800 dark:text-pink-200" />
+                            <StoreIcon className="h-12 w-12 text-pink-800 dark:text-pink-200" />
                           )}
                         </div>
 
@@ -349,7 +352,7 @@ export function AddDeviceModal({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {selectedStore.TractorInStore.map((tractor) => (
+                {selectedStore.TractorInStore.map((tractor: TractorInStore) => (
                   <Card
                     key={tractor.id}
                     className="rounded-xl overflow-hidden shadow border-none"

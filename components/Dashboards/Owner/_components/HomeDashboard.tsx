@@ -39,6 +39,7 @@ import TranslatedText from "@/components/Menubar/TranslatedText";
 import { OwnerDashboardTranslation } from "../OwnerDashboardTranslation";
 import DeviceApiService, { type Device } from "../devices/Device";
 import { useCookie } from "next-cookie";
+import { getAuthUserId } from "@/utils/auth/clientAuth";
 import {
   Attachment,
   Booking,
@@ -66,8 +67,8 @@ export default function HomeDashboard({
   tractors: Tractor[];
   attachments: Attachment[];
   bookings: Booking[];
-  tractorsInUse: number;
-  attachmentsInUse: number;
+  tractorsInUse: any;
+  attachmentsInUse: any;
 }) {
   const [devices, setDevices] = useState<Device[]>([]);
   const [currentDeviceIndex, setCurrentDeviceIndex] = useState(0);
@@ -76,7 +77,7 @@ export default function HomeDashboard({
     longitude: null,
   });
 
-  let user = null;
+  let user: any = null;
   try {
     const { cookie } = useCookie();
     user = cookie?.get("user");
@@ -86,7 +87,9 @@ export default function HomeDashboard({
 
   const fetchDevices = async () => {
     try {
-      const deviceData = await DeviceApiService.getAllDevices();
+      const parsedUser = typeof user === "string" ? (() => { try { return JSON.parse(user); } catch { return null; } })() : user;
+      const ownerId = parsedUser?.userId || parsedUser?.id || getAuthUserId();
+      const deviceData = await DeviceApiService.getAllDevices(ownerId);
       setDevices(Array.isArray(deviceData) ? deviceData : []);
     } catch (error) {
       console.error("Error fetching devices:", error);

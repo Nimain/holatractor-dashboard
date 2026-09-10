@@ -2,6 +2,7 @@ import { renderInstance } from "@/utils/Axios/RenderInstance"
 import axios from "axios"
 import DeviceLocationService from "@/utils/Axios/DeviceLocationService"
 import type { DeviceLocationData, LocationHistoryParams } from "@/utils/Axios/DeviceLocationService"
+import { getAuthToken, getAuthUser, getAuthUserId } from "@/utils/auth/clientAuth"
 
 interface Device {
   id: string
@@ -11,6 +12,12 @@ interface Device {
   tractor_store_id: string
   createdAt: string
   updatedAt: string
+  store?: {
+    id: string
+    name: string
+    owner_user_id?: string
+    created_by?: string
+  }
   base: {
     id: string
     created_by: string
@@ -83,40 +90,12 @@ interface TractorInStore {
     images: string[]
   }
 }
-
-interface DeviceLocationData {
-  id?: string
-  _id?: { $oid: string }
-  device_imei?: string
-  imei?: string
-  latitude?: number
-  longitude?: number
-  lat?: number
-  lon?: number
-  speed?: number
-  heading?: number
-  course?: number
-  altitude?: number
-  accuracy?: number
-  timestamp?: string
-  created_at?: string
-  battery_level?: number
-  signal_strength?: number
-  satellites?: number
-  hdop?: number
-  updated_at?: string
-}
-
-interface LocationHistoryParams {
-  startDate?: string
-  endDate?: string
-  limit?: number
-}
-
 class DeviceApiService {
   private static getAuthToken(): string | null {
+    const clientToken = getAuthToken()
+    if (clientToken) return clientToken
+
     if (typeof window !== "undefined") {
-      // Get access_token from cookies (same approach as owner.tsx)
       const cookies = document.cookie.split(";")
       const accessTokenCookie = cookies.find((cookie) => cookie.trim().startsWith("access_token="))
       if (accessTokenCookie) {
@@ -126,39 +105,56 @@ class DeviceApiService {
     return null
   }
 
-  static async getAllDevices(): Promise<Device[]> {
+  static async getAllDevices(ownerId?: string): Promise<Device[]> {
     try {
       const access_token = this.getAuthToken()
+      const targetId = ownerId || getAuthUserId() || getAuthUser()?.id || getAuthUser()?.userId
 
-      const response = await renderInstance.get("/store/getalltractordevices", {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
+      const url = targetId
+        ? `/store/getalltractordevices/${encodeURIComponent(targetId)}`
+        : "/store/getalltractordevices"
+
+      const response = await renderInstance.get(url, {
+        headers: access_token
+          ? {
+              Authorization: `Bearer ${access_token}`,
+            }
+          : undefined,
+        params: targetId ? { owner_id: targetId, user_id: targetId } : undefined,
       })
+
+      let list: Device[] = []
       if (Array.isArray(response.data)) {
-        return response.data
+        list = response.data
+      } else if (response.data && Array.isArray((response.data as any).data)) {
+        list = (response.data as any).data
+      } else if (response.data && Array.isArray((response.data as any).devices)) {
+        list = (response.data as any).devices
       }
-      if (response.data && Array.isArray((response.data as any).data)) {
-        return (response.data as any).data
-      }
-      if (response.data && Array.isArray((response.data as any).devices)) {
-        return (response.data as any).devices
-      }
-      return []
+
+      return list
     } catch (error) {
       console.error("Error fetching devices:", error)
       return []
     }
   }
 
-  static async getAllStores(): Promise<Store[]> {
+  static async getAllStores(ownerId?: string): Promise<Store[]> {
     try {
       const access_token = this.getAuthToken()
+      const targetId = ownerId || getAuthUserId() || getAuthUser()?.id || getAuthUser()?.userId
 
-      const response = await renderInstance.get("/store/byowners", {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
+      const url = targetId
+        ? `/store/byowners/${encodeURIComponent(targetId)}`
+        : "/store/byowners"
+
+      const response = await renderInstance.get(url, {
+        headers: access_token
+          ? {
+              Authorization: `Bearer ${access_token}`,
+            }
+          : undefined,
+        params: targetId ? { owner_id: targetId, user_id: targetId } : undefined,
       })
       return response.data || []
     } catch (error) {
@@ -167,19 +163,29 @@ class DeviceApiService {
     }
   }
 
-  static async addDeviceToTractor(deviceId: string, tractorId: string): Promise<void> {
+  static async addDeviceToTractor(
+    deviceId: string,
+    tractorId: string,
+    storeId?: string,
+    deviceRegion: string = "SW"
+  ): Promise<void> {
     try {
       const access_token = this.getAuthToken()
 
       const payload = {
         device_id: deviceId,
         tractor_id: tractorId,
+        tractor_store_id: tractorId,
+        store_id: storeId,
+        device_region: deviceRegion,
       }
 
       await renderInstance.post("/store/addDevicetoTractor", payload, {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
+        headers: access_token
+          ? {
+              Authorization: `Bearer ${access_token}`,
+            }
+          : undefined,
       })
     } catch (error) {
       console.error("Error adding device:", error)
@@ -192,9 +198,11 @@ class DeviceApiService {
       const access_token = this.getAuthToken()
 
       await renderInstance.delete(`/store/removeDevice/${deviceId}`, {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
+        headers: access_token
+          ? {
+              Authorization: `Bearer ${access_token}`,
+            }
+          : undefined,
       })
     } catch (error) {
       console.error("Error removing device:", error)
@@ -213,3 +221,4 @@ class DeviceApiService {
 
 export default DeviceApiService
 export type { Device, Store, TractorInStore, DeviceLocationData, LocationHistoryParams }
+

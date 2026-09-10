@@ -10,6 +10,7 @@ import DeviceApiService, { type Device } from "./Device"
 import { AddDeviceModal } from "./AddDeviceModal"
 import { DeviceMapModal } from "./DeviceMapModal"
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages"
+import { getAuthUser } from "@/utils/auth/clientAuth"
 
 interface DeviceListProps {
   language?: "en" | "es"
@@ -79,7 +80,9 @@ export function DeviceList({ language = "en" }: DeviceListProps) {
   const fetchDevices = async () => {
     try {
       setLoading(true)
-      const devicesData = await DeviceApiService.getAllDevices()
+      const user = getAuthUser()
+      const ownerId = user?.userId || user?.id
+      const devicesData = await DeviceApiService.getAllDevices(ownerId)
       const safeDevices = Array.isArray(devicesData) ? devicesData : []
       // Log device regions for debugging
       safeDevices.forEach(device => {
