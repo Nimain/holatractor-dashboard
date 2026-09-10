@@ -57,8 +57,9 @@ export default function PaymentMethods({ bookingId, fetchBooking }: { bookingId:
                 Authorization: `Bearer ${access_token}`,
             },
         }).then((res) => {
-            setBankAccounts(res.data)
-            const bankIds = res.data.map((bank: BankAccount) => bank.id)
+            const list = Array.isArray(res.data) ? res.data : []
+            setBankAccounts(list)
+            const bankIds = list.map((bank: BankAccount) => bank.id).filter(Boolean)
             setAllBankIds(bankIds)
         }).catch((err) => {
             errorMessage("Error fetching bank accounts")
@@ -74,8 +75,9 @@ export default function PaymentMethods({ bookingId, fetchBooking }: { bookingId:
                 Authorization: `Bearer ${access_token}`,
             },
         }).then((res) => {
-            setPaypalAccounts(res.data)
-            const paypalIds = res.data.map((bank: PayPal) => bank.id)
+            const list = Array.isArray(res.data) ? res.data : []
+            setPaypalAccounts(list)
+            const paypalIds = list.map((bank: PayPal) => bank.id).filter(Boolean)
             setallPaypalIds(paypalIds)
         }).catch((err) => {
             errorMessage("Error fetching paypal accounts")
@@ -91,8 +93,9 @@ export default function PaymentMethods({ bookingId, fetchBooking }: { bookingId:
                 Authorization: `Bearer ${access_token}`,
             },
         }).then((res) => {
-            setUPIAccounts(res.data)
-            const UPIIds = res.data.map((bank: UPI) => bank.id)
+            const list = Array.isArray(res.data) ? res.data : []
+            setUPIAccounts(list)
+            const UPIIds = list.map((bank: UPI) => bank.id).filter(Boolean)
             setallUPIIds(UPIIds)
         }).catch((err) => {
             errorMessage("Error fetching UPI accounts")
@@ -231,42 +234,54 @@ export default function PaymentMethods({ bookingId, fetchBooking }: { bookingId:
                                             {
                                                 fetchingBankAccounts ? <p>Fetching bank accounts</p>
                                                     :
-                                                    bankAccounts.map((method) => (
-                                                        <div key={method.id} className="flex items-center space-x-2 mb-4">
-                                                            <RadioGroupItem value={method.id} id={method.id} />
-                                                            <Label htmlFor={method.id} className="flex items-center">
-                                                                <Currency className="w-4 h-4 mr-2" />
-                                                                <span className="capitalize">Bank account: xxxxx{method.accountNumber.slice(-6)}</span>
-                                                            </Label>
-                                                        </div>
-                                                    ))
+                                                    bankAccounts.map((method, idx) => {
+                                                        const accNum = String(method.accountNumber || (method as any).account_number || '');
+                                                        const displayNum = accNum ? (accNum.length > 6 ? `xxxxx${accNum.slice(-6)}` : accNum) : '******';
+                                                        return (
+                                                            <div key={method.id || idx} className="flex items-center space-x-2 mb-4">
+                                                                <RadioGroupItem value={method.id} id={method.id} />
+                                                                <Label htmlFor={method.id} className="flex items-center">
+                                                                    <Currency className="w-4 h-4 mr-2" />
+                                                                    <span className="capitalize">Bank account: {displayNum}</span>
+                                                                </Label>
+                                                            </div>
+                                                        );
+                                                    })
                                             }
                                             {
                                                 fetchingPaypalAccounts ? <p>Fetching paypal account</p>
                                                     :
-                                                    paypalAccounts.map((method) => (
-                                                        <div key={method.id} className="flex items-center space-x-2 mb-4">
-                                                            <RadioGroupItem value={method.id} id={method.id} />
-                                                            <Label htmlFor={method.id} className="flex items-center">
-                                                                <CreditCard className="w-4 h-4 mr-2" />
-                                                                <span className="capitalize">Paypal account: xxxxx{method.email.slice(-6)}</span>
-                                                            </Label>
-                                                        </div>
-                                                    ))
+                                                    paypalAccounts.map((method, idx) => {
+                                                        const email = String(method.email || '');
+                                                        const displayEmail = email ? (email.length > 6 ? `xxxxx${email.slice(-6)}` : email) : '******';
+                                                        return (
+                                                            <div key={method.id || idx} className="flex items-center space-x-2 mb-4">
+                                                                <RadioGroupItem value={method.id} id={method.id} />
+                                                                <Label htmlFor={method.id} className="flex items-center">
+                                                                    <CreditCard className="w-4 h-4 mr-2" />
+                                                                    <span className="capitalize">Paypal account: {displayEmail}</span>
+                                                                </Label>
+                                                            </div>
+                                                        );
+                                                    })
                                             }
                                             {
                                                 fetchingUPIAccounts ? <p>Fetching UPI accounts</p>
                                                     :
-                                                    UPIAccounts.map((method) => (
-                                                        <div key={method.id} className="flex items-center space-x-2 mb-4">
-                                                            <RadioGroupItem value={method.id} id={method.id} />
-                                                            <Label htmlFor={method.id} className="flex items-center">
-                                                                {/* {method.type === 'paypal' && <CreditCard className="w-4 h-4 mr-2" />} */}
-                                                                <QrCode className="w-4 h-4 mr-2" />
-                                                                <span className="capitalize">UPI account: xxxxx{method.upi_id.slice(-6)}</span>
-                                                            </Label>
-                                                        </div>
-                                                    ))
+                                                    UPIAccounts.map((method, idx) => {
+                                                        const upiId = String(method.upi_id || (method as any).upiId || '');
+                                                        const displayUpi = upiId ? (upiId.length > 6 ? `xxxxx${upiId.slice(-6)}` : upiId) : '******';
+                                                        return (
+                                                            <div key={method.id || idx} className="flex items-center space-x-2 mb-4">
+                                                                <RadioGroupItem value={method.id} id={method.id} />
+                                                                <Label htmlFor={method.id} className="flex items-center">
+                                                                    {/* {method.type === 'paypal' && <CreditCard className="w-4 h-4 mr-2" />} */}
+                                                                    <QrCode className="w-4 h-4 mr-2" />
+                                                                    <span className="capitalize">UPI account: {displayUpi}</span>
+                                                                </Label>
+                                                            </div>
+                                                        );
+                                                    })
                                             }
                                         </RadioGroup>
                                     </CardContent>

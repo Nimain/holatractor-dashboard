@@ -27,6 +27,13 @@ export const ownerSidebar = {
       qu: "Rantikuna qillqakuy",
       gn: "Rervakuaa"
     },
+    fieldTasks: {
+      en: "Field Tasks",
+      es: "Tareas de Campo",
+      ay: "Yapuchawi Irnaqawinaka",
+      qu: "Chakrakuna Ruwaykuna",
+      gn: "Tembiapo Ñu Pegua"
+    },
     operator: {
       en: "Operator",
       es: "Operador",

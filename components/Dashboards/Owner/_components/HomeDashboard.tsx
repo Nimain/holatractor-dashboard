@@ -47,6 +47,16 @@ import {
   Store,
   Tractor,
 } from "@/utils/Types/types";
+import ActiveFleetStrategyCard from "./ActiveFleetStrategyCard";
+import OptimizationActionCards from "./OptimizationActionCards";
+import PricingSimulatorModal from "./PricingSimulatorModal";
+import RouteChainingModal from "./RouteChainingModal";
+import FleetOverview from "./FleetOverview";
+import AgriculturalTaskOperationsCard from "./AgriculturalTaskOperationsCard";
+import TaskManagementModal from "./TaskManagementModal";
+import CreateTaskModal from "./CreateTaskModal";
+import TaskLiveTrackingModal from "./TaskLiveTrackingModal";
+import TaskReportModal from "./TaskReportModal";
 
 interface Location {
   latitude: number | null;
@@ -76,6 +86,23 @@ export default function HomeDashboard({
     latitude: null,
     longitude: null,
   });
+  const [pricingModalOpen, setPricingModalOpen] = useState(false);
+  const [routeChainingModalOpen, setRouteChainingModalOpen] = useState(false);
+  const [taskManagementModalOpen, setTaskManagementModalOpen] = useState(false);
+  const [createTaskModalOpen, setCreateTaskModalOpen] = useState(false);
+  const [liveTrackingTaskId, setLiveTrackingTaskId] = useState<string | null>(null);
+  const [reportTaskId, setReportTaskId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tasks") === "open" || params.get("action") === "tasks") {
+        setTaskManagementModalOpen(true);
+      } else if (params.get("action") === "create-task") {
+        setCreateTaskModalOpen(true);
+      }
+    }
+  }, []);
 
   let user: any = null;
   try {
@@ -219,18 +246,78 @@ export default function HomeDashboard({
           </div>
 
           <div className="flex-1 flex items-end gap-2 h-36 pt-4 border-b border-slate-100 pb-2">
-            <div className="flex-1 bg-orange-200 hover:bg-orange-400 rounded-t h-[40%] transition-all" />
-            <div className="flex-1 bg-orange-300 hover:bg-orange-400 rounded-t h-[65%] transition-all" />
-            <div className="flex-1 bg-orange-400 hover:bg-orange-500 rounded-t h-[85%] transition-all" />
-            <div className="flex-1 bg-orange-500 hover:bg-orange-600 rounded-t h-[55%] transition-all" />
-            <div className="flex-1 bg-orange-600 hover:bg-orange-700 rounded-t h-[95%] transition-all" />
-            <div className="flex-1 bg-orange-300 hover:bg-orange-400 rounded-t h-[45%] transition-all" />
+            {(() => {
+              const counts = [0, 0, 0, 0, 0, 0];
+              if (bookings && bookings.length > 0) {
+                bookings.forEach((b: any) => {
+                  const d = b.createdAt ? new Date(b.createdAt) : new Date();
+                  const month = d.getMonth();
+                  const bucket = Math.min(5, Math.floor(month / 2));
+                  counts[bucket]++;
+                });
+              } else {
+                counts[4] = 3;
+                counts[5] = 1;
+              }
+              const max = Math.max(...counts, 1);
+              return counts.map((c, i) => {
+                const height = Math.max(18, Math.round((c / max) * 100));
+                return (
+                  <div
+                    key={i}
+                    className={`flex-1 rounded-t transition-all duration-500 ${
+                      i === 4 ? "bg-orange-600 hover:bg-orange-700" : "bg-orange-300 hover:bg-orange-400"
+                    }`}
+                    style={{ height: `${height}%` }}
+                  />
+                );
+              });
+            })()}
           </div>
           <div className="mt-3 flex justify-between text-xs font-semibold text-slate-400">
             <span>Jan</span>
             <span>Jun</span>
             <span>Dec</span>
           </div>
+        </div>
+
+        {/* 1. Active Fleet Strategy Card (12 Cols) */}
+        <div className="col-span-12">
+          <ActiveFleetStrategyCard
+            onAdjustStrategy={() => setPricingModalOpen(true)}
+            tractorCountOverride={deviceList.length || tractors.length}
+            tractors={tractors}
+            user={user}
+            userId={typeof user === "string" ? (() => { try { return JSON.parse(user)?.userId || JSON.parse(user)?.id; } catch { return undefined; } })() : user?.userId || user?.id || getAuthUserId()}
+          />
+        </div>
+
+        {/* 2. Quick AI Tools: Pricing Simulator & Route Chaining (12 Cols) */}
+        <div className="col-span-12">
+          <OptimizationActionCards
+            onPricingSimulatorPress={() => setPricingModalOpen(true)}
+            onRouteChainPress={() => setRouteChainingModalOpen(true)}
+          />
+        </div>
+
+        {/* Agricultural Task Operations Suite (12 Cols) */}
+        <div className="col-span-12">
+          <AgriculturalTaskOperationsCard
+            ownerId={typeof user === "string" ? (() => { try { return JSON.parse(user)?.userId || JSON.parse(user)?.id; } catch { return undefined; } })() : user?.userId || user?.id || getAuthUserId()}
+            onOpenTaskManagement={() => setTaskManagementModalOpen(true)}
+            onOpenCreateTask={() => setCreateTaskModalOpen(true)}
+          />
+        </div>
+
+        {/* 3. Fleet Overview: Dynamic Fuel & CO2 Telematics (12 Cols) */}
+        <div className="col-span-12">
+          <FleetOverview
+            ownerId={typeof user === "string" ? (() => { try { return JSON.parse(user)?.userId || JSON.parse(user)?.id; } catch { return undefined; } })() : user?.userId || user?.id || getAuthUserId()}
+            tractors={tractors}
+            stores={stores}
+            devices={devices}
+            bookings={bookings}
+          />
         </div>
 
         {/* Operator Available Section (4 Cols) */}
@@ -263,7 +350,7 @@ export default function HomeDashboard({
                 {operators.slice(0, 3).map((op, idx) => (
                   <div key={idx} className="flex items-center gap-3 p-2 rounded-xl bg-slate-50 border border-slate-100">
                     <Avatar className="w-10 h-10 border border-amber-500">
-                      <AvatarImage src={op.operator.user.image} />
+                      <AvatarImage src={op.operator.user.image || undefined} />
                       <AvatarFallback className="bg-amber-600 text-white font-bold">
                         {op.operator.user.first_name?.[0]}
                       </AvatarFallback>
@@ -448,10 +535,76 @@ export default function HomeDashboard({
       </div>
 
       {/* Floating TractorAI Trigger Button */}
-      <button className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-orange-600 to-amber-600 text-white flex items-center gap-2 px-5 py-3 rounded-full shadow-2xl border border-white/20 transition-all hover:-translate-y-1 hover:scale-105 group">
+      <button
+        onClick={() => setPricingModalOpen(true)}
+        className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-orange-600 to-amber-600 text-white flex items-center gap-2 px-5 py-3 rounded-full shadow-2xl border border-white/20 transition-all hover:-translate-y-1 hover:scale-105 group"
+      >
         <Bot className="w-5 h-5 text-amber-200 group-hover:rotate-12 transition-transform" />
         <span className="font-bold text-sm tracking-wide">TractorAI</span>
       </button>
+
+      {/* Interactive Modals */}
+      <PricingSimulatorModal
+        isOpen={pricingModalOpen}
+        onClose={() => setPricingModalOpen(false)}
+        initialTractorCount={deviceList.length || tractors.length || 1}
+        user={user}
+        userId={typeof user === "string" ? (() => { try { return JSON.parse(user)?.userId || JSON.parse(user)?.id; } catch { return undefined; } })() : user?.userId || user?.id || getAuthUserId()}
+      />
+
+      <RouteChainingModal
+        isOpen={routeChainingModalOpen}
+        onClose={() => setRouteChainingModalOpen(false)}
+        userId={typeof user === "string" ? (() => { try { return JSON.parse(user)?.userId || JSON.parse(user)?.id; } catch { return undefined; } })() : user?.userId || user?.id || getAuthUserId()}
+        bookings={bookings}
+        operators={operators}
+      />
+
+      {/* Agricultural Task Operations Modals */}
+      <TaskManagementModal
+        isOpen={taskManagementModalOpen}
+        onClose={() => setTaskManagementModalOpen(false)}
+        ownerId={typeof user === "string" ? (() => { try { return JSON.parse(user)?.userId || JSON.parse(user)?.id; } catch { return undefined; } })() : user?.userId || user?.id || getAuthUserId()}
+        onOpenCreateTask={() => {
+          setTaskManagementModalOpen(false);
+          setCreateTaskModalOpen(true);
+        }}
+        onOpenLiveTracking={(id) => {
+          setLiveTrackingTaskId(id);
+        }}
+        onOpenReport={(id) => {
+          setReportTaskId(id);
+        }}
+      />
+
+      <CreateTaskModal
+        isOpen={createTaskModalOpen}
+        onClose={() => setCreateTaskModalOpen(false)}
+        ownerId={typeof user === "string" ? (() => { try { return JSON.parse(user)?.userId || JSON.parse(user)?.id; } catch { return undefined; } })() : user?.userId || user?.id || getAuthUserId()}
+        onTaskCreated={() => {
+          setCreateTaskModalOpen(false);
+          setTaskManagementModalOpen(true);
+        }}
+      />
+
+      <TaskLiveTrackingModal
+        taskId={liveTrackingTaskId}
+        isOpen={!!liveTrackingTaskId}
+        onClose={() => setLiveTrackingTaskId(null)}
+        onOpenReport={(id) => {
+          setLiveTrackingTaskId(null);
+          setReportTaskId(id);
+        }}
+        onTaskUpdated={() => {
+          // Keep state synced
+        }}
+      />
+
+      <TaskReportModal
+        taskId={reportTaskId}
+        isOpen={!!reportTaskId}
+        onClose={() => setReportTaskId(null)}
+      />
     </div>
   );
 }

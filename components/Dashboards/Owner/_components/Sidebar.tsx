@@ -17,6 +17,7 @@ import {
   TabletSmartphone,
   LayoutDashboard,
   CalendarCheck,
+  ListTodo,
   Wrench,
   ShoppingBag,
   Users,
@@ -218,6 +219,21 @@ const Sidebar = () => {
             <CalendarCheck className="h-5 w-5 shrink-0 text-white" />
           </Tooltip>
           {isExpanded && <span><TranslatedText greetings={ownerSidebar.bookings} /></span>}
+        </Link>
+
+        {/* Field Tasks (Agricultural Task Operations) */}
+        <Link
+          href="/owner/tasks"
+          className={`${linkBaseClasses} ${
+            isActive("/owner/tasks")
+              ? "bg-white/20 text-white font-bold shadow-sm"
+              : "text-white/80 hover:bg-white/10 hover:text-white"
+          } ${!isExpanded ? "justify-center px-0" : "justify-start"}`}
+        >
+          <Tooltip title="Field Tasks" placement="right" disableHoverListener={isExpanded}>
+            <ListTodo className="h-5 w-5 shrink-0 text-white" />
+          </Tooltip>
+          {isExpanded && <span><TranslatedText greetings={(ownerSidebar as any).fieldTasks} /></span>}
         </Link>
 
         {/* Operators Link */}

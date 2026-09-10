@@ -165,15 +165,18 @@ const Marketplace = () => {
     renderInstance
       .get(endpoint)
       .then((res) => {
-        setCustomers(res.data.customers);
-        setTotalStandAloneBookimgs(res.data.totalStandAloneBookimgs);
-        setOpenBookings(res.data.openBookings);
-        setInProgressBookings(res.data.inProgressBookings);
-        setTotalReceived(res.data.totalReceived);
-        setCompletedBookings(res.data.completedBookings);
+        setCustomers(typeof res.data.customers === "number" ? res.data.customers : 0);
+        setTotalStandAloneBookimgs(typeof res.data.totalStandAloneBookimgs === "number" ? res.data.totalStandAloneBookimgs : (Array.isArray(res.data.openBookings) ? res.data.openBookings.length : 0));
+        setOpenBookings(Array.isArray(res.data.openBookings) ? res.data.openBookings : []);
+        setInProgressBookings(Array.isArray(res.data.inProgressBookings) ? res.data.inProgressBookings : []);
+        setTotalReceived(typeof res.data.totalReceived === "number" ? res.data.totalReceived : 0);
+        setCompletedBookings(Array.isArray(res.data.completedBookings) ? res.data.completedBookings : []);
       })
       .catch((err) => {
         console.error("Error fetching marketplace details:", err);
+        setOpenBookings([]);
+        setInProgressBookings([]);
+        setCompletedBookings([]);
       })
       .finally(() => {
         setFetchingPageDetails(false);
@@ -376,7 +379,7 @@ const Marketplace = () => {
                     </span>
                   </CardTitle>
                   <span className="text-sm text-muted">
-                    {openBookings.length}{" "}
+                    {Array.isArray(openBookings) ? openBookings.length : 0}{" "}
                     <TranslatedText
                       greetings={ownerMarketPlaceTranslations.leads}
                     />
@@ -386,7 +389,7 @@ const Marketplace = () => {
               <div className=" bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white p-3">
                 {fetchingPageDetails ? (
                   <LeadShrimmer />
-                ) : openBookings.length === 0 ? (
+                ) : !Array.isArray(openBookings) || openBookings.length === 0 ? (
                   <p>
                     <TranslatedText
                       greetings={
@@ -395,8 +398,8 @@ const Marketplace = () => {
                     />
                   </p>
                 ) : (
-                  openBookings.map((lead) => (
-                    <SeeBooking booking={lead} key={lead.id} />
+                  (openBookings || []).map((lead) => (
+                    <SeeBooking booking={lead} key={lead?.id || (lead as any)?._id} />
                   ))
                 )}
               </div>
@@ -415,7 +418,7 @@ const Marketplace = () => {
                     </span>
                   </CardTitle>
                   <span className="text-sm text-muted">
-                    {inProgressBookings.length}{" "}
+                    {Array.isArray(inProgressBookings) ? inProgressBookings.length : 0}{" "}
                     <TranslatedText
                       greetings={ownerMarketPlaceTranslations.leads}
                     />
@@ -425,7 +428,7 @@ const Marketplace = () => {
              <div className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white p-3">
               {fetchingPageDetails ? (
                 <LeadShrimmer />
-              ) : inProgressBookings.length === 0 ? (
+              ) : !Array.isArray(inProgressBookings) || inProgressBookings.length === 0 ? (
                 <p>
                   <TranslatedText
                     greetings={
@@ -434,8 +437,8 @@ const Marketplace = () => {
                   />
                 </p>
               ) : (
-                inProgressBookings.map((lead) => (
-                  <SeeBooking booking={lead} key={lead.id} />
+                (inProgressBookings || []).map((lead) => (
+                  <SeeBooking booking={lead} key={lead?.id || (lead as any)?._id} />
                 ))
               )}
               </div>
@@ -454,7 +457,7 @@ const Marketplace = () => {
                     </span>
                   </CardTitle>
                   <span className="text-sm text-muted">
-                    {completedBookings.length}{" "}
+                    {Array.isArray(completedBookings) ? completedBookings.length : 0}{" "}
                     <TranslatedText
                       greetings={ownerMarketPlaceTranslations.leads}
                     />
@@ -464,7 +467,7 @@ const Marketplace = () => {
               <div className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white p-3">
               {fetchingPageDetails ? (
                 <LeadShrimmer />
-              ) : completedBookings.length === 0 ? (
+              ) : !Array.isArray(completedBookings) || completedBookings.length === 0 ? (
                 <p>
                   <TranslatedText
                     greetings={
@@ -473,8 +476,8 @@ const Marketplace = () => {
                   />
                 </p>
               ) : (
-                completedBookings.map((lead) => (
-                  <SeeBooking booking={lead} key={lead.id} />
+                (completedBookings || []).map((lead) => (
+                  <SeeBooking booking={lead} key={lead?.id || (lead as any)?._id} />
                 ))
               )}
               </div>

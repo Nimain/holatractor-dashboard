@@ -13,6 +13,7 @@ import { CircularProgress } from '@mui/material'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from '@/components/ui/badge'
 import Image from 'next/image'
+import { getAuthUserId } from "@/utils/auth/clientAuth"
 import RequestOperators from './RequestOperators'
 import PaymentMethods from './BankAccountSelect'
 import PaymentReview from './PaymentProofAction'
