@@ -188,15 +188,37 @@ const Marketplace = () => {
         `/booking/get/stand-alone/bookings?lat=${location.latitude}&lng=${location.longitude}&radius=100`
       )
       .then((res) => {
-        setNewBookings(res.data);
+        const raw = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray((res.data as any)?.data)
+          ? (res.data as any).data
+          : [];
+        const normalized: NewBookings[] = raw
+          .filter(Boolean)
+          .map((item: any) => {
+            if (item && item.booking && typeof item.booking === "object") {
+              return {
+                booking: item.booking,
+                minDistance: item.minDistance ?? null,
+              };
+            }
+            return {
+              booking: item,
+              minDistance: item?.minDistance ?? null,
+            };
+          })
+          .filter((item: any) => Boolean(item?.booking && (item.booking.id || (item.booking as any)._id)));
+        setNewBookings(normalized);
       })
       .catch((err) => {
         console.error("Error fetching stand-alone bookings:", err);
+        setNewBookings([]);
       })
       .finally(() => {
         setFetchingNewPageDetails(false);
       });
   }
+
 
   useEffect(() => {
     if (user) {
@@ -321,14 +343,20 @@ const Marketplace = () => {
                     />
                   </p>
                 ) : (
-                  newBookings.map((lead) => (
-                    <NewBookings
-                      booking={lead.booking}
-                      key={lead.booking.id}
-                      minDistance={lead.minDistance}
-                    />
-                  ))
+                  newBookings.map((lead, idx) => {
+                    const bookingData = lead?.booking || (lead as any);
+                    if (!bookingData) return null;
+                    const bId = bookingData.id || (bookingData as any)._id || `new-booking-${idx}`;
+                    return (
+                      <NewBookings
+                        booking={bookingData}
+                        key={bId}
+                        minDistance={lead?.minDistance ?? null}
+                      />
+                    );
+                  })
                 )}
+
               </div>
             </div>
 
