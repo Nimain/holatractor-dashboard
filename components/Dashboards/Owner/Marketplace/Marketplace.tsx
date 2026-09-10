@@ -196,18 +196,21 @@ const Marketplace = () => {
         const normalized: NewBookings[] = raw
           .filter(Boolean)
           .map((item: any) => {
-            if (item && item.booking && typeof item.booking === "object") {
-              return {
-                booking: item.booking,
-                minDistance: item.minDistance ?? null,
-              };
-            }
+            const b = (item && item.booking && typeof item.booking === "object") ? item.booking : item;
+            const safeBooking = {
+              ...b,
+              id: b.id || (b as any)._id,
+              standaloneTractors: Array.isArray(b.standaloneTractors) ? b.standaloneTractors : [],
+              standaloneAttachments: Array.isArray(b.standaloneAttachments) ? b.standaloneAttachments : [],
+              tractors: Array.isArray(b.tractors) ? b.tractors : [],
+              attachments: Array.isArray(b.attachments) ? b.attachments : [],
+            };
             return {
-              booking: item,
+              booking: safeBooking,
               minDistance: item?.minDistance ?? null,
             };
           })
-          .filter((item: any) => Boolean(item?.booking && (item.booking.id || (item.booking as any)._id)));
+          .filter((item: any) => Boolean(item?.booking && item.booking.id));
         setNewBookings(normalized);
       })
       .catch((err) => {

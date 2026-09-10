@@ -118,19 +118,21 @@ const NewBookings = ({ booking, minDistance }: { booking: Booking; minDistance: 
                         <Avatar className="h-12 w-12">
                             {
                                 booking.user && booking.user?.image &&
-                                <AvatarImage src={booking.user?.image} alt={booking.user.first_name} />
+                                <AvatarImage src={booking.user?.image} alt={booking.user?.first_name || ""} />
                             }
                             <AvatarFallback>
-                                {booking.user?.first_name[0]}
+                                {booking.user?.first_name ? booking.user.first_name[0] : "U"}
                             </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 space-y-1">
-                            <p className="text-sm font-medium leading-none">{booking.user?.first_name} {booking.user?.middle_name ?? ""} {booking.user?.last_name}</p>
-                            <p className="text-sm text-muted-foreground">{new Date(booking.createdAt).toLocaleDateString()}</p>
+                            <p className="text-sm font-medium leading-none">{booking.user?.first_name || ""} {booking.user?.middle_name ?? ""} {booking.user?.last_name || ""}</p>
+                            <p className="text-sm text-muted-foreground">{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString() : ""}</p>
                             <div className="flex items-center pt-2">
                                 <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
                                 <span className="text-sm">
-                                    {`${booking.user?.email.split('@')[0].slice(0, 3)}...@${booking.user?.email.split('@')[1]}`}
+                                    {booking.user?.email && booking.user.email.includes("@")
+                                        ? `${booking.user.email.split('@')[0].slice(0, 3)}...@${booking.user.email.split('@')[1]}`
+                                        : booking.user?.email || ""}
                                 </span>
                             </div>
                             <div className="flex items-center pt-2">
@@ -165,14 +167,14 @@ const NewBookings = ({ booking, minDistance }: { booking: Booking; minDistance: 
                                             <AvatarImage src={booking.user?.image} />
                                         }
                                         <AvatarFallback>
-                                            {booking.user?.first_name[0]}{booking.user?.last_name[0]}
+                                            {booking.user?.first_name?.[0] || ""}{booking.user?.last_name?.[0] || ""}
                                         </AvatarFallback>
                                     </Avatar>
                                 </div>
                                 <div>
                                     <div>
                                         <h2 className="text-xl font-semibold">
-                                            {`${booking.user?.first_name} ${booking.user?.middle_name ?? ""} ${booking.user?.last_name}`}
+                                            {`${booking.user?.first_name || ""} ${booking.user?.middle_name ?? ""} ${booking.user?.last_name || ""}`}
                                         </h2>
                                     </div>
                                     {
@@ -261,7 +263,7 @@ const NewBookings = ({ booking, minDistance }: { booking: Booking; minDistance: 
                     </div>
                     <div className="w-full flex items-center justify-around gap-2 flex-wrap">
                     {
-                        booking.farm &&
+                        (booking.farm?.boundary?.coordinates && booking.farm.boundary.coordinates.length > 0) &&
                         <div className="mt-6">
                             <Dialog>
                                 <DialogTrigger asChild>
@@ -286,22 +288,22 @@ const NewBookings = ({ booking, minDistance }: { booking: Booking; minDistance: 
                         </div>
                     }
                     {
-                        booking.standaloneTractors.length > 0 &&
+                        Boolean(booking.standaloneTractors && booking.standaloneTractors.length > 0) &&
                         <div className="mt-6">
                             <Dialog>
                                 <DialogTrigger asChild>
                                     <Button>
-                                        <Tractor className="mr-2" /> {booking.standaloneTractors.length}
+                                        <Tractor className="mr-2" /> {booking.standaloneTractors?.length ?? 0}
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent className="max-h-[90vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
                                     <div className="w-full grid grid-cols-2 gap-5">
                                         {
-                                            booking.standaloneTractors.map((tractorDetails, i) => {
+                                            (booking.standaloneTractors || []).map((tractorDetails, i) => {
                                                 return (
                                                     <Card key={i}>
                                                         <CardTitle>
-                                                            {tractorDetails.tractor.name}
+                                                            {tractorDetails.tractor?.name ?? "Tractor"}
                                                         </CardTitle>
                                                         <CardContent>
                                                             <Swiper
@@ -314,11 +316,11 @@ const NewBookings = ({ booking, minDistance }: { booking: Booking; minDistance: 
                                                                 className="w-full h-full"
                                                             >
                                                                 {
-                                                                    tractorDetails.tractor.images.map((imageLink) => {
+                                                                    (tractorDetails.tractor?.images || []).map((imageLink) => {
                                                                         return (
                                                                             <SwiperSlide className="w-full h-full" key={imageLink}>
                                                                                 <Image
-                                                                                    alt={tractorDetails.tractor.name}
+                                                                                    alt={tractorDetails.tractor?.name || "Tractor"}
                                                                                     src={imageLink}
                                                                                     width={400}
                                                                                     height={400}
@@ -330,10 +332,10 @@ const NewBookings = ({ booking, minDistance }: { booking: Booking; minDistance: 
                                                                 }
                                                             </Swiper>
                                                             <p>
-                                                            <TranslatedText greetings={ownerMarketPlaceTranslations.tractorType} />: {tractorDetails.tractor.type}
+                                                            <TranslatedText greetings={ownerMarketPlaceTranslations.tractorType} />: {tractorDetails.tractor?.type ?? ""}
                                                             </p>
                                                             <p>
-                                                            <TranslatedText greetings={ownerMarketPlaceTranslations.quantity} />: {tractorDetails.count}
+                                                            <TranslatedText greetings={ownerMarketPlaceTranslations.quantity} />: {tractorDetails.count ?? 1}
                                                             </p>
                                                         </CardContent>
                                                     </Card>
@@ -346,22 +348,22 @@ const NewBookings = ({ booking, minDistance }: { booking: Booking; minDistance: 
                         </div>
                     }
                     {
-                        booking.standaloneAttachments.length > 0 &&
+                        Boolean(booking.standaloneAttachments && booking.standaloneAttachments.length > 0) &&
                         <div className="mt-6">
                             <Dialog>
                                 <DialogTrigger asChild>
                                     <Button>
-                                        <Truck className="mr-2"/> {booking.standaloneAttachments.length}
+                                        <Truck className="mr-2"/> {booking.standaloneAttachments?.length ?? 0}
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent className="max-h-[90vh] overflow-auto" style={{ scrollbarWidth: "none" }}>
                                     <div className="w-full grid grid-cols-2 gap-5">
                                         {
-                                            booking.standaloneAttachments.map((tractorDetails, i) => {
+                                            (booking.standaloneAttachments || []).map((tractorDetails, i) => {
                                                 return (
                                                     <Card key={i}>
                                                         <CardTitle>
-                                                            {tractorDetails.attachment.name}
+                                                            {tractorDetails.attachment?.name ?? "Attachment"}
                                                         </CardTitle>
                                                         <CardContent>
                                                             <Swiper
@@ -374,11 +376,11 @@ const NewBookings = ({ booking, minDistance }: { booking: Booking; minDistance: 
                                                                 className="w-full h-full"
                                                             >
                                                                 {
-                                                                    tractorDetails.attachment.images.map((imageLink) => {
+                                                                    (tractorDetails.attachment?.images || []).map((imageLink) => {
                                                                         return (
                                                                             <SwiperSlide className="w-full h-full" key={imageLink}>
                                                                                 <Image
-                                                                                    alt={tractorDetails.attachment.name}
+                                                                                    alt={tractorDetails.attachment?.name ?? "Attachment"}
                                                                                     src={imageLink}
                                                                                     width={400}
                                                                                     height={400}
@@ -390,7 +392,7 @@ const NewBookings = ({ booking, minDistance }: { booking: Booking; minDistance: 
                                                                 }
                                                             </Swiper>
                                                             <p>
-                                                            <TranslatedText greetings={ownerMarketPlaceTranslations.quantity} />: {tractorDetails.count}
+                                                            <TranslatedText greetings={ownerMarketPlaceTranslations.quantity} />: {tractorDetails.count ?? 1}
                                                             </p>
                                                         </CardContent>
                                                     </Card>
