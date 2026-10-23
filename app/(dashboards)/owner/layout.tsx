@@ -1,0 +1,42 @@
+import { ReactNode } from 'react'
+import "../../globals.css"
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import ReduxWrapper from '../_components/ReduxWrapper';
+import SidebarWrapper from './_components/SidebarWrapper';
+import dynamic from "next/dynamic";
+
+const Header = dynamic(
+  ()=> import('@/components/Dashboards/Owner/_components/Header'),
+  {
+      ssr: false,
+    }
+)
+
+const NewStore = dynamic(
+  ()=> import('@/components/Dashboards/Owner/_components/NewStore'),
+  {
+      ssr: false,
+    }
+)
+
+const OwnerDashboardLayout = ({
+  children,
+}: {
+  children: ReactNode
+}) => {
+  return (
+    <ReduxWrapper>
+      <SidebarWrapper>
+        <main className="flex-1 overflow-y-auto my-2 space-y-4">
+          <NewStore />
+          <ToastContainer />
+          <Header />
+          {children}
+        </main>
+      </SidebarWrapper>
+    </ReduxWrapper>
+  )
+}
+
+export default OwnerDashboardLayout

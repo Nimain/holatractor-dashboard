@@ -1,0 +1,217 @@
+import { type NextRequest, NextResponse } from "next/server"
+
+export function middleware(req: NextRequest) {
+  // Get cookies from the request
+  const token = req.cookies.get("access_token")
+  const authHeader = req.headers.get("authorization")
+
+  const { pathname } = req.nextUrl
+
+  // Allow all API routes to pass through without redirecting to login pages
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next()
+  }
+
+  // If there is no access_token and no authorization header, redirect to the login page
+  if (!token && !authHeader) {
+    console.log("No access token, redirecting to login")
+    return NextResponse.redirect(new URL(`/login`, req.url))
+  }
+
+  // Parse role cookies - ensure we're comparing with string "true"
+  let isOwner = req.cookies.get("isOwner")?.value === "true"
+  let isDealer = req.cookies.get("isDealer")?.value === "true"
+  let isAgent = req.cookies.get("isAgent")?.value === "true"
+  let isOperator = req.cookies.get("isOperator")?.value === "true"
+  let isFarmer = req.cookies.get("isFarmer")?.value === "true"
+  let activeRole = req.cookies.get("active_role")?.value
+
+  let userEmail = ""
+  try {
+    const rawUserCookie = req.cookies.get("user")?.value
+    if (rawUserCookie) {
+      const parsedUser = JSON.parse(decodeURIComponent(rawUserCookie))
+      userEmail = (parsedUser?.email || "").toLowerCase().trim()
+      if (parsedUser?.isAdmin || parsedUser?.isSuperAdmin) {
+        activeRole = "admin"
+      }
+    }
+  } catch {}
+
+  // Parse JWT token payload directly for zero-latency role recognition on 1st request
+  const tokenString = token?.value || authHeader?.replace(/^Bearer\s+/i, "") || ""
+  let isJwtAdmin = false
+  if (tokenString && tokenString.includes(".")) {
+    try {
+      const parts = tokenString.split(".")
+      if (parts.length >= 2) {
+        const base64Url = parts[1]
+        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/")
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split("")
+            .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+            .join("")
+        )
+        const jwtPayload = JSON.parse(jsonPayload)
+        if (jwtPayload?.email) {
+          userEmail = (jwtPayload.email || "").toLowerCase().trim()
+        }
+        const isRoleAdmin = (r: any): boolean => {
+          if (!r) return false;
+          if (typeof r === "string") return ["admin", "superadmin", "super_admin", "superadmin"].includes(r.trim().toLowerCase());
+          if (typeof r === "object") {
+            const name = r.name || r.role || r.role_name || "";
+            if (typeof name === "string" && ["admin", "superadmin", "super_admin"].includes(name.trim().toLowerCase())) return true;
+            if (r.isAdmin || r.isSuperAdmin) return true;
+          }
+          return false;
+        };
+
+        if (
+          jwtPayload?.isAdmin === true ||
+          jwtPayload?.isSuperAdmin === true ||
+          (Array.isArray(jwtPayload?.role) && jwtPayload.role.some(isRoleAdmin)) ||
+          (Array.isArray(jwtPayload?.roles) && jwtPayload.roles.some(isRoleAdmin)) ||
+          (typeof jwtPayload?.role === "string" && isRoleAdmin(jwtPayload.role)) ||
+          (typeof jwtPayload?.roles === "string" && isRoleAdmin(jwtPayload.roles))
+        ) {
+          isJwtAdmin = true;
+          activeRole = "admin";
+        }
+        if (jwtPayload?.isOwner) isOwner = true;
+        if (jwtPayload?.isDealer) isDealer = true;
+        if (jwtPayload?.isOperator) isOperator = true;
+        if (jwtPayload?.isAgent) isAgent = true;
+        if (jwtPayload?.isFarmer) isFarmer = true;
+      }
+    } catch {}
+  }
+
+  const isAdminEmail =
+    userEmail === "sistemas@holatractor.com" ||
+    userEmail === "admin@holatractor.com" ||
+    userEmail === "admin@gmail.com" ||
+    userEmail.startsWith("admin@") ||
+    userEmail.startsWith("sistemas@");
+
+  const isAdmin =
+    req.cookies.get("isAdmin")?.value === "true" ||
+    activeRole === "admin" ||
+    isAdminEmail ||
+    isJwtAdmin;
+
+  // 1. Admin has unrestricted access to all dashboards and management pages (direct access to Admin dashboard on /)
+  if (isAdmin) {
+    return NextResponse.next();
+  }
+
+  // 2. Protect Admin-only management routes from non-admin accounts
+  const adminOnlyRoutes = [
+    "/Admin",
+    "/City",
+    "/Country",
+    "/Currency",
+    "/Roles",
+    "/Permissions",
+    "/create_admin",
+    "/Subscriptions",
+    "/Package",
+    "/Coupon",
+    "/Purchase",
+    "/Logs",
+  ];
+  if (adminOnlyRoutes.some((route) => pathname.startsWith(route))) {
+    const fallbackTarget = isOwner ? "/owner" : isDealer ? "/dealer" : isOperator ? "/operator" : isAgent ? "/agent" : "/farmer";
+    return NextResponse.redirect(new URL(fallbackTarget, req.url));
+  }
+
+  // 3. If user is currently visiting a path that matches one of their active roles, ALLOW IT!
+  if (pathname.startsWith("/owner") && isOwner) {
+    return NextResponse.next();
+  }
+  if (pathname.startsWith("/dealer") && isDealer) {
+    return NextResponse.next();
+  }
+  if (pathname.startsWith("/agent") && isAgent) {
+    return NextResponse.next();
+  }
+  if (pathname.startsWith("/operator") && isOperator) {
+    return NextResponse.next();
+  }
+  if (pathname.startsWith("/farmer") && isFarmer) {
+    return NextResponse.next();
+  }
+
+  // 4. If user is on the root path `/` or generic common pages, redirect non-admins to their operational dashboard
+  if (pathname === "/" || pathname === "") {
+    const activeRole = req.cookies.get("active_role")?.value;
+
+    if (activeRole === "owner" && isOwner) {
+      return NextResponse.redirect(new URL(`/owner`, req.url));
+    }
+    if (activeRole === "farmer" && isFarmer) {
+      return NextResponse.redirect(new URL(`/farmer`, req.url));
+    }
+    if (activeRole === "dealer" && isDealer) {
+      return NextResponse.redirect(new URL(`/dealer`, req.url));
+    }
+    if (activeRole === "agent" && isAgent) {
+      return NextResponse.redirect(new URL(`/agent`, req.url));
+    }
+    if (activeRole === "operator" && isOperator) {
+      return NextResponse.redirect(new URL(`/operator`, req.url));
+    }
+
+    if (isOwner) {
+      return NextResponse.redirect(new URL(`/owner`, req.url));
+    }
+    if (isDealer) {
+      return NextResponse.redirect(new URL(`/dealer`, req.url));
+    }
+    if (isAgent) {
+      return NextResponse.redirect(new URL(`/agent`, req.url));
+    }
+    if (isOperator) {
+      return NextResponse.redirect(new URL(`/operator`, req.url));
+    }
+    if (isFarmer) {
+      return NextResponse.redirect(new URL(`/farmer`, req.url));
+    }
+
+    // Default non-admin landing page
+    return NextResponse.redirect(new URL(`/farmer`, req.url));
+  }
+
+  // 5. If accessing a role-specific dashboard for which they do NOT have permission:
+  if (pathname.startsWith("/owner") && !isOwner) {
+    const target = isDealer ? "/dealer" : isAgent ? "/agent" : isOperator ? "/operator" : isFarmer ? "/farmer" : "/login";
+    return NextResponse.redirect(new URL(target, req.url));
+  }
+  if (pathname.startsWith("/dealer") && !isDealer) {
+    const target = isOwner ? "/owner" : isAgent ? "/agent" : isOperator ? "/operator" : isFarmer ? "/farmer" : "/login";
+    return NextResponse.redirect(new URL(target, req.url));
+  }
+  if (pathname.startsWith("/agent") && !isAgent) {
+    const target = isOwner ? "/owner" : isDealer ? "/dealer" : isOperator ? "/operator" : isFarmer ? "/farmer" : "/login";
+    return NextResponse.redirect(new URL(target, req.url));
+  }
+  if (pathname.startsWith("/operator") && !isOperator) {
+    const target = isOwner ? "/owner" : isDealer ? "/dealer" : isAgent ? "/agent" : isFarmer ? "/farmer" : "/login";
+    return NextResponse.redirect(new URL(target, req.url));
+  }
+  if (pathname.startsWith("/farmer") && !isFarmer) {
+    const target = isOwner ? "/owner" : isDealer ? "/dealer" : isAgent ? "/agent" : isOperator ? "/operator" : "/login";
+    return NextResponse.redirect(new URL(target, req.url));
+  }
+
+  // Allow general operational pages (e.g. /Devices, /Store, /Inventory, etc.) if authenticated
+  return NextResponse.next();
+}
+
+// Define which paths should use this middleware
+export const config = {
+  matcher: [
+    "/((?!login|register|farmer_login|create_admin|_next|static|favicon\\.ico|apple-touch-icon\\.png|icon\\.png|.*\\.png|.*\\.jpg|.*\\.jpeg|.*\\.svg|.*\\.ico).*)",
+  ],
+}

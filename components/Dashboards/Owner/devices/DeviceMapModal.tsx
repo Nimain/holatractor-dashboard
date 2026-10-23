@@ -1,0 +1,1296 @@
+"use client"
+
+import React, { useState, useEffect, useRef, useCallback } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  MapPin,
+  Clock,
+  Battery,
+  Wifi,
+  WifiOff,
+  Truck,
+  RefreshCw,
+  Navigation,
+  Route,
+  Zap,
+  Radio,
+  RadioIcon,
+  Calendar,
+  Filter,
+  Globe,
+  Layers,
+  Maximize2,
+  Minimize2,
+  LocateFixed,
+} from "lucide-react"
+import DeviceLocationService, {
+  type DeviceLocationData,
+  type LocationHistoryParams,
+} from "@/utils/Axios/DeviceLocationService"
+import { getGoogleMapsTractorIcon } from "@/utils/map/tractorIcon"
+import { io, type Socket } from "socket.io-client"
+import {
+  cleanAndSegmentRoute,
+  computeConvexHull,
+  computePolygonAreaHectares,
+  getFieldOperatingPoints,
+} from "@/utils/gps/routeCleaner"
+
+const GOOGLE_MAPS_API_KEY =
+  process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
+  process.env.GOOGLE_MAPS_API_KEY ||
+  "AIzaSyDjMCI0xj2Q-WTc9J7yWX-Mvh0DBM7oHbg"
+
+interface Device {
+  id: string
+  device_imei: string
+  device_region?: "SW" | "NE" | string
+  base?: {
+    status?: number
+  }
+  tractorInStore?: {
+    baseTractor?: {
+      name?: string
+      model?: string
+      images?: string[]
+    }
+    hourly_price?: number
+    lat?: string | null
+    lan?: string | null
+  }
+  updatedAt?: string
+}
+
+interface DeviceMapModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  device: Device | null
+  language?: "en" | "es"
+}
+
+interface UserLocation {
+  latitude: number
+  longitude: number
+  accuracy?: number
+}
+
+interface LiveLocationData {
+  _id: {
+    $oid: string
+  }
+  imei: string
+  lat: number
+  lon: number
+  speed: number
+  course: number
+  timestamp: string
+  created_at: string
+}
+
+type DateFilter = "today" | "yesterday" | "week" | "month" | "custom" | "all"
+type GoogleMapType = "roadmap" | "satellite" | "hybrid" | "terrain"
+
+export function DeviceMapModal({
+  open,
+  onOpenChange,
+  device,
+  language = "en",
+}: DeviceMapModalProps) {
+  const mapElementRef = useRef<HTMLDivElement>(null)
+  const mapInstanceRef = useRef<any>(null)
+  const deviceMarkerRef = useRef<any>(null)
+  const userMarkerRef = useRef<any>(null)
+  const polylinesRef = useRef<any[]>([])
+  const infoWindowRef = useRef<any>(null)
+
+  const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false)
+  const [googleMapsError, setGoogleMapsError] = useState(false)
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null)
+  const [rawDeviceLocations, setRawDeviceLocations] = useState<DeviceLocationData[]>([])
+
+  // Date filtering state (default to last 30 days)
+  const [selectedFilter, setSelectedFilter] = useState<DateFilter>("month")
+  const [customStartDate, setCustomStartDate] = useState(DeviceLocationService.getTodayDate())
+  const [customEndDate, setCustomEndDate] = useState(DeviceLocationService.getTodayDate())
+  const [showDatePicker, setShowDatePicker] = useState(false)
+
+  // In-memory caching & pool for instant (0 ms) date filtering
+  const deviceHistoryCacheRef = useRef<Record<string, DeviceLocationData[]>>({})
+  const masterHistoryPoolRef = useRef<Record<string, (DeviceLocationData & { _timeMs: number })[]>>({})
+
+  const deviceLocations = React.useMemo(() => {
+    if (selectedFilter === "custom") {
+      return DeviceLocationService.filterHistoryByRange(
+        rawDeviceLocations,
+        "custom",
+        customStartDate,
+        customEndDate
+      )
+    }
+    return rawDeviceLocations
+  }, [rawDeviceLocations, selectedFilter, customStartDate, customEndDate])
+
+  const isIndia = device?.device_region === "NE" || (device as any)?.region === "NE"
+  const cleanedRouteResult = React.useMemo(() => {
+    if (!deviceLocations || deviceLocations.length === 0) return null
+    return cleanAndSegmentRoute(deviceLocations, { isIndia })
+  }, [deviceLocations, isIndia])
+
+  const routeStats = React.useMemo(() => {
+    if (cleanedRouteResult) {
+      const fieldPts = getFieldOperatingPoints(
+        cleanedRouteResult.workingFieldPoints && cleanedRouteResult.workingFieldPoints.length >= 3
+          ? cleanedRouteResult.workingFieldPoints
+          : cleanedRouteResult.allCleanPoints.map((p) => ({ lat: p.lat, lng: p.lng }))
+      )
+      const hull = fieldPts.length >= 3 ? computeConvexHull(fieldPts) : []
+      const polygonArea = hull.length >= 3 ? computePolygonAreaHectares(hull) : 0
+      const calculatedArea =
+        polygonArea > 0 ? polygonArea : Number((cleanedRouteResult.totalDistanceKm * 0.3).toFixed(1))
+
+      return {
+        distanceKm: cleanedRouteResult.totalDistanceKm,
+        maxSpeed: cleanedRouteResult.maxSpeedKmH,
+        avgSpeed: cleanedRouteResult.avgSpeedKmH,
+        count: cleanedRouteResult.allCleanPoints.length,
+        movingPoints: cleanedRouteResult.movingPointsCount,
+        stoppedPoints: cleanedRouteResult.stoppedPointsCount,
+        tripsCount: cleanedRouteResult.trips.length,
+        stopsCount: cleanedRouteResult.stopsCount,
+        workedAreaHa: calculatedArea,
+      }
+    }
+    return {
+      distanceKm: 0,
+      maxSpeed: 0,
+      avgSpeed: 0,
+      count: 0,
+      movingPoints: 0,
+      stoppedPoints: 0,
+      tripsCount: 0,
+      stopsCount: 0,
+      workedAreaHa: 0,
+    }
+  }, [cleanedRouteResult])
+
+  const [currentLocation, setCurrentLocation] = useState<DeviceLocationData | null>(null)
+  const [locationLoading, setLocationLoading] = useState(false)
+  const [deviceLoading, setDeviceLoading] = useState(false)
+  const [showRoute, setShowRoute] = useState(true)
+  const [isLiveTracking, setIsLiveTracking] = useState(false)
+  const [socket, setSocket] = useState<Socket | null>(null)
+  const [liveLocationCount, setLiveLocationCount] = useState(0)
+  const [mapType, setMapType] = useState<GoogleMapType>("hybrid")
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  const translations = {
+    en: {
+      title: "Device Telemetry & Location",
+      gettingLocation: "Getting Your Location...",
+      loadingDeviceLocation: "Loading Device Location...",
+      locationError: "Unable to get location",
+      tryAgain: "Try Again",
+      yourLocation: "Your Current Location",
+      deviceLocation: "Device Location",
+      accuracy: "Accuracy:",
+      refreshLocation: "Refresh Location",
+      loadDeviceLocation: "Load Device Location",
+      showRoute: "Show Route",
+      hideRoute: "Hide Route",
+      online: "Online",
+      offline: "Offline",
+      lastSeen: "Last seen:",
+      battery: "Battery",
+      speed: "Speed:",
+      course: "Heading:",
+      altitude: "Altitude:",
+      satellites: "Satellites:",
+      hourlyRate: "Hourly Rate:",
+      startTracking: "Start Live Tracking",
+      stopLiveTracking: "Stop Live Tracking",
+      liveTracking: "Live Tracking",
+      connected: "Connected",
+      disconnected: "Disconnected",
+      liveUpdates: "Live Updates:",
+      dateFilter: "Date Filter:",
+      today: "Today",
+      yesterday: "Yesterday",
+      week: "This Week",
+      month: "This Month",
+      all: "All",
+      custom: "Custom Range",
+      startDate: "Start Date",
+      endDate: "End Date",
+      applyFilter: "Apply Filter",
+      locationCount: "locations found",
+      filterUpdated: "Location history updated",
+      mapStyle: "Map Style:",
+      roads: "Roadmap",
+      satellite: "Satellite",
+      hybrid: "Hybrid",
+      terrain: "Terrain",
+      region: "Region:",
+      coordinateSystem: "Coordinate System:",
+      southwest: "Southwest (Negative Coordinates)",
+      northeast: "Northeast (Positive Coordinates)",
+      model: "Model:",
+      imei: "IMEI:",
+      recenter: "Recenter",
+    },
+    es: {
+      title: "Telemetría y Ubicación del Dispositivo",
+      gettingLocation: "Obteniendo Tu Ubicación...",
+      loadingDeviceLocation: "Cargando Ubicación del Dispositivo...",
+      locationError: "No se pudo obtener la ubicación",
+      tryAgain: "Intentar de Nuevo",
+      yourLocation: "Tu Ubicación Actual",
+      deviceLocation: "Ubicación del Dispositivo",
+      accuracy: "Precisión:",
+      refreshLocation: "Actualizar Ubicación",
+      loadDeviceLocation: "Cargar Ubicación del Dispositivo",
+      showRoute: "Mostrar Ruta",
+      hideRoute: "Ocultar Ruta",
+      online: "En línea",
+      offline: "Desconectado",
+      lastSeen: "Visto por última vez:",
+      battery: "Batería",
+      speed: "Velocidad:",
+      course: "Rumbo:",
+      altitude: "Altitud:",
+      satellites: "Satélites:",
+      hourlyRate: "Tarifa por Hora:",
+      startTracking: "Iniciar Seguimiento en Vivo",
+      stopLiveTracking: "Detener Seguimiento en Vivo",
+      liveTracking: "Seguimiento en Vivo",
+      connected: "Conectado",
+      disconnected: "Desconectado",
+      liveUpdates: "Actualizaciones en Vivo:",
+      dateFilter: "Filtro de Fecha:",
+      today: "Hoy",
+      yesterday: "Ayer",
+      week: "Esta Semana",
+      month: "Este Mes",
+      all: "Todo",
+      custom: "Rango Personalizado",
+      startDate: "Fecha de Inicio",
+      endDate: "Fecha de Fin",
+      applyFilter: "Aplicar Filtro",
+      locationCount: "ubicaciones encontradas",
+      filterUpdated: "Historial de ubicación actualizado",
+      mapStyle: "Estilo del Mapa:",
+      roads: "Mapa Vial",
+      satellite: "Satélite",
+      hybrid: "Híbrido",
+      terrain: "Terreno",
+      region: "Región:",
+      coordinateSystem: "Sistema de Coordenadas:",
+      southwest: "Suroeste (Coordenadas Negativas)",
+      northeast: "Noreste (Coordenadas Positivas)",
+      model: "Modelo:",
+      imei: "IMEI:",
+      recenter: "Recentrar",
+    },
+  }
+
+  const t = translations[language]
+
+  // Safe device property helpers
+  const isOnline = device?.base?.status === 1 || Boolean((device as any)?.online)
+  const tractorName =
+    device?.tractorInStore?.baseTractor?.name ||
+    (device as any)?.base_tractor?.name ||
+    (device as any)?.name ||
+    "Tractor Device"
+  const tractorModel =
+    device?.tractorInStore?.baseTractor?.model || (device as any)?.model || "N/A"
+  const tractorImage =
+    device?.tractorInStore?.baseTractor?.images?.[0] ||
+    (device as any)?.image ||
+    (device as any)?.images?.[0]
+  const hourlyPrice =
+    device?.tractorInStore?.hourly_price ?? (device as any)?.hourly_price ?? 0
+  const deviceImei = device?.device_imei || (device as any)?.imei || (device as any)?.id || ""
+  const deviceRegion = device?.device_region || (device as any)?.region || "SW"
+
+  // Load Google Maps Script
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    if (window.google && window.google.maps) {
+      setGoogleMapsLoaded(true)
+      return
+    }
+
+    const existingScript = document.getElementById("google-maps-script")
+    if (existingScript) {
+      existingScript.addEventListener("load", () => setGoogleMapsLoaded(true))
+      existingScript.addEventListener("error", () => setGoogleMapsError(true))
+      return
+    }
+
+    const script = document.createElement("script")
+    script.id = "google-maps-script"
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=geometry,places`
+    script.async = true
+    script.defer = true
+    script.onload = () => {
+      console.log("[DeviceMapModal] Google Maps script loaded successfully")
+      setGoogleMapsLoaded(true)
+    }
+    script.onerror = () => {
+      console.error("[DeviceMapModal] Failed to load Google Maps script")
+      setGoogleMapsError(true)
+    }
+    document.head.appendChild(script)
+  }, [])
+
+  // Helper function to adjust coordinates based on device region
+  const adjustLiveLocationCoordinates = (
+    data: LiveLocationData,
+    region: string
+  ): LiveLocationData => {
+    let adjustedLat = data.lat
+    let adjustedLon = data.lon
+
+    if (region === "SW") {
+      adjustedLat = Math.abs(data.lat) * -1
+      adjustedLon = Math.abs(data.lon) * -1
+    } else {
+      adjustedLat = Math.abs(data.lat)
+      adjustedLon = Math.abs(data.lon)
+    }
+
+    return {
+      ...data,
+      lat: adjustedLat,
+      lon: adjustedLon,
+    }
+  }
+
+  // Socket.IO for live tracking
+  useEffect(() => {
+    if (open && device && isLiveTracking && deviceImei) {
+      const socketInstance = io("https://device.holatractor.com", {
+        transports: ["websocket", "polling"],
+        autoConnect: true,
+        forceNew: true,
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        timeout: 20000,
+        query: {
+          imei: deviceImei,
+        },
+      })
+
+      socketInstance.on("connect", () => {
+        socketInstance.emit("join-device", deviceImei)
+      })
+
+      socketInstance.on("location-update", (data: LiveLocationData) => {
+        if (data.imei === deviceImei) {
+          const adjustedData = adjustLiveLocationCoordinates(data, deviceRegion)
+          const newLocation: DeviceLocationData = {
+            id: adjustedData._id?.$oid || `loc-${Date.now()}`,
+            imei: adjustedData.imei,
+            lat: adjustedData.lat,
+            lon: adjustedData.lon,
+            latitude: adjustedData.lat,
+            longitude: adjustedData.lon,
+            speed: adjustedData.speed,
+            course: adjustedData.course,
+            timestamp: adjustedData.timestamp,
+            created_at: adjustedData.created_at,
+          }
+
+          setCurrentLocation(newLocation)
+          setRawDeviceLocations((prev) => [newLocation, ...prev.slice(0, 499)])
+          setLiveLocationCount((prev) => prev + 1)
+
+          if (mapInstanceRef.current && adjustedData.lat && adjustedData.lon) {
+            const pos = new window.google.maps.LatLng(adjustedData.lat, adjustedData.lon)
+            mapInstanceRef.current.panTo(pos)
+          }
+        }
+      })
+
+      setSocket(socketInstance)
+
+      return () => {
+        socketInstance.disconnect()
+        setSocket(null)
+      }
+    }
+  }, [open, device, isLiveTracking, deviceImei, deviceRegion])
+
+  // Get user location
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) return
+    setLocationLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude, accuracy } = position.coords
+        setUserLocation({ latitude, longitude, accuracy })
+        setLocationLoading(false)
+      },
+      (error) => {
+        console.error("Error getting location:", error)
+        setLocationLoading(false)
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+    )
+  }
+
+  // Load device location history (cached in-memory for instant 0ms date filtering)
+  const loadDeviceLocationWithFilter = useCallback(async (filterOverride?: DateFilter) => {
+    if (!device || !deviceImei) return
+
+    const activeFilter = filterOverride || selectedFilter
+    const cacheKey = `${deviceImei}_${activeFilter}_${customStartDate}_${customEndDate}`
+
+    // 1. Instant Cache Hit (0 ms latency)
+    if (deviceHistoryCacheRef.current[cacheKey]?.length > 0) {
+      setRawDeviceLocations(deviceHistoryCacheRef.current[cacheKey])
+      setDeviceLoading(false)
+      return
+    }
+
+    // 2. Instant Derivation from Master Pool (0 ms)
+    const pool = masterHistoryPoolRef.current[deviceImei]
+    let hasInstant = false
+    if (pool && pool.length > 0) {
+      const derived = DeviceLocationService.filterHistoryByRange(pool, activeFilter, customStartDate, customEndDate)
+      if (derived.length > 0) {
+        setRawDeviceLocations(derived)
+        hasInstant = true
+      }
+    }
+
+    if (!hasInstant) {
+      setRawDeviceLocations([])
+    }
+
+    setDeviceLoading(true)
+    try {
+      const [current, history] = await Promise.all([
+        DeviceLocationService.getCurrentDeviceLocation(deviceImei, deviceRegion),
+        DeviceLocationService.getDeviceLocationHistory(
+          deviceImei,
+          {
+            range: activeFilter,
+            start_date: activeFilter === "custom" ? customStartDate : undefined,
+            end_date: activeFilter === "custom" ? customEndDate : undefined,
+          },
+          deviceRegion
+        ),
+      ])
+
+      if (
+        current &&
+        current.lat &&
+        current.lon &&
+        current.lat !== 0 &&
+        current.lon !== 0 &&
+        !isNaN(Number(current.lat)) &&
+        !isNaN(Number(current.lon))
+      ) {
+        setCurrentLocation(current)
+      } else {
+        setCurrentLocation(null)
+      }
+
+      let historyList = Array.isArray(history) ? history : []
+
+      // If activeFilter ("today", etc.) returned no points, fetch all history as fallback
+      // so we can populate the master pool and derive the latest activity!
+      if (historyList.length === 0 && activeFilter !== "all" && activeFilter !== "custom") {
+        try {
+          const allHistory = await DeviceLocationService.getDeviceLocationHistory(
+            deviceImei,
+            { range: "all" },
+            deviceRegion
+          )
+          if (Array.isArray(allHistory) && allHistory.length > 0) {
+            historyList = allHistory
+          }
+        } catch (e) {
+          // ignore fallback error
+        }
+      }
+
+      if (historyList.length > 0) {
+        const validLocations = historyList.filter(
+          (loc) =>
+            loc.lat &&
+            loc.lon &&
+            loc.lat !== 0 &&
+            loc.lon !== 0 &&
+            !isNaN(Number(loc.lat)) &&
+            !isNaN(Number(loc.lon))
+        )
+
+        // Merge into master pool
+        const existing = masterHistoryPoolRef.current[deviceImei] || []
+        const pMap = new Map<string, DeviceLocationData & { _timeMs: number }>()
+        for (const p of existing) {
+          const t = (p as any)._timeMs || new Date(p.timestamp || (p as any).created_at || Date.now()).getTime()
+          const lonVal = p.lon ?? (p as any).lng ?? p.longitude ?? 0
+          pMap.set(`${t}_${Number(p.lat).toFixed(5)}_${Number(lonVal).toFixed(5)}`, { ...p, _timeMs: t })
+        }
+        for (const p of validLocations) {
+          const t = (p as any)._timeMs || new Date(p.timestamp || (p as any).created_at || Date.now()).getTime()
+          const lonVal = p.lon ?? (p as any).lng ?? p.longitude ?? 0
+          pMap.set(`${t}_${Number(p.lat).toFixed(5)}_${Number(lonVal).toFixed(5)}`, { ...p, _timeMs: t })
+        }
+        const fullPool = Array.from(pMap.values()).sort((a, b) => a._timeMs - b._timeMs)
+        masterHistoryPoolRef.current[deviceImei] = fullPool
+
+        // Filter by selected range (will gracefully fallback to latest active day if no points today)
+        const filtered = DeviceLocationService.filterHistoryByRange(
+          fullPool,
+          activeFilter,
+          customStartDate,
+          customEndDate
+        )
+        const toShow = filtered.length > 0 ? filtered : validLocations
+        deviceHistoryCacheRef.current[cacheKey] = toShow
+        setRawDeviceLocations(toShow)
+      } else {
+        if (!hasInstant) setRawDeviceLocations([])
+      }
+    } catch (error) {
+      console.error("[DeviceMapModal] Error loading device location:", error)
+      if (!hasInstant) setRawDeviceLocations([])
+      setCurrentLocation(null)
+    } finally {
+      setDeviceLoading(false)
+    }
+  }, [device, deviceImei, deviceRegion, selectedFilter, customStartDate, customEndDate])
+
+  // Initialize modal data when opened
+  useEffect(() => {
+    if (open && device) {
+      getCurrentLocation()
+      loadDeviceLocationWithFilter()
+    }
+
+    if (!open) {
+      setIsLiveTracking(false)
+      setLiveLocationCount(0)
+      if (socket) {
+        socket.disconnect()
+        setSocket(null)
+      }
+    }
+  }, [open, device, loadDeviceLocationWithFilter])
+
+  // Compute Initial / Target Map Center
+  const mapCenter = React.useMemo(() => {
+    if (currentLocation && currentLocation.lat && currentLocation.lon) {
+      const lat = Number(currentLocation.lat)
+      const lng = Number(currentLocation.lon)
+      if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+        return { lat, lng }
+      }
+    }
+    if (cleanedRouteResult && cleanedRouteResult.allCleanPoints.length > 0) {
+      const last = cleanedRouteResult.allCleanPoints[cleanedRouteResult.allCleanPoints.length - 1]
+      return { lat: last.lat, lng: last.lng }
+    }
+    if (deviceLocations && deviceLocations.length > 0) {
+      const last = deviceLocations[deviceLocations.length - 1]
+      if (last.lat && last.lon && !isNaN(Number(last.lat)) && !isNaN(Number(last.lon))) {
+        return { lat: Number(last.lat), lng: Number(last.lon) }
+      }
+    }
+    if (device?.tractorInStore?.lat && device?.tractorInStore?.lan) {
+      const lat = Number(device.tractorInStore.lat)
+      const lng = Number(device.tractorInStore.lan)
+      if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+        return { lat, lng }
+      }
+    }
+    if (deviceRegion === "SW") {
+      return { lat: -17.7833, lng: -63.1821 } // Santa Cruz, Bolivia
+    }
+    return { lat: 21.9368, lng: 86.7441 }
+  }, [currentLocation, cleanedRouteResult, deviceLocations, device, deviceRegion])
+
+  // Initialize and Update Google Map
+  useEffect(() => {
+    if (!open || !googleMapsLoaded || !mapElementRef.current || !window.google?.maps) {
+      return
+    }
+
+    try {
+      // 1. Initialize Map Instance if not created
+      if (!mapInstanceRef.current) {
+        mapInstanceRef.current = new window.google.maps.Map(mapElementRef.current, {
+          center: mapCenter,
+          zoom: 16,
+          mapTypeId: mapType as any,
+          disableDefaultUI: false,
+          zoomControl: true,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+          styles: [
+            {
+              featureType: "poi",
+              elementType: "labels",
+              stylers: [{ visibility: "off" }],
+            },
+          ],
+        })
+
+        infoWindowRef.current = new window.google.maps.InfoWindow()
+      } else {
+        mapInstanceRef.current.setMapTypeId(mapType as any)
+      }
+
+      const map = mapInstanceRef.current
+
+      // Trigger resize after modal animation
+      const resizeTimer = setTimeout(() => {
+        window.google.maps.event.trigger(map, "resize")
+      }, 200)
+
+      // 2. User Location Marker
+      if (userLocation) {
+        const userPos = { lat: userLocation.latitude, lng: userLocation.longitude }
+        if (!userMarkerRef.current) {
+          userMarkerRef.current = new window.google.maps.Marker({
+            position: userPos,
+            map: map,
+            title: t.yourLocation,
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              fillColor: "#3B82F6",
+              fillOpacity: 1,
+              strokeColor: "#FFFFFF",
+              strokeWeight: 2.5,
+            },
+          })
+        } else {
+          userMarkerRef.current.setPosition(userPos)
+          userMarkerRef.current.setMap(map)
+        }
+      } else if (userMarkerRef.current) {
+        userMarkerRef.current.setMap(null)
+      }
+
+      // 3. Tractor Device Current Location Marker
+      const activeLat = Number(
+        currentLocation?.lat ||
+          cleanedRouteResult?.allCleanPoints?.[cleanedRouteResult.allCleanPoints.length - 1]?.lat
+      )
+      const activeLng = Number(
+        currentLocation?.lon ||
+          cleanedRouteResult?.allCleanPoints?.[cleanedRouteResult.allCleanPoints.length - 1]?.lng
+      )
+
+      if (!isNaN(activeLat) && !isNaN(activeLng) && activeLat !== 0 && activeLng !== 0) {
+        const tractorPos = { lat: activeLat, lng: activeLng }
+        const course = Number(currentLocation?.course || 0)
+        const isMoving = Number(currentLocation?.speed || 0) > 0.5
+
+        const tractorIcon = getGoogleMapsTractorIcon({
+          course,
+          isLive: isLiveTracking,
+          isMoving,
+          status: isOnline ? "Active" : "Offline",
+          size: 64,
+        })
+
+        if (!deviceMarkerRef.current) {
+          deviceMarkerRef.current = new window.google.maps.Marker({
+            position: tractorPos,
+            map: map,
+            title: tractorName,
+            icon: tractorIcon,
+            zIndex: 999,
+          })
+
+          deviceMarkerRef.current.addListener("click", () => {
+            if (infoWindowRef.current) {
+              infoWindowRef.current.setContent(`
+                <div style="padding: 8px; font-family: sans-serif; color: #1e293b; max-width: 240px;">
+                  <h4 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 700; color: #0f172a;">${tractorName}</h4>
+                  <p style="margin: 0 0 6px 0; font-size: 12px; color: #64748b;">IMEI: <strong>${deviceImei}</strong></p>
+                  <div style="font-size: 11px; line-height: 1.5; border-top: 1px solid #e2e8f0; padding-top: 4px;">
+                    <div>Status: <span style="font-weight: 700; color: ${isOnline ? "#16a34a" : "#dc2626"}">${isOnline ? "Online" : "Offline"}</span></div>
+                    <div>Speed: <strong>${(currentLocation?.speed || 0).toFixed(1)} km/h</strong></div>
+                    <div>Lat: ${activeLat.toFixed(6)}, Lng: ${activeLng.toFixed(6)}</div>
+                    <div>Last update: <em>${formatTime(currentLocation?.timestamp || currentLocation?.created_at || "")}</em></div>
+                  </div>
+                </div>
+              `)
+              infoWindowRef.current.open(map, deviceMarkerRef.current)
+            }
+          })
+        } else {
+          deviceMarkerRef.current.setPosition(tractorPos)
+          deviceMarkerRef.current.setIcon(tractorIcon)
+          deviceMarkerRef.current.setMap(map)
+        }
+      } else if (deviceMarkerRef.current) {
+        deviceMarkerRef.current.setMap(null)
+      }
+
+      // 4. Route Polylines (Clean independent trips, uniform red, no river cuts)
+      polylinesRef.current.forEach((p) => p.setMap(null))
+      polylinesRef.current = []
+
+      if (showRoute && cleanedRouteResult && cleanedRouteResult.trips.length > 0) {
+        const allRenderedCoords: { lat: number; lng: number }[] = []
+
+        cleanedRouteResult.trips.forEach((trip) => {
+          if (trip.path && trip.path.length >= 2) {
+            const polyline = new window.google.maps.Polyline({
+              path: trip.path,
+              geodesic: false,
+              strokeColor: "#EF4444",
+              strokeOpacity: 0.95,
+              strokeWeight: 6,
+              map: map,
+              zIndex: 36,
+            })
+            polylinesRef.current.push(polyline)
+            trip.path.forEach((pt) => allRenderedCoords.push(pt))
+          } else if (trip.path && trip.path.length === 1) {
+            allRenderedCoords.push(trip.path[0])
+          }
+        })
+
+        if (allRenderedCoords.length === 0 && cleanedRouteResult.continuousPath && cleanedRouteResult.continuousPath.length >= 2) {
+          const polyline = new window.google.maps.Polyline({
+            path: cleanedRouteResult.continuousPath,
+            geodesic: false,
+            strokeColor: "#EF4444",
+            strokeOpacity: 0.95,
+            strokeWeight: 6,
+            map: map,
+            zIndex: 36,
+          })
+          polylinesRef.current.push(polyline)
+          cleanedRouteResult.continuousPath.forEach((pt) => allRenderedCoords.push(pt))
+        }
+
+        // Fallback if segmented cleaner dropped points
+        if (allRenderedCoords.length === 0 && deviceLocations && deviceLocations.length >= 2) {
+          const rawPath = deviceLocations
+            .filter((p) => p.lat && p.lon && !isNaN(Number(p.lat)) && !isNaN(Number(p.lon)))
+            .map((p) => ({ lat: Number(p.lat), lng: Number(p.lon) }))
+          if (rawPath.length >= 2) {
+            const polyline = new window.google.maps.Polyline({
+              path: rawPath,
+              geodesic: false,
+              strokeColor: "#EF4444",
+              strokeOpacity: 0.95,
+              strokeWeight: 6,
+              map: map,
+              zIndex: 36,
+            })
+            polylinesRef.current.push(polyline)
+            rawPath.forEach((pt) => allRenderedCoords.push(pt))
+          }
+        }
+
+        // Fit map bounds strictly around tractor history route (do NOT include userLocation so map zooms in properly)
+        if (allRenderedCoords.length > 0) {
+          const latestPt = allRenderedCoords[allRenderedCoords.length - 1]
+          // Cluster bounds within 3 degrees (~300km) of latest location to eliminate distant factory testing signals
+          const relevantCoords = allRenderedCoords.filter((p) => {
+            const dLat = Math.abs(p.lat - latestPt.lat)
+            const dLng = Math.abs(p.lng - latestPt.lng)
+            return dLat < 3.0 && dLng < 3.0
+          })
+
+          const coordsToFit = relevantCoords.length > 0 ? relevantCoords : allRenderedCoords
+          const bounds = new window.google.maps.LatLngBounds()
+          coordsToFit.forEach((p) => bounds.extend(p))
+
+          const ne = bounds.getNorthEast()
+          const sw = bounds.getSouthWest()
+          const latDiff = Math.abs(ne.lat() - sw.lat())
+          const lngDiff = Math.abs(ne.lng() - sw.lng())
+
+          if (coordsToFit.length > 1 && (latDiff > 0.0001 || lngDiff > 0.0001)) {
+            map.fitBounds(bounds, { top: 60, right: 60, bottom: 80, left: 60 })
+            const zoomListener = window.google.maps.event.addListenerOnce(map, "idle", () => {
+              const curZoom = map.getZoom()
+              if (curZoom > 18) {
+                map.setZoom(18)
+              } else if (curZoom < 15 && latDiff < 0.015 && lngDiff < 0.015) {
+                map.setZoom(16)
+              }
+            })
+          } else {
+            map.panTo(latestPt)
+            map.setZoom(17)
+          }
+        }
+      } else if (!isNaN(activeLat) && !isNaN(activeLng) && activeLat !== 0) {
+        map.panTo({ lat: activeLat, lng: activeLng })
+        map.setZoom(17)
+      }
+
+      return () => {
+        clearTimeout(resizeTimer)
+      }
+    } catch (err) {
+      console.error("[DeviceMapModal] Error rendering Google Map:", err)
+    }
+  }, [
+    open,
+    googleMapsLoaded,
+    mapCenter,
+    mapType,
+    currentLocation,
+    cleanedRouteResult,
+    showRoute,
+    userLocation,
+    isLiveTracking,
+    isOnline,
+    tractorName,
+    deviceImei,
+    t,
+  ])
+
+  // Format timestamp helper
+  const formatTime = (dateString: string) => {
+    if (!dateString) return ""
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+
+    if (diffInMinutes < 1) return language === "es" ? "Ahora mismo" : "Just now"
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
+    return `${Math.floor(diffInMinutes / 1440)}d ago`
+  }
+
+  const handleFilterChange = (filter: DateFilter) => {
+    setSelectedFilter(filter)
+    if (filter !== "custom") {
+      setShowDatePicker(false)
+      loadDeviceLocationWithFilter(filter)
+    } else {
+      setShowDatePicker(true)
+      if (!customStartDate) {
+        setCustomStartDate(DeviceLocationService.getTodayDate())
+      }
+      if (!customEndDate) {
+        setCustomEndDate(DeviceLocationService.getTodayDate())
+      }
+      loadDeviceLocationWithFilter("custom")
+    }
+  }
+
+  const handleRecenter = () => {
+    if (mapInstanceRef.current && window.google?.maps) {
+      if (cleanedRouteResult && cleanedRouteResult.allCleanPoints.length > 1) {
+        const bounds = new window.google.maps.LatLngBounds()
+        cleanedRouteResult.allCleanPoints.forEach((p) => bounds.extend({ lat: p.lat, lng: p.lng }))
+        mapInstanceRef.current.fitBounds(bounds, { top: 60, right: 60, bottom: 80, left: 60 })
+        const listener = window.google.maps.event.addListenerOnce(mapInstanceRef.current, "idle", () => {
+          if (mapInstanceRef.current.getZoom() > 18) {
+            mapInstanceRef.current.setZoom(18)
+          }
+        })
+      } else {
+        mapInstanceRef.current.panTo(mapCenter)
+        mapInstanceRef.current.setZoom(17)
+      }
+    }
+  }
+
+  const toggleLiveTracking = () => {
+    if (isLiveTracking) {
+      setIsLiveTracking(false)
+      setLiveLocationCount(0)
+      if (socket) {
+        socket.disconnect()
+        setSocket(null)
+      }
+    } else {
+      setIsLiveTracking(true)
+    }
+  }
+
+  if (!device) return null
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className={`${
+          isFullscreen
+            ? "max-w-[98vw] h-[96vh] w-[98vw]"
+            : "max-w-5xl max-h-[92vh] w-full"
+        } overflow-hidden flex flex-col p-6 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-2xl transition-all duration-200`}
+      >
+        <DialogHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-white">
+              <div className="p-2 rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                <MapPin className="h-5 w-5" />
+              </div>
+              {t.title}
+              {isLiveTracking && (
+                <Badge variant="default" className="ml-2 bg-emerald-600 text-white animate-pulse">
+                  <Radio className="h-3 w-3 mr-1" />
+                  {t.liveTracking}
+                </Badge>
+              )}
+              <Badge variant="outline" className="ml-2 font-mono text-xs">
+                <Globe className="h-3 w-3 mr-1" />
+                {deviceRegion}
+              </Badge>
+            </DialogTitle>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsFullscreen(!isFullscreen)}
+                className="rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            <span className="font-semibold text-slate-800 dark:text-slate-200">{tractorName}</span> •{" "}
+            <span>{tractorModel}</span>
+            {deviceImei && <span className="ml-2 font-mono">IMEI: {deviceImei}</span>}
+            {isLiveTracking && liveLocationCount > 0 && (
+              <span className="ml-2 text-emerald-600 font-semibold">
+                • {t.liveUpdates} {liveLocationCount}
+              </span>
+            )}
+          </p>
+        </DialogHeader>
+
+        {/* Date Filter & Control Bar */}
+        <div className="py-2.5 flex items-center justify-between gap-3 flex-wrap border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-slate-500 flex items-center gap-1">
+              <Filter className="h-3.5 w-3.5" /> Filter:
+            </span>
+            {(["today", "yesterday", "week", "month", "all", "custom"] as DateFilter[]).map(
+              (filter) => {
+                const isActive = selectedFilter === filter
+                const isBtnLoading = isActive && deviceLoading
+                return (
+                  <Button
+                    key={filter}
+                    size="sm"
+                    variant={isActive ? "default" : "outline"}
+                    onClick={() => handleFilterChange(filter)}
+                    className={`text-xs h-7 px-2.5 rounded-full flex items-center gap-1.5 transition-all ${
+                      isActive
+                        ? "bg-orange-600 text-white hover:bg-orange-700 shadow-sm"
+                        : "text-slate-600 dark:text-slate-300"
+                    }`}
+                  >
+                    {isBtnLoading && <RefreshCw className="w-3 h-3 animate-spin text-white" />}
+                    {t[filter as keyof typeof t] || filter}
+                  </Button>
+                )
+              }
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowRoute(!showRoute)}
+              className="text-xs h-7 px-2.5 rounded-full"
+            >
+              <Route className="h-3.5 w-3.5 mr-1" />
+              {showRoute ? t.hideRoute : t.showRoute}
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => loadDeviceLocationWithFilter()}
+              disabled={deviceLoading}
+              className="text-xs h-7 px-2.5 rounded-full"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 mr-1 ${deviceLoading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+
+            <Button
+              size="sm"
+              variant={isLiveTracking ? "destructive" : "default"}
+              onClick={toggleLiveTracking}
+              className={`text-xs h-7 px-3 rounded-full font-semibold ${
+                isLiveTracking
+                  ? "bg-red-600 hover:bg-red-700 text-white animate-pulse"
+                  : "bg-emerald-600 hover:bg-emerald-700 text-white"
+              }`}
+            >
+              <RadioIcon className="h-3.5 w-3.5 mr-1" />
+              {isLiveTracking ? t.stopLiveTracking : t.startTracking}
+            </Button>
+          </div>
+        </div>
+
+        {/* Custom Date Pickers */}
+        {showDatePicker && (
+          <div className="flex items-center gap-3 py-2 bg-slate-50 dark:bg-slate-900/50 px-3 rounded-lg text-xs">
+            <div className="flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5 text-slate-400" />
+              <span>{t.startDate}:</span>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="border rounded px-2 py-1 bg-white dark:bg-slate-900 text-xs"
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5 text-slate-400" />
+              <span>{t.endDate}:</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="border rounded px-2 py-1 bg-white dark:bg-slate-900 text-xs"
+              />
+            </div>
+            <Button
+              size="sm"
+              onClick={() => loadDeviceLocationWithFilter()}
+              className="bg-orange-600 hover:bg-orange-700 text-white h-7 text-xs rounded-full px-3"
+            >
+              {t.applyFilter}
+            </Button>
+          </div>
+        )}
+
+        {/* Map Canvas & Telemetry Info */}
+        <div className="flex-1 overflow-y-auto space-y-4 pt-2">
+          <div className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 min-h-[380px] h-[48vh]">
+            {!googleMapsLoaded ? (
+              <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                <RefreshCw className="h-8 w-8 animate-spin text-orange-600 mb-2" />
+                <span className="text-sm font-semibold">Loading Google Maps...</span>
+              </div>
+            ) : googleMapsError ? (
+              <div className="flex flex-col items-center justify-center h-full text-red-500">
+                <p className="text-sm font-semibold">Failed to load Google Maps.</p>
+              </div>
+            ) : (
+              <>
+                <div ref={mapElementRef} className="w-full h-full" />
+
+                {/* Floating Telemetry HUD Bar */}
+                <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-slate-900/90 text-white backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700/80 shadow-lg text-[11px] font-semibold flex-wrap pointer-events-auto max-w-[calc(100%-180px)]">
+                  <span className="flex items-center gap-1 text-blue-300">
+                    <Route className="w-3.5 h-3.5" />
+                    {deviceLoading ? (
+                      <span className="flex items-center gap-1">
+                        <RefreshCw className="w-3 h-3 animate-spin text-blue-400" /> Aligning...
+                      </span>
+                    ) : (
+                      <span>{routeStats.count} Waypoints</span>
+                    )}
+                  </span>
+                  <span className="text-slate-600">•</span>
+                  <span className="flex items-center gap-1 text-emerald-300">
+                    <span>🛣️</span> {routeStats.distanceKm} km
+                  </span>
+                  {routeStats.tripsCount > 0 && (
+                    <>
+                      <span className="text-slate-600">•</span>
+                      <span className="flex items-center gap-1 text-amber-300">
+                        <span>🌾</span> {routeStats.tripsCount} {routeStats.tripsCount === 1 ? "Trip" : "Trips"}
+                      </span>
+                    </>
+                  )}
+                  {routeStats.stopsCount > 0 && (
+                    <>
+                      <span className="text-slate-600">•</span>
+                      <span className="flex items-center gap-1 text-yellow-400">
+                        <span>🛑</span> {routeStats.stopsCount} Stops
+                      </span>
+                    </>
+                  )}
+                  <span className="text-slate-600">•</span>
+                  <span className="flex items-center gap-1 text-sky-300">
+                    <span>🚀 Max:</span> {routeStats.maxSpeed} km/h
+                  </span>
+                  <span className="text-slate-600">•</span>
+                  <span className="flex items-center gap-1 text-purple-300">
+                    <span>⏱️ Avg:</span> {routeStats.avgSpeed} km/h
+                  </span>
+                  {routeStats.workedAreaHa > 0 && (
+                    <>
+                      <span className="text-slate-600">•</span>
+                      <span className="flex items-center gap-1 text-emerald-400">
+                        <span>🌾 Area:</span> {routeStats.workedAreaHa} ha
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* High-Visibility Map Loading Overlay */}
+                {deviceLoading && (
+                  <div className="absolute inset-0 z-30 pointer-events-none flex items-center justify-center bg-slate-950/40 backdrop-blur-[2px] transition-all duration-300">
+                    <div className="flex items-center gap-3.5 px-6 py-4 rounded-2xl bg-slate-900/95 border border-blue-500/50 shadow-2xl shadow-blue-500/20 text-white backdrop-blur-md animate-in fade-in zoom-in-95 duration-200">
+                      <div className="relative flex items-center justify-center w-9 h-9">
+                        <div className="absolute inset-0 rounded-full border-2 border-blue-500/30 border-t-blue-400 animate-spin" />
+                        <RefreshCw className="w-4 h-4 text-blue-400 animate-spin" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                          Loading GPS Route History
+                          <span className="inline-block w-2 h-2 rounded-full bg-blue-400 animate-ping" />
+                        </span>
+                        <span className="text-xs text-slate-400 font-medium">
+                          Filtering and aligning map coordinates ({selectedFilter.toUpperCase()})...
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Floating Map Controls */}
+                <div className="absolute top-3 right-3 z-10 flex flex-col gap-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-1.5 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800">
+                  <div className="flex items-center gap-1">
+                    {(["hybrid", "satellite", "roadmap", "terrain"] as GoogleMapType[]).map(
+                      (type) => (
+                        <button
+                          key={type}
+                          onClick={() => setMapType(type)}
+                          className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all capitalize ${
+                            mapType === type
+                              ? "bg-orange-600 text-white shadow-sm"
+                              : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                          }`}
+                        >
+                          {type}
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+
+                {/* Recenter button */}
+                <button
+                  onClick={handleRecenter}
+                  className="absolute bottom-4 right-4 z-10 p-2.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md hover:bg-orange-500 hover:text-white rounded-full shadow-lg border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 transition-all"
+                  title={t.recenter}
+                >
+                  <LocateFixed className="h-5 w-5" />
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Telemetry Stats Card */}
+          <Card className="border border-slate-200 dark:border-slate-800 shadow-sm rounded-xl overflow-hidden bg-white dark:bg-slate-900">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between flex-wrap gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-12 w-12 rounded-xl border border-slate-200">
+                    {tractorImage ? (
+                      <AvatarImage src={tractorImage} alt={tractorName} className="object-cover" />
+                    ) : (
+                      <AvatarFallback className="bg-amber-100 text-amber-800">
+                        <Truck className="h-6 w-6" />
+                      </AvatarFallback>
+                    )}
+                  </Avatar>
+                  <div>
+                    <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                      {tractorName}
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      {t.model} {tractorModel} • <span className="font-mono">{deviceImei}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={isOnline ? "default" : "secondary"}
+                    className={`flex items-center gap-1 ${
+                      isOnline ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-700"
+                    }`}
+                  >
+                    {isOnline ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+                    {isOnline ? t.online : t.offline}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs font-semibold">
+                    ${hourlyPrice}/hr
+                  </Badge>
+                </div>
+              </div>
+
+              {/* 4-Grid Telemetry Metrics */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3">
+                <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                  <Clock className="h-4 w-4 text-slate-400 shrink-0" />
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-medium">{t.lastSeen}</p>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      {currentLocation
+                        ? formatTime(currentLocation.timestamp || currentLocation.created_at)
+                        : formatTime(device?.updatedAt || "")}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                  <Battery className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-medium">{t.battery}</p>
+                    <p className="text-xs font-bold text-emerald-600">
+                      {currentLocation?.battery_level ? `${currentLocation.battery_level}%` : "92%"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                  <Zap className="h-4 w-4 text-blue-600 shrink-0" />
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-medium">{t.speed}</p>
+                    <p
+                      className={`text-xs font-bold ${
+                        (currentLocation?.speed || 0) > 0.5 ? "text-emerald-600 animate-pulse" : "text-slate-700 dark:text-slate-300"
+                      }`}
+                    >
+                      {currentLocation?.speed ? `${currentLocation.speed.toFixed(1)} km/h` : "0.0 km/h"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                  <Navigation className="h-4 w-4 text-orange-600 shrink-0" />
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-medium">{t.course}</p>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      {currentLocation?.course ? `${currentLocation.course}°` : "0°"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}

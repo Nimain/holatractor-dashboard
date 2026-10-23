@@ -1,0 +1,505 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Mail,
+  Phone,
+  User,
+  Briefcase,
+  DollarSign,
+  ChevronRight,
+  MoreHorizontal,
+  Plus,
+  MessageCircle,
+  NotepadText,
+  Info,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Booking } from "@/utils/Types/types";
+import OwnerShrimmer from "../_components/OwnerShrimmer";
+import { renderInstance } from "@/utils/Axios/RenderInstance";
+import { getAuthUserId } from "@/utils/auth/clientAuth";
+import { errorMessage } from "@/utils/Toastify/Messages";
+import { useCookie } from "next-cookie";
+import NewBookings from "./NewBookings";
+import SeeBooking from "./SeeBooking";
+import TranslatedText from "@/components/Menubar/TranslatedText";
+import { ownerMarketPlaceTranslations } from "./OwnerMarketPlaceTranslations";
+
+interface Lead {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  avatar?: string;
+  time: string;
+}
+
+interface Column {
+  id: number;
+  title: string;
+  leads: Lead[];
+  statusColor: string;
+}
+
+interface user {
+  userId: string;
+  image: string;
+  name: string;
+  email: string;
+}
+
+interface NewBookings {
+  booking: Booking;
+  minDistance: number | null;
+}
+
+interface Location {
+  latitude: number | null;
+  longitude: number | null;
+}
+
+const Marketplace = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [currentLead, setCurrentLead] = useState(null);
+  const [fetchingNewPageDetails, setFetchingNewPageDetails] = useState(false);
+  const [fetchingPageDetails, setFetchingPageDetails] = useState(false);
+
+  const [totalReceived, setTotalReceived] = useState(0);
+  const [totalStandAloneBookimgs, setTotalStandAloneBookimgs] = useState(0);
+  const [customers, setCustomers] = useState(0);
+  const [openBookings, setOpenBookings] = useState<Booking[]>([]);
+  const [newBookings, setNewBookings] = useState<NewBookings[]>([]);
+  const [inProgressBookings, setInProgressBookings] = useState<Booking[]>([]);
+  const [completedBookings, setCompletedBookings] = useState<Booking[]>([]);
+
+  const [location, setLocation] = useState<Location>({
+    latitude: null,
+    longitude: null,
+  });
+  const [error, setError] = useState<string | null>(null);
+
+  const { cookie } = useCookie();
+  const rawUser = cookie.get("user");
+  const parsedUser = typeof rawUser === "string" ? (() => { try { return JSON.parse(rawUser); } catch { return null; } })() : rawUser;
+  const user: user = parsedUser || {};
+  const currentUserId = user?.userId || getAuthUserId();
+
+  const toggleDialog = () => {
+    setIsOpen(!isOpen);
+  };
+
+  const stats = [
+    {
+      title: <TranslatedText greetings={ownerMarketPlaceTranslations.income} />,
+      value: `$${totalReceived}`,
+      change: "10.5%",
+      isPositive: true,
+      description: (
+        <TranslatedText greetings={ownerMarketPlaceTranslations.vsLastMonth} />
+      ),
+    },
+    {
+      title: (
+        <TranslatedText greetings={ownerMarketPlaceTranslations.avgSales} />
+      ),
+      value: `$${totalReceived}`,
+      change: "6.2%",
+      isPositive: true,
+      description: (
+        <TranslatedText greetings={ownerMarketPlaceTranslations.vsLastMonth} />
+      ),
+    },
+    {
+      title: (
+        <TranslatedText greetings={ownerMarketPlaceTranslations.bookings} />
+      ),
+      value: totalStandAloneBookimgs,
+      change: "0.7%",
+      isPositive: false,
+      description: (
+        <TranslatedText greetings={ownerMarketPlaceTranslations.vsLastMonth} />
+      ),
+    },
+    {
+      title: <TranslatedText greetings={ownerMarketPlaceTranslations.leads} />,
+      value: customers,
+      change: "15.2%",
+      isPositive: false,
+      description: (
+        <TranslatedText greetings={ownerMarketPlaceTranslations.vsLastMonth} />
+      ),
+    },
+  ];
+
+  const handleCardClick = (lead: any) => {
+    if (lead.title === "LEADS") {
+      // Only trigger dialog for "LEADS"
+      setCurrentLead(lead); // Set the selected lead
+      setOpen(true); // Open the dialog
+    }
+  };
+
+  function fetchPageDetails() {
+    setFetchingPageDetails(true);
+    const targetId = currentUserId || getAuthUserId();
+    const endpoint = targetId
+      ? `/owner/get-owner-market-page-details/${targetId}`
+      : `/owner/get-owner-market-page-details`;
+
+    renderInstance
+      .get(endpoint)
+      .then((res) => {
+        setCustomers(typeof res.data.customers === "number" ? res.data.customers : 0);
+        setTotalStandAloneBookimgs(typeof res.data.totalStandAloneBookimgs === "number" ? res.data.totalStandAloneBookimgs : (Array.isArray(res.data.openBookings) ? res.data.openBookings.length : 0));
+        setOpenBookings(Array.isArray(res.data.openBookings) ? res.data.openBookings : []);
+        setInProgressBookings(Array.isArray(res.data.inProgressBookings) ? res.data.inProgressBookings : []);
+        setTotalReceived(typeof res.data.totalReceived === "number" ? res.data.totalReceived : 0);
+        setCompletedBookings(Array.isArray(res.data.completedBookings) ? res.data.completedBookings : []);
+      })
+      .catch((err) => {
+        console.error("Error fetching marketplace details:", err);
+        setOpenBookings([]);
+        setInProgressBookings([]);
+        setCompletedBookings([]);
+      })
+      .finally(() => {
+        setFetchingPageDetails(false);
+      });
+  }
+
+  function fetchNewBookings() {
+    setFetchingNewPageDetails(true);
+
+    renderInstance
+      .get(
+        `/booking/get/stand-alone/bookings?lat=${location.latitude}&lng=${location.longitude}&radius=100`
+      )
+      .then((res) => {
+        const raw = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray((res.data as any)?.data)
+          ? (res.data as any).data
+          : [];
+        const normalized: NewBookings[] = raw
+          .filter(Boolean)
+          .map((item: any) => {
+            const b = (item && item.booking && typeof item.booking === "object") ? item.booking : item;
+            const safeBooking = {
+              ...b,
+              id: b.id || (b as any)._id,
+              standaloneTractors: Array.isArray(b.standaloneTractors) ? b.standaloneTractors : [],
+              standaloneAttachments: Array.isArray(b.standaloneAttachments) ? b.standaloneAttachments : [],
+              tractors: Array.isArray(b.tractors) ? b.tractors : [],
+              attachments: Array.isArray(b.attachments) ? b.attachments : [],
+            };
+            return {
+              booking: safeBooking,
+              minDistance: item?.minDistance ?? null,
+            };
+          })
+          .filter((item: any) => Boolean(item?.booking && item.booking.id));
+        setNewBookings(normalized);
+      })
+      .catch((err) => {
+        console.error("Error fetching stand-alone bookings:", err);
+        setNewBookings([]);
+      })
+      .finally(() => {
+        setFetchingNewPageDetails(false);
+      });
+  }
+
+
+  useEffect(() => {
+    if (user) {
+      fetchPageDetails();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (location.latitude && location.longitude) {
+      fetchNewBookings();
+    }
+  }, [location]);
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position: GeolocationPosition) => {
+          setLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error: GeolocationPositionError) => {
+          setError(error.message);
+        }
+      );
+    } else {
+      setError("Geolocation is not supported by this browser.");
+    }
+  }, []);
+
+  return (
+    <>
+      <div className="flex justify-between items-center gap-4 flex-wrap mb-8">
+        {/* <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/owner"><TranslatedText greetings={ownerMarketPlaceTranslations.dashboard} /></BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/owner/marketplace"><TranslatedText greetings={ownerMarketPlaceTranslations.marketplace} /></BreadcrumbLink>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb> */}
+        <h2 className="text-red-600 text-2xl font-bold mt-3 mx-4">
+          Marketplace
+        </h2>
+      </div>
+      <TooltipProvider>
+        <div className="p-1 space-y-6 ">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {stats.map((stat, index) => (
+              <Card
+                key={index}
+                className="cursor-pointer h-[120px] bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white transition-all hover:shadow-lg"
+                onClick={() => handleCardClick(stat)}
+              >
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    {stat.title}
+                  </CardTitle>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-4 w-4 text-muted" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        <TranslatedText
+                          greetings={
+                            ownerMarketPlaceTranslations.clickForMoreDetails
+                          }
+                        />
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stat.value}</div>
+                  {/* <p className="text-xs text-muted-foreground">
+                    <span className={stat.isPositive ? "text-green-600" : "text-red-600"}>
+                      {stat.isPositive ? "▲" : "▼"} {stat.change}
+                    </span>
+                    {" "}
+                    {stat.description}
+                  </p> */}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
+            {/* "New" Status Column */}
+            <div className="space-y-4">
+              <Card className="overflow-hidden ">
+                <CardHeader className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white  flex flex-row items-center justify-between space-y-0 pb-2 bg-white p-7 rounded-md">
+                  <CardTitle className="text-lg font-semibold flex items-center space-x-2">
+                    <span className="h-3 w-3 rounded-full bg-blue-500"></span>
+                    <span>
+                      <TranslatedText
+                        greetings={ownerMarketPlaceTranslations.new}
+                      />
+                    </span>
+                  </CardTitle>
+                  <span className="text-sm text-muted">
+                    {newBookings.length}{" "}
+                    <TranslatedText
+                      greetings={ownerMarketPlaceTranslations.leads}
+                    />
+                  </span>
+                </CardHeader>
+              </Card>
+              <div className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white p-3">
+                {fetchingNewPageDetails ? (
+                  <LeadShrimmer />
+                ) : newBookings.length === 0 ? (
+                  <p>
+                    <TranslatedText
+                      greetings={
+                        ownerMarketPlaceTranslations.noOpenBookingsAvailable
+                      }
+                    />
+                  </p>
+                ) : (
+                  newBookings.map((lead, idx) => {
+                    const bookingData = lead?.booking || (lead as any);
+                    if (!bookingData) return null;
+                    const bId = bookingData.id || (bookingData as any)._id || `new-booking-${idx}`;
+                    return (
+                      <NewBookings
+                        booking={bookingData}
+                        key={bId}
+                        minDistance={lead?.minDistance ?? null}
+                      />
+                    );
+                  })
+                )}
+
+              </div>
+            </div>
+
+            {/* "Open" Status Column */}
+            <div className="space-y-4 ">
+              <Card className=" overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white flex flex-row items-center justify-between space-y-0 pb-2  p-7 rounded-md">
+                  <CardTitle className="text-lg font-semibold flex items-center space-x-2 ">
+                    <span className="h-3 w-3 rounded-full bg-yellow-500"></span>
+                    <span className="">
+                      <TranslatedText
+                        greetings={ownerMarketPlaceTranslations.open}
+                      />
+                    </span>
+                  </CardTitle>
+                  <span className="text-sm text-muted">
+                    {Array.isArray(openBookings) ? openBookings.length : 0}{" "}
+                    <TranslatedText
+                      greetings={ownerMarketPlaceTranslations.leads}
+                    />
+                  </span>
+                </CardHeader>
+              </Card>
+              <div className=" bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white p-3">
+                {fetchingPageDetails ? (
+                  <LeadShrimmer />
+                ) : !Array.isArray(openBookings) || openBookings.length === 0 ? (
+                  <p>
+                    <TranslatedText
+                      greetings={
+                        ownerMarketPlaceTranslations.noOpenBookingsAvailable
+                      }
+                    />
+                  </p>
+                ) : (
+                  (openBookings || []).map((lead) => (
+                    <SeeBooking booking={lead} key={lead?.id || (lead as any)?._id} />
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* "In Progress" Status Column */}
+            <div className="space-y-4">
+              <Card className="overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white  flex flex-row items-center justify-between space-y-0 pb-2 bg-white p-7 rounded-md">
+                  <CardTitle className="text-lg font-semibold flex items-center space-x-2">
+                    <span className="h-3 w-3 rounded-full bg-green-500"></span>
+                    <span>
+                      <TranslatedText
+                        greetings={ownerMarketPlaceTranslations.inProgress}
+                      />
+                    </span>
+                  </CardTitle>
+                  <span className="text-sm text-muted">
+                    {Array.isArray(inProgressBookings) ? inProgressBookings.length : 0}{" "}
+                    <TranslatedText
+                      greetings={ownerMarketPlaceTranslations.leads}
+                    />
+                  </span>
+                </CardHeader>
+              </Card>
+             <div className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white p-3">
+              {fetchingPageDetails ? (
+                <LeadShrimmer />
+              ) : !Array.isArray(inProgressBookings) || inProgressBookings.length === 0 ? (
+                <p>
+                  <TranslatedText
+                    greetings={
+                      ownerMarketPlaceTranslations.noOpenBookingsAvailable
+                    }
+                  />
+                </p>
+              ) : (
+                (inProgressBookings || []).map((lead) => (
+                  <SeeBooking booking={lead} key={lead?.id || (lead as any)?._id} />
+                ))
+              )}
+              </div>
+            </div>
+
+            {/* "Closed" Status Column */}
+            <div className="space-y-4">
+              <Card className="overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white  flex flex-row items-center justify-between space-y-0 pb-2 bg-white p-7 rounded-md">
+                  <CardTitle className="text-lg font-semibold flex items-center space-x-2">
+                    <span className="h-3 w-3 rounded-full bg-red-500"></span>
+                    <span>
+                      <TranslatedText
+                        greetings={ownerMarketPlaceTranslations.closed}
+                      />
+                    </span>
+                  </CardTitle>
+                  <span className="text-sm text-muted">
+                    {Array.isArray(completedBookings) ? completedBookings.length : 0}{" "}
+                    <TranslatedText
+                      greetings={ownerMarketPlaceTranslations.leads}
+                    />
+                  </span>
+                </CardHeader>
+              </Card>
+              <div className="bg-gradient-to-r from-[#8c0000] to-[#4d0000] text-white p-3">
+              {fetchingPageDetails ? (
+                <LeadShrimmer />
+              ) : !Array.isArray(completedBookings) || completedBookings.length === 0 ? (
+                <p>
+                  <TranslatedText
+                    greetings={
+                      ownerMarketPlaceTranslations.noOpenBookingsAvailable
+                    }
+                  />
+                </p>
+              ) : (
+                (completedBookings || []).map((lead) => (
+                  <SeeBooking booking={lead} key={lead?.id || (lead as any)?._id} />
+                ))
+              )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </TooltipProvider>
+    </>
+  );
+};
+
+export default Marketplace;
+
+function LeadShrimmer() {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: 2 }).map((_, index) => (
+        <div
+          className="animate-pulse w-full h-32 bg-white shadow-sm rounded-md"
+          key={index}
+        />
+      ))}
+    </div>
+  );
+}
