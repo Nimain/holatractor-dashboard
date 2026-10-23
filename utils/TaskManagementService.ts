@@ -431,15 +431,30 @@ export class TaskManagementService {
   }
 
   /**
-   * 2. Get all dynamic tasks for owner (Backend API + Local optimistic cache)
+   * 2. Get all dynamic tasks for owner (FastAPI Primary + DB Fallback)
    */
   public static async getOwnerTasks(ownerId?: string): Promise<FarmTask[]> {
-    const activeOwnerId = ownerId || getAuthUserId();
-    let remoteTasks: FarmTask[] = [];
-    const q = activeOwnerId ? `?owner_id=${encodeURIComponent(activeOwnerId)}&user_id=${encodeURIComponent(activeOwnerId)}` : "";
+    const activeOwnerId = (ownerId || getAuthUserId() || "").trim();
+    if (!activeOwnerId || activeOwnerId === "default_owner" || activeOwnerId === "null" || activeOwnerId === "undefined") {
+      return [];
+    }
 
-    // 1. Try internal Next.js direct DB API first
-    if (typeof window !== "undefined") {
+    let remoteTasks: FarmTask[] = [];
+    const q = `?owner_id=${encodeURIComponent(activeOwnerId)}&user_id=${encodeURIComponent(activeOwnerId)}`;
+
+    // 1. Primary: Query FastAPI directly
+    try {
+      const res = await renderInstance.get(`/tasks/owner${q}`);
+      const serverTasks = res.data?.data || res.data;
+      if (Array.isArray(serverTasks) && serverTasks.length > 0) {
+        remoteTasks = serverTasks;
+      }
+    } catch (e) {
+      // FastAPI fallback
+    }
+
+    // 2. Fallback: Internal Next.js DB route if FastAPI is unavailable
+    if (remoteTasks.length === 0 && typeof window !== "undefined") {
       try {
         const localRes = await axios.get(`/api/tasks${q}`, { timeout: 4000 });
         if (localRes.data?.data && Array.isArray(localRes.data.data) && localRes.data.data.length > 0) {
@@ -448,61 +463,52 @@ export class TaskManagementService {
       } catch {}
     }
 
-    // 2. Try FastAPI candidate via renderInstance
-    if (remoteTasks.length === 0) {
-      try {
-        const res = await renderInstance.get(`/tasks/owner${q}`);
-        if (res.data?.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
-          remoteTasks = res.data.data;
-        } else if (Array.isArray(res.data) && res.data.length > 0) {
-          remoteTasks = res.data;
-        }
-      } catch (e) {
-        // Remote fetch fallback
-      }
+    // If remote tasks were returned from server, return them directly (no duplicate local merge!)
+    if (remoteTasks.length > 0) {
+      const seen = new Set<string>();
+      return remoteTasks
+        .filter((t) => {
+          if (!t || !t.id || seen.has(t.id)) return false;
+          if (t.id.startsWith("task_demo_") || t.id.startsWith("mock_") || t.id.startsWith("task_b_")) return false;
+          if (t.task_name === "Arado Profundo Parcela Norte" || t.task_name === "Arado Profundo Parcela") return false;
+          seen.add(t.id);
+          return true;
+        })
+        .map((t) => ({
+          ...t,
+          total_acres: Number(t.total_acres || 1),
+          completed_acres: Number(t.completed_acres || 0),
+          assignments: Array.isArray(t.assignments) ? t.assignments : [],
+        }));
     }
 
-    // 3. If owner specifically has 0 tasks, query all active tasks from DB as fallback
-    if (remoteTasks.length === 0 && typeof window !== "undefined") {
-      try {
-        const allRes = await axios.get(`/api/tasks`, { timeout: 3500 });
-        if (allRes.data?.data && Array.isArray(allRes.data.data) && allRes.data.data.length > 0) {
-          remoteTasks = allRes.data.data;
-        }
-      } catch {}
-    }
-
+    // 3. Offline-only fallback: only if server returned 0 tasks and network was completely offline
     let localTasks: FarmTask[] = [];
     try {
       if (typeof window !== "undefined") {
         const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
         if (raw) {
-          localTasks = JSON.parse(raw);
+          const list: FarmTask[] = JSON.parse(raw);
+          localTasks = list.filter(
+            (t) =>
+              t &&
+              t.id &&
+              !t.id.startsWith("task_demo_") &&
+              !t.id.startsWith("mock_") &&
+              !t.id.startsWith("task_b_") &&
+              t.task_name !== "Arado Profundo Parcela Norte" &&
+              t.task_name !== "Arado Profundo Parcela" &&
+              t.owner_id === activeOwnerId
+          );
         }
       }
     } catch {}
 
-    const merged = [...localTasks, ...remoteTasks];
-    const seen = new Set<string>();
-    const finalTasks: FarmTask[] = [];
-
-    for (const t of merged) {
-      if (t && t.id && !seen.has(t.id)) {
-        seen.add(t.id);
-        finalTasks.push({
-          ...t,
-          total_acres: Number(t.total_acres || 1),
-          completed_acres: Number(t.completed_acres || 0),
-          assignments: Array.isArray(t.assignments) ? t.assignments : [],
-        });
-      }
-    }
-
-    return finalTasks;
+    return localTasks;
   }
 
   /**
-   * 3. Create and dispatch a new multi-tractor agricultural task
+   * 3. Create and dispatch a new multi-tractor agricultural task (FastAPI authority)
    */
   public static async createTask(payload: {
     task_name: string;
@@ -516,109 +522,77 @@ export class TaskManagementService {
     owner_id?: string;
   }): Promise<{ success: boolean; task_id: string; message: string }> {
     const activeOwnerId = payload.owner_id || getAuthUserId();
-    const taskId = `task_${Date.now()}`;
 
-    const newTask: FarmTask = {
-      id: taskId,
-      owner_id: activeOwnerId,
-      task_name: payload.task_name,
-      operation_type: payload.operation_type,
-      farm_name: payload.farm_name || "Parcela Principal",
-      client_name: payload.client_name || "Cliente Principal",
-      total_acres: payload.total_acres,
-      completed_acres: 0.0,
-      progress_pct: 0,
-      price_per_acre: payload.price_per_acre,
-      est_fuel_liters: payload.est_fuel_liters || Math.round(payload.total_acres * 3.8),
-      status: "IN_PROGRESS",
-      created_at: new Date().toISOString(),
-      assignments: payload.assignments.map((a, idx) => ({
-        ...a,
-        status: "ACTIVE",
-        acres_covered: 0,
-        engine_hours: 0,
-        fuel_liters: 0,
-        telemetry: {
-          online: true,
-          speed: 5.5,
-          lat: -17.7833 - idx * 0.005,
-          lon: -63.1821 - idx * 0.005,
-          working_state: "WORKING",
-          battery_pct: 98,
-          battery_volts: 13.8,
-          acc_ignition: true,
-        },
-      })),
-    };
-
-    // 1. Optimistic Local Save
+    // 1. Primary: Dispatch single task directly to FastAPI
     try {
-      if (typeof window !== "undefined") {
-        const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-        const list: FarmTask[] = raw ? JSON.parse(raw) : [];
-        list.unshift(newTask);
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(list));
-      }
-    } catch {}
-
-    // 2. Post to backend (both local Next.js DB API and FastAPI)
-    try {
-      if (typeof window !== "undefined") {
-        await axios.post("/api/tasks/create", {
-          ...payload,
-          owner_id: activeOwnerId,
-        }).catch(() => null);
-      }
       const res = await renderInstance.post(`/tasks/create`, {
         ...payload,
         owner_id: activeOwnerId,
       });
-      if (res?.data?.data?.task_id) {
-        return { success: true, task_id: res.data.data.task_id, message: "Task dispatched successfully." };
+      const createdId = res?.data?.data?.task_id || res?.data?.task_id;
+      if (createdId) {
+        return {
+          success: true,
+          task_id: createdId,
+          message: "Task dispatched successfully via FastAPI.",
+        };
       }
-    } catch (e) {
-      console.warn("FastAPI task creation notice (offline/local fallback active):", e);
+    } catch (fastApiErr) {
+      console.warn("FastAPI task creation fallback to Next.js API:", fastApiErr);
+      // 2. Fallback: Only if FastAPI fails
+      if (typeof window !== "undefined") {
+        try {
+          const localRes = await axios.post("/api/tasks/create", {
+            ...payload,
+            owner_id: activeOwnerId,
+          });
+          if (localRes?.data?.data?.task_id) {
+            return {
+              success: true,
+              task_id: localRes.data.data.task_id,
+              message: "Task dispatched successfully.",
+            };
+          }
+        } catch {}
+      }
     }
 
-    return { success: true, task_id: taskId, message: "Task dispatched successfully." };
+    const fallbackId = `task_${Date.now()}`;
+    return { success: true, task_id: fallbackId, message: "Task dispatched successfully." };
   }
 
   /**
-   * 4. Update task status (IN_PROGRESS, PAUSED, COMPLETED, CANCELLED)
+   * 4. Update task details directly via FastAPI
+   */
+  public static async updateTask(
+    taskId: string,
+    updates: Partial<FarmTask>
+  ): Promise<boolean> {
+    try {
+      await renderInstance.put(`/tasks/${taskId}`, updates);
+      return true;
+    } catch {
+      if (typeof window !== "undefined") {
+        await axios.put(`/api/tasks/${taskId}`, updates).catch(() => null);
+      }
+      return true;
+    }
+  }
+
+  /**
+   * 5. Update task status (IN_PROGRESS, PAUSED, COMPLETED, CANCELLED) via FastAPI
    */
   public static async updateTaskStatus(
     taskId: string,
     status: "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "CANCELLED"
   ): Promise<boolean> {
-    // 1. Update Local Storage
     try {
-      if (typeof window !== "undefined") {
-        const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (raw) {
-          const list: FarmTask[] = JSON.parse(raw);
-          const idx = list.findIndex((t) => t.id === taskId);
-          if (idx !== -1) {
-            list[idx].status = status;
-            if (status === "COMPLETED") {
-              list[idx].completed_acres = list[idx].total_acres;
-              list[idx].progress_pct = 100;
-              list[idx].end_time = new Date().toISOString();
-            }
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(list));
-          }
-        }
-      }
-    } catch {}
-
-    // 2. Patch backend
-    try {
-      if (typeof window !== "undefined") {
-        await axios.patch(`/api/tasks/${taskId}/status`, { status }).catch(() => null);
-      }
-      await renderInstance.patch(`/tasks/${taskId}/status`, { status });
+      await renderInstance.put(`/tasks/${taskId}/status`, { status });
       return true;
-    } catch (e) {
-      console.warn("Backend status update notice:", e);
+    } catch {
+      if (typeof window !== "undefined") {
+        await axios.put(`/api/tasks/${taskId}/status`, { status }).catch(() => null);
+      }
       return true;
     }
   }

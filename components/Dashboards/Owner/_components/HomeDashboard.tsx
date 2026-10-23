@@ -112,11 +112,12 @@ export default function HomeDashboard({
     // Client-side hydration fallback
   }
 
+  const parsedUser = typeof user === "string" ? (() => { try { return JSON.parse(user); } catch { return null; } })() : user;
+  const resolvedOwnerId = parsedUser?.userId || parsedUser?.id || stores?.[0]?.owner_user_id || getAuthUserId();
+
   const fetchDevices = async () => {
     try {
-      const parsedUser = typeof user === "string" ? (() => { try { return JSON.parse(user); } catch { return null; } })() : user;
-      const ownerId = parsedUser?.userId || parsedUser?.id || getAuthUserId();
-      const deviceData = await DeviceApiService.getAllDevices(ownerId);
+      const deviceData = await DeviceApiService.getAllDevices(resolvedOwnerId);
       setDevices(Array.isArray(deviceData) ? deviceData : []);
     } catch (error) {
       console.error("Error fetching devices:", error);
@@ -288,7 +289,7 @@ export default function HomeDashboard({
             tractorCountOverride={deviceList.length || tractors.length}
             tractors={tractors}
             user={user}
-            userId={typeof user === "string" ? (() => { try { return JSON.parse(user)?.userId || JSON.parse(user)?.id; } catch { return undefined; } })() : user?.userId || user?.id || getAuthUserId()}
+            userId={resolvedOwnerId}
           />
         </div>
 
@@ -303,7 +304,7 @@ export default function HomeDashboard({
         {/* Agricultural Task Operations Suite (12 Cols) */}
         <div className="col-span-12">
           <AgriculturalTaskOperationsCard
-            ownerId={typeof user === "string" ? (() => { try { return JSON.parse(user)?.userId || JSON.parse(user)?.id; } catch { return undefined; } })() : user?.userId || user?.id || getAuthUserId()}
+            ownerId={resolvedOwnerId}
             onOpenTaskManagement={() => setTaskManagementModalOpen(true)}
             onOpenCreateTask={() => setCreateTaskModalOpen(true)}
           />
@@ -312,7 +313,7 @@ export default function HomeDashboard({
         {/* 3. Fleet Overview: Dynamic Fuel & CO2 Telematics (12 Cols) */}
         <div className="col-span-12">
           <FleetOverview
-            ownerId={typeof user === "string" ? (() => { try { return JSON.parse(user)?.userId || JSON.parse(user)?.id; } catch { return undefined; } })() : user?.userId || user?.id || getAuthUserId()}
+            ownerId={resolvedOwnerId}
             tractors={tractors}
             stores={stores}
             devices={devices}
@@ -564,7 +565,7 @@ export default function HomeDashboard({
       <TaskManagementModal
         isOpen={taskManagementModalOpen}
         onClose={() => setTaskManagementModalOpen(false)}
-        ownerId={typeof user === "string" ? (() => { try { return JSON.parse(user)?.userId || JSON.parse(user)?.id; } catch { return undefined; } })() : user?.userId || user?.id || getAuthUserId()}
+        ownerId={resolvedOwnerId}
         onOpenCreateTask={() => {
           setTaskManagementModalOpen(false);
           setCreateTaskModalOpen(true);
@@ -580,7 +581,7 @@ export default function HomeDashboard({
       <CreateTaskModal
         isOpen={createTaskModalOpen}
         onClose={() => setCreateTaskModalOpen(false)}
-        ownerId={typeof user === "string" ? (() => { try { return JSON.parse(user)?.userId || JSON.parse(user)?.id; } catch { return undefined; } })() : user?.userId || user?.id || getAuthUserId()}
+        ownerId={resolvedOwnerId}
         onTaskCreated={() => {
           setCreateTaskModalOpen(false);
           setTaskManagementModalOpen(true);

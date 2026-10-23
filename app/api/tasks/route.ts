@@ -16,17 +16,35 @@ const FASTAPI_CANDIDATES = Array.from(
 );
 
 async function getTasksFromDB(ownerId?: string | null, statusFilter?: string | null) {
+  const cleanOwnerId = (ownerId || "").trim();
+  if (
+    !cleanOwnerId ||
+    cleanOwnerId === "default_owner" ||
+    cleanOwnerId === "undefined" ||
+    cleanOwnerId === "null"
+  ) {
+    // Never return random tasks if owner ID is missing
+    return [];
+  }
+
   const client = await pool.connect();
   try {
     const params: any[] = [];
     let whereClauses = "WHERE 1=1";
 
-    if (ownerId && ownerId !== "all" && ownerId !== "default_owner") {
-      params.push(ownerId);
+    if (cleanOwnerId !== "all") {
+      params.push(cleanOwnerId);
       whereClauses += ` AND (
         t.owner_id = $${params.length} 
         OR t.owner_id IN (SELECT user_id FROM "Owner" WHERE id = $${params.length}) 
         OR t.owner_id IN (SELECT id FROM "Owner" WHERE user_id = $${params.length})
+        OR t.owner_id IN (
+          SELECT owner_user_id FROM "Store" 
+          WHERE owner_user_id = $${params.length}
+             OR owner_user_id IN (SELECT user_id FROM "Owner" WHERE id = $${params.length})
+             OR owner_user_id IN (SELECT id FROM "Owner" WHERE user_id = $${params.length})
+             OR id = $${params.length}
+        )
       )`;
     }
 
@@ -200,12 +218,6 @@ export async function POST(request: NextRequest) {
       throw e;
     } finally {
       client.release();
-    }
-
-    // Attempt FastAPI sync in background (non-blocking)
-    const headers = getFastApiAuthHeaders(request);
-    for (const base of FASTAPI_CANDIDATES) {
-      axios.post(`${base}/tasks/create`, { ...body, owner_id }, { headers, timeout: 3000 }).catch(() => {});
     }
 
     return NextResponse.json({
