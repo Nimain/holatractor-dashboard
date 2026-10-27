@@ -30,8 +30,9 @@ export async function GET(request: NextRequest) {
 
     // 1. Try FastAPI
     if (dealerId) {
-      const candidates = ["http://localhost:8000", fastApiUrl];
-      for (const base of candidates) {
+      // Local candidate commented for future use: // const candidates = ["http://localhost:8000", fastApiUrl];
+      const candidates = [fastApiUrl, "https://tractorai.sinsignal.com"];
+      for (const base of Array.from(new Set(candidates))) {
         try {
           const url = new URL(`${base}/dealer/dashboard/stats`);
           url.searchParams.set("dealer_id", dealerId);

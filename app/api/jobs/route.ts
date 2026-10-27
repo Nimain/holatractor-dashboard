@@ -6,7 +6,8 @@ export const dynamic = "force-dynamic";
 
 async function callFastApi(method: "GET" | "PATCH" | "DELETE", endpoint: string, data?: any) {
   const urls = [
-    "http://127.0.0.1:8000",
+    // "http://127.0.0.1:8000", // "http://localhost:8000" commented for future use
+    "https://tractorai.sinsignal.com",
     process.env.NEXT_PUBLIC_TRACTOR_AI_URL,
   ].filter(Boolean) as string[];
 
