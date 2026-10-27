@@ -13,7 +13,8 @@ import { Button } from '../ui/button';
 import { Backdrop, CircularProgress } from '@mui/material';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbSeparator } from '../ui/breadcrumb';
-import { AtSign, BadgeDollarSign, CalendarIcon, Check, ChevronsUpDown, CircleCheck, DatabaseZap, Eye, EyeOff, MapPinned, VenetianMask } from 'lucide-react';
+import { AtSign, BadgeDollarSign, CalendarIcon, Check, ChevronsUpDown, CircleCheck, DatabaseZap, Eye, EyeOff, MapPinned, VenetianMask, Store, User, MapPin, ShieldCheck, ChevronLeft, ChevronRight } from 'lucide-react';
+import { RegisterStepperHeader } from './RegisterStepperHeader';
 import { Separator } from '../ui/separator';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { Label } from '../ui/label';
@@ -405,8 +406,7 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
             </DialogTrigger>
 
             <DialogContent
-                className="bg-white h-[90vh] w-[1200px] overflow-auto"
-                style={{ scrollbarWidth: "none" }}
+                className="bg-white max-w-4xl w-[95vw] h-[92vh] max-h-[92vh] overflow-hidden p-0 rounded-3xl border border-slate-200/90 shadow-2xl flex flex-col"
             >
 
                 <Backdrop
@@ -417,108 +417,56 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                 </Backdrop>
 
                 <div
-                    className="bg-white rounded-xl text-black flex gap-[16px] flex-col relative w-full h-[90vh] overflow-auto"
-                    style={{ scrollbarWidth: "none" }}
+                    className="bg-white text-slate-900 flex flex-col relative w-full h-full overflow-y-auto p-4 sm:p-7"
+                    style={{ scrollbarWidth: "thin" }}
                 >
 
-                    <Tabs className="w-full h-full" defaultValue='stepone'>
+                    <Tabs className="w-full flex flex-col flex-1" defaultValue='stepone'>
 
-                        <TabsList className='w-full bg-transparent'>
-
-                            <Breadcrumb className="w-full">
-
-                                <BreadcrumbList className='w-full flex items-center justify-between bg-transparent'>
-
-                                    <BreadcrumbItem className='w-fit'>
-
-                                        <TabsTrigger
-                                            value="stepone"
-                                            className='bg-transparent flex items-center px-0'>
-                                            <Button
-                                                className={`bg-white hover:bg-transparent px-5 ${(name && agEmail && agPassword && agnewCountry && agnumber) ? "text-green-400" : "text-black"}`}>
-                                                <AtSign />
-                                            </Button>
-                                        </TabsTrigger>
-
-                                    </BreadcrumbItem>
-
-                                    <BreadcrumbSeparator>
-                                        <Separator
-                                            className={`w-24 h-1 rounded-full ${(date && gender) ? "bg-green-400" : "bg-gray-400"}`} />
-                                    </BreadcrumbSeparator>
-
-                                    <BreadcrumbItem className='w-fit'>
-
-                                        <TabsTrigger
-                                            value="steptwo"
-                                            className='bg-transparent flex items-center px-0'>
-                                            <Button
-                                                className={`bg-white hover:bg-transparent px-5 ${(date && gender) ? "text-green-400" : "text-black"}`}>
-                                                <VenetianMask />
-                                            </Button>
-                                        </TabsTrigger>
-
-                                    </BreadcrumbItem>
-
-                                    <BreadcrumbSeparator>
-                                        <Separator
-                                            className={`w-24 h-1 rounded-full ${(location_name && location_address && location_city && location_state && location_zip_code && location_country) ? "bg-green-400" : "bg-gray-400"}`} />
-                                    </BreadcrumbSeparator>
-
-                                    <BreadcrumbItem className='w-fit'>
-
-                                        <TabsTrigger
-                                            value="stepthree"
-                                            className='bg-transparent flex items-center px-0'>
-                                            <Button
-                                                className={`bg-white hover:bg-transparent px-5 ${(location_name && location_address && location_city && location_state && location_zip_code && location_country) ? "text-green-400" : "text-black"}`}>
-                                                <MapPinned />
-                                            </Button>
-                                        </TabsTrigger>
-
-                                    </BreadcrumbItem>
-
-                                    <BreadcrumbSeparator>
-                                        <Separator
-                                            className={`w-24 h-1 rounded-full ${(attachment && document_number) ? "bg-green-400" : "bg-gray-400"}`} />
-                                    </BreadcrumbSeparator>
-
-                                    <BreadcrumbItem className="w-fit">
-
-                                        <TabsTrigger
-                                            value="stepfour"
-                                            className='bg-transparent flex items-center px-0'>
-                                            <Button
-                                                className={`bg-white hover:bg-transparent pl-1 pr-0 ${(attachment && document_number) ? "text-green-400" : "text-black"}`}>
-                                                <DatabaseZap />
-                                            </Button>
-                                        </TabsTrigger>
-
-                                    </BreadcrumbItem>
-
-                                    <BreadcrumbSeparator>
-                                        <Separator
-                                            className={`w-24 h-1 rounded-full ${(false) ? "bg-green-400" : "bg-gray-400"}`} />
-                                    </BreadcrumbSeparator>
-
-                                    <BreadcrumbItem className="w-fit">
-
-                                        <TabsTrigger
-                                            value="stepfive"
-                                            className='bg-transparent flex items-center px-0'>
-                                            <Button
-                                                className={`bg-white hover:bg-transparent px-5 ${(false) ? "text-green-400" : "text-black"}`}>
-                                                <BadgeDollarSign />
-                                            </Button>
-                                        </TabsTrigger>
-
-                                    </BreadcrumbItem>
-
-                                </BreadcrumbList>
-
-                            </Breadcrumb>
-
-                        </TabsList>
+                        <RegisterStepperHeader
+                            roleTitle="Machinery Dealer & Workshop"
+                            roleBadge="Sales & Service"
+                            roleIcon={<Store className="w-5 h-5 text-white" />}
+                            applicantName={name}
+                            themeColor="blue"
+                            steps={[
+                                {
+                                    id: "stepone",
+                                    number: 1,
+                                    label: "Account Credentials",
+                                    isComplete: Boolean(name && agEmail && agPassword && agnewCountry && agnumber),
+                                    icon: <AtSign className="w-4 h-4" />
+                                },
+                                {
+                                    id: "steptwo",
+                                    number: 2,
+                                    label: "Personal Profile",
+                                    isComplete: Boolean(date && gender),
+                                    icon: <User className="w-4 h-4" />
+                                },
+                                {
+                                    id: "stepthree",
+                                    number: 3,
+                                    label: "Store Location",
+                                    isComplete: Boolean(location_name && location_address && location_city && location_state && location_zip_code && location_country),
+                                    icon: <MapPin className="w-4 h-4" />
+                                },
+                                {
+                                    id: "stepfour",
+                                    number: 4,
+                                    label: "Business Documents",
+                                    isComplete: Boolean(attachment && document_number),
+                                    icon: <ShieldCheck className="w-4 h-4" />
+                                },
+                                {
+                                    id: "stepfive",
+                                    number: 5,
+                                    label: "Dealer Plan",
+                                    isComplete: Boolean(selectedPlan),
+                                    icon: <BadgeDollarSign className="w-4 h-4" />
+                                }
+                            ]}
+                        />
 
                         <TabsContent value="stepone" className='w-full'>
 
@@ -666,14 +614,16 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                     </div>
                                 </CardContent>
 
-                                <CardFooter>
-                                    <TabsList className='w-full flex items-center justify-end bg-transparent'>
+                                <CardFooter className="pt-4 border-t border-slate-100 flex items-center justify-end">
+                                    <TabsList className='bg-transparent p-0'>
                                         <TabsTrigger
                                             value="steptwo"
-                                            className='bg-transparent flex items-center px-0'>
+                                            asChild
+                                            className='p-0'>
                                             <Button
-                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
-                                                Next
+                                                className="px-6 py-2.5 rounded-xl bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white font-semibold flex items-center gap-2 shadow-sm transition-all duration-200 cursor-pointer">
+                                                <span>Next: Personal Profile</span>
+                                                <ChevronRight className="w-4 h-4" />
                                             </Button>
                                         </TabsTrigger>
                                     </TabsList>
@@ -803,22 +753,27 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                     </div>
                                 </CardContent>
 
-                                <CardFooter>
-                                    <TabsList className='w-full flex items-center justify-between bg-transparent'>
+                                <CardFooter className="pt-4 border-t border-slate-100">
+                                    <TabsList className='w-full flex items-center justify-between bg-transparent p-0'>
                                         <TabsTrigger
                                             value="stepone"
-                                            className='bg-transparent flex items-center px-0'>
+                                            asChild
+                                            className='p-0'>
                                             <Button
-                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
-                                                Back
+                                                variant="outline"
+                                                className="px-5 py-2.5 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold flex items-center gap-2 cursor-pointer">
+                                                <ChevronLeft className="w-4 h-4" />
+                                                <span>Back</span>
                                             </Button>
                                         </TabsTrigger>
                                         <TabsTrigger
                                             value="stepthree"
-                                            className='bg-transparent flex items-center px-0'>
+                                            asChild
+                                            className='p-0'>
                                             <Button
-                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
-                                                Next
+                                                className="px-6 py-2.5 rounded-xl bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white font-semibold flex items-center gap-2 shadow-sm transition-all duration-200 cursor-pointer">
+                                                <span>Next: Store Location</span>
+                                                <ChevronRight className="w-4 h-4" />
                                             </Button>
                                         </TabsTrigger>
                                     </TabsList>
@@ -1005,22 +960,27 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
 
                                 </CardContent>
 
-                                <CardFooter>
-                                    <TabsList className='w-full flex items-center justify-between bg-transparent'>
+                                <CardFooter className="pt-4 border-t border-slate-100">
+                                    <TabsList className='w-full flex items-center justify-between bg-transparent p-0'>
                                         <TabsTrigger
                                             value="steptwo"
-                                            className='bg-transparent flex items-center px-0'>
+                                            asChild
+                                            className='p-0'>
                                             <Button
-                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
-                                                Back
+                                                variant="outline"
+                                                className="px-5 py-2.5 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold flex items-center gap-2 cursor-pointer">
+                                                <ChevronLeft className="w-4 h-4" />
+                                                <span>Back</span>
                                             </Button>
                                         </TabsTrigger>
                                         <TabsTrigger
                                             value="stepfour"
-                                            className='bg-transparent flex items-center px-0'>
+                                            asChild
+                                            className='p-0'>
                                             <Button
-                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
-                                                Next
+                                                className="px-6 py-2.5 rounded-xl bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white font-semibold flex items-center gap-2 shadow-sm transition-all duration-200 cursor-pointer">
+                                                <span>Next: Business Documents</span>
+                                                <ChevronRight className="w-4 h-4" />
                                             </Button>
                                         </TabsTrigger>
                                     </TabsList>
@@ -1139,22 +1099,27 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                         </PopoverContent>
                                     </Popover>
                                 </CardContent>
-                                <CardFooter className='w-full flex items-center justify-between'>
-                                <TabsList className='w-full flex items-center justify-between bg-transparent'>
+                                <CardFooter className="pt-4 border-t border-slate-100">
+                                    <TabsList className='w-full flex items-center justify-between bg-transparent p-0'>
                                         <TabsTrigger
                                             value="stepthree"
-                                            className='bg-transparent flex items-center px-0'>
+                                            asChild
+                                            className='p-0'>
                                             <Button
-                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
-                                                Back
+                                                variant="outline"
+                                                className="px-5 py-2.5 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold flex items-center gap-2 cursor-pointer">
+                                                <ChevronLeft className="w-4 h-4" />
+                                                <span>Back</span>
                                             </Button>
                                         </TabsTrigger>
                                         <TabsTrigger
                                             value="stepfive"
-                                            className='bg-transparent flex items-center px-0'>
+                                            asChild
+                                            className='p-0'>
                                             <Button
-                                                className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto">
-                                                Next
+                                                className="px-6 py-2.5 rounded-xl bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white font-semibold flex items-center gap-2 shadow-sm transition-all duration-200 cursor-pointer">
+                                                <span>Next: Choose Plan</span>
+                                                <ChevronRight className="w-4 h-4" />
                                             </Button>
                                         </TabsTrigger>
                                     </TabsList>
