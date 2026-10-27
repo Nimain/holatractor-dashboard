@@ -13,13 +13,13 @@ const SignUp = () => {
 
   const [name, setName] = useState("");
 
-  function handleNameChage(name: string) {
-    setName(name)
-    
-    const { lastName } = splitFullName(name)
-
-    if(lastName) setIsSignUpCard(true)
-      else setIsSignUpCard(false)
+  function handleNameChage(val: string) {
+    setName(val);
+    if (val.trim().length >= 2) {
+      setIsSignUpCard(true);
+    } else {
+      setIsSignUpCard(false);
+    }
   }
 
   const splitFullName = (fullName: string) => {
@@ -107,35 +107,40 @@ const SignUp = () => {
           })}
         </div>
 
-        <div className="w-full px-[40px] flex flex-col items-center gap-[20px]">
-          <div className="w-[240px] 400px:w-[300px] flex items-center bg-white overflow-hidden rounded-full">
-            <div className="px-[20px] py-[10px] w-[70%]">
+        <div className="w-full px-[20px] flex flex-col items-center gap-[20px]">
+          <div className="w-[280px] 400px:w-[360px] 768px:w-[420px] flex items-center bg-white overflow-hidden rounded-full shadow-2xl border border-white/30 transition-all focus-within:ring-4 focus-within:ring-red-500/30">
+            <div className="px-[20px] py-[12px] flex-1">
               <input
                 type="text"
                 name="registration_last_name"
                 id="registration_last_name"
                 placeholder="Enter your name"
-                className="bg-transparent outline-none border-none text-black"
+                className="w-full bg-transparent outline-none border-none text-slate-900 font-medium placeholder:text-slate-400 text-sm md:text-base"
                 value={name}
                 onChange={(e) => {
                   handleNameChage(e.target.value);
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !isSignUpCard) {
+                    errorMessage("Please enter your name to continue");
+                  }
+                }}
               />
             </div>
-              {
-                isSignUpCard ?
-                <SignupCard name={name} />
-                :
-                <button
-              name="Name_next_button"
-              className="p-[10px] w-[30%] flex items-center justify-center bg-[#AB0F0C]"
-              onClick={() => {
-                errorMessage("Please give your name")
-              }}
-            >
-              Next
-            </button>
-              }
+            {isSignUpCard ? (
+              <SignupCard name={name} />
+            ) : (
+              <button
+                type="button"
+                name="Name_next_button"
+                className="px-6 py-[12px] flex items-center justify-center bg-[#AB0F0C] hover:bg-[#8F0C09] text-white font-semibold transition-all duration-300"
+                onClick={() => {
+                  errorMessage("Please enter your name to continue");
+                }}
+              >
+                Next
+              </button>
+            )}
           </div>
         </div>
 

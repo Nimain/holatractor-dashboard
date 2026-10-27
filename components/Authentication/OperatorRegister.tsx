@@ -43,7 +43,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbSeparator } from 
 import AddIcon from '@mui/icons-material/Add';
 import countryData from './CountryCodeRoles'
 
-const OperatorRegister = ({ nameOfOperator, inPage }: { nameOfOperator: string; inPage: boolean; }) => {
+const OperatorRegister = ({ nameOfOperator, inPage, trigger }: { nameOfOperator: string; inPage: boolean; trigger?: React.ReactNode }) => {
     const [open, setOpen] = useState(false)
     const [fetchingContry, setFetchingCountry] = useState(false);
     const [popoverOpen, setPopoverOpen] = useState(false)
@@ -373,15 +373,19 @@ const OperatorRegister = ({ nameOfOperator, inPage }: { nameOfOperator: string; 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button
-                    className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto"
-                    variant={"default"}
-                    onClick={() => {
-                        setOpen(true)
-                    }}
-                >
-                    {inPage ? "Continue" : "Continue as operator"}
-                </Button>
+                {trigger ? (
+                    trigger
+                ) : (
+                    <Button
+                        className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto"
+                        variant={"default"}
+                        onClick={() => {
+                            setOpen(true)
+                        }}
+                    >
+                        {inPage ? "Continue" : "Continue as operator"}
+                    </Button>
+                )}
             </DialogTrigger>
 
             <DialogContent

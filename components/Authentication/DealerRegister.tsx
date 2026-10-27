@@ -28,7 +28,7 @@ import countryData from './CountryCodeRoles';
 import { Badge } from '../ui/badge';
 import CryptoJS from "crypto-js";
 
-const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => {
+const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boolean; trigger?: React.ReactNode }) => {
     const [open, setOpen] = useState(false)
     const [fetchingContry, setFetchingCountry] = useState(false);
     const [popoverOpen, setPopoverOpen] = useState(false)
@@ -389,15 +389,19 @@ const DealerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) =>
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button
-                    className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto"
-                    variant={"default"}
-                    onClick={() => {
-                        setOpen(true)
-                    }}
-                >
-                    {inPage ? "Continue" : "Continue a dealer"}
-                </Button>
+                {trigger ? (
+                    trigger
+                ) : (
+                    <Button
+                        className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto"
+                        variant={"default"}
+                        onClick={() => {
+                            setOpen(true)
+                        }}
+                    >
+                        {inPage ? "Continue" : "Continue a dealer"}
+                    </Button>
+                )}
             </DialogTrigger>
 
             <DialogContent

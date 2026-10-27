@@ -52,7 +52,7 @@ interface Location {
     longitude: number | null;
 }
 
-const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => {
+const OwnerRegister = ({ name, inPage, trigger }: { name: string; inPage: boolean; trigger?: React.ReactNode }) => {
     const [open, setOpen] = useState(false)
     const [fetchingContry, setFetchingCountry] = useState(false);
     const [popoverOpen, setPopoverOpen] = useState(false)
@@ -474,15 +474,19 @@ const OwnerRegister = ({ name, inPage }: { name: string; inPage: boolean; }) => 
         <Dialog open={open} onOpenChange={setOpen}>
 
             <DialogTrigger asChild>
-                <Button
-                    className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto"
-                    variant={"default"}
-                    onClick={() => {
-                        setOpen(true)
-                    }}
-                >
-                    {inPage ? "Continue" : "Continue as owner"}
-                </Button>
+                {trigger ? (
+                    trigger
+                ) : (
+                    <Button
+                        className="px-[20px] py-[10px] text-[18px] rounded-md bg-black text-white w-fit flex items-center justify-center gap-[10px] ml-auto"
+                        variant={"default"}
+                        onClick={() => {
+                            setOpen(true)
+                        }}
+                    >
+                        {inPage ? "Continue" : "Continue as owner"}
+                    </Button>
+                )}
             </DialogTrigger>
 
             <DialogContent
