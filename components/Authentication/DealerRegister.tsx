@@ -406,7 +406,7 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
             </DialogTrigger>
 
             <DialogContent
-                className="bg-white max-w-4xl w-[95vw] h-[92vh] max-h-[92vh] overflow-hidden p-0 rounded-3xl border border-slate-200/90 shadow-2xl flex flex-col"
+                className="bg-white max-w-lg sm:max-w-xl md:max-w-2xl w-[94vw] max-h-[85vh] overflow-hidden p-0 rounded-2xl border border-slate-200/90 shadow-2xl flex flex-col"
             >
 
                 <Backdrop
@@ -417,7 +417,7 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                 </Backdrop>
 
                 <div
-                    className="bg-white text-slate-900 flex flex-col relative w-full h-full overflow-y-auto p-4 sm:p-7"
+                    className="bg-white text-slate-900 flex flex-col relative w-full max-h-[85vh] overflow-y-auto p-4 sm:p-6"
                     style={{ scrollbarWidth: "thin" }}
                 >
 
@@ -426,52 +426,47 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                         <RegisterStepperHeader
                             roleTitle="Machinery Dealer & Workshop"
                             roleBadge="Sales & Service"
-                            roleIcon={<Store className="w-5 h-5 text-white" />}
+                            roleIcon={<Store className="w-4 h-4 text-white" />}
                             applicantName={name}
                             themeColor="blue"
                             steps={[
                                 {
                                     id: "stepone",
                                     number: 1,
-                                    label: "Account Credentials",
+                                    label: "Credentials",
                                     isComplete: Boolean(name && agEmail && agPassword && agnewCountry && agnumber),
-                                    icon: <AtSign className="w-4 h-4" />
                                 },
                                 {
                                     id: "steptwo",
                                     number: 2,
-                                    label: "Personal Profile",
+                                    label: "Profile",
                                     isComplete: Boolean(date && gender),
-                                    icon: <User className="w-4 h-4" />
                                 },
                                 {
                                     id: "stepthree",
                                     number: 3,
-                                    label: "Store Location",
+                                    label: "Location",
                                     isComplete: Boolean(location_name && location_address && location_city && location_state && location_zip_code && location_country),
-                                    icon: <MapPin className="w-4 h-4" />
                                 },
                                 {
                                     id: "stepfour",
                                     number: 4,
-                                    label: "Business Documents",
+                                    label: "Documents",
                                     isComplete: Boolean(attachment && document_number),
-                                    icon: <ShieldCheck className="w-4 h-4" />
                                 },
                                 {
                                     id: "stepfive",
                                     number: 5,
-                                    label: "Dealer Plan",
+                                    label: "Subscription",
                                     isComplete: Boolean(selectedPlan),
-                                    icon: <BadgeDollarSign className="w-4 h-4" />
                                 }
                             ]}
                         />
 
                         <TabsContent value="stepone" className='w-full'>
 
-                            <Card className='w-full'>
-                                <CardContent className="space-y-2">
+                            <Card className='w-full border-0 shadow-none p-0 mt-2 bg-transparent'>
+                                <CardContent className="space-y-3 px-0 py-1">
                                     <div className="space-y-1">
                                         <Label htmlFor="email">Email</Label>
                                         <Input
@@ -614,15 +609,15 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                     </div>
                                 </CardContent>
 
-                                <CardFooter className="pt-4 border-t border-slate-100 flex items-center justify-end">
+                                <CardFooter className="pt-4 border-t border-slate-100 flex items-center justify-end px-0">
                                     <TabsList className='bg-transparent p-0'>
                                         <TabsTrigger
                                             value="steptwo"
                                             asChild
                                             className='p-0'>
                                             <Button
-                                                className="px-6 py-2.5 rounded-xl bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white font-semibold flex items-center gap-2 shadow-sm transition-all duration-200 cursor-pointer">
-                                                <span>Next: Personal Profile</span>
+                                                className="px-5 py-2 rounded-lg bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white text-sm font-semibold flex items-center gap-1.5 shadow-xs transition-all duration-150 cursor-pointer">
+                                                <span>Next: Profile</span>
                                                 <ChevronRight className="w-4 h-4" />
                                             </Button>
                                         </TabsTrigger>
@@ -634,8 +629,8 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
 
                         <TabsContent value="steptwo">
 
-                            <Card>
-                                <CardContent className="space-y-2 py-2">
+                            <Card className='w-full border-0 shadow-none p-0 mt-2 bg-transparent'>
+                                <CardContent className="space-y-3 px-0 py-1">
                                     <div className="flex items-center justify-center w-full">
                                         {agImage ? (
                                             <Image
@@ -753,7 +748,7 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                     </div>
                                 </CardContent>
 
-                                <CardFooter className="pt-4 border-t border-slate-100">
+                                <CardFooter className="pt-4 border-t border-slate-100 px-0">
                                     <TabsList className='w-full flex items-center justify-between bg-transparent p-0'>
                                         <TabsTrigger
                                             value="stepone"
@@ -761,7 +756,7 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                             className='p-0'>
                                             <Button
                                                 variant="outline"
-                                                className="px-5 py-2.5 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold flex items-center gap-2 cursor-pointer">
+                                                className="px-4 py-2 rounded-lg border-slate-200 text-slate-700 hover:bg-slate-100 text-sm font-semibold flex items-center gap-1.5 cursor-pointer">
                                                 <ChevronLeft className="w-4 h-4" />
                                                 <span>Back</span>
                                             </Button>
@@ -771,8 +766,8 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                             asChild
                                             className='p-0'>
                                             <Button
-                                                className="px-6 py-2.5 rounded-xl bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white font-semibold flex items-center gap-2 shadow-sm transition-all duration-200 cursor-pointer">
-                                                <span>Next: Store Location</span>
+                                                className="px-5 py-2 rounded-lg bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white text-sm font-semibold flex items-center gap-1.5 shadow-xs transition-all duration-150 cursor-pointer">
+                                                <span>Next: Location</span>
                                                 <ChevronRight className="w-4 h-4" />
                                             </Button>
                                         </TabsTrigger>
@@ -784,8 +779,8 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
 
                         <TabsContent value="stepthree">
 
-                            <Card>
-                                <CardContent className="space-y-2 py-2">
+                            <Card className='w-full border-0 shadow-none p-0 mt-2 bg-transparent'>
+                                <CardContent className="space-y-3 px-0 py-1">
                                     {
                                         fetchingContry ?
                                             <CircularProgress />
@@ -960,7 +955,7 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
 
                                 </CardContent>
 
-                                <CardFooter className="pt-4 border-t border-slate-100">
+                                <CardFooter className="pt-4 border-t border-slate-100 px-0">
                                     <TabsList className='w-full flex items-center justify-between bg-transparent p-0'>
                                         <TabsTrigger
                                             value="steptwo"
@@ -968,7 +963,7 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                             className='p-0'>
                                             <Button
                                                 variant="outline"
-                                                className="px-5 py-2.5 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold flex items-center gap-2 cursor-pointer">
+                                                className="px-4 py-2 rounded-lg border-slate-200 text-slate-700 hover:bg-slate-100 text-sm font-semibold flex items-center gap-1.5 cursor-pointer">
                                                 <ChevronLeft className="w-4 h-4" />
                                                 <span>Back</span>
                                             </Button>
@@ -978,8 +973,8 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                             asChild
                                             className='p-0'>
                                             <Button
-                                                className="px-6 py-2.5 rounded-xl bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white font-semibold flex items-center gap-2 shadow-sm transition-all duration-200 cursor-pointer">
-                                                <span>Next: Business Documents</span>
+                                                className="px-5 py-2 rounded-lg bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white text-sm font-semibold flex items-center gap-1.5 shadow-xs transition-all duration-150 cursor-pointer">
+                                                <span>Next: Documents</span>
                                                 <ChevronRight className="w-4 h-4" />
                                             </Button>
                                         </TabsTrigger>
@@ -991,8 +986,8 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
 
                         <TabsContent value="stepfour">
 
-                            <Card>
-                                <CardContent className="space-y-2 py-2">
+                            <Card className='w-full border-0 shadow-none p-0 mt-2 bg-transparent'>
+                                <CardContent className="space-y-3 px-0 py-1">
                                     <div className="flex items-center justify-center w-full">
                                         {attachment ? (
                                             <Image
@@ -1099,7 +1094,7 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                         </PopoverContent>
                                     </Popover>
                                 </CardContent>
-                                <CardFooter className="pt-4 border-t border-slate-100">
+                                <CardFooter className="pt-4 border-t border-slate-100 px-0">
                                     <TabsList className='w-full flex items-center justify-between bg-transparent p-0'>
                                         <TabsTrigger
                                             value="stepthree"
@@ -1107,7 +1102,7 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                             className='p-0'>
                                             <Button
                                                 variant="outline"
-                                                className="px-5 py-2.5 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold flex items-center gap-2 cursor-pointer">
+                                                className="px-4 py-2 rounded-lg border-slate-200 text-slate-700 hover:bg-slate-100 text-sm font-semibold flex items-center gap-1.5 cursor-pointer">
                                                 <ChevronLeft className="w-4 h-4" />
                                                 <span>Back</span>
                                             </Button>
@@ -1117,8 +1112,8 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                             asChild
                                             className='p-0'>
                                             <Button
-                                                className="px-6 py-2.5 rounded-xl bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white font-semibold flex items-center gap-2 shadow-sm transition-all duration-200 cursor-pointer">
-                                                <span>Next: Choose Plan</span>
+                                                className="px-5 py-2 rounded-lg bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white text-sm font-semibold flex items-center gap-1.5 shadow-xs transition-all duration-150 cursor-pointer">
+                                                <span>Next: Subscription</span>
                                                 <ChevronRight className="w-4 h-4" />
                                             </Button>
                                         </TabsTrigger>
