@@ -21,8 +21,10 @@ import {
   Sparkles,
   ShieldCheck,
   ChevronRight,
-  CheckCircle2,
 } from "lucide-react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
+import { authTranslations, AuthLanguage } from "@/utils/translation/authTranslations";
 
 interface SignupCardProps {
   name: string;
@@ -30,6 +32,12 @@ interface SignupCardProps {
 
 const SignupCard = ({ name }: SignupCardProps) => {
   const [open, setOpen] = useState(false);
+
+  const currentLang = (useSelector(
+    (state: RootState) => state.ActiveLanguage.language
+  ) || "en") as AuthLanguage;
+
+  const t = authTranslations[currentLang] || authTranslations.en;
 
   // Extract first name for friendly personalized greeting
   const firstName = name.trim().split(/\s+/)[0] || name.trim() || "Partner";
@@ -40,10 +48,10 @@ const SignupCard = ({ name }: SignupCardProps) => {
         <button
           type="button"
           name="Name_next_button"
-          className="p-[10px] w-[30%] flex items-center justify-center gap-1.5 bg-[#AB0F0C] hover:bg-[#8F0C09] text-white font-semibold transition-all duration-300 rounded-r-full shadow-md"
+          className="p-[10px] w-[30%] flex items-center justify-center gap-1.5 bg-[#AB0F0C] hover:bg-[#8F0C09] text-white font-semibold transition-all duration-300 rounded-r-full shadow-md cursor-pointer"
           onClick={() => setOpen(true)}
         >
-          <span>Next</span>
+          <span>{t.next}</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </DialogTrigger>
@@ -56,19 +64,19 @@ const SignupCard = ({ name }: SignupCardProps) => {
         <div className="h-2 w-full bg-gradient-to-r from-red-600 via-amber-500 to-emerald-600" />
 
         <div className="p-6 md:p-8 flex flex-col gap-6 max-h-[88vh] overflow-y-auto">
-          {/* Header */}
-          <DialogHeader className="text-left space-y-2">
+          {/* Header - pr-10 avoids overlapping with the dialog close button */}
+          <DialogHeader className="text-left space-y-2 pr-10">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 text-[#AB0F0C] text-xs font-bold uppercase tracking-wider border border-red-100/80 w-fit">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>HolaTractor Ecosystem</span>
+              <span>{t.ecosystemTag}</span>
             </div>
 
             <DialogTitle className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
-              Welcome, <span className="text-[#AB0F0C]">{firstName}</span>!
+              {t.welcomeGreeting}, <span className="text-[#AB0F0C]">{firstName}</span>!
             </DialogTitle>
 
             <DialogDescription className="text-sm md:text-base text-slate-600 leading-relaxed">
-              Select how you will be using HolaTractor. We will customize your workspace, telemetry tools, and dashboards based on your role.
+              {t.roleSelectionSubtitle}
             </DialogDescription>
           </DialogHeader>
 
@@ -90,14 +98,14 @@ const SignupCard = ({ name }: SignupCardProps) => {
                   <div className="flex-1 min-w-0 pr-2">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <h4 className="text-base md:text-lg font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
-                        Tractor Fleet Owner
+                        {t.ownerRoleTitle}
                       </h4>
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">
-                        Popular
+                        {t.ownerRoleBadge}
                       </span>
                     </div>
                     <p className="text-xs md:text-sm text-slate-500 leading-snug">
-                      Manage tractor fleet, track machinery with IoT GPS, dispatch field operations, and monitor earnings.
+                      {t.ownerRoleDesc}
                     </p>
                   </div>
 
@@ -124,14 +132,14 @@ const SignupCard = ({ name }: SignupCardProps) => {
                   <div className="flex-1 min-w-0 pr-2">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <h4 className="text-base md:text-lg font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
-                        Dealer & Workshop
+                        {t.dealerRoleTitle}
                       </h4>
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-800">
-                        Sales & Service
+                        {t.dealerRoleBadge}
                       </span>
                     </div>
                     <p className="text-xs md:text-sm text-slate-500 leading-snug">
-                      Sell agricultural machinery, manage spare parts inventory, and offer certified mechanic repairs.
+                      {t.dealerRoleDesc}
                     </p>
                   </div>
 
@@ -158,14 +166,14 @@ const SignupCard = ({ name }: SignupCardProps) => {
                   <div className="flex-1 min-w-0 pr-2">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <h4 className="text-base md:text-lg font-bold text-slate-900 group-hover:text-amber-700 transition-colors">
-                        Tractor Operator
+                        {t.operatorRoleTitle}
                       </h4>
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800">
-                        Field Tasks
+                        {t.operatorRoleBadge}
                       </span>
                     </div>
                     <p className="text-xs md:text-sm text-slate-500 leading-snug">
-                      Receive agricultural work jobs, execute field operations with route navigation, and earn daily payouts.
+                      {t.operatorRoleDesc}
                     </p>
                   </div>
 
@@ -191,7 +199,7 @@ const SignupCard = ({ name }: SignupCardProps) => {
                 className="text-[#AB0F0C] hover:text-[#8F0C09] font-bold hover:underline transition-colors"
                 onClick={() => setOpen(false)}
               >
-                Sign in
+                {t.signIn}
               </Link>
             </div>
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { X, Upload, Package } from "lucide-react";
 import { useCookie } from "next-cookie";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
@@ -13,6 +13,7 @@ interface AddPartsModalProps {
   onClose: () => void;
   onAddSuccess: () => void;
   inventoryData: any[];
+  dealerId?: string;
 }
 
 interface PartFormData {
@@ -43,12 +44,34 @@ const CATEGORIES = [
   "Bearings & Seals"
 ];
 
-export default function AddPartsModal({ isOpen, onClose, onAddSuccess, inventoryData }: AddPartsModalProps) {
-  const { cookie } = useCookie();
-  const cookieToken = cookie?.get("access_token");
+export default function AddPartsModal({ isOpen, onClose, onAddSuccess, inventoryData, dealerId: propDealerId }: AddPartsModalProps) {
+  const cookie = useCookie();
+  const rawCookieUser = cookie?.get ? cookie.get("user") : null;
+  const cookieToken = cookie?.get ? cookie.get("access_token") : null;
+  const authUser = getAuthUser();
+
+  const dynamicDealerId = useMemo(() => {
+    if (propDealerId && propDealerId !== "all") return propDealerId;
+    try {
+      const parsed = typeof rawCookieUser === "string" ? JSON.parse(rawCookieUser) : rawCookieUser;
+      return (
+        parsed?.dealer_id ||
+        parsed?.dealerId ||
+        (authUser as any)?.dealer_id ||
+        (typeof window !== "undefined" ? localStorage.getItem("dealer_id") : null) ||
+        parsed?.userId ||
+        parsed?.id ||
+        authUser?.userId ||
+        authUser?.id ||
+        ""
+      );
+    } catch {
+      return (authUser as any)?.dealer_id || authUser?.userId || authUser?.id || "";
+    }
+  }, [propDealerId, rawCookieUser, authUser]);
 
   const [loading, setLoading] = useState(false);
-  const [dealerId, setDealerId] = useState<string>("");
+  const [dealerId, setDealerId] = useState<string>(dynamicDealerId);
   const [baseId, setBaseId] = useState<string>("");
 
   const [formData, setFormData] = useState<PartFormData>({
@@ -68,12 +91,11 @@ export default function AddPartsModal({ isOpen, onClose, onAddSuccess, inventory
   useEffect(() => {
     if (isOpen) {
       const activeToken = getAuthToken() || cookieToken || "";
-      const authUser = getAuthUser();
-      if (authUser?.dealer_id || authUser?.userId) {
-        setDealerId(authUser.dealer_id || authUser.userId);
-      }
-      if (authUser?.base_id) {
-        setBaseId(authUser.base_id);
+      const currentDealerId = dynamicDealerId || dealerId;
+      setDealerId(currentDealerId);
+
+      if ((authUser as any)?.base_id) {
+        setBaseId((authUser as any).base_id);
       }
 
       const headers = activeToken ? { Authorization: `Bearer ${activeToken}` } : undefined;
@@ -82,16 +104,16 @@ export default function AddPartsModal({ isOpen, onClose, onAddSuccess, inventory
         if (Array.isArray(res.data) && res.data.length > 0) {
           const fetchedDealerId = res.data[0].id;
           const fetchedBaseId = res.data[0].base_id || "";
-          setDealerId(fetchedDealerId);
+          setDealerId(fetchedDealerId || currentDealerId);
           setBaseId(fetchedBaseId);
         }
       })
       .catch(() => {
-        setDealerId(authUser?.dealer_id || authUser?.userId || "cmb7lih4v000ez5ms8nhvegf6");
-        setBaseId(authUser?.base_id || "cmb7ligx0000cz5msyqv6tuva");
+        setDealerId(currentDealerId);
+        setBaseId((authUser as any)?.base_id || "");
       });
     }
-  }, [isOpen, cookieToken]);
+  }, [isOpen, cookieToken, dynamicDealerId]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -111,9 +133,7 @@ export default function AddPartsModal({ isOpen, onClose, onAddSuccess, inventory
       return;
     }
 
-    const authUser = getAuthUser();
-    const activeDealerId = dealerId || authUser?.dealer_id || authUser?.userId || "cmb7lih4v000ez5ms8nhvegf6";
-    const activeBaseId = baseId || authUser?.base_id || "cmb7ligx0000cz5msyqv6tuva";
+    const activeDealerId = dealerId || dynamicDealerId;
 
     setLoading(true);
 
@@ -126,7 +146,7 @@ export default function AddPartsModal({ isOpen, onClose, onAddSuccess, inventory
       price: parseFloat(formData.price),
       quantity_in_stock: parseInt(formData.quantity_in_stock),
       dealer_id: activeDealerId,
-      base_id: activeBaseId,
+      base_id: baseId || undefined,
       ...(formData.description && { description: formData.description }),
       ...(formData.tractor_model && { tractor_model: formData.tractor_model })
     };

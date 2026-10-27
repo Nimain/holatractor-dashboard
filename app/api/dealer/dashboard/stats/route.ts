@@ -7,32 +7,66 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const dealerId = searchParams.get("dealer_id") || "cmb7lih4v000ez5ms8nhvegf6";
+    const rawDealerId = searchParams.get("dealer_id") || searchParams.get("dealerId") || "";
+    let dealerId = rawDealerId && rawDealerId !== "all" && rawDealerId !== "undefined" && rawDealerId !== "null" ? rawDealerId : "";
+
+    if (!dealerId) {
+      try {
+        const directDealerId = request.cookies.get("dealer_id")?.value;
+        if (directDealerId && directDealerId !== "all") dealerId = directDealerId;
+        else {
+          const userCookie = request.cookies.get("user")?.value;
+          if (userCookie) {
+            const parsed = JSON.parse(decodeURIComponent(userCookie));
+            dealerId = parsed?.dealer_id || parsed?.dealerId || parsed?.userId || parsed?.id || "";
+          }
+        }
+      } catch {}
+    }
+
     const period = searchParams.get("period") || "week";
 
     const fastApiUrl = getBackendBaseUrl();
 
     // 1. Try FastAPI
-    try {
-      const url = new URL(`${fastApiUrl}/dealer/dashboard/stats`);
-      url.searchParams.set("dealer_id", dealerId);
-      url.searchParams.set("period", period);
+    if (dealerId) {
+      const candidates = ["http://localhost:8000", fastApiUrl];
+      for (const base of candidates) {
+        try {
+          const url = new URL(`${base}/dealer/dashboard/stats`);
+          url.searchParams.set("dealer_id", dealerId);
+          url.searchParams.set("period", period);
 
-      const fastRes = await fetch(url.toString(), { cache: "no-store" });
-      if (fastRes.ok) {
-        const data = await fastRes.json();
-        return NextResponse.json(data);
+          const fastRes = await fetch(url.toString(), { cache: "no-store", signal: AbortSignal.timeout(1500) });
+          if (fastRes.ok) {
+            const data = await fastRes.json();
+            if (data && typeof data.totalCustomers === "number" && data.totalCustomers < 2000) {
+              return NextResponse.json(data);
+            }
+          }
+        } catch {}
       }
-    } catch {
-      // Fall through to direct PostgreSQL fallback
     }
 
     // 2. Direct PostgreSQL fallback
     const client = await pool.connect();
     try {
-      // Total customers
-      const userRes = await client.query(`SELECT COUNT(*) FROM "User"`);
-      const totalUserCount = parseInt(userRes.rows[0]?.count || "3793", 10);
+      // Total customers scoped to this dealer
+      let totalCustomers = 0;
+      if (dealerId) {
+        const custCountRes = await client.query(`
+          SELECT COUNT(*) FROM "DealerCustomer" dc
+          WHERE (
+            dc.dealer_id = $1
+            OR dc.dealer_id = CONCAT('dlr_', $1::text)
+            OR REPLACE(dc.dealer_id, 'dlr_', '') = $1
+            OR dc.dealer_id IN (SELECT id FROM "Dealer" WHERE user_id = $1 OR id = $1)
+            OR dc.dealer_id IN (SELECT user_id FROM "Dealer" WHERE id = $1 OR user_id = $1)
+            OR dc.dealer_id IN (SELECT CONCAT('dlr_', user_id) FROM "Dealer" WHERE id = $1 OR user_id = $1)
+          );
+        `, [dealerId]);
+        totalCustomers = parseInt(custCountRes.rows[0]?.count || "0", 10);
+      }
 
       // Total leases
       const leaseRes = await client.query(`SELECT COUNT(*) FROM "Lease"`);
@@ -121,13 +155,29 @@ export async function GET(request: NextRequest) {
         return { name: d.name, value: total };
       });
 
-      // Customers
-      const custRes = await client.query(`
-        SELECT id, first_name, last_name, mobile, email, gender, status, "createdAt"
-        FROM "DealerCustomer"
-        ORDER BY "createdAt" DESC
-        LIMIT 20;
-      `);
+      // Customers scoped to dealer
+      let custQuery = `
+        SELECT dc.id, dc.first_name, dc.last_name, dc.mobile, dc.email, dc.gender, dc.status, dc."createdAt"
+        FROM "DealerCustomer" dc
+      `;
+      const custParams: any[] = [];
+      if (dealerId) {
+        custQuery += `
+          WHERE (
+            dc.dealer_id = $1
+            OR dc.dealer_id = CONCAT('dlr_', $1::text)
+            OR REPLACE(dc.dealer_id, 'dlr_', '') = $1
+            OR dc.dealer_id IN (SELECT id FROM "Dealer" WHERE user_id = $1 OR id = $1)
+            OR dc.dealer_id IN (SELECT user_id FROM "Dealer" WHERE id = $1 OR user_id = $1)
+            OR dc.dealer_id IN (SELECT CONCAT('dlr_', user_id) FROM "Dealer" WHERE id = $1 OR user_id = $1)
+          )
+        `;
+        custParams.push(dealerId);
+      } else {
+        custQuery += ` WHERE 1=0 `;
+      }
+      custQuery += ` ORDER BY dc."createdAt" DESC LIMIT 20; `;
+      const custRes = await client.query(custQuery, custParams);
 
       const sampleProgress = [75, 60, 45, 30, 85, 90, 50, 65];
       const sampleAges = [28, 34, 45, 29, 52, 38, 41, 33];
@@ -152,7 +202,7 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        totalCustomers: totalUserCount,
+        totalCustomers,
         totalLease,
         avgTimeWorked,
         avgTimeChange: "+1.2%",

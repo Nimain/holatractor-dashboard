@@ -107,12 +107,34 @@ export default function Sidebar() {
   const navigationItems = getNavigationItems(t)
   const dropdownSections = getDropdownSections(t)
 
+  // Collect all registered hrefs across navigation items and dropdown sections
+  const allHrefs = [
+    ...navigationItems.map((item) => item.href),
+    ...dropdownSections.flatMap((section) => [
+      ...(section.href ? [section.href] : []),
+      ...(section.items ? section.items.map((i: any) => i.href) : []),
+    ]),
+  ]
+
   // Function to check if a route is active
   const isActiveRoute = (href: string) => {
-    if (href === "/dealer") {
-      return pathname === "/dealer"
+    // Exact match is always active
+    if (pathname === href) {
+      return true
     }
-    return pathname.startsWith(href)
+
+    // If pathname starts with href + "/", ensure there is no more specific registered route matching
+    if (pathname.startsWith(href + "/")) {
+      const moreSpecificMatch = allHrefs.some(
+        (otherHref) =>
+          otherHref !== href &&
+          otherHref.startsWith(href) &&
+          (pathname === otherHref || pathname.startsWith(otherHref + "/"))
+      )
+      return !moreSpecificMatch
+    }
+
+    return false
   }
 
   // Function to check if any item in a section is active

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { useDealerLanguage } from "@/context/DealerLanguageContext";
+import { renderInstance } from "@/utils/Axios/RenderInstance";
 
 interface AddTractorModalProps {
   isOpen: boolean;
@@ -65,24 +66,16 @@ export default function AddTractorModal({
 
     try {
       if (customerId) {
-        const res = await fetch(`/api/dealer/customers/${customerId}/fleet`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "tractor",
-            model,
-            vin,
-            acquisitionDate,
-            engineHours,
-            imei,
-            region,
-          }),
+        await renderInstance.post(`/dealer/customers/${customerId}/fleet`, {
+          type: "tractor",
+          equipment_type: "tractor",
+          model,
+          vin,
+          acquisitionDate,
+          engineHours,
+          imei,
+          region,
         });
-
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || "Failed to add tractor to customer fleet");
-        }
       }
 
       successMessage("Tractor added to fleet successfully!");

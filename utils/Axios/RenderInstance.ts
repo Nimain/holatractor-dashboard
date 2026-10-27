@@ -1,20 +1,16 @@
 import axios, { AxiosResponse } from "axios";
 
-const candidateUrls = [
-  process.env.NEXT_PUBLIC_TRACTOR_AI_URL,
-  process.env.NEXT_PUBLIC_API_URL,
-  process.env.FASTAPI_URL,
-].filter((u): u is string => Boolean(u && !u.includes("localhost") && !u.includes("127.0.0.1")));
-
-export const rawTractorUrl = candidateUrls[0] || "https://tractorai.sinsignal.com";
-
 export function getBackendBaseUrl(): string {
-  return rawTractorUrl.endsWith("/") ? rawTractorUrl.slice(0, -1) : rawTractorUrl;
+  if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+    return "http://localhost:8000";
+  }
+  const candidate = process.env.FASTAPI_URL || process.env.NEXT_PUBLIC_TRACTOR_AI_URL || process.env.NEXT_PUBLIC_API_URL;
+  const url = candidate || "http://localhost:8000";
+  return url.endsWith("/") ? url.slice(0, -1) : url;
 }
 
-export const TractorAIBaseURL = rawTractorUrl.endsWith("/")
-  ? rawTractorUrl
-  : `${rawTractorUrl}/`;
+export const rawTractorUrl = getBackendBaseUrl();
+export const TractorAIBaseURL = rawTractorUrl.endsWith("/") ? rawTractorUrl : `${rawTractorUrl}/`;
 export const NestJsBaseURL = TractorAIBaseURL;
 export const DeviceBaseURL = "https://device.holatractor.com/";
 export const FastApiBaseURL = TractorAIBaseURL;
@@ -43,6 +39,7 @@ export const renderInstance = axios.create({
 // Automatic authorization header attachment with Bearer token & URL sanitization for renderInstance
 renderInstance.interceptors.request.use(
   (config) => {
+    config.baseURL = getBackendBaseUrl();
     if (typeof window !== "undefined") {
       const token = getAuthToken() || getClientAuthToken();
       if (token && !config.headers.Authorization) {

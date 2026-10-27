@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { useDealerLanguage } from "@/context/DealerLanguageContext";
+import { renderInstance } from "@/utils/Axios/RenderInstance";
 
 interface AddAttachmentModalProps {
   isOpen: boolean;
@@ -48,24 +49,16 @@ export default function AddAttachmentModal({
 
     try {
       if (customerId) {
-        const res = await fetch(`/api/dealer/customers/${customerId}/fleet`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "attachment",
-            attachmentType,
-            serialNumber,
-            acquisitionDate,
-            engineHours,
-            imei,
-            region,
-          }),
+        await renderInstance.post(`/dealer/customers/${customerId}/fleet`, {
+          type: "attachment",
+          equipment_type: "attachment",
+          attachmentType,
+          serialNumber,
+          acquisitionDate,
+          engineHours,
+          imei,
+          region,
         });
-
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || "Failed to add implement to customer fleet");
-        }
       }
 
       successMessage("Attachment added to fleet successfully!");

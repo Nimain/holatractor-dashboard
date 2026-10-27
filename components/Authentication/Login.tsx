@@ -213,16 +213,36 @@ const LogInPage = () => {
       checkIsAdmin(rawUser, userEmail) ||
       checkIsAdmin(payload?.user, userEmail);
 
+    const isDealer = !isAdmin && (
+      payload.isDealer === true ||
+      payload?.user?.isDealer === true ||
+      rawUser?.isDealer === true ||
+      Boolean(payload.dealer_id || payload.dealerId || rawUser?.dealer_id || rawUser?.dealerId) ||
+      payload.active_role === "dealer" ||
+      rawUser?.role === "dealer" ||
+      (Array.isArray(payload.role) && payload.role.includes("dealer")) ||
+      (Array.isArray(payload.roles) && payload.roles.includes("dealer")) ||
+      (typeof payload.role === "string" && payload.role.toLowerCase() === "dealer") ||
+      (Array.isArray(rawUser?.role) && rawUser.role.includes("dealer")) ||
+      (Array.isArray(rawUser?.roles) && rawUser.roles.includes("dealer")) ||
+      (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "dealer")
+    );
+
+    const hasOwnerRecord = Boolean(payload.owner_id || payload.ownerId || rawUser?.owner_id || rawUser?.ownerId);
+
     const isOwner = !isAdmin && (
-      payload.isOwner === true ||
-      payload?.user?.isOwner === true ||
-      rawUser?.isOwner === true ||
-      (Array.isArray(payload.role) && payload.role.includes("owner")) ||
-      (Array.isArray(payload.roles) && payload.roles.includes("owner")) ||
-      (typeof payload.role === "string" && payload.role.toLowerCase() === "owner") ||
-      (Array.isArray(rawUser?.role) && rawUser.role.includes("owner")) ||
-      (Array.isArray(rawUser?.roles) && rawUser.roles.includes("owner")) ||
-      (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "owner")
+      hasOwnerRecord ||
+      (!isDealer && (
+        payload.isOwner === true ||
+        payload?.user?.isOwner === true ||
+        rawUser?.isOwner === true ||
+        (Array.isArray(payload.role) && payload.role.includes("owner")) ||
+        (Array.isArray(payload.roles) && payload.roles.includes("owner")) ||
+        (typeof payload.role === "string" && payload.role.toLowerCase() === "owner") ||
+        (Array.isArray(rawUser?.role) && rawUser.role.includes("owner")) ||
+        (Array.isArray(rawUser?.roles) && rawUser.roles.includes("owner")) ||
+        (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "owner")
+      ))
     );
 
     const isFarmer = !isAdmin && (
@@ -235,18 +255,6 @@ const LogInPage = () => {
       (Array.isArray(rawUser?.role) && rawUser.role.includes("farmer")) ||
       (Array.isArray(rawUser?.roles) && rawUser.roles.includes("farmer")) ||
       (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "farmer")
-    );
-
-    const isDealer = !isAdmin && (
-      payload.isDealer === true ||
-      payload?.user?.isDealer === true ||
-      rawUser?.isDealer === true ||
-      (Array.isArray(payload.role) && payload.role.includes("dealer")) ||
-      (Array.isArray(payload.roles) && payload.roles.includes("dealer")) ||
-      (typeof payload.role === "string" && payload.role.toLowerCase() === "dealer") ||
-      (Array.isArray(rawUser?.role) && rawUser.role.includes("dealer")) ||
-      (Array.isArray(rawUser?.roles) && rawUser.roles.includes("dealer")) ||
-      (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "dealer")
     );
 
     const isOperator = !isAdmin && (
@@ -273,6 +281,10 @@ const LogInPage = () => {
       (typeof rawUser?.role === "string" && rawUser.role.toLowerCase() === "agent")
     );
 
+    const activeRoleCalculated = isAdmin
+      ? "admin"
+      : (payload.active_role || (isDealer ? "dealer" : isOwner ? "owner" : isOperator ? "operator" : isAgent ? "agent" : "farmer"));
+
     const userObj = {
       ...user,
       isAdmin,
@@ -282,8 +294,10 @@ const LogInPage = () => {
       isDealer,
       isOperator,
       isAgent,
-      role: isAdmin ? ["admin", "superAdmin"] : (user.role || (isFarmer ? ["farmer"] : [])),
-      roles: isAdmin ? ["admin", "superAdmin"] : (user.roles || (isFarmer ? ["farmer"] : [])),
+      dealer_id: payload.dealer_id || payload.dealerId || rawUser?.dealer_id || rawUser?.dealerId || undefined,
+      owner_id: payload.owner_id || payload.ownerId || rawUser?.owner_id || rawUser?.ownerId || undefined,
+      role: isAdmin ? ["admin", "superAdmin"] : (user.role || (isDealer ? ["dealer"] : isOwner ? ["owner"] : isFarmer ? ["farmer"] : [])),
+      roles: isAdmin ? ["admin", "superAdmin"] : (user.roles || (isDealer ? ["dealer"] : isOwner ? ["owner"] : isFarmer ? ["farmer"] : [])),
     };
 
     const setCookieValue = (name: string, val: string) => {
@@ -304,7 +318,7 @@ const LogInPage = () => {
     setCookieValue("isDealer", String(isDealer));
     setCookieValue("isOperator", String(isOperator));
     setCookieValue("isAgent", String(isAgent));
-    setCookieValue("active_role", isAdmin ? "admin" : (isOwner ? "owner" : isDealer ? "dealer" : isOperator ? "operator" : isAgent ? "agent" : "farmer"));
+    setCookieValue("active_role", activeRoleCalculated);
 
     if (typeof window !== "undefined") {
       try {
@@ -317,7 +331,7 @@ const LogInPage = () => {
         localStorage.setItem("isDealer", String(isDealer));
         localStorage.setItem("isOperator", String(isOperator));
         localStorage.setItem("isAgent", String(isAgent));
-        localStorage.setItem("active_role", isAdmin ? "admin" : (isOwner ? "owner" : isDealer ? "dealer" : isOperator ? "operator" : isAgent ? "agent" : "farmer"));
+        localStorage.setItem("active_role", activeRoleCalculated);
       } catch {}
     }
 
@@ -328,9 +342,9 @@ const LogInPage = () => {
     }
 
     const activeRoles: string[] = [];
+    if (isDealer) activeRoles.push("dealer");
     if (isOwner) activeRoles.push("owner");
     if (isFarmer) activeRoles.push("farmer");
-    if (isDealer) activeRoles.push("dealer");
     if (isOperator) activeRoles.push("operator");
     if (isAgent) activeRoles.push("agent");
 
@@ -346,14 +360,14 @@ const LogInPage = () => {
 
       const redirectPath =
         singleRole === "dealer"
-          ? "/dealer/customer"
+          ? "/dealer"
           : singleRole === "operator"
           ? "/operator/bookings"
           : singleRole === "owner"
           ? "/owner"
           : `/${singleRole}`;
 
-      router.push(redirectPath);
+      window.location.href = redirectPath;
       return;
     }
 

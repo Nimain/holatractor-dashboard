@@ -25,7 +25,8 @@ import {
   X,
   AlertCircle
 } from "lucide-react";
-import { renderInstance } from "@/utils/Axios/RenderInstance";
+import { renderInstance, getAuthUser } from "@/utils/Axios/RenderInstance";
+import { useCookie } from "next-cookie";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 
 interface MarketingCampaign {
@@ -84,6 +85,29 @@ const CHANNELS = [
 ];
 
 export default function CampaignsDashboard() {
+  const cookie = useCookie();
+  const rawCookieUser = cookie?.get ? cookie.get("user") : null;
+  const authUser = getAuthUser();
+
+  const targetDealerId = useMemo(() => {
+    try {
+      const parsed = typeof rawCookieUser === "string" ? JSON.parse(rawCookieUser) : rawCookieUser;
+      return (
+        parsed?.dealer_id ||
+        parsed?.dealerId ||
+        (authUser as any)?.dealer_id ||
+        (typeof window !== "undefined" ? localStorage.getItem("dealer_id") : null) ||
+        parsed?.userId ||
+        parsed?.id ||
+        authUser?.userId ||
+        authUser?.id ||
+        ""
+      );
+    } catch {
+      return (authUser as any)?.dealer_id || authUser?.userId || authUser?.id || "";
+    }
+  }, [rawCookieUser, authUser]);
+
   const [campaigns, setCampaigns] = useState<MarketingCampaign[]>([]);
   const [stats, setStats] = useState<CampaignStats>({
     total_campaigns: 0,
@@ -124,49 +148,53 @@ export default function CampaignsDashboard() {
     else setLoading(true);
 
     try {
-      let data: any = null;
+      const qParams: Record<string, string> = {};
+      if (targetDealerId) qParams.dealer_id = targetDealerId;
 
-      // 1. Next.js API
-      try {
-        const localRes = await fetch("/api/dealer/marketing/campaigns");
-        if (localRes.ok) {
-          const json = await localRes.json();
-          if (json.success) data = json;
-        }
-      } catch (err) {}
+      const res = await renderInstance.get("/dealer/marketing/campaigns", {
+        params: qParams,
+      });
 
-      // 2. FastAPI fallback
-      if (!data) {
-        const fastRes = await renderInstance.get("/dealer/marketing/campaigns");
-        data = fastRes.data;
-      }
-
-      if (data && data.campaigns) {
+      const data = res.data;
+      if (data && Array.isArray(data.campaigns)) {
         setCampaigns(data.campaigns);
         if (data.stats) setStats(data.stats);
         if (isRefresh) successMessage("Marketing campaigns refreshed");
+      } else {
+        setCampaigns([]);
       }
     } catch (err: any) {
-      console.error("Error loading campaigns:", err);
+      console.error("FastAPI error loading campaigns:", err);
+      // Fallback via Next API proxy
+      try {
+        const query = targetDealerId ? `?dealer_id=${encodeURIComponent(targetDealerId)}` : "";
+        const localRes = await fetch(`/api/dealer/marketing/campaigns${query}`);
+        if (localRes.ok) {
+          const json = await localRes.json();
+          if (json.success && Array.isArray(json.campaigns)) {
+            setCampaigns(json.campaigns);
+            if (json.stats) setStats(json.stats);
+            return;
+          }
+        }
+      } catch {}
       errorMessage("Failed to load marketing campaigns");
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [targetDealerId]);
 
   useEffect(() => {
     fetchCampaigns();
   }, [fetchCampaigns]);
 
-  // Toggle Pause/Active
+  // Toggle Pause/Active directly with FastAPI
   const handleToggleStatus = async (id: string, currentStatus: string) => {
     const nextStatus = currentStatus === "ACTIVE" ? "PAUSED" : "ACTIVE";
     try {
-      await fetch(`/api/dealer/marketing/campaigns/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: nextStatus }),
+      await renderInstance.patch(`/dealer/marketing/campaigns/${encodeURIComponent(id)}`, {
+        status: nextStatus,
       });
 
       setCampaigns((prev) =>
@@ -175,26 +203,26 @@ export default function CampaignsDashboard() {
       successMessage(`Campaign marked as ${nextStatus}`);
       fetchCampaigns();
     } catch (err) {
+      console.error("Error toggling campaign status:", err);
       errorMessage("Failed to update campaign status");
     }
   };
 
-  // Delete Campaign
+  // Delete Campaign directly with FastAPI
   const handleDeleteCampaign = async (id: string) => {
     if (!window.confirm("Are you sure you want to remove this marketing campaign?")) return;
     try {
-      await fetch(`/api/dealer/marketing/campaigns/${id}`, {
-        method: "DELETE",
-      });
+      await renderInstance.delete(`/dealer/marketing/campaigns/${encodeURIComponent(id)}`);
       setCampaigns((prev) => prev.filter((c) => c.id !== id));
       successMessage("Campaign removed");
       fetchCampaigns();
     } catch (err) {
+      console.error("Error deleting campaign:", err);
       errorMessage("Failed to delete campaign");
     }
   };
 
-  // Handle Create Campaign
+  // Handle Create Campaign directly with FastAPI
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formName.trim()) {
@@ -205,6 +233,7 @@ export default function CampaignsDashboard() {
     setSubmitting(true);
     try {
       const payload = {
+        dealer_id: targetDealerId || undefined,
         name: formName.trim(),
         type: formType,
         channel: formChannel,
@@ -213,24 +242,19 @@ export default function CampaignsDashboard() {
         description: formDescription.trim(),
       };
 
-      const res = await fetch("/api/dealer/marketing/campaigns", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const res = await renderInstance.post("/dealer/marketing/campaigns", payload);
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to create campaign");
+      if (res.status === 200 || res.status === 201) {
+        successMessage("Ad campaign launched successfully!");
+        setIsCreateModalOpen(false);
+        setFormName("");
+        setFormDescription("");
+        fetchCampaigns();
+      } else {
+        throw new Error(res.data?.detail || "Failed to create campaign");
       }
-
-      successMessage("Ad campaign launched successfully!");
-      setIsCreateModalOpen(false);
-      setFormName("");
-      setFormDescription("");
-      fetchCampaigns();
     } catch (err: any) {
-      errorMessage(err.message || "Failed to launch campaign");
+      errorMessage(err.response?.data?.detail || err.message || "Failed to launch campaign");
     } finally {
       setSubmitting(false);
     }

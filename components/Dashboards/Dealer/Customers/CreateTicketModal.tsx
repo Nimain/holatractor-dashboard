@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { getAuthToken, getAuthUser } from "@/utils/auth/clientAuth";
-import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
+import { errorMessage } from "@/utils/Toastify/Messages";
 
 interface CreateTicketModalProps {
   isOpen: boolean;
@@ -44,6 +44,7 @@ export default function CreateTicketModal({ isOpen, onClose, onCreated }: Create
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<any[]>([]);
   const [tractors, setTractors] = useState<any[]>([]);
+  const [loadingTractors, setLoadingTractors] = useState(false);
 
   const [formData, setFormData] = useState({
     customer_id: "",
@@ -59,33 +60,92 @@ export default function CreateTicketModal({ isOpen, onClose, onCreated }: Create
     assigned_to: "Dealer Support Team"
   });
 
+  // Load customers for selection on modal open
   useEffect(() => {
     if (isOpen) {
       const activeToken = getAuthToken() || "";
       const headers = activeToken ? { Authorization: `Bearer ${activeToken}` } : undefined;
 
-      // Fetch customers for autocomplete / selection
       renderInstance.get("/dealer/customers", { headers })
         .then((res) => {
           const list = Array.isArray(res.data) ? res.data : (res.data?.customers || []);
           setCustomers(list);
         })
         .catch(() => setCustomers([]));
-
-      // Fetch tractors for selection
-      renderInstance.get("/dealer/tractors", { headers })
-        .then((res) => {
-          const list = Array.isArray(res.data?.tractors) ? res.data.tractors : [];
-          setTractors(list);
-        })
-        .catch(() => setTractors([]));
     }
   }, [isOpen]);
+
+  // Load tractors and attachments strictly for the selected customer's fleet
+  useEffect(() => {
+    if (!isOpen || !formData.customer_id) {
+      setTractors([]);
+      setFormData(prev => ({ ...prev, tractor_id: "", tractor_model: "" }));
+      return;
+    }
+
+    const activeToken = getAuthToken() || "";
+    const headers = activeToken ? { Authorization: `Bearer ${activeToken}` } : undefined;
+    setLoadingTractors(true);
+
+    renderInstance
+      .get("/dealer/tractors", { 
+        headers, 
+        params: { customer_id: formData.customer_id } 
+      })
+      .then((res) => {
+        const list = Array.isArray(res.data?.tractors) 
+          ? res.data.tractors 
+          : Array.isArray(res.data?.data) 
+          ? res.data.data 
+          : Array.isArray(res.data) 
+          ? res.data 
+          : [];
+        setTractors(list);
+        if (list.length > 0) {
+          const first = list[0];
+          const idStr = first.identifier ? ` [${first.identifier}]` : "";
+          setFormData(prev => ({
+            ...prev,
+            tractor_id: first.id,
+            tractor_model: `${first.name}${idStr}`.trim()
+          }));
+        } else {
+          setFormData(prev => ({ ...prev, tractor_id: "", tractor_model: "" }));
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching customer fleet:", err);
+        setTractors([]);
+        setFormData(prev => ({ ...prev, tractor_id: "", tractor_model: "" }));
+      })
+      .finally(() => setLoadingTractors(false));
+  }, [isOpen, formData.customer_id]);
+
+  const customerFleetTractors = React.useMemo(() => {
+    return tractors.filter(t => (t.equipment_type === "tractor" || !t.equipment_type) && t.source !== "liked_booked");
+  }, [tractors]);
+
+  const customerFleetAttachments = React.useMemo(() => {
+    return tractors.filter(t => t.equipment_type === "attachment");
+  }, [tractors]);
+
+  const customerLikedMachinery = React.useMemo(() => {
+    return tractors.filter(t => t.source === "liked_booked");
+  }, [tractors]);
 
   const handleCustomerSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const custId = e.target.value;
     if (!custId) {
-      setFormData(prev => ({ ...prev, customer_id: "", customer_name: "", customer_email: "", customer_phone: "" }));
+      setFormData(prev => ({ 
+        ...prev, 
+        customer_id: "", 
+        customer_name: "", 
+        customer_email: "", 
+        customer_phone: "",
+        tractor_id: "",
+        tractor_model: ""
+      }));
+      setTractors([]);
       return;
     }
     const found = customers.find(c => c.id === custId);
@@ -109,10 +169,12 @@ export default function CreateTicketModal({ isOpen, onClose, onCreated }: Create
     }
     const found = tractors.find(t => t.id === tId);
     if (found) {
+      const idStr = found.identifier ? ` [${found.identifier}]` : "";
+      const modelStr = found.model && found.model !== found.name ? ` (${found.model})` : "";
       setFormData(prev => ({
         ...prev,
         tractor_id: found.id,
-        tractor_model: `${found.brand || ""} ${found.name || found.model || ""}`.trim()
+        tractor_model: `${found.name}${modelStr}${idStr}`.trim()
       }));
     }
   };
@@ -125,7 +187,7 @@ export default function CreateTicketModal({ isOpen, onClose, onCreated }: Create
     }
 
     const authUser = getAuthUser();
-    const dealerId = authUser?.dealer_id || authUser?.userId || "cmb7lih4v000ez5ms8nhvegf6";
+    const dealerId = (authUser as any)?.dealer_id || authUser?.userId || "cmb7lih4v000ez5ms8nhvegf6";
 
     const payload = {
       ...formData,
@@ -140,7 +202,6 @@ export default function CreateTicketModal({ isOpen, onClose, onCreated }: Create
 
       const res = await renderInstance.post("/dealer/support-tickets", payload, { headers });
       if (res.data?.success) {
-        successMessage(`Support ticket ${res.data?.ticket?.ticket_number || ""} opened successfully!`);
         onCreated();
         onClose();
         // Reset form
@@ -273,30 +334,78 @@ export default function CreateTicketModal({ isOpen, onClose, onCreated }: Create
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                <Truck size={14} className="text-red-600" /> Tractor / Machine Reference
-              </label>
-              {tractors.length > 0 ? (
-                <select
-                  value={formData.tractor_id}
-                  onChange={handleTractorSelect}
-                  className="w-full px-3.5 py-2.5 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                >
-                  <option value="">-- General Equipment / Store Customer --</option>
-                  {tractors.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.brand} {t.name || t.model} ({t.hp ? `${t.hp} HP` : "Standard"})
-                    </option>
-                  ))}
-                </select>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <Truck size={14} className="text-red-600" /> Tractor / Machine Reference
+                </label>
+                {loadingTractors && (
+                  <span className="text-[11px] text-gray-500 flex items-center gap-1">
+                    <Loader2 size={11} className="animate-spin text-red-600" /> Loading fleet...
+                  </span>
+                )}
+              </div>
+
+              {!formData.customer_id ? (
+                <div className="w-full px-3.5 py-2.5 text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-lg flex items-center gap-2">
+                  <Truck size={14} className="text-gray-300 shrink-0" />
+                  <span>Please select a customer above to view their fleet machinery</span>
+                </div>
+              ) : tractors.length > 0 ? (
+                <div className="space-y-1.5">
+                  <select
+                    value={formData.tractor_id}
+                    onChange={handleTractorSelect}
+                    disabled={loadingTractors}
+                    className="w-full px-3.5 py-2.5 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none transition-all cursor-pointer"
+                  >
+                    <option value="">-- General / Non-Specific Equipment --</option>
+                    {customerFleetTractors.length > 0 && (
+                      <optgroup label="Customer Fleet - Tractors">
+                        {customerFleetTractors.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            🚜 {t.name} {t.model && t.model !== t.name ? `(${t.model})` : ""} {t.identifier ? `• VIN: ${t.identifier}` : ""}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {customerFleetAttachments.length > 0 && (
+                      <optgroup label="Customer Fleet - Implements & Attachments">
+                        {customerFleetAttachments.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            🔧 {a.name} {a.identifier ? `• Serial: ${a.identifier}` : ""}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {customerLikedMachinery.length > 0 && (
+                      <optgroup label="Customer Liked / Booked Equipment">
+                        {customerLikedMachinery.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            ⭐ {t.name} ({t.model || t.brand})
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                  <p className="text-[11px] text-green-700 font-medium">
+                    ✓ Loaded {tractors.length} fleet equipment item(s) for this client.
+                  </p>
+                </div>
               ) : (
-                <input
-                  type="text"
-                  placeholder="e.g., John Deere 5075E"
-                  value={formData.tractor_model}
-                  onChange={(e) => setFormData(p => ({ ...p, tractor_model: e.target.value }))}
-                  className="w-full px-3.5 py-2.5 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                />
+                <div className="space-y-1.5">
+                  <input
+                    type="text"
+                    placeholder="Enter machine model or VIN manually..."
+                    value={formData.tractor_model}
+                    onChange={(e) => setFormData(p => ({ ...p, tractor_model: e.target.value }))}
+                    className="w-full px-3.5 py-2.5 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
+                  />
+                  {!loadingTractors && (
+                    <p className="text-[11px] text-amber-600">
+                      No registered tractors or attachments found in this customer's fleet. Reference can be typed manually above.
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           </div>

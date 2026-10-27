@@ -43,8 +43,15 @@ import { Separator } from '../ui/separator'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbSeparator } from '../ui/breadcrumb'
 import AddIcon from '@mui/icons-material/Add';
 import countryData from './CountryCodeRoles'
+import { useSelector } from 'react-redux'
+import { RootState } from '@/redux/store'
+import { authTranslations, AuthLanguage } from '@/utils/translation/authTranslations'
 
 const OperatorRegister = ({ nameOfOperator, inPage, trigger }: { nameOfOperator: string; inPage: boolean; trigger?: React.ReactNode }) => {
+    const activeLang = useSelector((state: RootState) => state.ActiveLanguage.language) as AuthLanguage;
+    const currentLang = activeLang === 'es' ? 'es' : 'en';
+    const t = authTranslations[currentLang] || authTranslations.en;
+
     const [open, setOpen] = useState(false)
     const [fetchingContry, setFetchingCountry] = useState(false);
     const [popoverOpen, setPopoverOpen] = useState(false)
@@ -384,7 +391,7 @@ const OperatorRegister = ({ nameOfOperator, inPage, trigger }: { nameOfOperator:
                             setOpen(true)
                         }}
                     >
-                        {inPage ? "Continue" : "Continue as operator"}
+                        {inPage ? t.continueBtn : t.continueOperator}
                     </Button>
                 )}
             </DialogTrigger>
@@ -408,8 +415,8 @@ const OperatorRegister = ({ nameOfOperator, inPage, trigger }: { nameOfOperator:
                     <Tabs className="w-full flex flex-col flex-1" defaultValue='stepone'>
 
                         <RegisterStepperHeader
-                            roleTitle="Certified Operator"
-                            roleBadge="Field Tasks"
+                            roleTitle={t.operatorRoleTitle}
+                            roleBadge={t.operatorRoleBadge}
                             roleIcon={<UserCheck className="w-4 h-4 text-white" />}
                             applicantName={nameOfOperator}
                             themeColor="amber"
@@ -417,25 +424,25 @@ const OperatorRegister = ({ nameOfOperator, inPage, trigger }: { nameOfOperator:
                                 {
                                     id: "stepone",
                                     number: 1,
-                                    label: "Credentials",
+                                    label: t.stepCredentials,
                                     isComplete: Boolean(nameOfOperator && agEmail && agPassword && agnewCountry && agnumber),
                                 },
                                 {
                                     id: "steptwo",
                                     number: 2,
-                                    label: "Profile",
+                                    label: t.stepProfile,
                                     isComplete: Boolean(date && gender),
                                 },
                                 {
                                     id: "stepthree",
                                     number: 3,
-                                    label: "Location",
+                                    label: t.stepLocation,
                                     isComplete: Boolean(location_name && location_address && location_city && location_state && location_zip_code && location_country),
                                 },
                                 {
                                     id: "stepfour",
                                     number: 4,
-                                    label: "License",
+                                    label: t.stepLicense,
                                     isComplete: Boolean(attachment && document_number),
                                 }
                             ]}
@@ -594,7 +601,7 @@ const OperatorRegister = ({ nameOfOperator, inPage, trigger }: { nameOfOperator:
                                             className='p-0'>
                                             <Button
                                                 className="px-5 py-2 rounded-lg bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white text-sm font-semibold flex items-center gap-1.5 shadow-xs transition-all duration-150 cursor-pointer">
-                                                <span>Next: Profile</span>
+                                                <span>{t.next}: {t.stepProfile}</span>
                                                 <ChevronRight className="w-4 h-4" />
                                             </Button>
                                         </TabsTrigger>
@@ -661,47 +668,50 @@ const OperatorRegister = ({ nameOfOperator, inPage, trigger }: { nameOfOperator:
                                             </label>
                                         )}
                                     </div>
-                                    <Popover open={agDOB} onOpenChange={setagDOB}>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant={"outline"}
-                                                className={cn(
-                                                    "w-[280px] justify-start text-left font-normal",
-                                                    !date && "text-muted-foreground"
-                                                )}
-                                                onClick={() => { setagDOB(true) }}
-                                            >
-                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {date ? format(date, "PPP") : <span>Pick a date</span>}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="flex w-fit flex-col space-y-2 p-2">
-                                            <Select
-                                                onValueChange={(value) => setyear(parseInt(value))}
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select Year" />
-                                                </SelectTrigger>
-                                                <SelectContent position="popper">
-                                                    {[...Array(90)].map((_, index) => {
-                                                        const yearValue = new Date().getFullYear() - index
-                                                        return (
-                                                            <SelectItem key={yearValue} value={yearValue.toString()}>
-                                                                {yearValue}
-                                                            </SelectItem>
-                                                        )
-                                                    })}
-                                                </SelectContent>
-                                            </Select>
-                                            <div className="rounded-md border">
-                                                <Calendar
-                                                    mode="single"
-                                                    selected={date}
-                                                    onSelect={handleDateChange}
-                                                />
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
+                                    <div className="space-y-1">
+                                        <Label>{t.dateOfBirth}</Label>
+                                        <Popover open={agDOB} onOpenChange={setagDOB}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant={"outline"}
+                                                    className={cn(
+                                                        "w-full sm:w-[280px] justify-start text-left font-normal",
+                                                        !date && "text-muted-foreground"
+                                                    )}
+                                                    onClick={() => { setagDOB(true) }}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {date ? format(date, "PPP") : <span>{t.pickADate}</span>}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="flex w-fit flex-col space-y-2 p-2">
+                                                <Select
+                                                    onValueChange={(value) => setyear(parseInt(value))}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select Year" />
+                                                    </SelectTrigger>
+                                                    <SelectContent position="popper">
+                                                        {[...Array(90)].map((_, index) => {
+                                                            const yearValue = new Date().getFullYear() - index
+                                                            return (
+                                                                <SelectItem key={yearValue} value={yearValue.toString()}>
+                                                                    {yearValue}
+                                                                </SelectItem>
+                                                            )
+                                                        })}
+                                                    </SelectContent>
+                                                </Select>
+                                                <div className="rounded-md border">
+                                                    <Calendar
+                                                        mode="single"
+                                                        selected={date}
+                                                        onSelect={handleDateChange}
+                                                    />
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
                                     <div className="space-y-1">
                                         <Label htmlFor="gender">Gender</Label>
                                         <Select
@@ -735,7 +745,7 @@ const OperatorRegister = ({ nameOfOperator, inPage, trigger }: { nameOfOperator:
                                                 variant="outline"
                                                 className="px-4 py-2 rounded-lg border-slate-200 text-slate-700 hover:bg-slate-100 text-sm font-semibold flex items-center gap-1.5 cursor-pointer">
                                                 <ChevronLeft className="w-4 h-4" />
-                                                <span>Back</span>
+                                                <span>{t.back}</span>
                                             </Button>
                                         </TabsTrigger>
                                         <TabsTrigger
@@ -744,7 +754,7 @@ const OperatorRegister = ({ nameOfOperator, inPage, trigger }: { nameOfOperator:
                                             className='p-0'>
                                             <Button
                                                 className="px-5 py-2 rounded-lg bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white text-sm font-semibold flex items-center gap-1.5 shadow-xs transition-all duration-150 cursor-pointer">
-                                                <span>Next: Location</span>
+                                                <span>{t.next}: {t.stepLocation}</span>
                                                 <ChevronRight className="w-4 h-4" />
                                             </Button>
                                         </TabsTrigger>
@@ -935,7 +945,7 @@ const OperatorRegister = ({ nameOfOperator, inPage, trigger }: { nameOfOperator:
                                                 variant="outline"
                                                 className="px-4 py-2 rounded-lg border-slate-200 text-slate-700 hover:bg-slate-100 text-sm font-semibold flex items-center gap-1.5 cursor-pointer">
                                                 <ChevronLeft className="w-4 h-4" />
-                                                <span>Back</span>
+                                                <span>{t.back}</span>
                                             </Button>
                                         </TabsTrigger>
                                         <TabsTrigger
@@ -944,7 +954,7 @@ const OperatorRegister = ({ nameOfOperator, inPage, trigger }: { nameOfOperator:
                                             className='p-0'>
                                             <Button
                                                 className="px-5 py-2 rounded-lg bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white text-sm font-semibold flex items-center gap-1.5 shadow-xs transition-all duration-150 cursor-pointer">
-                                                <span>Next: License</span>
+                                                <span>{t.next}: {t.stepLicense}</span>
                                                 <ChevronRight className="w-4 h-4" />
                                             </Button>
                                         </TabsTrigger>
@@ -1074,14 +1084,14 @@ const OperatorRegister = ({ nameOfOperator, inPage, trigger }: { nameOfOperator:
                                                 variant="outline"
                                                 className="px-4 py-2 rounded-lg border-slate-200 text-slate-700 hover:bg-slate-100 text-sm font-semibold flex items-center gap-1.5 cursor-pointer">
                                                 <ChevronLeft className="w-4 h-4" />
-                                                <span>Back</span>
+                                                <span>{t.back}</span>
                                             </Button>
                                         </TabsTrigger>
                                     </TabsList>
                                     <Button 
                                         className="px-5 py-2 rounded-lg bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white text-sm font-semibold flex items-center gap-1.5 shadow-xs transition-all duration-150 cursor-pointer"
                                         onClick={() => { operatorRegister() }}>
-                                        <span>Complete Registration</span>
+                                        <span>{loading ? t.creatingAccount : t.completeRegistration}</span>
                                         <Check className="w-4 h-4" />
                                     </Button>
                                 </CardFooter>

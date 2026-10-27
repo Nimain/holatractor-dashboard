@@ -1,7 +1,12 @@
 "use client"
 import { useState } from "react"
 
-const CreateTemplateModal = ({ isOpen, onClose }) => {
+interface CreateTemplateModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const CreateTemplateModal: React.FC<CreateTemplateModalProps> = ({ isOpen, onClose }) => {
   const [templateTitle, setTemplateTitle] = useState("")
   const [language, setLanguage] = useState("")
   const [headerEnabled, setHeaderEnabled] = useState(true)

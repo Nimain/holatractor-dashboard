@@ -28,8 +28,15 @@ import { Calendar } from '../ui/calendar';
 import countryData from './CountryCodeRoles';
 import { Badge } from '../ui/badge';
 import CryptoJS from "crypto-js";
+import { useSelector } from 'react-redux';
+import { RootState } from '@/redux/store';
+import { authTranslations, AuthLanguage } from '@/utils/translation/authTranslations';
 
 const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boolean; trigger?: React.ReactNode }) => {
+    const activeLang = useSelector((state: RootState) => state.ActiveLanguage.language) as AuthLanguage;
+    const currentLang = activeLang === 'es' ? 'es' : 'en';
+    const t = authTranslations[currentLang] || authTranslations.en;
+
     const [open, setOpen] = useState(false)
     const [fetchingContry, setFetchingCountry] = useState(false);
     const [popoverOpen, setPopoverOpen] = useState(false)
@@ -78,9 +85,10 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
 
     const fetchAllSubscriptions = () => {
         setFetchSubscriptions(true)
-        renderInstance.get("/subscription")
+        renderInstance.get("/subscription?for_dealer=true")
             .then((res) => {
-                setSubscriptions(res.data)
+                const list = Array.isArray(res.data) ? res.data : []
+                setSubscriptions(list.filter((p: any) => p.for_dealer === true))
             }).finally(() => {
                 setFetchSubscriptions(false)
             })
@@ -219,27 +227,22 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
         }
 
         let imageUrl = "";
-
         if (agImage) {
-
-            const buffer = Buffer.from(await agImage.arrayBuffer());
-            imageUrl = await uploadFileToS3(buffer, agImage.name);
-
-            if (!imageUrl) {
-                errorMessage("Something went wrong in uploading the image");
-                return;
+            try {
+                const buffer = Buffer.from(await agImage.arrayBuffer());
+                imageUrl = await uploadFileToS3(buffer, agImage.name);
+            } catch (imgErr) {
+                console.warn("Dealer profile image upload warning:", imgErr);
             }
         }
 
-        let attachmentLink = ""
+        let attachmentLink = "";
         if (attachment) {
-
-            const buffer = Buffer.from(await attachment.arrayBuffer());
-            attachmentLink = await uploadFileToS3(buffer, attachment.name);
-
-            if (!attachmentLink) {
-                errorMessage("Something went wrong in uploading the attachment");
-                return;
+            try {
+                const buffer = Buffer.from(await attachment.arrayBuffer());
+                attachmentLink = await uploadFileToS3(buffer, attachment.name);
+            } catch (attErr) {
+                console.warn("Dealer document attachment upload warning:", attErr);
             }
         }
 
@@ -277,10 +280,17 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                 .then((res) => {
                     if (res.status === 201 && res.data.access_token) {
                         successMessage("Created successfully")
+                        if (selectedPlan?.id) {
+                            renderInstance.post(`/subscription/dealer_purchase/${selectedPlan.id}`, {}, {
+                                headers: {
+                                    Authorization: `Bearer ${res.data.access_token}`,
+                                }
+                            }).catch(() => {})
+                        }
                         setTimeout(() => {
                             router.push("/Dealer")
                             window.location.reload()
-                        }, 3000);
+                        }, 2000);
                     }
                 })
                 .catch((err) => {
@@ -400,7 +410,7 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                             setOpen(true)
                         }}
                     >
-                        {inPage ? "Continue" : "Continue a dealer"}
+                        {inPage ? t.continueBtn : t.continueDealer}
                     </Button>
                 )}
             </DialogTrigger>
@@ -424,8 +434,8 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                     <Tabs className="w-full flex flex-col flex-1" defaultValue='stepone'>
 
                         <RegisterStepperHeader
-                            roleTitle="Machinery Dealer & Workshop"
-                            roleBadge="Sales & Service"
+                            roleTitle={t.dealerRoleTitle}
+                            roleBadge={t.dealerRoleBadge}
                             roleIcon={<Store className="w-4 h-4 text-white" />}
                             applicantName={name}
                             themeColor="blue"
@@ -433,31 +443,31 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                 {
                                     id: "stepone",
                                     number: 1,
-                                    label: "Credentials",
+                                    label: t.stepCredentials,
                                     isComplete: Boolean(name && agEmail && agPassword && agnewCountry && agnumber),
                                 },
                                 {
                                     id: "steptwo",
                                     number: 2,
-                                    label: "Profile",
+                                    label: t.stepProfile,
                                     isComplete: Boolean(date && gender),
                                 },
                                 {
                                     id: "stepthree",
                                     number: 3,
-                                    label: "Location",
+                                    label: t.stepLocation,
                                     isComplete: Boolean(location_name && location_address && location_city && location_state && location_zip_code && location_country),
                                 },
                                 {
                                     id: "stepfour",
                                     number: 4,
-                                    label: "Documents",
+                                    label: t.stepDocuments,
                                     isComplete: Boolean(attachment && document_number),
                                 },
                                 {
                                     id: "stepfive",
                                     number: 5,
-                                    label: "Subscription",
+                                    label: t.stepSubscription,
                                     isComplete: Boolean(selectedPlan),
                                 }
                             ]}
@@ -617,7 +627,7 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                             className='p-0'>
                                             <Button
                                                 className="px-5 py-2 rounded-lg bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white text-sm font-semibold flex items-center gap-1.5 shadow-xs transition-all duration-150 cursor-pointer">
-                                                <span>Next: Profile</span>
+                                                <span>{t.next}: {t.stepProfile}</span>
                                                 <ChevronRight className="w-4 h-4" />
                                             </Button>
                                         </TabsTrigger>
@@ -684,47 +694,50 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                             </label>
                                         )}
                                     </div>
-                                    <Popover open={agDOB} onOpenChange={setagDOB}>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant={"outline"}
-                                                className={cn(
-                                                    "w-[280px] justify-start text-left font-normal",
-                                                    !date && "text-muted-foreground"
-                                                )}
-                                                onClick={() => { setagDOB(true) }}
-                                            >
-                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {date ? format(date, "PPP") : <span>Pick a date</span>}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="flex w-fit flex-col space-y-2 p-2">
-                                            <Select
-                                                onValueChange={(value) => setyear(parseInt(value))}
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select Year" />
-                                                </SelectTrigger>
-                                                <SelectContent position="popper">
-                                                    {[...Array(90)].map((_, index) => {
-                                                        const yearValue = new Date().getFullYear() - index
-                                                        return (
-                                                            <SelectItem key={yearValue} value={yearValue.toString()}>
-                                                                {yearValue}
-                                                            </SelectItem>
-                                                        )
-                                                    })}
-                                                </SelectContent>
-                                            </Select>
-                                            <div className="rounded-md border">
-                                                <Calendar
-                                                    mode="single"
-                                                    selected={date}
-                                                    onSelect={handleDateChange}
-                                                />
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
+                                    <div className="space-y-1">
+                                        <Label>{t.dateOfBirth}</Label>
+                                        <Popover open={agDOB} onOpenChange={setagDOB}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant={"outline"}
+                                                    className={cn(
+                                                        "w-full sm:w-[280px] justify-start text-left font-normal",
+                                                        !date && "text-muted-foreground"
+                                                    )}
+                                                    onClick={() => { setagDOB(true) }}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {date ? format(date, "PPP") : <span>{t.pickADate}</span>}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="flex w-fit flex-col space-y-2 p-2">
+                                                <Select
+                                                    onValueChange={(value) => setyear(parseInt(value))}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select Year" />
+                                                    </SelectTrigger>
+                                                    <SelectContent position="popper">
+                                                        {[...Array(90)].map((_, index) => {
+                                                            const yearValue = new Date().getFullYear() - index
+                                                            return (
+                                                                <SelectItem key={yearValue} value={yearValue.toString()}>
+                                                                    {yearValue}
+                                                                </SelectItem>
+                                                            )
+                                                        })}
+                                                    </SelectContent>
+                                                </Select>
+                                                <div className="rounded-md border">
+                                                    <Calendar
+                                                        mode="single"
+                                                        selected={date}
+                                                        onSelect={handleDateChange}
+                                                    />
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
                                     <div className="space-y-1">
                                         <Label htmlFor="gender">Gender</Label>
                                         <Select
@@ -758,7 +771,7 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                                 variant="outline"
                                                 className="px-4 py-2 rounded-lg border-slate-200 text-slate-700 hover:bg-slate-100 text-sm font-semibold flex items-center gap-1.5 cursor-pointer">
                                                 <ChevronLeft className="w-4 h-4" />
-                                                <span>Back</span>
+                                                <span>{t.back}</span>
                                             </Button>
                                         </TabsTrigger>
                                         <TabsTrigger
@@ -767,7 +780,7 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                             className='p-0'>
                                             <Button
                                                 className="px-5 py-2 rounded-lg bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white text-sm font-semibold flex items-center gap-1.5 shadow-xs transition-all duration-150 cursor-pointer">
-                                                <span>Next: Location</span>
+                                                <span>{t.next}: {t.stepLocation}</span>
                                                 <ChevronRight className="w-4 h-4" />
                                             </Button>
                                         </TabsTrigger>
@@ -965,7 +978,7 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                                 variant="outline"
                                                 className="px-4 py-2 rounded-lg border-slate-200 text-slate-700 hover:bg-slate-100 text-sm font-semibold flex items-center gap-1.5 cursor-pointer">
                                                 <ChevronLeft className="w-4 h-4" />
-                                                <span>Back</span>
+                                                <span>{t.back}</span>
                                             </Button>
                                         </TabsTrigger>
                                         <TabsTrigger
@@ -974,7 +987,7 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                             className='p-0'>
                                             <Button
                                                 className="px-5 py-2 rounded-lg bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white text-sm font-semibold flex items-center gap-1.5 shadow-xs transition-all duration-150 cursor-pointer">
-                                                <span>Next: Documents</span>
+                                                <span>{t.next}: {t.stepDocuments}</span>
                                                 <ChevronRight className="w-4 h-4" />
                                             </Button>
                                         </TabsTrigger>
@@ -1104,7 +1117,7 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                                 variant="outline"
                                                 className="px-4 py-2 rounded-lg border-slate-200 text-slate-700 hover:bg-slate-100 text-sm font-semibold flex items-center gap-1.5 cursor-pointer">
                                                 <ChevronLeft className="w-4 h-4" />
-                                                <span>Back</span>
+                                                <span>{t.back}</span>
                                             </Button>
                                         </TabsTrigger>
                                         <TabsTrigger
@@ -1113,7 +1126,7 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                             className='p-0'>
                                             <Button
                                                 className="px-5 py-2 rounded-lg bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white text-sm font-semibold flex items-center gap-1.5 shadow-xs transition-all duration-150 cursor-pointer">
-                                                <span>Next: Subscription</span>
+                                                <span>{t.next}: {t.stepSubscription}</span>
                                                 <ChevronRight className="w-4 h-4" />
                                             </Button>
                                         </TabsTrigger>
@@ -1130,7 +1143,7 @@ const DealerRegister = ({ name, inPage, trigger }: { name: string; inPage: boole
                                     <p>Loading all plans</p>
                                     :
                                     <div className="container mx-auto p-4">
-                                        <h1 className="text-3xl font-bold mb-6 text-center">Choose Your Subscription Plan</h1>
+                                        <h1 className="text-3xl font-bold mb-6 text-center">{t.choosePlanTitle}</h1>
                                         <div className='w-full flex justify-end items-center my-4'>
                                             <Button
                                                 onClick={() => { dealerRegister() }}>

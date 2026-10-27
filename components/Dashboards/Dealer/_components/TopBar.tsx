@@ -2,10 +2,11 @@
 
 import { useCookie } from "next-cookie"
 import { useRouter } from "next/navigation"
-import { LogOut, User, Bell, Search, Globe, ChevronDown, Menu, X, Check, AlertTriangle, CheckCheck, Inbox } from "lucide-react"
+import { LogOut, User, Bell, Search, Globe, ChevronDown, Menu, X, Check, AlertTriangle, CheckCheck, Inbox, Clock, Calendar } from "lucide-react"
 import { successMessage } from "@/utils/Toastify/Messages"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useDealerLanguage } from "@/context/DealerLanguageContext"
+import { renderInstance } from "@/utils/Axios/RenderInstance"
 
 const TopBar = () => {
   const { cookie } = useCookie()
@@ -38,9 +39,9 @@ const TopBar = () => {
   }, [])
 
   // Get user info from cookie
-  let user = null
+  let user: any = null
   try {
-    const userCookie = cookie?.get ? cookie.get("user") : null
+    const userCookie = cookie?.get ? (cookie.get("user") || cookie.get("user_info")) : null
     if (userCookie) {
       user = typeof userCookie === 'string' ? JSON.parse(userCookie) : userCookie
     }
@@ -48,6 +49,59 @@ const TopBar = () => {
     console.error("Error parsing user cookie:", error)
     user = null
   }
+
+  const [liveName, setLiveName] = useState<string>("")
+  const [liveImage, setLiveImage] = useState<string>("")
+
+  // Fetch real dealer profile from FastAPI to replace any placeholder or stale "User"
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const uId = user?.userId || user?.user_id || user?.id
+        const dId = user?.dealer_id || user?.dealerId
+        const uEmail = user?.email
+        if (!uId && !dId && !uEmail) return
+
+        const res = await renderInstance.get("/dealer/profile", {
+          params: {
+            user_id: uId,
+            dealer_id: dId,
+            email: uEmail,
+          },
+        })
+        const profile = res.data?.profile
+        if (profile) {
+          const fullName = `${profile.firstName || ""} ${profile.lastName || ""}`.trim()
+          if (fullName && fullName.toLowerCase() !== "user") {
+            setLiveName(fullName)
+          }
+          if (profile.image && profile.image !== "test") {
+            setLiveImage(profile.image)
+          }
+        }
+      } catch (err) {
+        // Fallback to local cookie data
+      }
+    }
+
+    fetchUserProfile()
+  }, [user?.id, user?.userId, user?.user_id, user?.dealer_id, user?.email])
+
+  const resolvedName = useMemo(() => {
+    if (liveName && liveName.toLowerCase() !== "user") return liveName
+    if (user) {
+      const full = `${user.first_name || user.firstName || ""} ${user.last_name || user.lastName || ""}`.trim()
+      if (full && full.toLowerCase() !== "user") return full
+      if (user.name && user.name.toLowerCase() !== "user") return user.name
+      if (user.email) {
+        const prefix = user.email.split("@")[0]
+        return prefix.charAt(0).toUpperCase() + prefix.slice(1)
+      }
+    }
+    return "Dealer"
+  }, [liveName, user])
+
+  const avatarSrc = liveImage || (user?.image && user.image !== "test" ? user.image : "")
 
   // Update time every second
   useEffect(() => {
@@ -126,27 +180,30 @@ const TopBar = () => {
     <>
       <div className="bg-[#A80000] border-b border-gray-200 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 shadow-sm">
         <div className="flex items-center justify-between">
-          {/* Left Section - Title and Menu */}
-          <div className="flex items-center space-x-2 sm:space-x-4 lg:space-x-8">
+          {/* Left Section - Menu & Re-arranged Date/Time Box */}
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2 text-white hover:bg-red-700 rounded-lg transition-all"
+              className="lg:hidden p-2 text-white hover:bg-white/10 rounded-xl transition-all"
             >
               {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
 
-            <div>
-              <h1 className="text-base sm:text-xl lg:text-2xl font-bold text-white truncate">
-                {t("dealerDashboard")}
-              </h1>
-            </div>
-
-            {/* Desktop Time Display */}
-            <div className="hidden lg:flex items-center space-x-2 px-4 py-2 bg-gray-50 rounded-lg">
-              <div className="text-sm text-[#F91F1F]">
-                <div className="font-medium">{formatTime(currentTime)}</div>
-                <div className="text-xs text-[#F91F1F]">{formatDate(currentTime)}</div>
+            {/* Re-arranged Date & Time Box */}
+            <div className="flex items-center gap-2.5 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 hover:bg-white/15 border border-white/20 rounded-xl text-white backdrop-blur-sm transition-all shadow-sm">
+              <div className="p-1 rounded-lg bg-white/15 text-white flex items-center justify-center shrink-0">
+                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 leading-tight">
+                <span className="font-bold text-xs sm:text-sm tracking-wide text-white">
+                  {formatTime(currentTime)}
+                </span>
+                <span className="hidden sm:inline text-white/40 text-xs">•</span>
+                <div className="flex items-center gap-1 text-[11px] sm:text-xs text-white/85 font-medium">
+                  <Calendar className="w-3 h-3 text-white/70 hidden sm:inline" />
+                  <span>{formatDate(currentTime)}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -340,37 +397,45 @@ const TopBar = () => {
             <div className="relative profile-dropdown">
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className="flex items-center space-x-1 sm:space-x-2 lg:space-x-3 p-1 sm:p-2 rounded-lg transition-all"
+                className="flex items-center space-x-1 sm:space-x-2 lg:space-x-3 p-1 sm:p-2 rounded-lg hover:bg-white/10 transition-all"
               >
                 <div className="relative">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                    <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 bg-white/20 border border-white/30 rounded-full flex items-center justify-center overflow-hidden">
+                    {avatarSrc ? (
+                      <img src={avatarSrc} alt={resolvedName} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-white text-xs font-bold uppercase">{resolvedName.charAt(0)}</span>
+                    )}
                   </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-400 rounded-full border-2 border-white"></div>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-400 rounded-full border-2 border-[#A80000]"></div>
                 </div>
-                <div className="hidden lg:block text-left">
-                  <div className="text-sm font-medium text-white truncate max-w-[120px]">
-                    {user?.name || user?.email?.split('@')[0] || "Dealer"}
+                <div className="hidden sm:block text-left">
+                  <div className="text-sm font-semibold text-white truncate max-w-[150px]">
+                    {resolvedName}
                   </div>
-                  <div className="text-xs text-white">{t("online")}</div>
+                  <div className="text-xs text-white/80">{t("online")}</div>
                 </div>
-                <ChevronDown size={14} className={`hidden sm:block text-white transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={14} className={`text-white transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {/* Dropdown Menu */}
               {isProfileOpen && (
-                <div className="absolute right-0 mt-2 w-56 sm:w-64 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-50">
-                  <div className="p-3 sm:p-4 border-b border-gray-100">
+                <div className="absolute right-0 mt-2 w-56 sm:w-64 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">
+                  <div className="p-3 sm:p-4 border-b border-gray-100 bg-gray-50/50">
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                        <User size={20} className="text-white" />
+                      <div className="w-10 h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden font-bold text-sm">
+                        {avatarSrc ? (
+                          <img src={avatarSrc} alt={resolvedName} className="w-full h-full object-cover" />
+                        ) : (
+                          <span>{resolvedName.charAt(0).toUpperCase()}</span>
+                        )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium text-[#F91F1F] truncate">
-                          {user?.name || user?.email?.split('@')[0] || "Dealer"}
+                        <div className="font-semibold text-gray-900 truncate text-sm">
+                          {resolvedName}
                         </div>
-                        <div className="text-sm text-gray-500 truncate">
-                          {user?.email || "dealer@example.com"}
+                        <div className="text-xs text-gray-500 truncate">
+                          {user?.email || "dealer@holatractor.com"}
                         </div>
                       </div>
                     </div>

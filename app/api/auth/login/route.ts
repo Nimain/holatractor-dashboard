@@ -36,7 +36,8 @@ function isRoleAdmin(r: any): boolean {
 }
 
 function createAuthResponse(data: any, fallbackRoles: string[] = [], fallbackIsAdmin: boolean = false) {
-  const token = data.access_token || data.token || data.accessToken;
+  const payload = data?.data && typeof data.data === "object" ? { ...data.data, ...data } : data;
+  const token = payload.access_token || payload.token || payload.accessToken || data.access_token || data.token || data.accessToken;
   let jwtPayload: any = {};
   if (token && typeof token === "string" && token.includes(".")) {
     try {
@@ -55,7 +56,7 @@ function createAuthResponse(data: any, fallbackRoles: string[] = [], fallbackIsA
     } catch {}
   }
 
-  const email = (data.email || data.user?.email || jwtPayload.email || "").toLowerCase().trim();
+  const email = (payload.email || payload.user?.email || jwtPayload.email || data.email || "").toLowerCase().trim();
   const isAdminEmail =
     email === "sistemas@holatractor.com" ||
     email === "admin@holatractor.com" ||
@@ -66,43 +67,74 @@ function createAuthResponse(data: any, fallbackRoles: string[] = [], fallbackIsA
   const isAdmin =
     fallbackIsAdmin ||
     isAdminEmail ||
-    data.isAdmin === true ||
-    data.isSuperAdmin === true ||
-    data.user?.isAdmin === true ||
-    data.user?.isSuperAdmin === true ||
+    payload.isAdmin === true ||
+    payload.isSuperAdmin === true ||
+    payload.user?.isAdmin === true ||
+    payload.user?.isSuperAdmin === true ||
     jwtPayload.isAdmin === true ||
     jwtPayload.isSuperAdmin === true ||
-    (Array.isArray(data.role) && data.role.some(isRoleAdmin)) ||
-    (Array.isArray(data.roles) && data.roles.some(isRoleAdmin)) ||
-    (Array.isArray(data.user?.role) && data.user.role.some(isRoleAdmin)) ||
-    (Array.isArray(data.user?.roles) && data.user.roles.some(isRoleAdmin)) ||
+    (Array.isArray(payload.role) && payload.role.some(isRoleAdmin)) ||
+    (Array.isArray(payload.roles) && payload.roles.some(isRoleAdmin)) ||
+    (Array.isArray(payload.user?.role) && payload.user.role.some(isRoleAdmin)) ||
+    (Array.isArray(payload.user?.roles) && payload.user.roles.some(isRoleAdmin)) ||
     (Array.isArray(jwtPayload.role) && jwtPayload.role.some(isRoleAdmin)) ||
     (Array.isArray(jwtPayload.roles) && jwtPayload.roles.some(isRoleAdmin)) ||
-    (typeof data.role === "string" && isRoleAdmin(data.role)) ||
-    (typeof data.roles === "string" && isRoleAdmin(data.roles)) ||
+    (typeof payload.role === "string" && isRoleAdmin(payload.role)) ||
+    (typeof payload.roles === "string" && isRoleAdmin(payload.roles)) ||
     (typeof jwtPayload.role === "string" && isRoleAdmin(jwtPayload.role));
 
-  const isOwner = !isAdmin && (data.isOwner === true || data.user?.isOwner === true || jwtPayload.isOwner === true || fallbackRoles.includes("owner"));
-  const isDealer = !isAdmin && (data.isDealer === true || data.user?.isDealer === true || jwtPayload.isDealer === true || fallbackRoles.includes("dealer"));
-  const isOperator = !isAdmin && (data.isOperator === true || data.user?.isOperator === true || jwtPayload.isOperator === true || fallbackRoles.includes("operator"));
-  const isAgent = !isAdmin && (data.isAgent === true || data.user?.isAgent === true || jwtPayload.isAgent === true || fallbackRoles.includes("agent"));
+  const isDealer = !isAdmin && (
+    fallbackRoles.includes("dealer") ||
+    payload.isDealer === true ||
+    payload.user?.isDealer === true ||
+    jwtPayload.isDealer === true ||
+    Boolean(payload.dealer_id || payload.dealerId || jwtPayload.dealer_id || jwtPayload.dealerId) ||
+    payload.active_role === "dealer" ||
+    jwtPayload.role === "dealer" ||
+    (Array.isArray(payload.role) && payload.role.some((r: any) => String(r).toLowerCase() === "dealer")) ||
+    (Array.isArray(payload.roles) && payload.roles.some((r: any) => String(r).toLowerCase() === "dealer")) ||
+    (typeof payload.role === "string" && payload.role.toLowerCase() === "dealer") ||
+    (Array.isArray(jwtPayload.role) && jwtPayload.role.some((r: any) => String(r).toLowerCase() === "dealer")) ||
+    (Array.isArray(jwtPayload.roles) && jwtPayload.roles.some((r: any) => String(r).toLowerCase() === "dealer")) ||
+    (typeof jwtPayload.role === "string" && jwtPayload.role.toLowerCase() === "dealer")
+  );
+
+  const hasGenuineOwnerRecord = fallbackRoles.includes("owner") || Boolean(payload.owner_id || payload.ownerId || jwtPayload.owner_id || jwtPayload.ownerId);
+
+  const isOwner = !isAdmin && (
+    hasGenuineOwnerRecord ||
+    (!isDealer && (
+      payload.isOwner === true ||
+      payload.user?.isOwner === true ||
+      jwtPayload.isOwner === true ||
+      (Array.isArray(payload.role) && payload.role.some((r: any) => String(r).toLowerCase() === "owner")) ||
+      (Array.isArray(payload.roles) && payload.roles.some((r: any) => String(r).toLowerCase() === "owner")) ||
+      (typeof payload.role === "string" && payload.role.toLowerCase() === "owner") ||
+      (Array.isArray(jwtPayload.role) && jwtPayload.role.some((r: any) => String(r).toLowerCase() === "owner")) ||
+      (Array.isArray(jwtPayload.roles) && jwtPayload.roles.some((r: any) => String(r).toLowerCase() === "owner")) ||
+      (typeof jwtPayload.role === "string" && jwtPayload.role.toLowerCase() === "owner")
+    ))
+  );
+
+  const isOperator = !isAdmin && (payload.isOperator === true || payload.user?.isOperator === true || jwtPayload.isOperator === true || fallbackRoles.includes("operator"));
+  const isAgent = !isAdmin && (payload.isAgent === true || payload.user?.isAgent === true || jwtPayload.isAgent === true || fallbackRoles.includes("agent"));
   const isFarmer = !isAdmin && !isOwner && !isDealer && !isOperator && !isAgent;
 
   const roles = isAdmin
     ? ["admin", "superAdmin"]
     : [
-        ...(isOwner ? ["owner"] : []),
         ...(isDealer ? ["dealer"] : []),
+        ...(isOwner ? ["owner"] : []),
         ...(isOperator ? ["operator"] : []),
         ...(isAgent ? ["agent"] : []),
         ...(isFarmer ? ["farmer"] : []),
       ];
 
   const userObj = {
-    ...(data.user || {}),
+    ...(payload.user || {}),
     ...jwtPayload,
-    userId: data.user?.userId || data.user?.id || jwtPayload.userId || jwtPayload.id || jwtPayload.sub || data.userId || data.id || (isAdmin ? "admin_sistemas" : "user_1"),
-    name: data.user?.name || jwtPayload.name || (isAdmin ? "Sistemas HolaTractor" : "User"),
+    userId: payload.user?.userId || payload.user?.id || jwtPayload.userId || jwtPayload.id || jwtPayload.sub || payload.userId || payload.id || (isAdmin ? "admin_sistemas" : "user_1"),
+    name: payload.user?.name || jwtPayload.name || (isAdmin ? "Sistemas HolaTractor" : "User"),
     email,
     isAdmin,
     isSuperAdmin: isAdmin,
@@ -111,11 +143,14 @@ function createAuthResponse(data: any, fallbackRoles: string[] = [], fallbackIsA
     isOperator,
     isAgent,
     isFarmer,
+    dealer_id: payload.dealer_id || payload.dealerId || jwtPayload.dealer_id || jwtPayload.dealerId || undefined,
+    owner_id: payload.owner_id || payload.ownerId || jwtPayload.owner_id || jwtPayload.ownerId || undefined,
     role: roles,
     roles,
   };
 
   const responseData = {
+    ...payload,
     ...data,
     success: true,
     access_token: token,
@@ -129,6 +164,8 @@ function createAuthResponse(data: any, fallbackRoles: string[] = [], fallbackIsA
     isOperator,
     isAgent,
     isFarmer,
+    dealer_id: userObj.dealer_id,
+    owner_id: userObj.owner_id,
     role: roles,
     roles,
     active_role: isAdmin ? "admin" : (roles[0] || "farmer"),
@@ -181,6 +218,34 @@ export async function POST(request: NextRequest) {
       email.startsWith("admin@") ||
       email.startsWith("sistemas@");
 
+    // Fetch verified roles from PostgreSQL
+    let dbRoles: string[] = [];
+    let dbUser: any = null;
+    try {
+      const userRes = await pool.query(
+        `SELECT id, first_name, last_name, email, password, image FROM "User" WHERE LOWER(email) = LOWER($1) LIMIT 1`,
+        [email]
+      );
+      if (userRes.rows.length > 0) {
+        dbUser = userRes.rows[0];
+        const uid = dbUser.id;
+        const [dRes, oRes, fRes, opRes, agRes] = await Promise.all([
+          pool.query(`SELECT id FROM "Dealer" WHERE user_id = $1 LIMIT 1`, [uid]).catch(() => ({ rows: [] })),
+          pool.query(`SELECT id FROM "Owner" WHERE user_id = $1 LIMIT 1`, [uid]).catch(() => ({ rows: [] })),
+          pool.query(`SELECT id FROM "Farmer" WHERE user_id = $1 LIMIT 1`, [uid]).catch(() => ({ rows: [] })),
+          pool.query(`SELECT id FROM "Operator" WHERE user_id = $1 LIMIT 1`, [uid]).catch(() => ({ rows: [] })),
+          pool.query(`SELECT id FROM "Agent" WHERE user_id = $1 LIMIT 1`, [uid]).catch(() => ({ rows: [] })),
+        ]);
+        if (dRes.rows.length > 0) dbRoles.push("dealer");
+        if (oRes.rows.length > 0) dbRoles.push("owner");
+        if (fRes.rows.length > 0) dbRoles.push("farmer");
+        if (opRes.rows.length > 0) dbRoles.push("operator");
+        if (agRes.rows.length > 0) dbRoles.push("agent");
+      }
+    } catch (dbErr) {
+      console.warn("[/api/auth/login] Database role query notice:", dbErr);
+    }
+
     // 1. Attempt FastAPI Backend
     try {
       const fastApiRes = await axios.post(
@@ -193,20 +258,19 @@ export async function POST(request: NextRequest) {
         (fastApiRes.status === 200 || fastApiRes.status === 201) &&
         (fastApiRes.data?.access_token || fastApiRes.data?.data?.access_token)
       ) {
-        return createAuthResponse(fastApiRes.data, [], isAdminEmail);
+        return createAuthResponse(fastApiRes.data, dbRoles, isAdminEmail);
       }
     } catch (fastErr: any) {
       // FastAPI offline/error, continue to failover
     }
 
     // 2. Database / Built-in Admin Authentication Failover
-    let dbUser: any = null;
-    let roles: string[] = [];
+    let roles: string[] = [...dbRoles];
     let isFarmer = false;
-    let isOwner = false;
-    let isDealer = false;
-    let isOperator = false;
-    let isAgent = false;
+    let isOwner = dbRoles.includes("owner");
+    let isDealer = dbRoles.includes("dealer");
+    let isOperator = dbRoles.includes("operator");
+    let isAgent = dbRoles.includes("agent");
     let isAdmin = isAdminEmail;
 
     const reqName = String(body?.name || "").trim();

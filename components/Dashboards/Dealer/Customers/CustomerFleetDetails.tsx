@@ -31,6 +31,7 @@ import AddAttachmentModal from "./AddAttachmentModal";
 import FleetMapTracker, { TractorMarker } from "./FleetMapTracker";
 import { useDealerLanguage } from "@/context/DealerLanguageContext";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
+import { renderInstance } from "@/utils/Axios/RenderInstance";
 
 interface Owner {
   id: string;
@@ -112,15 +113,12 @@ export default function CustomerFleetDetails({
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Fetch live fleet data for this specific customer
+  // Fetch live dynamic fleet data from FastAPI
   const fetchCustomerFleet = useCallback(async () => {
     if (!customer?.id) return;
     try {
-      const res = await fetch(`/api/dealer/customers/${customer.id}/fleet`);
-      if (!res.ok) {
-        throw new Error("Failed to load customer fleet");
-      }
-      const data = await res.json();
+      const res = await renderInstance.get(`/dealer/customers/${customer.id}/fleet`);
+      const data = res.data || {};
       setFleet(data.fleet || []);
       setEquipment(data.equipment || []);
       setStats(
@@ -143,24 +141,18 @@ export default function CustomerFleetDetails({
     fetchCustomerFleet();
   }, [fetchCustomerFleet]);
 
-  // Handle delete item
+  // Handle delete item directly via FastAPI
   const handleDeleteItem = async (itemId: string, name: string) => {
     if (!confirm(`Are you sure you want to remove ${name} from this customer's fleet?`)) {
       return;
     }
     setDeletingId(itemId);
     try {
-      const res = await fetch(
-        `/api/dealer/customers/${customer.id}/fleet?itemId=${itemId}`,
-        { method: "DELETE" }
-      );
-      if (!res.ok) {
-        throw new Error("Failed to delete item");
-      }
+      await renderInstance.delete(`/dealer/customers/${customer.id}/fleet?itemId=${itemId}`);
       successMessage(`${name} removed from fleet`);
       fetchCustomerFleet();
     } catch (err: any) {
-      errorMessage(err?.message || "Failed to remove item");
+      errorMessage(err?.response?.data?.detail || err?.message || "Failed to remove item");
     } finally {
       setDeletingId(null);
     }

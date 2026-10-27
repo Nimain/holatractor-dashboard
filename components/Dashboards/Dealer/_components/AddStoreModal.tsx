@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FeatureGroup, MapContainer, TileLayer } from "react-leaflet"
 import { EditControl } from "react-leaflet-draw"
 import { Button } from "@/components/ui/button"
-import { MapPin, Upload, Clock, ImageIcon, FileText, Info, Trash2, Sparkles, RefreshCw, Bot, Edit3, Store } from "lucide-react"
+import { MapPin, Upload, Clock, ImageIcon, FileText, Info, Trash2, Sparkles, RefreshCw, Bot, Edit3, Store, Navigation } from "lucide-react"
 import { Backdrop, CircularProgress } from "@mui/material"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import axios from "axios"
@@ -58,6 +58,9 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
   const [error, setError] = useState<string | null>(null)
   const [location, setLocation] = useState<Location>({ latitude: null, longitude: null })
   const [name, setName] = useState("")
+  const [address, setAddress] = useState("")
+  const [city, setCity] = useState("")
+  const [state, setState] = useState("")
   const [country, setCountry] = useState("")
   const [description, setDescription] = useState("")
   const [descriptionMode, setDescriptionMode] = useState<"ai" | "manual">("ai")
@@ -71,6 +74,7 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
   const [closingDays, setClosingDays] = useState<string[]>(["Sunday"])
   const [creating, setCreating] = useState(false)
   const [creatingMessage, setCreatingMessage] = useState("")
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false)
 
   const { cookie } = useCookie()
   const rawCookieUser = cookie?.get ? cookie.get("user") : null
@@ -83,6 +87,70 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
   const access_token = cookie?.get ? cookie.get("access_token") : null
   const fileInputRef = useRef<HTMLInputElement>(null)
   const bannerInputRef = useRef<HTMLInputElement>(null)
+
+  const reverseGeocode = async (lat: number, lng: number) => {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
+        headers: { "Accept-Language": "es,en" }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.address) {
+          const addr = data.address;
+          const detectedCity = addr.city || addr.town || addr.village || addr.municipality || addr.county || "";
+          const detectedState = addr.state || addr.province || addr.region || "";
+          const detectedCountry = addr.country || "";
+          const detectedRoad = addr.road || addr.neighbourhood || addr.suburb || "";
+          
+          if (detectedCity) setCity((prev) => prev || detectedCity);
+          if (detectedState) setState((prev) => prev || detectedState);
+          if (detectedCountry) setCountry((prev) => prev || detectedCountry);
+          if (detectedRoad) setAddress((prev) => prev || [detectedRoad, detectedCity].filter(Boolean).join(", "));
+        }
+      }
+    } catch (err) {
+      console.warn("Reverse geocode notice:", err);
+    }
+  };
+
+  const detectCurrentLocation = () => {
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      setIsDetectingLocation(true);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setIsDetectingLocation(false);
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          setLocation({ latitude: lat, longitude: lng });
+          reverseGeocode(lat, lng);
+          successMessage("Location detected from GPS!");
+        },
+        (err) => {
+          setIsDetectingLocation(false);
+          console.warn("Geolocation failed:", err.message);
+          errorMessage("Could not detect GPS location. Please pin on map.");
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    } else {
+      errorMessage("Geolocation not supported on this browser.");
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && typeof window !== "undefined" && navigator.geolocation && !location.latitude) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          setLocation({ latitude: lat, longitude: lng });
+          reverseGeocode(lat, lng);
+        },
+        () => {},
+        { enableHighAccuracy: true, timeout: 6000 }
+      );
+    }
+  }, [isOpen]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -105,12 +173,15 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
   }
 
   const _created = (e: any) => {
+    const lat = e.layer._latlng.lat;
+    const lng = e.layer._latlng.lng;
     const locDet: Location = {
-      latitude: e.layer._latlng.lat,
-      longitude: e.layer._latlng.lng,
+      latitude: lat,
+      longitude: lng,
     }
     setLocation(locDet)
     setLocationOpen(false)
+    reverseGeocode(lat, lng)
   }
 
   const handleGenerateAIDescription = async () => {
@@ -121,7 +192,7 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
 
       const payload = {
         storeName: name.trim() || undefined,
-        city: country.trim() || undefined,
+        city: (city || country).trim() || undefined,
         country: country.trim() || undefined,
         specialty: aiSpecialty,
         language: aiLanguage,
@@ -183,8 +254,10 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
       return
     }
     if (!location.latitude || !location.longitude) {
-      errorMessage("Please select store location")
-      return
+      if (!city && !country && !address) {
+        errorMessage("Please provide a store location or pin on map")
+        return
+      }
     }
 
     setCreating(true)
@@ -222,7 +295,9 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
     // Resilient Auth Token resolution guaranteed to never be missing
     const authToken = ensureAuthToken() || access_token || getAuthToken();
     const authUser = getAuthUser();
-    const currentOwnerId = user?.userId || authUser?.userId || authUser?.id || "cm_dealer_default";
+    const dealerIdFromCookie = cookie?.get ? (cookie.get("dealer_id") || cookie.get("dealerId")) : null;
+    const directDealerId = (user as any)?.dealer_id || (user as any)?.dealerId || (authUser as any)?.dealer_id || (authUser as any)?.dealerId || dealerIdFromCookie;
+    const currentOwnerId = directDealerId || user?.userId || authUser?.userId || authUser?.id || "cm_dealer_default";
 
     const openTimeStr = openingTime && openingTime.trim() ? openingTime.trim() : "08:00";
     const closeTimeStr = closingTime && closingTime.trim() ? closingTime.trim() : "20:00";
@@ -233,11 +308,18 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
     const finalBanners = bannerImages.length > 0 ? bannerImages : [finalLogo];
 
     const storeData = {
-      store_lat: `${location.latitude}`,
-      store_lan: `${location.longitude}`,
+      store_lat: location.latitude ? `${location.latitude}` : undefined,
+      store_lan: location.longitude ? `${location.longitude}` : undefined,
+      lat: location.latitude ? `${location.latitude}` : undefined,
+      lan: location.longitude ? `${location.longitude}` : undefined,
       owner_id: currentOwnerId,
+      dealer_id: directDealerId || currentOwnerId,
       name,
       description,
+      address: address.trim() || undefined,
+      city: city.trim() || undefined,
+      state: state.trim() || undefined,
+      country: country.trim() || undefined,
       banner: finalBanners,
       logo: finalLogo,
       opening_time: new Date(`1970-01-01T${safeOpenTime}:00.000Z`),
@@ -245,7 +327,7 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
       closing_days: closingDays.length > 0 ? closingDays : ["Sunday"],
     }
 
-    console.log("Submitting store data:", storeData)
+    console.log("Submitting dynamic store data:", storeData)
     const submitHeaders = authToken ? { Authorization: `Bearer ${authToken}` } : {};
 
     try {
@@ -256,6 +338,9 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
       if (res.status === 201 || res.status === 200) {
         successMessage("Store created successfully");
         setName("");
+        setAddress("");
+        setCity("");
+        setState("");
         setCountry("");
         setDescription("");
         setHasAIGenerated(false);
@@ -281,6 +366,9 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
         if (localRes.status === 201 || localRes.status === 200) {
           successMessage("Store created successfully");
           setName("");
+          setAddress("");
+          setCity("");
+          setState("");
           setCountry("");
           setDescription("");
           setHasAIGenerated(false);
@@ -337,6 +425,9 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
   useEffect(() => {
     if (!isOpen) {
       setName("")
+      setAddress("")
+      setCity("")
+      setState("")
       setCountry("")
       setDescription("")
       setOpeningTime("08:00")
@@ -380,7 +471,7 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
         <div className="space-y-6 pt-2">
           {/* Basic Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 md:col-span-2">
               <Label htmlFor="name" className="text-xs font-semibold text-slate-700">
                 Store Branch Name <span className="text-red-500">*</span>
               </Label>
@@ -392,15 +483,60 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
                 className="bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-[#A10A0C] focus:ring-1 focus:ring-[#A10A0C] rounded-xl text-sm"
               />
             </div>
+
+            {/* Street Address */}
+            <div className="space-y-1.5 md:col-span-2">
+              <Label htmlFor="address" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-[#A10A0C]" />
+                Street Address / Showroom Location
+              </Label>
+              <Input
+                id="address"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="e.g. Av. Cristo Redentor Km 8.5 / NH-16 Main Highway"
+                className="bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-[#A10A0C] focus:ring-1 focus:ring-[#A10A0C] rounded-xl text-sm"
+              />
+            </div>
+
+            {/* City */}
             <div className="space-y-1.5">
+              <Label htmlFor="city" className="text-xs font-semibold text-slate-700">
+                City / Municipality <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="city"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="e.g. Santa Cruz / Balasore / Cochabamba"
+                className="bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-[#A10A0C] focus:ring-1 focus:ring-[#A10A0C] rounded-xl text-sm"
+              />
+            </div>
+
+            {/* State / Province */}
+            <div className="space-y-1.5">
+              <Label htmlFor="state" className="text-xs font-semibold text-slate-700">
+                State / Department / Province
+              </Label>
+              <Input
+                id="state"
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+                placeholder="e.g. Santa Cruz / Odisha / Tarija"
+                className="bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-[#A10A0C] focus:ring-1 focus:ring-[#A10A0C] rounded-xl text-sm"
+              />
+            </div>
+
+            {/* Country */}
+            <div className="space-y-1.5 md:col-span-2">
               <Label htmlFor="country" className="text-xs font-semibold text-slate-700">
-                Country / Region <span className="text-red-500">*</span>
+                Country <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="country"
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
-                placeholder="e.g. Bolivia, Santa Cruz"
+                placeholder="e.g. Bolivia / India / Argentina / Mexico"
                 className="bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-[#A10A0C] focus:ring-1 focus:ring-[#A10A0C] rounded-xl text-sm"
               />
             </div>
@@ -733,6 +869,16 @@ const DealerStoreModal = ({ isOpen, onClose, onStoreCreated }: DealerStoreModalP
                   readOnly
                   className="bg-white border-slate-200 text-slate-800 text-xs rounded-xl"
                 />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={detectCurrentLocation}
+                  disabled={isDetectingLocation}
+                  className="border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl flex-shrink-0"
+                >
+                  <Navigation className={`w-3.5 h-3.5 mr-1.5 text-[#A10A0C] ${isDetectingLocation ? "animate-spin" : ""}`} />
+                  {isDetectingLocation ? "Detecting..." : "Detect GPS"}
+                </Button>
                 <Dialog open={locationOpen} onOpenChange={setLocationOpen}>
                   <Button
                     type="button"

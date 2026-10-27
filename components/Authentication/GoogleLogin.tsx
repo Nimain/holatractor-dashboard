@@ -27,6 +27,9 @@ import { Badge } from '../ui/badge';
 import { uploadFileToS3 } from '@/utils/AWS/FileUpload';
 import { useCookie } from 'next-cookie';
 import { useRouter } from 'next/navigation';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/redux/store';
+import { authTranslations, AuthLanguage } from '@/utils/translation/authTranslations';
 
 interface GoogleResBody {
     email: string;
@@ -52,6 +55,10 @@ const roles = [
 ]
 
 function App() {
+    const activeLang = useSelector((state: RootState) => state.ActiveLanguage.language) as AuthLanguage;
+    const currentLang = activeLang === 'es' ? 'es' : 'en';
+    const t = authTranslations[currentLang] || authTranslations.en;
+
     const [googleRes, setGoogleRes] = useState<GoogleResBody | null>(null)
     const [dialogOpen, setDialogOpen] = useState(false)
     const [loading, setLoading] = useState(false)
@@ -1108,7 +1115,7 @@ function App() {
 
     return (
         <div className="flex items-center justify-center gap-[10px]" onClick={() => { login() }}>
-            Or continue with
+            <span>{t.orContinueWith}</span>
             <Image
                 src={
                     "https://res.cloudinary.com/spiralyze/image/upload/v1694499636/expensify/1001/icon-googlesvg.svg"

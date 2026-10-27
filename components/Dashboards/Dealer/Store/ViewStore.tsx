@@ -142,12 +142,12 @@ export default function ResponsiveDealerDashboard() {
     intervalData: PerformancePoint[]
   }>({
     summary: {
-      totalStores: 18,
-      totalLeads: 42,
-      recentLeads: 14,
-      overallPerformanceScore: "84.0%",
-      growthRate: "+16.2%",
-      topPerformingStore: "Tractor Dealer Store",
+      totalStores: 0,
+      totalLeads: 0,
+      recentLeads: 0,
+      overallPerformanceScore: "0%",
+      growthRate: "0%",
+      topPerformingStore: "",
     },
     chartData: [
       { name: "May", value: 45, leads: 18, inventory: 27, fill: "#A10A0C" },
@@ -189,69 +189,65 @@ export default function ResponsiveDealerDashboard() {
   const authUser = getAuthUser()
   const displayUser = cookieUser || authUser
 
-  // Fetch stores from APIs
+  const targetDealerId = useMemo(() => {
+    return (
+      cookieUser?.dealer_id ||
+      cookieUser?.dealerId ||
+      (authUser as any)?.dealer_id ||
+      (typeof window !== "undefined" ? localStorage.getItem("dealer_id") : null) ||
+      ""
+    )
+  }, [cookieUser?.dealer_id, cookieUser?.dealerId, (authUser as any)?.dealer_id])
+
+  const targetUserId = useMemo(() => {
+    return (
+      cookieUser?.userId ||
+      cookieUser?.id ||
+      authUser?.userId ||
+      authUser?.id ||
+      (typeof window !== "undefined" ? (localStorage.getItem("userId") || localStorage.getItem("id")) : null) ||
+      ""
+    )
+  }, [cookieUser?.userId, cookieUser?.id, authUser?.userId, authUser?.id])
+
+  const targetUid = targetDealerId || targetUserId
+
+  // Fetch stores directly from FastAPI (b2bholatractor)
   const fetchStores = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
     setIsRefreshing(true)
 
     const token = getAuthToken() || access_token
-    const targetUid = cookieUser?.userId || cookieUser?.id || authUser?.userId || authUser?.id || "all"
     const reqHeaders = token ? { Authorization: `Bearer ${token}` } : {}
 
     try {
-      // 1. Direct Next.js dynamic API (/api/dealer/all-stores)
-      try {
-        const localRes = await axios.get(`/api/dealer/all-stores/${targetUid}`, {
-          headers: reqHeaders,
-          timeout: 8000,
-        })
-        if (localRes.status === 200 && Array.isArray(localRes.data) && localRes.data.length > 0) {
-          setStores(localRes.data)
-          return
-        }
-      } catch (localErr) {
-        console.warn("Direct /api/dealer/all-stores fetch attempt:", localErr)
-      }
-
-      // 2. Try renderInstance dynamic backend
-      try {
-        const renderRes = await renderInstance.get(`/dealer/all-stores/${targetUid}`, {
-          headers: reqHeaders,
-        })
-        if (renderRes.status === 200 && Array.isArray(renderRes.data) && renderRes.data.length > 0) {
+      if (targetUid) {
+        const renderRes = await renderInstance.get(
+          `/dealer/all-stores/${encodeURIComponent(targetUid)}`,
+          { headers: reqHeaders }
+        )
+        if (renderRes.status === 200 && Array.isArray(renderRes.data)) {
           setStores(renderRes.data)
           return
         }
-      } catch (renderErr) {
-        console.warn("RenderInstance all-stores error:", renderErr)
       }
-
-      // 4. Fallback to /all on internal /api
-      try {
-        const allRes = await axios.get(`/api/dealer/all-stores/all`, {
-          headers: reqHeaders,
-          timeout: 8000,
-        })
-        if (allRes.status === 200 && Array.isArray(allRes.data)) {
-          setStores(allRes.data)
-          return
-        }
-      } catch (allErr) {
-        console.warn("Fallback to all-stores/all error:", allErr)
-      }
+      setStores([])
     } catch (error) {
-      console.error("Error fetching stores:", error)
+      console.error("FastAPI error fetching stores:", error)
+      setStores([])
     } finally {
       setLoading(false)
       setIsRefreshing(false)
     }
-  }, [cookieUser?.userId, cookieUser?.id, authUser?.userId, authUser?.id, access_token])
+  }, [targetUid, access_token])
 
-  // Fetch Store Performance Data dynamically from API
+  // Fetch Store Performance Data directly from FastAPI (b2bholatractor)
   const fetchPerformanceData = useCallback(async () => {
     setLoadingPerformance(true)
     try {
-      const res = await axios.get("/api/dealer/store/performance", { timeout: 8000 })
+      const res = await renderInstance.get(
+        `/dealer/store/performance?dealer_id=${encodeURIComponent(targetDealerId || targetUid)}`
+      )
       if (res.data?.success) {
         setPerformanceData({
           summary: res.data.summary || {},
@@ -259,45 +255,23 @@ export default function ResponsiveDealerDashboard() {
           intervalData: res.data.intervalData || [],
         })
       }
-    } catch (err) {
-      console.warn("Error fetching store performance API:", err)
+    } catch (perfErr) {
+      console.warn("FastAPI store performance fetch notice:", perfErr)
     } finally {
       setLoadingPerformance(false)
     }
-  }, [])
+  }, [targetDealerId, targetUid])
 
-  // Fetch Dealer Network dynamically from API
+  // Fetch Dealer Network dynamically from FastAPI (b2bholatractor)
   const fetchDealers = useCallback(async () => {
     setLoadingDealers(true)
     try {
-      // 1. Next.js local API route /api/dealer
-      try {
-        const res = await axios.get("/api/dealer", { timeout: 7000 })
-        if (Array.isArray(res.data) && res.data.length > 0) {
-          // De-duplicate by user email or id
-          const unique = res.data.filter((d: any, idx: number, arr: any[]) => {
-            const email = (d.user?.email || d.id || "").toLowerCase()
-            return arr.findIndex((x: any) => (x.user?.email || x.id || "").toLowerCase() === email) === idx
-          })
-          setDealers(unique)
-          return
-        }
-      } catch (e) {
-        console.warn("Local /api/dealer fetch attempt:", e)
-      }
-
-      // 2. Dynamic backend fallback
-      try {
-        const fastRes = await renderInstance.get("/dealer/all")
-        if (Array.isArray(fastRes.data) && fastRes.data.length > 0) {
-          setDealers(fastRes.data)
-          return
-        }
-      } catch (fe) {
-        console.warn("Backend /dealer/all fetch attempt:", fe)
+      const fastRes = await renderInstance.get("/dealer/all")
+      if (Array.isArray(fastRes.data)) {
+        setDealers(fastRes.data)
       }
     } catch (err) {
-      console.error("Error fetching dealers list:", err)
+      console.error("FastAPI error fetching dealers:", err)
     } finally {
       setLoadingDealers(false)
     }
@@ -309,16 +283,15 @@ export default function ResponsiveDealerDashboard() {
     fetchDealers()
   }, [fetchStores, fetchPerformanceData, fetchDealers])
 
-  // Window focus auto-refresh so returning to the tab re-syncs state dynamically
+  // Window focus auto-refresh (stable callback)
   useEffect(() => {
     const handleFocus = () => {
       fetchStores(true)
       fetchPerformanceData()
-      fetchDealers()
     }
     window.addEventListener("focus", handleFocus)
     return () => window.removeEventListener("focus", handleFocus)
-  }, [fetchStores, fetchPerformanceData, fetchDealers])
+  }, [fetchStores, fetchPerformanceData])
 
   const formatTime = (timeString: string) => {
     try {

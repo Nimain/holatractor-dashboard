@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { ArrowLeft, Share2, Camera, MapPin, Clock, Calendar, Plus, Search, Loader2, Tractor, Wrench, Check, Copy, RefreshCw, Building2 } from "lucide-react"
+import { ArrowLeft, Share2, Camera, MapPin, Clock, Calendar, Plus, Search, Loader2, Tractor, Wrench, Check, Copy, RefreshCw, Building2, Edit3, Navigation } from "lucide-react"
 import Image from "next/image"
 import { getSafeImageSrc, isValidImageSrc } from "@/utils/image/safeImage"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -188,6 +188,135 @@ export default function StorePage() {
   const { cookie } = useCookie()
   const access_token = cookie?.get ? cookie.get("access_token") : null
 
+  // Edit Store State
+  const [editStoreOpen, setEditStoreOpen] = useState(false)
+  const [editName, setEditName] = useState("")
+  const [editDescription, setEditDescription] = useState("")
+  const [editAddress, setEditAddress] = useState("")
+  const [editCity, setEditCity] = useState("")
+  const [editState, setEditState] = useState("")
+  const [editCountry, setEditCountry] = useState("")
+  const [editLat, setEditLat] = useState("")
+  const [editLan, setEditLan] = useState("")
+  const [editOpenTime, setEditOpenTime] = useState("08:00")
+  const [editCloseTime, setEditCloseTime] = useState("20:00")
+  const [isUpdatingStore, setIsUpdatingStore] = useState(false)
+  const [isDetectingEditGps, setIsDetectingEditGps] = useState(false)
+
+  const openEditModal = () => {
+    if (!store) return
+    setEditName(store.name || "")
+    setEditDescription(store.description || "")
+    setEditAddress(store.location?.address || "")
+    setEditCity(store.location?.city || "")
+    setEditState(store.location?.state || "")
+    setEditCountry(store.location?.country || "")
+    setEditLat(store.location?.lat || "")
+    setEditLan(store.location?.lan || "")
+    setEditOpenTime(formatTimeOnly(store.opening_time) || "08:00")
+    setEditCloseTime(formatTimeOnly(store.closing_time) || "20:00")
+    setEditStoreOpen(true)
+  }
+
+  const reverseGeocodeEdit = async (lat: number, lng: number) => {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
+        headers: { "Accept-Language": "es,en" }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.address) {
+          const addr = data.address;
+          const detectedCity = addr.city || addr.town || addr.village || addr.municipality || addr.county || "";
+          const detectedState = addr.state || addr.province || addr.region || "";
+          const detectedCountry = addr.country || "";
+          const detectedRoad = addr.road || addr.neighbourhood || addr.suburb || "";
+          
+          if (detectedCity) setEditCity(detectedCity);
+          if (detectedState) setEditState(detectedState);
+          if (detectedCountry) setEditCountry(detectedCountry);
+          if (detectedRoad) setEditAddress([detectedRoad, detectedCity].filter(Boolean).join(", "));
+        }
+      }
+    } catch (err) {
+      console.warn("Reverse geocode edit notice:", err);
+    }
+  };
+
+  const detectEditLocation = () => {
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      setIsDetectingEditGps(true);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setIsDetectingEditGps(false);
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          setEditLat(lat.toString());
+          setEditLan(lng.toString());
+          reverseGeocodeEdit(lat, lng);
+          successMessage("Location detected from GPS!");
+        },
+        (err) => {
+          setIsDetectingEditGps(false);
+          errorMessage("Could not detect GPS location.");
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    }
+  };
+
+  const handleSaveStoreLocation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!store?.id) return;
+
+    setIsUpdatingStore(true);
+    const updatePayload = {
+      name: editName.trim() || undefined,
+      description: editDescription.trim() || undefined,
+      address: editAddress.trim() || undefined,
+      city: editCity.trim() || undefined,
+      state: editState.trim() || undefined,
+      country: editCountry.trim() || undefined,
+      lat: editLat.trim() || undefined,
+      lan: editLan.trim() || undefined,
+      store_lat: editLat.trim() || undefined,
+      store_lan: editLan.trim() || undefined,
+      opening_time: editOpenTime ? new Date(`1970-01-01T${editOpenTime}:00.000Z`) : undefined,
+      closing_time: editCloseTime ? new Date(`1970-01-01T${editCloseTime}:00.000Z`) : undefined,
+    };
+
+    try {
+      const token = access_token || (typeof window !== "undefined" ? localStorage.getItem("token") : "");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      
+      const res = await axios.put(`/api/dealer/store/${store.id}`, updatePayload, { headers });
+      if (res.status === 200 && res.data) {
+        successMessage("Store location & details updated successfully!");
+        setStore(res.data);
+        setEditStoreOpen(false);
+        fetchStore();
+        return;
+      }
+    } catch (err: any) {
+      console.warn("Proxy update failed, trying direct FastAPI fallback:", err);
+      try {
+        const directRes = await renderInstance.put(`/dealer/store/${store.id}`, updatePayload);
+        if (directRes.status === 200 && directRes.data) {
+          successMessage("Store location & details updated successfully!");
+          setStore(directRes.data);
+          setEditStoreOpen(false);
+          fetchStore();
+          return;
+        }
+      } catch (directErr: any) {
+        console.error("Direct FastAPI store update failed:", directErr);
+        errorMessage(directErr?.response?.data?.detail || err?.response?.data?.error || "Failed to update store location");
+      }
+    } finally {
+      setIsUpdatingStore(false);
+    }
+  };
+
   // Filter functions for the attachment selection modal
   const filteredAttachments = allAttachments.filter((attachment) =>
     attachment.name.toLowerCase().includes(searchTerm.toLowerCase()),
@@ -198,35 +327,23 @@ export default function StorePage() {
     if (!slug) return
     setFetchingStore(true)
     try {
-      try {
-        const localRes = await axios.get(`/api/dealer/store/${slug}`, {
-          headers: access_token ? { Authorization: `Bearer ${access_token}` } : {},
-          timeout: 8000,
-        })
-        if (localRes.status === 200 && localRes.data && localRes.data.id) {
-          setStore(localRes.data)
-          return
-        }
-      } catch (localErr) {
-        console.warn("Direct /api/dealer/store fetch attempt:", localErr)
-      }
-
-      try {
-        const localRes = await axios.get(`/api/dealer/store/${slug}`, {
-          headers: access_token ? { Authorization: `Bearer ${access_token}` } : {},
-          timeout: 8000,
-        })
-        if (localRes.status === 200 && localRes.data && localRes.data.id) {
-          setStore(localRes.data)
-          return
-        }
-      } catch (localErr) {
-        console.warn("Direct /api/dealer/store fetch attempt:", localErr)
-      }
-
       const res = await renderInstance.get(`/dealer/store/${slug}`)
       setStore(res.data)
     } catch (err: any) {
+      console.warn("FastAPI fetch store failed, trying local fallback:", err?.message)
+      try {
+        const localRes = await axios.get(`/api/dealer/store/${slug}`, {
+          headers: access_token ? { Authorization: `Bearer ${access_token}` } : {},
+          timeout: 8000,
+        })
+        if (localRes.status === 200 && localRes.data && localRes.data.id) {
+          setStore(localRes.data)
+          return
+        }
+      } catch (localErr) {
+        console.error("Local store fetch also failed:", localErr)
+      }
+
       console.error("Error fetching store:", err)
       if (err.response && err.response.status === 404 && err.response.data?.message === "Store not found") {
         errorMessage("Store not found")
@@ -400,7 +517,10 @@ export default function StorePage() {
     if (geocodeLoading) {
       return "Resolving location address..."
     }
-    return `${store.location.lat || "-17.7833"}, ${store.location.lan || "-63.1821"}`
+    if (store.location.lat && store.location.lan) {
+      return `${store.location.lat}, ${store.location.lan}`
+    }
+    return "Location on record"
   }
 
   const getAllTractors = () => {
@@ -642,6 +762,15 @@ export default function StorePage() {
               <Button
                 variant="secondary"
                 size="sm"
+                onClick={openEditModal}
+                className="rounded-full bg-white/90 hover:bg-white text-gray-800 backdrop-blur-md shadow-md gap-1.5 text-xs font-semibold h-8 px-3.5 hover:text-[#A10A0C]"
+              >
+                <Edit3 className="h-3.5 w-3.5 text-[#A10A0C]" />
+                <span>Edit Location & Store</span>
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   if (typeof navigator !== "undefined" && navigator.share) {
                     navigator.share({ title: store.name, url: window.location.href }).catch(() => {})
@@ -692,7 +821,11 @@ export default function StorePage() {
 
                   <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full text-slate-200 border border-white/10">
                     <MapPin className="w-3.5 h-3.5 text-rose-400" />
-                    <span>{store.location?.city || "Santa Cruz"}, {store.location?.country || "Bolivia"}</span>
+                    <span>
+                      {[store.location?.city, store.location?.state, store.location?.country]
+                        .filter(Boolean)
+                        .join(", ") || store.location?.address || "Location on record"}
+                    </span>
                   </div>
 
                   <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full text-slate-200 border border-white/10">
@@ -1127,6 +1260,214 @@ export default function StorePage() {
             </div>
           </DialogContent>
         )}
+      </Dialog>
+
+      {/* Edit Store Location & Profile Modal */}
+      <Dialog open={editStoreOpen} onOpenChange={setEditStoreOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-white text-slate-900 border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-2xl">
+          <DialogHeader className="pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-50 text-[#A10A0C] flex items-center justify-center flex-shrink-0">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-extrabold text-slate-900">
+                  Update Store & Location
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 mt-0.5">
+                  Update your showroom branch information, real geographic location, and operational schedule.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveStoreLocation} className="space-y-5 pt-3">
+            {/* Store Name & Description */}
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="editName" className="text-xs font-semibold text-slate-700">
+                  Store Branch Name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="editName"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="e.g. Central Dealership Showroom"
+                  required
+                  className="bg-white border-slate-200 text-slate-900 rounded-xl text-xs sm:text-sm"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="editDescription" className="text-xs font-semibold text-slate-700">
+                  Store Bio / Description
+                </Label>
+                <textarea
+                  id="editDescription"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={2}
+                  placeholder="Official dealership description..."
+                  className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#A10A0C] resize-none"
+                />
+              </div>
+            </div>
+
+            {/* Dynamic Location Section */}
+            <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-4 sm:p-5 space-y-3.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+                  <MapPin className="w-4 h-4 text-[#A10A0C]" />
+                  Geographic Location (Dynamic)
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={detectEditLocation}
+                  disabled={isDetectingEditGps}
+                  className="h-7.5 px-3 border-slate-200 hover:bg-white text-slate-700 text-xs font-semibold rounded-lg shadow-xs"
+                >
+                  <Navigation className={`w-3.5 h-3.5 mr-1 text-[#A10A0C] ${isDetectingEditGps ? "animate-spin" : ""}`} />
+                  {isDetectingEditGps ? "Detecting GPS..." : "Auto-Detect GPS"}
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                {/* Street Address */}
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label htmlFor="editAddress" className="text-xs font-semibold text-slate-700">
+                    Street Address / Highway
+                  </Label>
+                  <Input
+                    id="editAddress"
+                    value={editAddress}
+                    onChange={(e) => setEditAddress(e.target.value)}
+                    placeholder="e.g. Km 9 Doble Vía / Main Commercial Road"
+                    className="bg-white border-slate-200 text-slate-900 rounded-xl text-xs sm:text-sm"
+                  />
+                </div>
+
+                {/* City */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="editCity" className="text-xs font-semibold text-slate-700">
+                    City / Municipality <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="editCity"
+                    value={editCity}
+                    onChange={(e) => setEditCity(e.target.value)}
+                    placeholder="e.g. Santa Cruz, Balasore, Cochabamba"
+                    required
+                    className="bg-white border-slate-200 text-slate-900 rounded-xl text-xs sm:text-sm"
+                  />
+                </div>
+
+                {/* State */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="editState" className="text-xs font-semibold text-slate-700">
+                    State / Department / Province
+                  </Label>
+                  <Input
+                    id="editState"
+                    value={editState}
+                    onChange={(e) => setEditState(e.target.value)}
+                    placeholder="e.g. Santa Cruz, Odisha, Tarija"
+                    className="bg-white border-slate-200 text-slate-900 rounded-xl text-xs sm:text-sm"
+                  />
+                </div>
+
+                {/* Country */}
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label htmlFor="editCountry" className="text-xs font-semibold text-slate-700">
+                    Country <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="editCountry"
+                    value={editCountry}
+                    onChange={(e) => setEditCountry(e.target.value)}
+                    placeholder="e.g. Bolivia, India, Argentina, Mexico"
+                    required
+                    className="bg-white border-slate-200 text-slate-900 rounded-xl text-xs sm:text-sm"
+                  />
+                </div>
+
+                {/* Coordinates */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="editLat" className="text-xs font-semibold text-slate-600">
+                    Latitude
+                  </Label>
+                  <Input
+                    id="editLat"
+                    value={editLat}
+                    onChange={(e) => setEditLat(e.target.value)}
+                    placeholder="e.g. -17.7833 or 28.628"
+                    className="bg-white border-slate-200 text-slate-900 rounded-xl text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="editLan" className="text-xs font-semibold text-slate-600">
+                    Longitude
+                  </Label>
+                  <Input
+                    id="editLan"
+                    value={editLan}
+                    onChange={(e) => setEditLan(e.target.value)}
+                    placeholder="e.g. -63.1821 or 77.029"
+                    className="bg-white border-slate-200 text-slate-900 rounded-xl text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Operating Hours */}
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="space-y-1.5">
+                <Label htmlFor="editOpenTime" className="text-xs font-semibold text-slate-700">
+                  Opening Time
+                </Label>
+                <Input
+                  id="editOpenTime"
+                  value={editOpenTime}
+                  onChange={(e) => setEditOpenTime(e.target.value)}
+                  placeholder="08:00"
+                  className="bg-white border-slate-200 text-slate-900 rounded-xl text-xs"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="editCloseTime" className="text-xs font-semibold text-slate-700">
+                  Closing Time
+                </Label>
+                <Input
+                  id="editCloseTime"
+                  value={editCloseTime}
+                  onChange={(e) => setEditCloseTime(e.target.value)}
+                  placeholder="20:00"
+                  className="bg-white border-slate-200 text-slate-900 rounded-xl text-xs"
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditStoreOpen(false)}
+                className="border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-semibold rounded-xl px-5 h-9"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isUpdatingStore}
+                className="bg-[#A10A0C] hover:bg-[#85080A] text-white text-xs font-bold rounded-xl px-6 h-9 shadow-xs"
+              >
+                {isUpdatingStore ? "Updating Store..." : "Save Location Changes"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
       </Dialog>
     </div>
   )

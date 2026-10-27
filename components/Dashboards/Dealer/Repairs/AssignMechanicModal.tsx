@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { X, Wrench, User, Phone, CheckCircle, Loader2 } from "lucide-react";
 import { useCookie } from "next-cookie";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
@@ -33,8 +33,18 @@ export default function AssignMechanicModal({
   onAssignSuccess, 
   repairId 
 }: AssignMechanicModalProps) {
-  const { cookie } = useCookie();
-  const cookieToken = cookie?.get("access_token");
+  const cookie = useCookie();
+  const rawCookieUser = cookie?.get ? cookie.get("user") : null;
+  const cookieToken = cookie?.get ? cookie.get("access_token") : null;
+
+  const targetDealerId = useMemo(() => {
+    try {
+      const parsed = typeof rawCookieUser === "string" ? JSON.parse(rawCookieUser) : rawCookieUser;
+      return parsed?.dealer_id || parsed?.dealerId || parsed?.userId || parsed?.id || "";
+    } catch {
+      return "";
+    }
+  }, [rawCookieUser]);
 
   const [mechanics, setMechanics] = useState<Mechanic[]>([]);
   const [selectedMechanicId, setSelectedMechanicId] = useState<string>("");
@@ -51,10 +61,11 @@ export default function AssignMechanicModal({
   const fetchMechanics = () => {
     const activeToken = getAuthToken() || cookieToken || "";
     const headers = activeToken ? { Authorization: `Bearer ${activeToken}` } : undefined;
+    const params = targetDealerId ? { dealer_id: targetDealerId } : undefined;
 
     setFetchingMechanics(true);
     renderInstance
-      .get("/dealer/mechanic", { headers })
+      .get("/dealer/mechanic", { headers, params })
       .then((res) => {
         console.log("Mechanics Response:", res.data);
         const mechanicsData = res.data?.mechanics || res.data?.data || (Array.isArray(res.data) ? res.data : []);

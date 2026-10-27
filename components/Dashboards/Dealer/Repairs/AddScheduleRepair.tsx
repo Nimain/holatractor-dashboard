@@ -1,6 +1,6 @@
 "use client";
-import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
-import { X, Wrench, MapPin, User, Hash, Check, ArrowRight, Loader2 } from "lucide-react";
+import React, { useState, useEffect, useMemo, ChangeEvent, FormEvent } from "react";
+import { X, Wrench, MapPin, User, Hash, Check, ArrowRight, Loader2, ChevronDown, Search, Truck } from "lucide-react";
 import { useCookie } from "next-cookie";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
@@ -14,6 +14,7 @@ interface AddModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddSuccess: () => void;
+  dealerId?: string;
 }
 
 interface FormData {
@@ -33,23 +34,52 @@ interface InputFieldProps {
 }
 
 const InputField = ({ icon: Icon, ...props }: InputFieldProps) => (
-  <div className="relative">
-    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-      <Icon className="text-gray-400" size={20} />
+  <div className="relative flex items-center">
+    <div className="absolute left-3.5 flex items-center pointer-events-none">
+      <Icon className="text-gray-400" size={18} />
     </div>
-    <input {...props} className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition outline-none" />
+    <input
+      {...props}
+      className="w-full h-11 pl-10 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 transition outline-none text-gray-800"
+    />
   </div>
 );
 
-export default function AddScheduleRepairModal({ isOpen, onClose, onAddSuccess }: AddModalProps) {
-  const { cookie } = useCookie();
-  const cookieToken = cookie?.get("access_token");
+export default function AddScheduleRepairModal({ isOpen, onClose, onAddSuccess, dealerId: propDealerId }: AddModalProps) {
+  const cookie = useCookie();
+  const rawCookieUser = cookie?.get ? cookie.get("user") : null;
+  const cookieToken = cookie?.get ? cookie.get("access_token") : null;
+  const authUser = getAuthUser();
 
-  const [dealerId, setDealerId] = useState<string>("");
+  const dynamicDealerId = useMemo(() => {
+    if (propDealerId && propDealerId !== "all") return propDealerId;
+    try {
+      const parsed = typeof rawCookieUser === "string" ? JSON.parse(rawCookieUser) : rawCookieUser;
+      return (
+        parsed?.dealer_id ||
+        parsed?.dealerId ||
+        (authUser as any)?.dealer_id ||
+        (typeof window !== "undefined" ? localStorage.getItem("dealer_id") : null) ||
+        parsed?.userId ||
+        parsed?.id ||
+        authUser?.userId ||
+        authUser?.id ||
+        ""
+      );
+    } catch {
+      return (authUser as any)?.dealer_id || authUser?.userId || authUser?.id || "";
+    }
+  }, [propDealerId, rawCookieUser, authUser]);
+
+  const [dealerId, setDealerId] = useState<string>(dynamicDealerId);
   const [baseId, setBaseId] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [customers, setCustomers] = useState<any[]>([]);
+  const [tractors, setTractors] = useState<any[]>([]);
+  const [loadingTractors, setLoadingTractors] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     user_id: "", 
@@ -62,42 +92,106 @@ export default function AddScheduleRepairModal({ isOpen, onClose, onAddSuccess }
     location_lng: "",
   });
 
+  // Load dealer customers
   useEffect(() => {
     if (isOpen) {
       const activeToken = getAuthToken() || cookieToken || "";
-      const authUser = getAuthUser();
-      
-      if (authUser?.dealer_id || authUser?.userId) {
-        setDealerId(authUser.dealer_id || authUser.userId);
-      }
-      if (authUser?.base_id) {
-        setBaseId(authUser.base_id);
-      }
+      const currentDealerId = dynamicDealerId || dealerId;
+      setDealerId(currentDealerId);
 
       const headers = activeToken ? { Authorization: `Bearer ${activeToken}` } : undefined;
 
-      renderInstance.get("/dealer", { headers })
-        .then((res) => {
-          if (Array.isArray(res.data) && res.data.length > 0) {
-            setDealerId(res.data[0].id || authUser?.dealer_id || "cmb7lih4v000ez5ms8nhvegf6");
-            setBaseId(res.data[0].base_id || authUser?.base_id || "cmb7ligx0000cz5msyqv6tuva");
-          }
-        })
-        .catch(() => {
-          // Fallback to active auth user
-          setDealerId(authUser?.dealer_id || authUser?.userId || "cmb7lih4v000ez5ms8nhvegf6");
-          setBaseId(authUser?.base_id || "cmb7ligx0000cz5msyqv6tuva");
-        });
-
-      // Load customers for easy selection
-      renderInstance.get("/dealer/customers", { headers })
+      // Load customers dynamically scoped to dealer
+      const custParams = currentDealerId ? { dealer_id: currentDealerId } : undefined;
+      renderInstance.get("/dealer/customers", { headers, params: custParams })
         .then((res) => {
           const list = Array.isArray(res.data) ? res.data : (res.data?.customers || []);
           setCustomers(list);
+          if (list.length > 0 && !formData.user_id) {
+            const firstCust = list[0];
+            setFormData(prev => ({ 
+              ...prev, 
+              user_id: firstCust.id,
+              location_address: prev.location_address || firstCust.city || "Santa Cruz, Bolivia"
+            }));
+          }
         })
         .catch(() => setCustomers([]));
     }
-  }, [isOpen, cookieToken]);
+  }, [isOpen, cookieToken, dynamicDealerId]);
+
+  // Load tractors & equipment dynamically strictly for selected customer
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!formData.user_id) {
+      setTractors([]);
+      setFormData((prev) => ({ ...prev, tractor_id: "" }));
+      return;
+    }
+
+    const activeToken = getAuthToken() || cookieToken || "";
+    const headers = activeToken ? { Authorization: `Bearer ${activeToken}` } : undefined;
+    const currentDealerId = dynamicDealerId || dealerId;
+
+    setLoadingTractors(true);
+    const params: Record<string, string> = { customer_id: formData.user_id };
+    if (currentDealerId) params.dealer_id = currentDealerId;
+
+    renderInstance
+      .get("/dealer/tractors", { headers, params })
+      .then((res) => {
+        const list = Array.isArray(res.data?.tractors)
+          ? res.data.tractors
+          : Array.isArray(res.data?.data)
+          ? res.data.data
+          : Array.isArray(res.data)
+          ? res.data
+          : [];
+        setTractors(list);
+        if (list.length > 0) {
+          const hasCurrent = list.some((t: any) => t.id === formData.tractor_id);
+          if (!hasCurrent) {
+            setFormData((prev) => ({ ...prev, tractor_id: list[0].id }));
+          }
+        } else {
+          setFormData((prev) => ({ ...prev, tractor_id: "" }));
+        }
+      })
+      .catch((err) => {
+        console.error("Error loading customer equipment:", err);
+        setTractors([]);
+        setFormData((prev) => ({ ...prev, tractor_id: "" }));
+      })
+      .finally(() => setLoadingTractors(false));
+  }, [isOpen, formData.user_id, dynamicDealerId, cookieToken]);
+
+  const selectedCustomer = useMemo(() => {
+    return customers.find(c => c.id === formData.user_id || c.user_id === formData.user_id) || null;
+  }, [customers, formData.user_id]);
+
+  const filteredCustomers = useMemo(() => {
+    if (!customerSearch.trim()) return customers;
+    const q = customerSearch.toLowerCase().trim();
+    return customers.filter(c => {
+      const name = `${c.first_name || ""} ${c.last_name || ""}`.toLowerCase();
+      const phone = String(c.mobile || "").toLowerCase();
+      const email = String(c.email || "").toLowerCase();
+      const city = String(c.city || "").toLowerCase();
+      return name.includes(q) || phone.includes(q) || email.includes(q) || city.includes(q);
+    });
+  }, [customers, customerSearch]);
+
+  const customerTractors = useMemo(() => {
+    return tractors.filter(t => (t.equipment_type === "tractor" || !t.equipment_type) && t.source !== "liked_booked");
+  }, [tractors]);
+
+  const customerAttachments = useMemo(() => {
+    return tractors.filter(t => t.equipment_type === "attachment");
+  }, [tractors]);
+
+  const customerLikedEquipment = useMemo(() => {
+    return tractors.filter(t => t.source === "liked_booked");
+  }, [tractors]);
 
   function handleInputChange(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -112,9 +206,7 @@ export default function AddScheduleRepairModal({ isOpen, onClose, onAddSuccess }
       return;
     }
     
-    const authUser = getAuthUser();
-    const activeDealerId = dealerId || authUser?.dealer_id || authUser?.userId || "cmb7lih4v000ez5ms8nhvegf6";
-    const activeBaseId = baseId || authUser?.base_id || "cmb7ligx0000cz5msyqv6tuva";
+    const activeDealerId = dealerId || dynamicDealerId;
 
     // Prepare payload
     const payload = { 
@@ -127,7 +219,7 @@ export default function AddScheduleRepairModal({ isOpen, onClose, onAddSuccess }
       location_lat: parseFloat(formData.location_lat) || 0,
       location_lng: parseFloat(formData.location_lng) || 0,
       dealer_id: activeDealerId,
-      base_id: activeBaseId
+      base_id: baseId || undefined
     };
 
     const activeToken = getAuthToken() || cookieToken || "";
@@ -241,50 +333,179 @@ export default function AddScheduleRepairModal({ isOpen, onClose, onAddSuccess }
               {/* Step 1: Details */}
               {currentStep === 1 && (
                 <div className="space-y-4">
-                  <div>
-                    <label className="font-semibold block mb-2 text-gray-700">
-                      User ID <span className="text-red-500">*</span>
+                  {/* Searchable Customer Field */}
+                  <div className="relative">
+                    <label className="font-semibold block mb-2 text-gray-700 flex items-center justify-between">
+                      <span>Customer (Dealer's Client) <span className="text-red-500">*</span></span>
+                      {selectedCustomer && (
+                        <span className="text-xs text-green-700 bg-green-100 font-medium px-2 py-0.5 rounded-full">
+                          Selected: {selectedCustomer.first_name} {selectedCustomer.last_name}
+                        </span>
+                      )}
                     </label>
-                    <InputField 
-                      icon={User} 
-                      type="text" 
-                      name="user_id" 
-                      placeholder="Enter the user's ID" 
-                      required 
-                      value={formData.user_id} 
-                      onChange={handleInputChange} 
-                    />
+
+                    {/* Search / Select Container */}
+                    <div className="relative">
+                      <div className="flex items-center gap-2 h-11 px-3.5 bg-gray-50 border border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-red-500 focus-within:border-red-500">
+                        <User size={18} className="text-gray-400 shrink-0" />
+                        <input
+                          type="text"
+                          placeholder={selectedCustomer ? `${selectedCustomer.first_name} ${selectedCustomer.last_name || ""} (${selectedCustomer.mobile || selectedCustomer.email || "ID: " + String(selectedCustomer.id).slice(0, 8)})` : "Search customer by name, phone or email..."}
+                          value={customerSearch}
+                          onChange={(e) => {
+                            setCustomerSearch(e.target.value);
+                            setIsCustomerDropdownOpen(true);
+                          }}
+                          onFocus={() => setIsCustomerDropdownOpen(true)}
+                          className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400 text-gray-800"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setIsCustomerDropdownOpen(!isCustomerDropdownOpen)}
+                          className="p-1 hover:bg-gray-200 rounded text-gray-500 cursor-pointer"
+                        >
+                          <ChevronDown size={16} />
+                        </button>
+                      </div>
+
+                      {/* Dropdown list */}
+                      {isCustomerDropdownOpen && (
+                        <div className="absolute top-full left-0 right-0 mt-1.5 max-h-56 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-xl z-30 divide-y divide-gray-50">
+                          {filteredCustomers.length === 0 ? (
+                            <div className="p-4 text-center text-xs text-gray-500">
+                              No matching customers found for this dealer
+                            </div>
+                          ) : (
+                            filteredCustomers.map((cust) => {
+                              const isSelected = cust.id === formData.user_id || cust.user_id === formData.user_id;
+                              return (
+                                <div
+                                  key={cust.id}
+                                  onClick={() => {
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      user_id: cust.id,
+                                      location_address: prev.location_address || cust.city || "Santa Cruz, Bolivia"
+                                    }));
+                                    setCustomerSearch(`${cust.first_name || ""} ${cust.last_name || ""}`.trim());
+                                    setIsCustomerDropdownOpen(false);
+                                  }}
+                                  className={`p-3 text-left hover:bg-red-50 cursor-pointer transition-colors flex items-center justify-between ${
+                                    isSelected ? "bg-red-50/70 border-l-4 border-red-600" : ""
+                                  }`}
+                                >
+                                  <div>
+                                    <p className="text-sm font-semibold text-gray-900">
+                                      {cust.first_name} {cust.last_name || ""}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      {cust.mobile || cust.email || "No contact info"} {cust.city ? `• ${cust.city}` : ""}
+                                    </p>
+                                  </div>
+                                  {isSelected && (
+                                    <Check size={16} className="text-red-600" />
+                                  )}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
+                  {/* Dynamic Tractor / Equipment Field (Scoped Strictly to Customer) */}
                   <div>
-                    <label className="font-semibold block mb-2 text-gray-700">
-                      Tractor ID <span className="text-red-500">*</span>
+                    <label className="font-semibold block mb-2 text-gray-700 flex items-center justify-between">
+                      <span>Tractor / Equipment <span className="text-red-500">*</span></span>
+                      {loadingTractors && (
+                        <span className="text-xs text-gray-500 flex items-center gap-1">
+                          <Loader2 size={12} className="animate-spin" /> Loading customer equipment...
+                        </span>
+                      )}
                     </label>
-                    <InputField 
-                      icon={Hash} 
-                      type="text" 
-                      name="tractor_id" 
-                      placeholder="Enter the tractor's ID" 
-                      required 
-                      value={formData.tractor_id} 
-                      onChange={handleInputChange} 
-                    />
+
+                    <div className="relative flex items-center">
+                      <Truck size={18} className="absolute left-3.5 text-gray-400 pointer-events-none" />
+                      <select
+                        name="tractor_id"
+                        required
+                        value={formData.tractor_id}
+                        onChange={handleInputChange}
+                        disabled={loadingTractors || tractors.length === 0}
+                        className="w-full h-11 pl-10 pr-9 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all disabled:opacity-60 appearance-none cursor-pointer"
+                      >
+                        <option value="">
+                          {loadingTractors
+                            ? "-- Loading customer equipment... --"
+                            : tractors.length === 0
+                            ? "-- No equipment in customer's fleet --"
+                            : "-- Select Tractor or Equipment --"}
+                        </option>
+                        {customerTractors.length > 0 && (
+                          <optgroup label="Customer Fleet - Tractors">
+                            {customerTractors.map((t) => (
+                              <option key={t.id} value={t.id}>
+                                🚜 {t.name} {t.model && t.model !== t.name ? `(${t.model})` : ""} {t.identifier ? `• VIN: ${t.identifier}` : ""}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {customerAttachments.length > 0 && (
+                          <optgroup label="Customer Fleet - Implements & Attachments">
+                            {customerAttachments.map((a) => (
+                              <option key={a.id} value={a.id}>
+                                🔧 {a.name} {a.identifier ? `• Serial: ${a.identifier}` : ""}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {customerLikedEquipment.length > 0 && (
+                          <optgroup label="Customer Liked / Booked Equipment">
+                            {customerLikedEquipment.map((t) => (
+                              <option key={t.id} value={t.id}>
+                                ⭐ {t.name} ({t.model || t.brand})
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </select>
+                      <div className="absolute right-3.5 pointer-events-none text-gray-400">
+                        <ChevronDown size={16} />
+                      </div>
+                    </div>
+
+                    {tractors.length > 0 ? (
+                      <p className="mt-1 text-xs text-green-700 font-medium">
+                        Found {tractors.length} registered equipment item(s) in this customer's fleet.
+                      </p>
+                    ) : !loadingTractors && formData.user_id ? (
+                      <p className="mt-1 text-xs text-amber-600 font-medium">
+                        No registered tractors or attachments found for this client. You can add machinery to their fleet in Customer Details.
+                      </p>
+                    ) : null}
                   </div>
                   
                   <div>
                     <label className="font-semibold block mb-2 text-gray-700">
                       Problem Category <span className="text-red-500">*</span>
                     </label>
-                    <select 
-                      name="problem_category" 
-                      value={formData.problem_category} 
-                      onChange={handleInputChange} 
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                    >
-                      {PROBLEM_CATEGORIES.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
+                    <div className="relative flex items-center">
+                      <Wrench size={18} className="absolute left-3.5 text-gray-400 pointer-events-none" />
+                      <select 
+                        name="problem_category" 
+                        value={formData.problem_category} 
+                        onChange={handleInputChange} 
+                        className="w-full h-11 pl-10 pr-9 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all appearance-none cursor-pointer"
+                      >
+                        {PROBLEM_CATEGORIES.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                      <div className="absolute right-3.5 pointer-events-none text-gray-400">
+                        <ChevronDown size={16} />
+                      </div>
+                    </div>
                   </div>
                   
                   <div>
@@ -297,7 +518,7 @@ export default function AddScheduleRepairModal({ isOpen, onClose, onAddSuccess }
                       required 
                       value={formData.problem_description} 
                       onChange={handleInputChange} 
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 outline-none" 
+                      className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all resize-none" 
                       rows={3}
                     ></textarea>
                   </div>
@@ -311,16 +532,22 @@ export default function AddScheduleRepairModal({ isOpen, onClose, onAddSuccess }
                     <label className="font-semibold block mb-2 text-gray-700">
                       Priority Level <span className="text-red-500">*</span>
                     </label>
-                    <select 
-                      name="priority_level" 
-                      value={formData.priority_level} 
-                      onChange={handleInputChange} 
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
-                    >
-                      {PRIORITY_LEVELS.map(level => (
-                        <option key={level} value={level}>{level}</option>
-                      ))}
-                    </select>
+                    <div className="relative flex items-center">
+                      <Hash size={18} className="absolute left-3.5 text-gray-400 pointer-events-none" />
+                      <select 
+                        name="priority_level" 
+                        value={formData.priority_level} 
+                        onChange={handleInputChange} 
+                        className="w-full h-11 pl-10 pr-9 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all appearance-none cursor-pointer"
+                      >
+                        {PRIORITY_LEVELS.map(level => (
+                          <option key={level} value={level}>{level}</option>
+                        ))}
+                      </select>
+                      <div className="absolute right-3.5 pointer-events-none text-gray-400">
+                        <ChevronDown size={16} />
+                      </div>
+                    </div>
                   </div>
                   
                   <div>

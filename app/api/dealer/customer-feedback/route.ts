@@ -7,7 +7,23 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const dealerId = searchParams.get("dealer_id") || searchParams.get("dealerId") || "cmb7lih4v000ez5ms8nhvegf6";
+    const rawDealerId = searchParams.get("dealer_id") || searchParams.get("dealerId") || "";
+    let dealerId = rawDealerId && rawDealerId !== "all" && rawDealerId !== "undefined" && rawDealerId !== "null" ? rawDealerId : "";
+
+    if (!dealerId) {
+      try {
+        const directDealerId = request.cookies.get("dealer_id")?.value;
+        if (directDealerId && directDealerId !== "all") dealerId = directDealerId;
+        else {
+          const userCookie = request.cookies.get("user")?.value;
+          if (userCookie) {
+            const parsed = JSON.parse(decodeURIComponent(userCookie));
+            dealerId = parsed?.dealer_id || parsed?.dealerId || parsed?.userId || parsed?.id || "";
+          }
+        }
+      } catch {}
+    }
+
     const ratingParam = searchParams.get("rating");
     const sentiment = searchParams.get("sentiment");
     const status = searchParams.get("status");
@@ -16,9 +32,18 @@ export async function GET(request: NextRequest) {
 
     const client = await pool.connect();
     try {
-      const whereClauses: string[] = ["(dealer_id = $1 OR dealer_id IS NULL)"];
-      const params: any[] = [dealerId];
-      let pIdx = 2;
+      const whereClauses: string[] = [
+        dealerId
+          ? `(
+              dealer_id = $1 
+              OR dealer_id = CONCAT('dlr_', $1::text)
+              OR dealer_id IN (SELECT id FROM "Dealer" WHERE user_id = $1 OR id = $1)
+              OR dealer_id IN (SELECT user_id FROM "Dealer" WHERE id = $1 OR user_id = $1)
+            )`
+          : "1=0"
+      ];
+      const params: any[] = dealerId ? [dealerId] : [];
+      let pIdx = dealerId ? 2 : 1;
 
       if (ratingParam) {
         whereClauses.push(`rating >= $${pIdx++}`);

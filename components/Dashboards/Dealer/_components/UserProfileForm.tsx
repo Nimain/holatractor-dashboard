@@ -1,6 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useCookie } from 'next-cookie';
+import { renderInstance } from '@/utils/Axios/RenderInstance';
+import { uploadFileToS3 } from '@/utils/AWS/FileUpload';
 import {
   User,
   Upload,
@@ -14,7 +17,8 @@ import {
   Phone,
   MapPin,
   Calendar,
-  X
+  X,
+  Building2
 } from 'lucide-react';
 
 export interface DealerProfileData {
@@ -32,6 +36,30 @@ export interface DealerProfileData {
 }
 
 export default function UserProfileForm() {
+  const { cookie } = useCookie();
+
+  // Extract auth user details from cookie
+  const authUser = useMemo(() => {
+    try {
+      const raw = cookie.get('user') || cookie.get('user_info');
+      return typeof raw === 'string' ? JSON.parse(raw) : raw;
+    } catch {
+      return null;
+    }
+  }, [cookie]);
+
+  const targetDealerId = useMemo(() => {
+    return authUser?.dealer_id || authUser?.dealerId || authUser?.id || '';
+  }, [authUser]);
+
+  const targetUserId = useMemo(() => {
+    return authUser?.userId || authUser?.user_id || authUser?.id || '';
+  }, [authUser]);
+
+  const targetEmail = useMemo(() => {
+    return authUser?.email || '';
+  }, [authUser]);
+
   const [formData, setFormData] = useState<DealerProfileData>({
     firstName: '',
     middleName: '',
@@ -47,52 +75,93 @@ export default function UserProfileForm() {
   const [initialData, setInitialData] = useState<DealerProfileData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
+  const [uploadingImage, setUploadingImage] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch live profile
-  const fetchProfile = async () => {
+  // Fetch live profile from FastAPI (with local proxy fallback)
+  const fetchProfile = useCallback(async () => {
     setLoading(true);
     setErrorMessage(null);
-    try {
-      const res = await fetch('/api/dealer/profile', { cache: 'no-store' });
-      if (!res.ok) throw new Error('Failed to load dealer profile');
-      const data = await res.json();
 
-      if (data.profile) {
+    const queryParams: Record<string, string> = {};
+    if (targetDealerId) queryParams.dealer_id = targetDealerId;
+    if (targetUserId) queryParams.user_id = targetUserId;
+    if (targetEmail) queryParams.email = targetEmail;
+
+    try {
+      // 1. Direct FastAPI request via renderInstance
+      const res = await renderInstance.get('/dealer/profile', { params: queryParams });
+      const profile = res.data?.profile;
+
+      if (profile) {
         const loaded: DealerProfileData = {
-          dealerId: data.profile.dealerId || '',
-          userId: data.profile.userId || '',
-          firstName: data.profile.firstName || '',
-          middleName: data.profile.middleName || '',
-          lastName: data.profile.lastName || '',
-          email: data.profile.email || '',
-          contactNumber: data.profile.contactNumber || '',
-          gender: data.profile.gender || 'Male',
-          age: String(data.profile.age || '26'),
-          address: data.profile.address || '',
-          image: data.profile.image || '',
+          dealerId: profile.dealerId || targetDealerId || '',
+          userId: profile.userId || targetUserId || '',
+          firstName: profile.firstName || '',
+          middleName: profile.middleName || '',
+          lastName: profile.lastName || '',
+          email: profile.email || targetEmail || '',
+          contactNumber: profile.contactNumber || '',
+          gender: profile.gender || 'Male',
+          age: String(profile.age || '26'),
+          address: profile.address || '',
+          image: profile.image || '',
         };
         setFormData(loaded);
         setInitialData(loaded);
         if (loaded.image && loaded.image !== 'test') {
           setImagePreview(loaded.image);
         }
+        return;
       }
-    } catch (err: any) {
-      console.error('Profile fetch error:', err);
-      setErrorMessage('Could not load profile from server. Showing cached defaults.');
+    } catch (apiErr: any) {
+      console.warn('FastAPI direct fetch failed, attempting local Next.js proxy fallback:', apiErr);
+      try {
+        const fallbackUrl = new URL('/api/dealer/profile', window.location.origin);
+        if (targetDealerId) fallbackUrl.searchParams.set('dealer_id', targetDealerId);
+        if (targetUserId) fallbackUrl.searchParams.set('user_id', targetUserId);
+        if (targetEmail) fallbackUrl.searchParams.set('email', targetEmail);
+
+        const res = await fetch(fallbackUrl.toString(), { cache: 'no-store' });
+        if (!res.ok) throw new Error('Failed to load profile');
+        const data = await res.json();
+
+        if (data.profile) {
+          const loaded: DealerProfileData = {
+            dealerId: data.profile.dealerId || targetDealerId || '',
+            userId: data.profile.userId || targetUserId || '',
+            firstName: data.profile.firstName || '',
+            middleName: data.profile.middleName || '',
+            lastName: data.profile.lastName || '',
+            email: data.profile.email || targetEmail || '',
+            contactNumber: data.profile.contactNumber || '',
+            gender: data.profile.gender || 'Male',
+            age: String(data.profile.age || '26'),
+            address: data.profile.address || '',
+            image: data.profile.image || '',
+          };
+          setFormData(loaded);
+          setInitialData(loaded);
+          if (loaded.image && loaded.image !== 'test') {
+            setImagePreview(loaded.image);
+          }
+        }
+      } catch (fallbackErr: any) {
+        console.error('All profile fetch attempts failed:', fallbackErr);
+        setErrorMessage('Could not load profile from server. Please refresh or check connection.');
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [targetDealerId, targetUserId, targetEmail]);
 
   useEffect(() => {
     fetchProfile();
-  }, []);
+  }, [fetchProfile]);
 
   // Auto-hide alert messages
   useEffect(() => {
@@ -112,26 +181,45 @@ export default function UserProfileForm() {
     }));
   };
 
-  // Image Upload handler
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Image Upload handler with S3 and preview
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      setErrorMessage('Image size exceeds 2MB limit. Please choose a smaller file.');
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage('Image size exceeds 5MB limit. Please choose a smaller file.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      setImagePreview(base64String);
-      setFormData((prev) => ({
-        ...prev,
-        image: base64String,
-      }));
-    };
-    reader.readAsDataURL(file);
+    setUploadingImage(true);
+    try {
+      const localUrl = URL.createObjectURL(file);
+      setImagePreview(localUrl);
+
+      // Upload to S3
+      const s3Url = await uploadFileToS3(file, file.name);
+      if (s3Url) {
+        setImagePreview(s3Url);
+        setFormData((prev) => ({
+          ...prev,
+          image: s3Url,
+        }));
+      }
+    } catch (uploadErr) {
+      console.warn('S3 upload fallback to base64 preview:', uploadErr);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setImagePreview(base64String);
+        setFormData((prev) => ({
+          ...prev,
+          image: base64String,
+        }));
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleReset = () => {
@@ -152,24 +240,60 @@ export default function UserProfileForm() {
     setSaving(true);
     setErrorMessage(null);
 
-    try {
-      const res = await fetch('/api/dealer/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
+    const payload = {
+      ...formData,
+      dealer_id: formData.dealerId || targetDealerId,
+      dealerId: formData.dealerId || targetDealerId,
+      user_id: formData.userId || targetUserId,
+      userId: formData.userId || targetUserId,
+    };
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to update profile');
+    try {
+      // 1. Direct FastAPI PUT via renderInstance
+      const res = await renderInstance.put('/dealer/profile', payload);
+      const data = res.data;
+
+      // Sync user cookie if present so TopBar reflects name immediately
+      try {
+        if (authUser) {
+          const updatedUser = {
+            ...authUser,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            name: `${formData.firstName} ${formData.lastName}`.trim(),
+            email: formData.email,
+            mobile: formData.contactNumber,
+            image: formData.image || authUser.image,
+          };
+          cookie.set('user', JSON.stringify(updatedUser), { path: '/' });
+        }
+      } catch (cookieErr) {
+        console.warn('Cookie sync error:', cookieErr);
       }
 
-      const data = await res.json();
-      setSuccessMessage(data.message || 'Profile updated successfully!');
+      setSuccessMessage(data.message || 'Dealer profile updated successfully!');
       setInitialData(formData);
     } catch (err: any) {
-      console.error('Profile update error:', err);
-      setErrorMessage(err.message || 'Error saving profile. Please check your connection.');
+      console.warn('FastAPI PUT failed, attempting local Next.js proxy fallback:', err);
+      try {
+        const res = await fetch('/api/dealer/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to update profile');
+        }
+
+        const data = await res.json();
+        setSuccessMessage(data.message || 'Profile updated successfully!');
+        setInitialData(formData);
+      } catch (fallbackErr: any) {
+        console.error('Profile update error:', fallbackErr);
+        setErrorMessage(fallbackErr.message || 'Error saving profile. Please check your connection.');
+      }
     } finally {
       setSaving(false);
     }
@@ -241,6 +365,12 @@ export default function UserProfileForm() {
               </div>
 
               <div className="flex items-center gap-2">
+                {formData.dealerId && (
+                  <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 bg-white/10 rounded-lg text-xs font-mono text-gray-300 border border-white/10">
+                    <Building2 size={13} className="text-orange-400" />
+                    ID: {formData.dealerId.slice(0, 12)}...
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={fetchProfile}
@@ -450,13 +580,22 @@ export default function UserProfileForm() {
                     onClick={() => fileInputRef.current?.click()}
                     className="flex-1 w-full p-4 bg-white rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors text-center"
                   >
-                    <Upload className="w-6 h-6 text-red-600 mb-1" />
-                    <p className="text-red-600 font-bold text-xs sm:text-sm">
-                      Click to choose or replace profile picture
-                    </p>
-                    <p className="text-gray-400 text-xs mt-0.5">
-                      PNG, JPG or WebP (max. 2MB, square recommended)
-                    </p>
+                    {uploadingImage ? (
+                      <div className="flex items-center gap-2 text-red-600 font-semibold text-sm">
+                        <RefreshCw size={16} className="animate-spin" />
+                        <span>Uploading image to S3...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="w-6 h-6 text-red-600 mb-1" />
+                        <p className="text-red-600 font-bold text-xs sm:text-sm">
+                          Click to choose or replace profile picture
+                        </p>
+                        <p className="text-gray-400 text-xs mt-0.5">
+                          PNG, JPG or WebP (max. 5MB, uploaded to S3)
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -474,7 +613,7 @@ export default function UserProfileForm() {
 
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={saving || uploadingImage}
                   className="w-full sm:w-auto px-8 py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all"
                 >
                   {saving ? (

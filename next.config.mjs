@@ -74,6 +74,14 @@ const nextConfig = {
         protocol: "https",
         hostname: "media.istockphoto.com",
       },
+      {
+        protocol: "https",
+        hostname: "www.hattattraktor.com",
+      },
+      {
+        protocol: "https",
+        hostname: "hattattraktor.com",
+      },
     ],
   },
 };

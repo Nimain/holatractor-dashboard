@@ -84,7 +84,7 @@ export default function ConversionRates() {
       let data: any = null;
 
       try {
-        const localRes = await fetch(`/api/dealer/leads/conversion?dealer_id=${dealerId}`);
+        const localRes = await fetch(`/api/dealer/leads/conversion?dealer_id=${dealerId}&period=${timePeriod}`);
         if (localRes.ok) {
           const json = await localRes.json();
           if (json.success) data = json;
@@ -92,7 +92,7 @@ export default function ConversionRates() {
       } catch (err) {}
 
       if (!data) {
-        const fastRes = await renderInstance.get(`/dealer/leads/conversion?dealer_id=${dealerId}`);
+        const fastRes = await renderInstance.get(`/dealer/leads/conversion?dealer_id=${dealerId}&period=${timePeriod}`);
         data = fastRes.data;
       }
 
@@ -110,7 +110,7 @@ export default function ConversionRates() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user?.userId]);
+  }, [user?.userId, timePeriod]);
 
   useEffect(() => {
     fetchConversionData();
@@ -142,7 +142,10 @@ export default function ConversionRates() {
     successMessage("Conversion report downloaded");
   };
 
-  const maxWeeklySale = Math.max(...(weeklyTrend.map((d) => d.sales) || [50000]));
+  const maxWeeklySale = Math.max(...(weeklyTrend.map((d) => d.sales) || [50000]), 1000);
+  const peakDay = weeklyTrend.length > 0
+    ? weeklyTrend.reduce((max, item) => (item.sales > max.sales ? item : max), weeklyTrend[0])
+    : null;
 
   return (
     <div className="min-h-screen bg-slate-50/60 dark:bg-gray-950 p-4 md:p-8 space-y-8 font-sans">
@@ -366,7 +369,9 @@ export default function ConversionRates() {
           <div className="p-3 bg-gray-50 dark:bg-gray-800/60 rounded-xl flex items-center justify-between text-xs">
             <span className="text-gray-500">Peak Conversion Day:</span>
             <span className="font-extrabold text-rose-600 dark:text-rose-400">
-              Friday ($52,300 across 4 deals)
+              {peakDay && peakDay.sales > 0
+                ? `${peakDay.day} ($${peakDay.sales.toLocaleString()} across ${peakDay.deals} deal${peakDay.deals === 1 ? "" : "s"})`
+                : "No peak day recorded yet"}
             </span>
           </div>
         </div>

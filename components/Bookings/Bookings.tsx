@@ -13,9 +13,10 @@ import NewBooking from "./NewBooking";
 import Image from "next/image";
 import NullImage from "@/assets/AnimateIcons/Tractor.svg";
 import axios from "axios";
-import { TractorAIBaseURL } from "@/utils/Axios/RenderInstance";
+import { TractorAIBaseURL, renderInstance } from "@/utils/Axios/RenderInstance";
+import SubscriptionsPage from "@/components/Subscription/Subscription";
 
-export type BookingCategoryTab = "store" | "standalone_tractor" | "standalone_attachment" | "simple_3tap";
+export type BookingCategoryTab = "store" | "standalone_tractor" | "standalone_attachment" | "simple_3tap" | "subscriptions";
 
 const Bookings = () => {
   const [activeCategory, setActiveCategory] = useState<BookingCategoryTab>("store");
@@ -25,11 +26,13 @@ const Bookings = () => {
     standalone_tractor: number;
     standalone_attachment: number;
     simple_3tap: number;
+    subscriptions: number;
   }>({
     store: 0,
     standalone_tractor: 0,
     standalone_attachment: 0,
     simple_3tap: 0,
+    subscriptions: 0,
   });
   const [loading, setLoading] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<any>(null);
@@ -45,11 +48,12 @@ const Bookings = () => {
   async function fetchCounts() {
     try {
       const fastApiBase = (TractorAIBaseURL || "https://tractorai.sinsignal.com").replace(/\/$/, "");
-      const [stRes, tractorRes, attachRes, tapRes] = await Promise.all([
+      const [stRes, tractorRes, attachRes, tapRes, subRes] = await Promise.all([
         axios.get("/api/booking?type=store").catch(() => ({ data: [] })),
         axios.get("/api/booking?type=standalone_tractor").catch(() => ({ data: [] })),
         axios.get("/api/booking?type=standalone_attachment").catch(() => ({ data: [] })),
         axios.get("/api/booking?type=3tap").catch(() => ({ data: [] })),
+        renderInstance.get("/subscription").catch(() => ({ data: [] })),
       ]);
 
       const tapList = Array.isArray(tapRes.data)
@@ -63,11 +67,16 @@ const Bookings = () => {
         standalone_tractor: Array.isArray(tractorRes.data) ? tractorRes.data.length : 0,
         standalone_attachment: Array.isArray(attachRes.data) ? attachRes.data.length : 0,
         simple_3tap: tapList.length,
+        subscriptions: Array.isArray(subRes.data) ? subRes.data.length : 0,
       });
     } catch {}
   }
 
   async function fetchBookings(category: BookingCategoryTab) {
+    if (category === "subscriptions") {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       let data: any[] = [];
@@ -378,10 +387,37 @@ const Bookings = () => {
             {counts.standalone_attachment}
           </span>
         </button>
+
+        <button
+          onClick={() => setActiveCategory("subscriptions")}
+          className={`flex-1 min-w-[170px] py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 shadow-sm ${
+            activeCategory === "subscriptions"
+              ? "bg-slate-900 text-white shadow-md scale-[1.01]"
+              : "bg-white text-slate-700 hover:bg-slate-50"
+          }`}
+        >
+          <span className="text-base">💳</span>
+          <span>Subscription Plans</span>
+          <span
+            className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+              activeCategory === "subscriptions"
+                ? "bg-emerald-500 text-white"
+                : "bg-slate-200 text-slate-800"
+            }`}
+          >
+            {counts.subscriptions}
+          </span>
+        </button>
       </div>
 
-      {/* Search & Status Filter Controls */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+      {activeCategory === "subscriptions" ? (
+        <div className="mt-2 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm">
+          <SubscriptionsPage embedded={true} />
+        </div>
+      ) : (
+        <>
+          {/* Search & Status Filter Controls */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
         <div className="relative w-full sm:w-80">
           <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -635,6 +671,8 @@ const Bookings = () => {
           </>
         )}
       </div>
+      </>
+      )}
 
       {/* Booking Details Modal */}
       {openModal && (

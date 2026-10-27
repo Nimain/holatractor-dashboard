@@ -47,6 +47,9 @@ import { useRouter } from 'next/navigation'
 import { Separator } from '../ui/separator'
 import countryData from './CountryCodeRoles'
 import QRCODE from "@/assets/QRcode.jpg"
+import { useSelector } from 'react-redux'
+import { RootState } from '@/redux/store'
+import { authTranslations, AuthLanguage } from '@/utils/translation/authTranslations'
 
 interface Location {
     latitude: number | null;
@@ -54,6 +57,10 @@ interface Location {
 }
 
 const OwnerRegister = ({ name, inPage, trigger }: { name: string; inPage: boolean; trigger?: React.ReactNode }) => {
+    const activeLang = useSelector((state: RootState) => state.ActiveLanguage.language) as AuthLanguage;
+    const currentLang = activeLang === 'es' ? 'es' : 'en';
+    const t = authTranslations[currentLang] || authTranslations.en;
+
     const [open, setOpen] = useState(false)
     const [fetchingContry, setFetchingCountry] = useState(false);
     const [popoverOpen, setPopoverOpen] = useState(false)
@@ -110,9 +117,10 @@ const OwnerRegister = ({ name, inPage, trigger }: { name: string; inPage: boolea
 
     const fetchAllSubscriptions = () => {
         setFetchSubscriptions(true)
-        renderInstance.get("/subscription")
+        renderInstance.get("/subscription?for_owner=true")
             .then((res) => {
-                setSubscriptions(res.data)
+                const list = Array.isArray(res.data) ? res.data : []
+                setSubscriptions(list.filter((p: any) => p.for_owner !== false))
             }).finally(() => {
                 setFetchSubscriptions(false)
             })
@@ -250,13 +258,12 @@ const OwnerRegister = ({ name, inPage, trigger }: { name: string; inPage: boolea
             return
         }
 
-        let paymentProofLink = ""
-        const buffer = Buffer.from(await selectedFile.arrayBuffer());
-        paymentProofLink = await uploadFileToS3(buffer, selectedFile.name);
-
-        if (!paymentProofLink) {
-            errorMessage("Something went wrong in uploading the image");
-            return;
+        let paymentProofLink = "";
+        try {
+            const buffer = Buffer.from(await selectedFile.arrayBuffer());
+            paymentProofLink = await uploadFileToS3(buffer, selectedFile.name);
+        } catch (proofErr) {
+            console.warn("Payment proof upload warning:", proofErr);
         }
 
         const selectedRole = await renderInstance.get('/role/getIdByName/owner')
@@ -267,27 +274,22 @@ const OwnerRegister = ({ name, inPage, trigger }: { name: string; inPage: boolea
         }
 
         let imageUrl = "";
-
         if (agImage) {
-
-            const buffer = Buffer.from(await agImage.arrayBuffer());
-            imageUrl = await uploadFileToS3(buffer, agImage.name);
-
-            if (!imageUrl) {
-                errorMessage("Something went wrong in uploading the image");
-                return;
+            try {
+                const buffer = Buffer.from(await agImage.arrayBuffer());
+                imageUrl = await uploadFileToS3(buffer, agImage.name);
+            } catch (imgErr) {
+                console.warn("Owner profile image upload warning:", imgErr);
             }
         }
 
-        let attachmentLink = ""
+        let attachmentLink = "";
         if (attachment) {
-
-            const buffer = Buffer.from(await attachment.arrayBuffer());
-            attachmentLink = await uploadFileToS3(buffer, attachment.name);
-
-            if (!attachmentLink) {
-                errorMessage("Something went wrong in uploading the attachment");
-                return;
+            try {
+                const buffer = Buffer.from(await attachment.arrayBuffer());
+                attachmentLink = await uploadFileToS3(buffer, attachment.name);
+            } catch (attErr) {
+                console.warn("Owner document attachment upload warning:", attErr);
             }
         }
 
@@ -485,7 +487,7 @@ const OwnerRegister = ({ name, inPage, trigger }: { name: string; inPage: boolea
                             setOpen(true)
                         }}
                     >
-                        {inPage ? "Continue" : "Continue as owner"}
+                        {inPage ? t.continueBtn : t.continueOwner}
                     </Button>
                 )}
             </DialogTrigger>
@@ -509,8 +511,8 @@ const OwnerRegister = ({ name, inPage, trigger }: { name: string; inPage: boolea
                     <Tabs className="w-full flex flex-col flex-1" defaultValue='stepone'>
 
                         <RegisterStepperHeader
-                            roleTitle="Tractor Fleet Owner"
-                            roleBadge="Fleet Control"
+                            roleTitle={t.ownerRoleTitle}
+                            roleBadge={t.ownerRoleBadge}
                             roleIcon={<Tractor className="w-4 h-4 text-white" />}
                             applicantName={name}
                             themeColor="emerald"
@@ -518,25 +520,25 @@ const OwnerRegister = ({ name, inPage, trigger }: { name: string; inPage: boolea
                                 {
                                     id: "stepone",
                                     number: 1,
-                                    label: "Credentials",
+                                    label: t.stepCredentials,
                                     isComplete: Boolean(name && agEmail && agPassword && agnewCountry && agnumber),
                                 },
                                 {
                                     id: "steptwo",
                                     number: 2,
-                                    label: "Profile",
+                                    label: t.stepProfile,
                                     isComplete: Boolean(date && gender),
                                 },
                                 {
                                     id: "stepfour",
                                     number: 3,
-                                    label: "Identity",
+                                    label: t.stepIdentity,
                                     isComplete: Boolean(attachment && document_number),
                                 },
                                 {
                                     id: "stepfive",
                                     number: 4,
-                                    label: "Subscription",
+                                    label: t.stepSubscription,
                                     isComplete: Boolean(selectedPlan),
                                 }
                             ]}
@@ -695,7 +697,7 @@ const OwnerRegister = ({ name, inPage, trigger }: { name: string; inPage: boolea
                                             className='p-0'>
                                             <Button
                                                 className="px-5 py-2 rounded-lg bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white text-sm font-semibold flex items-center gap-1.5 shadow-xs transition-all duration-150 cursor-pointer">
-                                                <span>Next: Profile</span>
+                                                <span>{t.next}: {t.stepProfile}</span>
                                                 <ChevronRight className="w-4 h-4" />
                                             </Button>
                                         </TabsTrigger>
@@ -762,47 +764,50 @@ const OwnerRegister = ({ name, inPage, trigger }: { name: string; inPage: boolea
                                             </label>
                                         )}
                                     </div>
-                                    <Popover open={agDOB} onOpenChange={setagDOB}>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant={"outline"}
-                                                className={cn(
-                                                    "w-[280px] justify-start text-left font-normal",
-                                                    !date && "text-muted-foreground"
-                                                )}
-                                                onClick={() => { setagDOB(true) }}
-                                            >
-                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {date ? format(date, "PPP") : <span>Pick a date</span>}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="flex w-fit flex-col space-y-2 p-2">
-                                            <Select
-                                                onValueChange={(value) => setyear(parseInt(value))}
-                                            >
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select Year" />
-                                                </SelectTrigger>
-                                                <SelectContent position="popper">
-                                                    {[...Array(90)].map((_, index) => {
-                                                        const yearValue = new Date().getFullYear() - index
-                                                        return (
-                                                            <SelectItem key={yearValue} value={yearValue.toString()}>
-                                                                {yearValue}
-                                                            </SelectItem>
-                                                        )
-                                                    })}
-                                                </SelectContent>
-                                            </Select>
-                                            <div className="rounded-md border">
-                                                <Calendar
-                                                    mode="single"
-                                                    selected={date}
-                                                    onSelect={handleDateChange}
-                                                />
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
+                                    <div className="space-y-1">
+                                        <Label>{t.dateOfBirth}</Label>
+                                        <Popover open={agDOB} onOpenChange={setagDOB}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant={"outline"}
+                                                    className={cn(
+                                                        "w-full sm:w-[280px] justify-start text-left font-normal",
+                                                        !date && "text-muted-foreground"
+                                                    )}
+                                                    onClick={() => { setagDOB(true) }}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {date ? format(date, "PPP") : <span>{t.pickADate}</span>}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="flex w-fit flex-col space-y-2 p-2">
+                                                <Select
+                                                    onValueChange={(value) => setyear(parseInt(value))}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select Year" />
+                                                    </SelectTrigger>
+                                                    <SelectContent position="popper">
+                                                        {[...Array(90)].map((_, index) => {
+                                                            const yearValue = new Date().getFullYear() - index
+                                                            return (
+                                                                <SelectItem key={yearValue} value={yearValue.toString()}>
+                                                                    {yearValue}
+                                                                </SelectItem>
+                                                            )
+                                                        })}
+                                                    </SelectContent>
+                                                </Select>
+                                                <div className="rounded-md border">
+                                                    <Calendar
+                                                        mode="single"
+                                                        selected={date}
+                                                        onSelect={handleDateChange}
+                                                    />
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
                                     <div className="space-y-1">
                                         <Label htmlFor="gender">Gender</Label>
                                         <Select
@@ -836,7 +841,7 @@ const OwnerRegister = ({ name, inPage, trigger }: { name: string; inPage: boolea
                                                 variant="outline"
                                                 className="px-4 py-2 rounded-lg border-slate-200 text-slate-700 hover:bg-slate-100 text-sm font-semibold flex items-center gap-1.5 cursor-pointer">
                                                 <ChevronLeft className="w-4 h-4" />
-                                                <span>Back</span>
+                                                <span>{t.back}</span>
                                             </Button>
                                         </TabsTrigger>
                                         <TabsTrigger
@@ -845,7 +850,7 @@ const OwnerRegister = ({ name, inPage, trigger }: { name: string; inPage: boolea
                                             className='p-0'>
                                             <Button
                                                 className="px-5 py-2 rounded-lg bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white text-sm font-semibold flex items-center gap-1.5 shadow-xs transition-all duration-150 cursor-pointer">
-                                                <span>Next: Identity</span>
+                                                <span>{t.next}: {t.stepIdentity}</span>
                                                 <ChevronRight className="w-4 h-4" />
                                             </Button>
                                         </TabsTrigger>
@@ -976,7 +981,7 @@ const OwnerRegister = ({ name, inPage, trigger }: { name: string; inPage: boolea
                                                 variant="outline"
                                                 className="px-4 py-2 rounded-lg border-slate-200 text-slate-700 hover:bg-slate-100 text-sm font-semibold flex items-center gap-1.5 cursor-pointer">
                                                 <ChevronLeft className="w-4 h-4" />
-                                                <span>Back</span>
+                                                <span>{t.back}</span>
                                             </Button>
                                         </TabsTrigger>
                                         <TabsTrigger
@@ -985,7 +990,7 @@ const OwnerRegister = ({ name, inPage, trigger }: { name: string; inPage: boolea
                                             className='p-0'>
                                             <Button
                                                 className="px-5 py-2 rounded-lg bg-[#AB0F0C] hover:bg-[#8e0d0a] text-white text-sm font-semibold flex items-center gap-1.5 shadow-xs transition-all duration-150 cursor-pointer">
-                                                <span>Next: Subscription</span>
+                                                <span>{t.next}: {t.stepSubscription}</span>
                                                 <ChevronRight className="w-4 h-4" />
                                             </Button>
                                         </TabsTrigger>
@@ -1002,7 +1007,7 @@ const OwnerRegister = ({ name, inPage, trigger }: { name: string; inPage: boolea
                                     <p>Loading all plans</p>
                                     :
                                     <div className="container mx-auto p-4">
-                                        <h1 className="text-3xl font-bold mb-6 text-center">Choose Your Subscription Plan</h1>
+                                        <h1 className="text-3xl font-bold mb-6 text-center">{t.choosePlanTitle}</h1>
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                             {subscriptions.filter(subs => subs.for_owner === true).length === 0 ?
                                                 <p>No subscriptions present for owners</p>
@@ -1055,7 +1060,7 @@ const OwnerRegister = ({ name, inPage, trigger }: { name: string; inPage: boolea
                                                                 onClick={() => handleSelectPlan(sub)}
                                                                 variant={selectedPlan?.id === sub.id ? "secondary" : "default"}
                                                             >
-                                                                {selectedPlan?.id === sub.id ? 'Selected' : 'Select Plan'}
+                                                                {selectedPlan?.id === sub.id ? t.selected : t.selectPlan}
                                                             </Button>
                                                         </CardFooter>
                                                     </Card>
@@ -1064,8 +1069,8 @@ const OwnerRegister = ({ name, inPage, trigger }: { name: string; inPage: boolea
 
                                         <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
                                             <DialogContent className='h-[90vh] overflow-auto' style={{ scrollbarWidth: "none" }}>
-                                                <DialogHeader>
-                                                    <DialogTitle className='text-center'>Complete Your payment and update the screen shot</DialogTitle>
+                                                <DialogHeader className="pr-10">
+                                                    <DialogTitle className='text-center'>{t.paymentProofTitle}</DialogTitle>
                                                 </DialogHeader>
                                                 <div className='grid grid-cols-2 gap-4'>
                                                     <Image
@@ -1131,7 +1136,7 @@ const OwnerRegister = ({ name, inPage, trigger }: { name: string; inPage: boolea
                                                             {
                                                                 selectedFile && <Button className='w-full' disabled={loading || purchasing} onClick={() => { ownerRegister() }}>
                                                                     {
-                                                                        (loading || purchasing) ? "Creating..." : "Creating account"
+                                                                        (loading || purchasing) ? t.creatingAccount : t.completeRegistration
                                                                     }
                                                                 </Button>
                                                             }

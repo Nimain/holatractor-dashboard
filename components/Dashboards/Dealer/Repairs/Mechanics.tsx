@@ -1,25 +1,15 @@
 "use client";
-import { useState, useEffect } from "react";
-import { Search, Plus, User, RefreshCw } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { Search, Plus, User, RefreshCw, Eye, Edit } from "lucide-react";
 import { useCookie } from "next-cookie";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage } from "@/utils/Toastify/Messages";
 import { getAuthToken } from "@/utils/auth/clientAuth";
 import AddMechanicModal from "./AddMechanics";
+import ViewMechanicModal, { MechanicData } from "./ViewMechanicModal";
+import EditMechanicModal from "./EditMechanicModal";
 
-interface ApiMechanic {
-  id: string;
-  specialization: string[];
-  experience_years: number;
-  Status: number;
-  user: {
-    first_name: string;
-    last_name: string;
-    mobile: string;
-    email: string;
-    image?: string;
-  };
-}
+export type ApiMechanic = MechanicData;
 
 const TableSkeleton = () => (
   <tbody>
@@ -43,27 +33,41 @@ const TableSkeleton = () => (
         <td className="hidden md:table-cell px-4 sm:px-6 py-4"><div className="h-4 bg-gray-200 rounded w-32 sm:w-48"></div></td>
         <td className="hidden sm:table-cell px-4 sm:px-6 py-4"><div className="h-4 bg-gray-200 rounded w-12 sm:w-16"></div></td>
         <td className="px-4 sm:px-6 py-4"><div className="h-8 bg-gray-200 rounded-full w-20 sm:w-24"></div></td>
+        <td className="px-4 sm:px-6 py-4 text-right"><div className="h-8 bg-gray-200 rounded w-16 ml-auto"></div></td>
       </tr>
     ))}
   </tbody>
 );
 
 export default function Mechanics() {
-  const { cookie } = useCookie();
-  const cookieToken = cookie?.get("access_token");
+  const cookie = useCookie();
+  const rawCookieUser = cookie?.get ? cookie.get("user") : null;
+  const cookieToken = cookie?.get ? cookie.get("access_token") : null;
+
+  const targetDealerId = React.useMemo(() => {
+    try {
+      const parsed = typeof rawCookieUser === "string" ? JSON.parse(rawCookieUser) : rawCookieUser;
+      return parsed?.dealer_id || parsed?.dealerId || parsed?.userId || parsed?.id || "";
+    } catch {
+      return "";
+    }
+  }, [rawCookieUser]);
 
   const [mechanicList, setMechanicList] = useState<ApiMechanic[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewingMechanic, setViewingMechanic] = useState<ApiMechanic | null>(null);
+  const [editingMechanic, setEditingMechanic] = useState<ApiMechanic | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchMechanics = () => {
     const activeToken = getAuthToken() || cookieToken || "";
     const headers = activeToken ? { Authorization: `Bearer ${activeToken}` } : undefined;
+    const params = targetDealerId ? { dealer_id: targetDealerId } : undefined;
 
     setLoading(true);
     renderInstance
-      .get("/dealer/mechanic", { headers })
+      .get("/dealer/mechanic", { headers, params })
       .then((res) => {
         const mechanicsData = res.data?.mechanics || res.data?.data || (Array.isArray(res.data) ? res.data : []);
         setMechanicList(Array.isArray(mechanicsData) ? mechanicsData : []);
@@ -77,7 +81,7 @@ export default function Mechanics() {
 
   useEffect(() => {
     fetchMechanics();
-  }, [cookieToken]);
+  }, [cookieToken, targetDealerId]);
 
   const handleAddSuccess = () => {
     setIsModalOpen(false);
@@ -165,13 +169,18 @@ export default function Mechanics() {
                   <th className="hidden md:table-cell px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-bold text-red-700 uppercase tracking-wider">Specialization</th>
                   <th className="hidden sm:table-cell px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-bold text-red-700 uppercase tracking-wider">Experience</th>
                   <th className="px-4 sm:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-bold text-red-700 uppercase tracking-wider">Status</th>
+                  <th className="px-4 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-bold text-red-700 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               {loading ? <TableSkeleton /> : (
                 <tbody className="bg-gradient-to-r from-[#A10A0C] to-[#3B0404]">
                   {filteredMechanics.length > 0 ? (
                     filteredMechanics.map((mech) => (
-                      <tr key={mech.id} className="hover:bg-white/10 transition-colors cursor-pointer border-b border-white/5">
+                      <tr
+                        key={mech.id}
+                        onClick={() => setViewingMechanic(mech)}
+                        className="hover:bg-white/10 transition-colors cursor-pointer border-b border-white/5"
+                      >
                         <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                           <div className="flex items-center gap-3 sm:gap-4">
                             <div className="flex-shrink-0 h-10 w-10 sm:h-12 sm:w-12">
@@ -214,11 +223,34 @@ export default function Mechanics() {
                         <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-semibold ${getStatusBadgeColor(mech.Status)}`}>{getStatusString(mech.Status)}</span>
                         </td>
+                        <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-right">
+                          <div
+                            className="flex items-center justify-end gap-1.5"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => setViewingMechanic(mech)}
+                              className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/15 transition-colors cursor-pointer"
+                              title="View details"
+                            >
+                              <Eye size={17} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingMechanic(mech)}
+                              className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/15 transition-colors cursor-pointer"
+                              title="Edit mechanic"
+                            >
+                              <Edit size={17} />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="text-center py-12 sm:py-16">
+                      <td colSpan={6} className="text-center py-12 sm:py-16">
                         <div className="flex flex-col items-center justify-center gap-3">
                           <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 rounded-full flex items-center justify-center">
                             <User size={24} className="sm:w-8 sm:h-8 text-gray-400" />
@@ -311,6 +343,24 @@ export default function Mechanics() {
                       </div>
                     </div>
                   )}
+
+                  {/* Actions for mobile */}
+                  <div className="pt-3 mt-2 border-t border-white/10 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setViewingMechanic(mech)}
+                      className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold text-white flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Eye size={13} /> View
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingMechanic(mech)}
+                      className="px-3 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-xs font-semibold text-white flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+                    >
+                      <Edit size={13} /> Edit
+                    </button>
+                  </div>
                 </div>
               </div>
             ))
@@ -327,7 +377,28 @@ export default function Mechanics() {
           )}
         </div>
 
-        <AddMechanicModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onAddSuccess={handleAddSuccess} />
+        <AddMechanicModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onAddSuccess={handleAddSuccess}
+        />
+
+        <ViewMechanicModal
+          isOpen={!!viewingMechanic}
+          onClose={() => setViewingMechanic(null)}
+          mechanic={viewingMechanic}
+          onEdit={(mech) => {
+            setViewingMechanic(null);
+            setEditingMechanic(mech as any);
+          }}
+        />
+
+        <EditMechanicModal
+          isOpen={!!editingMechanic}
+          onClose={() => setEditingMechanic(null)}
+          mechanic={editingMechanic}
+          onSuccess={() => fetchMechanics()}
+        />
       </div>
     </div>
   );

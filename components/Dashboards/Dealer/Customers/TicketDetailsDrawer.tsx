@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { getAuthToken } from "@/utils/auth/clientAuth";
-import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
+import { errorMessage } from "@/utils/Toastify/Messages";
 
 interface Message {
   sender: string;
@@ -96,7 +96,6 @@ export default function TicketDetailsDrawer({
       );
 
       if (res.data?.success) {
-        successMessage("Reply sent to customer successfully!");
         setReplyText("");
         onUpdated();
       }
@@ -121,7 +120,6 @@ export default function TicketDetailsDrawer({
       );
 
       if (res.data?.success) {
-        successMessage(`Ticket status updated to ${nextStatus}!`);
         onUpdated();
       }
     } catch (err: any) {
@@ -145,7 +143,6 @@ export default function TicketDetailsDrawer({
       );
 
       if (res.data?.success) {
-        successMessage("Resolution notes saved successfully!");
         onUpdated();
       }
     } catch (err: any) {

@@ -3,6 +3,9 @@
 import React from "react";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Check } from "lucide-react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
+import { authTranslations, AuthLanguage } from "@/utils/translation/authTranslations";
 
 export interface StepItem {
   id: string; // e.g. "stepone", "steptwo"
@@ -29,6 +32,12 @@ export const RegisterStepperHeader: React.FC<RegisterStepperHeaderProps> = ({
   steps,
   themeColor = "red",
 }) => {
+  const currentLang = (useSelector(
+    (state: RootState) => state.ActiveLanguage.language
+  ) || "en") as AuthLanguage;
+
+  const t = authTranslations[currentLang] || authTranslations.en;
+
   const badgeColors = {
     red: "bg-red-50 text-[#AB0F0C] border-red-100",
     emerald: "bg-emerald-50 text-emerald-700 border-emerald-100",
@@ -45,32 +54,28 @@ export const RegisterStepperHeader: React.FC<RegisterStepperHeaderProps> = ({
 
   return (
     <div className="w-full flex flex-col gap-2 pb-3 border-b border-slate-100 bg-white sticky top-0 z-20">
-      {/* Top Meta Header - Compact & Clean */}
-      <div className="flex items-center justify-between gap-2 px-0.5">
-        <div className="flex items-center gap-2.5">
+      {/* Top Meta Header - pr-12 guarantees full clearance for the absolute close (X) button */}
+      <div className="flex items-center justify-between gap-2 px-0.5 pr-12">
+        <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0 shadow-xs">
             {roleIcon}
           </div>
-          <div className="leading-tight">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-slate-900">
+          <div className="leading-tight min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-sm font-bold text-slate-900 truncate">
                 {roleTitle}
               </h3>
-              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${badgeColors}`}>
+              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border shrink-0 ${badgeColors}`}>
                 {roleBadge}
               </span>
             </div>
             {applicantName && (
-              <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                Applicant: <span className="text-slate-800 font-semibold">{applicantName}</span>
+              <p className="text-[11px] text-slate-500 font-medium mt-0.5 truncate">
+                {t.applicantLabel}: <span className="text-slate-800 font-semibold">{applicantName}</span>
               </p>
             )}
           </div>
         </div>
-
-        <span className="hidden sm:inline-block text-[11px] text-slate-400 font-medium">
-          Step by Step Setup
-        </span>
       </div>
 
       {/* Slim Modern Stepper Track */}

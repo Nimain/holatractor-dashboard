@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import pool from "@/utils/Database/db";
+import { getBackendBaseUrl } from "@/utils/api/apiUrl";
 
 export const dynamic = "force-dynamic";
 
@@ -10,58 +10,22 @@ export async function PATCH(
   try {
     const { id } = params;
     const body = await request.json();
+    const fastApiUrl = getBackendBaseUrl();
+    const token = request.headers.get("authorization") || "";
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = token;
 
-    const client = await pool.connect();
-    try {
-      const updates: string[] = [];
-      const values: any[] = [];
-      let idx = 1;
+    const fastRes = await fetch(`${fastApiUrl}/dealer/customers/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
 
-      const fields: string[] = [
-        "first_name",
-        "last_name",
-        "middle_name",
-        "email",
-        "mobile",
-        "gender",
-        "image",
-        "city",
-        "status",
-      ];
-
-      for (const f of fields) {
-        if (body[f] !== undefined) {
-          updates.push(`${f} = $${idx}`);
-          values.push(body[f]);
-          idx++;
-        }
-      }
-
-      if (updates.length === 0) {
-        return NextResponse.json({ success: true, message: "No changes requested" });
-      }
-
-      updates.push(`"updatedAt" = NOW()`);
-      values.push(id);
-
-      const query = `
-        UPDATE "DealerCustomer"
-        SET ${updates.join(", ")}
-        WHERE id = $${idx}
-        RETURNING *;
-      `;
-
-      const result = await client.query(query, values);
-      if (result.rows.length === 0) {
-        return NextResponse.json({ error: "Customer not found" }, { status: 404 });
-      }
-
-      return NextResponse.json({ success: true, customer: result.rows[0] });
-    } finally {
-      client.release();
-    }
+    const data = await fastRes.json().catch(() => ({}));
+    return NextResponse.json(data, { status: fastRes.status });
   } catch (error: any) {
-    console.error("[/api/dealer/customers/[id]] PATCH error:", error?.message);
+    console.error("[/api/dealer/customers/[id]] PATCH proxy error:", error?.message);
     return NextResponse.json({ error: error?.message || "Failed to update customer" }, { status: 500 });
   }
 }
@@ -72,15 +36,21 @@ export async function DELETE(
 ) {
   try {
     const { id } = params;
-    const client = await pool.connect();
-    try {
-      await client.query('DELETE FROM "DealerCustomer" WHERE id = $1;', [id]);
-      return NextResponse.json({ success: true, message: "Customer deleted successfully", id });
-    } finally {
-      client.release();
-    }
+    const fastApiUrl = getBackendBaseUrl();
+    const token = request.headers.get("authorization") || "";
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = token;
+
+    const fastRes = await fetch(`${fastApiUrl}/dealer/customers/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers,
+      cache: "no-store",
+    });
+
+    const data = await fastRes.json().catch(() => ({}));
+    return NextResponse.json(data, { status: fastRes.status });
   } catch (error: any) {
-    console.error("[/api/dealer/customers/[id]] DELETE error:", error?.message);
+    console.error("[/api/dealer/customers/[id]] DELETE proxy error:", error?.message);
     return NextResponse.json({ error: error?.message || "Failed to delete customer" }, { status: 500 });
   }
 }

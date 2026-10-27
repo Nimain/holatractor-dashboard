@@ -113,7 +113,6 @@ export default function LeaseLeadsPage() {
 
       if (Array.isArray(data)) {
         setLeases(data);
-        if (isRefresh) successMessage(`Refreshed ${data.length} tractor lease leads`);
       }
     } catch (err: any) {
       console.error("Error fetching lease leads:", err);

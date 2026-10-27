@@ -116,17 +116,18 @@ export default function AddTractor({ alreadyTractors, onTractorAdded }: AddTract
                 <Card key={tractor.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                   <CardContent className="p-4">
                     {/* Image Placeholder */}
-                    <div className="w-full h-24 bg-gray-300 rounded mb-3 flex items-center justify-center">
+                    <div className="w-full h-24 bg-gray-100 rounded mb-3 flex items-center justify-center overflow-hidden border border-gray-100">
                       {tractor.images?.[0] ? (
                         <Image
                           src={tractor.images[0] || "/placeholder.svg"}
                           alt={tractor.name}
-                          width={100}
-                          height={60}
-                          className="w-full h-full object-cover rounded"
+                          width={160}
+                          height={96}
+                          unoptimized
+                          className="w-full h-full object-contain p-1 rounded"
                         />
                       ) : (
-                        <div className="w-full h-full bg-gray-300 rounded"></div>
+                        <div className="w-full h-full bg-gray-200 rounded flex items-center justify-center text-xs text-gray-400">No Image</div>
                       )}
                     </div>
 

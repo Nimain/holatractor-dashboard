@@ -1,8 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { CircleCheck, PlusCircle, X } from "lucide-react";
+import {
+  CircleCheck,
+  PlusCircle,
+  Trash2,
+  Edit3,
+  Tractor,
+  Building2,
+  Sparkles,
+  ShieldCheck,
+  Zap,
+  Tag,
+  Clock,
+  Layers,
+  Filter,
+} from "lucide-react";
+import axios from "axios";
 import { Subscriptions, SubscriptionType } from "@/utils/Types/types";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import {
@@ -14,892 +29,388 @@ import {
   CardTitle,
 } from "../ui/card";
 import { Badge } from "../ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../ui/dialog";
 import { useCookie } from "next-cookie";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { CircularProgress } from "@mui/material";
-import { Label } from "../ui/label";
-import { Input } from "../ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
-import { Switch } from "../ui/switch";
+import CreateSubscriptionModal, { SubscriptionFormData } from "./CreateSubscriptionModal";
 
-export default function SubscriptionsPage() {
+interface SubscriptionsPageProps {
+  embedded?: boolean;
+}
+
+export default function SubscriptionsPage({ embedded = false }: SubscriptionsPageProps) {
   const [subscriptions, setSubscriptions] = useState<Subscriptions[]>([]);
   const [fetchSubscriptions, setFetchSubscriptions] = useState(false);
+  const [roleFilter, setRoleFilter] = useState<"all" | "owner" | "dealer">("all");
 
-  const [addSubscription, setAddSubscription] = useState(false);
-  const [formData, setFormData] = useState<Partial<Subscriptions>>({
-    name: "",
-    type: SubscriptionType.Basic,
-    actual_cost: 0,
-    discount_cost: 0,
-    features: [],
-    focused_features: [],
-    total_days: 0,
-    for_owner: false,
-    for_dealer: false,
-  });
-  const [newFeature, setNewFeature] = useState("");
-  const [newFocusedFeature, setNewFocusedFeature] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<"create" | "edit">("create");
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionFormData | null>(null);
 
-  const [editSubscription, setEditSubscription] = useState(false);
-  const [editFormData, setEditFormData] = useState<Partial<Subscriptions>>({
-    name: "",
-    type: SubscriptionType.Basic,
-    actual_cost: 0,
-    discount_cost: 0,
-    features: [],
-    focused_features: [],
-    total_days: 0,
-    for_owner: false,
-    for_dealer: false,
-    total_stores: 0,
-    total_operators: 0,
-    total_tractors: 0,
-    total_attachments: 0,
-  });
-  const [editFeature, setEditFeature] = useState("");
-  const [editFocusedFeature, setEditFocusedFeature] = useState("");
-
-  const [deleteSubscription, setDeleteSubscription] = useState(false);
-  const [idDeleting, setIsDeleting] = useState(false);
-  const [editingSubscriptionId, setEditingSubscriptionId] = useState<
-    string | null
-  >(null);
-  const [deletingSubscriptionId, setDeletingSubscriptionId] = useState<
-    string | null
-  >(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { cookie } = useCookie();
   const access_token = cookie.get("access_token");
 
-  // Fetch subscriptions from API
-  const fetchAllSubscriptions = () => {
+  // Fetch subscriptions from API with optional filtering (tries local Next.js API first, then FastAPI)
+  const fetchAllSubscriptions = async (role = roleFilter) => {
     setFetchSubscriptions(true);
-    renderInstance
-      .get("/subscription")
-      .then((res) => {
-        setSubscriptions(res.data);
-      })
-      .finally(() => {
-        setFetchSubscriptions(false);
-      });
+    let queryParam = "";
+    if (role === "owner") queryParam = "?for_owner=true";
+    if (role === "dealer") queryParam = "?for_dealer=true";
+
+    try {
+      const localRes = await axios.get(`/api/subscription${queryParam}`, { timeout: 5000 });
+      if (Array.isArray(localRes.data)) {
+        setSubscriptions(localRes.data);
+        return;
+      }
+    } catch {}
+
+    // Fallback to FastAPI
+    try {
+      const res = await renderInstance.get(`/subscription${queryParam}`);
+      const list = Array.isArray(res.data) ? res.data : [];
+      setSubscriptions(list);
+    } catch (err: any) {
+      console.error("Failed to fetch subscriptions:", err);
+    } finally {
+      setFetchSubscriptions(false);
+    }
   };
 
   useEffect(() => {
-    fetchAllSubscriptions();
-  }, []);
+    fetchAllSubscriptions(roleFilter);
+  }, [roleFilter]);
 
-  const handleDelete = (id: string) => {
-    setIsDeleting(true);
-    renderInstance
-      .delete(`/subscription/${id}`, {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      })
-      .then(() => {
-        successMessage("Deleted");
-        fetchAllSubscriptions();
-        setDeleteSubscription(false);
-      })
-      .catch((err) => {
-        errorMessage("Error deleting");
-      })
-      .finally(() => {
-        setIsDeleting(false);
-      });
+  const handleOpenCreate = () => {
+    setModalMode("create");
+    setSelectedPlan(null);
+    setModalOpen(true);
   };
 
-  const handleEdit = () => {
-    if (!editFormData.name) {
-      errorMessage("Please give the name");
-      return;
-    }
-    if (editFormData.actual_cost === 0) {
-      errorMessage("Please give the cost");
-      return;
-    }
-    if (
-      typeof editFormData.actual_cost !== "undefined" &&
-      editFormData.actual_cost <= 0
-    ) {
-      errorMessage("Please give the cost");
-      return;
-    }
-    if (
-      typeof editFormData.discount_cost !== "undefined" &&
-      typeof editFormData.actual_cost !== "undefined" &&
-      editFormData.discount_cost > 0 &&
-      editFormData.actual_cost < editFormData.discount_cost
-    ) {
-      errorMessage("Discount cost is greater than actual cost");
-      return;
-    }
-    if (
-      editFormData.features?.length === 0 &&
-      editFormData.focused_features?.length === 0
-    ) {
-      errorMessage("please give atleast one feature");
-      return;
-    }
-    if (
-      typeof editFormData.total_days !== "undefined" &&
-      editFormData.total_days <= 0
-    ) {
-      errorMessage("Please give the total days");
-      return;
-    }
-    if (!editFormData.for_owner && !editFormData.for_dealer) {
-      errorMessage("Please specify target user");
-      return;
-    }
-
-    if (!editingSubscriptionId) {
-      errorMessage("No subscription selected");
-      return;
-    }
-
-    setIsDeleting(true);
-    renderInstance
-      .patch(
-        `/subscription/${editingSubscriptionId}`,
-        {
-          ...editFormData,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${access_token}`,
-          },
-        }
-      )
-      .then(() => {
-        successMessage("Updated");
-        fetchAllSubscriptions();
-        setEditSubscription(false);
-        setEditingSubscriptionId(null);
-      })
-      .catch(() => {
-        errorMessage("Error updating");
-      })
-      .finally(() => {
-        setIsDeleting(false);
-      });
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData({ ...formData, [name]: value });
-  };
-
-  const handleSwitchChange = (name: string, checked: boolean) => {
-    setFormData({ ...formData, [name]: checked });
-  };
-
-  const handleAddFeature = () => {
-    if (newFeature.trim()) {
-      setFormData({
-        ...formData,
-        features: [...(formData.features || []), newFeature.trim()],
-      });
-      setNewFeature("");
-    }
-  };
-
-  const handleRemoveFeature = (index: number) => {
-    const updatedFeatures =
-      formData.features?.filter((_, i) => i !== index) || [];
-    setFormData({ ...formData, features: updatedFeatures });
-  };
-
-  const handleAddFocusedFeature = () => {
-    if (newFocusedFeature.trim()) {
-      setFormData({
-        ...formData,
-        focused_features: [
-          ...(formData.focused_features || []),
-          newFocusedFeature.trim(),
-        ],
-      });
-      setNewFocusedFeature("");
-    }
-  };
-
-  const handleRemoveFocusedFeature = (index: number) => {
-    const updatedFocusedFeatures =
-      formData.focused_features?.filter((_, i) => i !== index) || [];
-    setFormData({ ...formData, focused_features: updatedFocusedFeatures });
-  };
-
-  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setEditFormData({ ...editFormData, [name]: value });
-  };
-
-  const handleEditSelectChange = (name: string, value: string) => {
-    setEditFormData({ ...editFormData, [name]: value });
-  };
-
-  const handleEditSwitchChange = (name: string, checked: boolean) => {
-    setEditFormData({ ...editFormData, [name]: checked });
-  };
-
-  const handleAddEditFeature = () => {
-    if (editFeature.trim()) {
-      setEditFormData({
-        ...editFormData,
-        features: [...(editFormData.features || []), editFeature.trim()],
-      });
-      setEditFeature("");
-    }
-  };
-
-  const handleRemoveEditFeature = (index: number) => {
-    const updatedFeatures =
-      editFormData.features?.filter((_, i) => i !== index) || [];
-    setEditFormData({ ...editFormData, features: updatedFeatures });
-  };
-
-  const handleAddEditFocusedFeature = () => {
-    if (editFocusedFeature.trim()) {
-      setEditFormData({
-        ...editFormData,
-        focused_features: [
-          ...(editFormData.focused_features || []),
-          editFocusedFeature.trim(),
-        ],
-      });
-      setEditFocusedFeature("");
-    }
-  };
-
-  const handleRemoveEditFocusedFeature = (index: number) => {
-    const updatedFocusedFeatures =
-      editFormData.focused_features?.filter((_, i) => i !== index) || [];
-    setEditFormData({
-      ...editFormData,
-      focused_features: updatedFocusedFeatures,
+  const handleOpenEdit = (sub: Subscriptions) => {
+    setModalMode("edit");
+    setSelectedPlan({
+      id: sub.id,
+      name: sub.name,
+      type: (sub.type as any) || "Basic",
+      actual_cost: Number(sub.actual_cost) || 0,
+      discount_cost: Number(sub.discount_cost) || 0,
+      total_days: Number(sub.total_days) || 30,
+      total_stores: Number(sub.total_stores) || 1,
+      total_tractors: Number(sub.total_tractors) || 5,
+      total_attachments: Number(sub.total_attachments) || 5,
+      total_devices: Number((sub as any).total_devices) || 1,
+      total_operators: Number((sub as any).total_operators) || 3,
+      for_owner: Boolean(sub.for_owner),
+      for_dealer: Boolean(sub.for_dealer),
+      features: Array.isArray(sub.features) ? sub.features : [],
+      focused_features: Array.isArray(sub.focused_features) ? sub.focused_features : [],
     });
+    setModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // onSubmit(formData as Subscriptions)
-    // onClose()
-    if (!formData.name) {
-      errorMessage("Please give the name");
-      return;
-    }
-    if (formData.actual_cost === 0) {
-      errorMessage("Please give the cost");
-      return;
-    }
-    if (
-      typeof formData.actual_cost !== "undefined" &&
-      formData.actual_cost <= 0
-    ) {
-      errorMessage("Please give the cost");
-      return;
-    }
-    if (
-      typeof formData.discount_cost !== "undefined" &&
-      typeof formData.actual_cost !== "undefined" &&
-      formData.discount_cost > 0 &&
-      formData.actual_cost < formData.discount_cost
-    ) {
-      errorMessage("Discount cost is greater than actual cost");
-      return;
-    }
-    if (
-      formData.features?.length === 0 &&
-      formData.focused_features?.length === 0
-    ) {
-      errorMessage("please give atleast one feature");
-      return;
-    }
-    if (
-      typeof formData.total_days !== "undefined" &&
-      formData.total_days <= 0
-    ) {
-      errorMessage("Please give the total days");
-      return;
-    }
-    if (!formData.for_owner && !formData.for_dealer) {
-      errorMessage("Please specify target user");
-      return;
-    }
-
+  const handleDelete = async (id: string) => {
     setIsDeleting(true);
-    renderInstance
-      .post(
-        "/subscription",
-        {
-          ...formData,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${access_token}`,
-          },
-        }
-      )
-      .then(() => {
-        successMessage("Added");
-        fetchAllSubscriptions();
-        setAddSubscription(false);
-      })
-      .catch((err) => {
-        errorMessage("Error adding subscription");
-      })
-      .finally(() => {
-        setIsDeleting(false);
+    let deleted = false;
+
+    try {
+      await axios.delete(`/api/subscription/${id}`, {
+        headers: { Authorization: `Bearer ${access_token}` },
+        timeout: 5000,
       });
+      deleted = true;
+    } catch {
+      try {
+        await renderInstance.delete(`/subscription/${id}`, {
+          headers: { Authorization: `Bearer ${access_token}` },
+        });
+        deleted = true;
+      } catch (err: any) {
+        console.error("Delete subscription error:", err);
+      }
+    }
+
+    setIsDeleting(false);
+    if (deleted) {
+      successMessage("Subscription plan deleted");
+      fetchAllSubscriptions();
+      setDeleteDialogOpen(false);
+      setDeletingId(null);
+    } else {
+      errorMessage("Error deleting subscription plan");
+    }
   };
+
+  const ownerCount = subscriptions.filter((s) => s.for_owner).length;
+  const dealerCount = subscriptions.filter((s) => s.for_dealer).length;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-end items-center mb-6">
-        <Dialog open={addSubscription} onOpenChange={setAddSubscription}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setAddSubscription(true)}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Create New Subscription
-            </Button>
-          </DialogTrigger>
-          <DialogContent
-            className="sm:max-w-[425px] max-h-[90vh] overflow-auto"
-            style={{ scrollbarWidth: "none" }}
+    <div className={embedded ? "w-full" : "container mx-auto px-4 py-6"}>
+      {/* Top Banner & Control Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+            Subscription Plans
+            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-xs font-bold">
+              {subscriptions.length} Plans
+            </Badge>
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            Manage membership tiers, quotas, and feature perks for Tractor Owners and Dealers.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* Role Filter Tabs */}
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-semibold">
+            <button
+              onClick={() => setRoleFilter("all")}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                roleFilter === "all"
+                  ? "bg-white text-slate-900 shadow-sm font-bold"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setRoleFilter("owner")}
+              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 ${
+                roleFilter === "owner"
+                  ? "bg-white text-emerald-700 shadow-sm font-bold"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <Tractor className="w-3.5 h-3.5" />
+              Owners
+            </button>
+            <button
+              onClick={() => setRoleFilter("dealer")}
+              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 ${
+                roleFilter === "dealer"
+                  ? "bg-white text-indigo-700 shadow-sm font-bold"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              Dealers
+            </button>
+          </div>
+
+          {/* Create Button */}
+          <Button
+            onClick={handleOpenCreate}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-emerald-600/20 h-10 px-4"
           >
-            <DialogHeader>
-              <DialogTitle>Create New Subscription</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="type">Type</Label>
-                <Select
-                  value={formData.type}
-                  onValueChange={(value) => handleSelectChange("type", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={SubscriptionType.Basic}>
-                      Basic
-                    </SelectItem>
-                    <SelectItem value={SubscriptionType.Premium}>
-                      Premium
-                    </SelectItem>
-                    <SelectItem value={SubscriptionType.Business}>
-                      Business
-                    </SelectItem>
-                    <SelectItem value={SubscriptionType.Custom}>
-                      Custom
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="actual_cost">Actual Cost</Label>
-                  <Input
-                    id="actual_cost"
-                    name="actual_cost"
-                    type="number"
-                    value={formData.actual_cost}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="discount_cost">Discount Cost</Label>
-                  <Input
-                    id="discount_cost"
-                    name="discount_cost"
-                    type="number"
-                    value={formData.discount_cost}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Features</Label>
-                <div className="flex space-x-2">
-                  <Input
-                    value={newFeature}
-                    onChange={(e) => setNewFeature(e.target.value)}
-                    placeholder="Add a feature"
-                  />
-                  <Button type="button" onClick={handleAddFeature} size="icon">
-                    <PlusCircle className="h-4 w-4" />
-                  </Button>
-                </div>
-                <ul className="space-y-2">
-                  {formData.features?.map((feature, index) => (
-                    <li
-                      key={index}
-                      className="flex items-center justify-between bg-secondary p-2 rounded"
-                    >
-                      <span>{feature}</span>
-                      <Button
-                        type="button"
-                        onClick={() => handleRemoveFeature(index)}
-                        size="icon"
-                        variant="ghost"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="space-y-2">
-                <Label>Special Features</Label>
-                <div className="flex space-x-2">
-                  <Input
-                    value={newFocusedFeature}
-                    onChange={(e) => setNewFocusedFeature(e.target.value)}
-                    placeholder="Add a focused feature"
-                  />
-                  <Button
-                    type="button"
-                    onClick={handleAddFocusedFeature}
-                    size="icon"
-                  >
-                    <PlusCircle className="h-4 w-4" />
-                  </Button>
-                </div>
-                <ul className="space-y-2">
-                  {formData.focused_features?.map((feature, index) => (
-                    <li
-                      key={index}
-                      className="flex items-center justify-between bg-secondary p-2 rounded"
-                    >
-                      <span>{feature}</span>
-                      <Button
-                        type="button"
-                        onClick={() => handleRemoveFocusedFeature(index)}
-                        size="icon"
-                        variant="ghost"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="total_days">Total Days</Label>
-                <Input
-                  id="total_days"
-                  name="total_days"
-                  type="number"
-                  value={formData.total_days}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="for_owner"
-                  checked={formData.for_owner}
-                  onCheckedChange={(checked) =>
-                    handleSwitchChange("for_owner", checked)
-                  }
-                />
-                <Label htmlFor="for_owner">For Owners</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="for_dealer"
-                  checked={formData.for_dealer}
-                  onCheckedChange={(checked) =>
-                    handleSwitchChange("for_dealer", checked)
-                  }
-                />
-                <Label htmlFor="for_dealer">For Dealers</Label>
-              </div>
-              {formData.for_owner && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="total_stores">Total stores</Label>
-                    <Input
-                      id="total_stores"
-                      name="total_stores"
-                      type="number"
-                      value={formData.total_stores}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="total_operators">Total operators</Label>
-                    <Input
-                      id="total_operators"
-                      name="total_operators"
-                      type="number"
-                      value={formData.total_operators}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="total_tractors">Total tractors</Label>
-                    <Input
-                      id="total_tractors"
-                      name="total_tractors"
-                      type="number"
-                      value={formData.total_tractors}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="total_attachments">Total attachments</Label>
-                    <Input
-                      id="total_attachments"
-                      name="total_attachments"
-                      type="number"
-                      value={formData.total_attachments}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                </>
-              )}
-              {idDeleting ? (
-                <CircularProgress />
-              ) : (
-                <Button type="submit" className="w-full">
-                  Create Subscription
-                </Button>
-              )}
-            </form>
-          </DialogContent>
-        </Dialog>
+            <PlusCircle className="mr-1.5 h-4 w-4" />
+            Create Subscription
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {fetchSubscriptions ? (
-          <p>Loading subscription details</p>
-        ) : subscriptions.length === 0 ? (
-          <p>No subscriptions present</p>
-        ) : (
-          subscriptions.map((subscription) => (
-            <Card key={subscription.id} className="flex flex-col">
-              <CardHeader>
-                <CardTitle className="flex justify-between items-center">
-                  {subscription.name}
-                  <Badge>{subscription.type}</Badge>
-                </CardTitle>
-                <CardDescription>
-                  {subscription.for_owner ? "For Owners" : ""}
-                  {subscription.for_owner && subscription.for_dealer
-                    ? " & "
-                    : ""}
-                  {subscription.for_dealer ? "For Dealers" : ""}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <p className="text-2xl font-bold mb-2">
-                  ${(Number(subscription.actual_cost) || 0).toFixed(2)}
-                </p>
-                <p className="text-sm text-muted-foreground mb-4">
-                  <s>${(Number(subscription.actual_cost) || 0).toFixed(2)}</s> •{" "}
-                  {subscription.total_days} days
-                </p>
-                <ul className="list-disc list-inside my-2">
-                  {subscription.focused_features.map((feature, index) => (
-                    <li
-                      key={index}
-                      className="text-sm font-medium flex gap-2 items-center text-green-500"
-                    >
-                      <CircleCheck />{" "}
-                      <p className="text-green-500">{feature}</p>
-                    </li>
-                  ))}
-                </ul>
-                <ul className="list-disc list-inside mb-4">
-                  {subscription.features.map((feature, index) => (
-                    <li key={index} className="text-sm flex gap-2 items-center">
-                      <CircleCheck />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-              <CardFooter className="flex justify-between">
-                <Dialog
-                  open={
-                    editSubscription &&
-                    editingSubscriptionId === subscription.id
-                  }
-                  onOpenChange={(open) => {
-                    setEditSubscription(open);
-                    if (!open) setEditingSubscriptionId(null);
-                  }}
-                >
-                  <DialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setEditFormData(subscription);
-                        setEditingSubscriptionId(subscription.id);
-                        setEditSubscription(true);
-                      }}
-                    >
-                      Edit
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent
-                    className="sm:max-w-[425px] max-h-[90vh] overflow-auto"
-                    style={{ scrollbarWidth: "none" }}
-                  >
-                    <DialogHeader>
-                      <DialogTitle>Update Subscription</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Name</Label>
-                        <Input
-                          id="name"
-                          name="name"
-                          value={editFormData.name}
-                          onChange={handleEditInputChange}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="type">Type</Label>
-                        <Select
-                          value={editFormData.type}
-                          onValueChange={(value) =>
-                            handleEditSelectChange("type", value)
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={SubscriptionType.Basic}>
-                              Basic
-                            </SelectItem>
-                            <SelectItem value={SubscriptionType.Premium}>
-                              Premium
-                            </SelectItem>
-                            <SelectItem value={SubscriptionType.Business}>
-                              Business
-                            </SelectItem>
-                            <SelectItem value={SubscriptionType.Custom}>
-                              Custom
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="actual_cost">Actual Cost</Label>
-                          <Input
-                            id="actual_cost"
-                            name="actual_cost"
-                            type="number"
-                            value={editFormData.actual_cost}
-                            onChange={handleEditInputChange}
-                            required
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="discount_cost">Discount Cost</Label>
-                          <Input
-                            id="discount_cost"
-                            name="discount_cost"
-                            type="number"
-                            value={editFormData.discount_cost}
-                            onChange={handleEditInputChange}
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Features</Label>
-                        <div className="flex space-x-2">
-                          <Input
-                            value={editFeature}
-                            onChange={(e) => setEditFeature(e.target.value)}
-                            placeholder="Add a feature"
-                          />
-                          <Button
-                            type="button"
-                            onClick={handleAddEditFeature}
-                            size="icon"
-                          >
-                            <PlusCircle className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <ul className="space-y-2">
-                          {editFormData.features?.map((feature, index) => (
-                            <li
-                              key={index}
-                              className="flex items-center justify-between bg-secondary p-2 rounded"
-                            >
-                              <span>{feature}</span>
-                              <Button
-                                type="button"
-                                onClick={() => handleRemoveEditFeature(index)}
-                                size="icon"
-                                variant="ghost"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Special Features</Label>
-                        <div className="flex space-x-2">
-                          <Input
-                            value={editFocusedFeature}
-                            onChange={(e) =>
-                              setEditFocusedFeature(e.target.value)
-                            }
-                            placeholder="Add a focused feature"
-                          />
-                          <Button
-                            type="button"
-                            onClick={handleAddEditFocusedFeature}
-                            size="icon"
-                          >
-                            <PlusCircle className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <ul className="space-y-2">
-                          {editFormData.focused_features?.map(
-                            (feature, index) => (
-                              <li
-                                key={index}
-                                className="flex items-center justify-between bg-secondary p-2 rounded"
-                              >
-                                <span>{feature}</span>
-                                <Button
-                                  type="button"
-                                  onClick={() =>
-                                    handleRemoveEditFocusedFeature(index)
-                                  }
-                                  size="icon"
-                                  variant="ghost"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </li>
-                            )
-                          )}
-                        </ul>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="total_days">Total Days</Label>
-                        <Input
-                          id="total_days"
-                          name="total_days"
-                          type="number"
-                          value={editFormData.total_days}
-                          onChange={handleEditInputChange}
-                          required
-                        />
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="for_owner"
-                          checked={editFormData.for_owner}
-                          onCheckedChange={(checked) =>
-                            handleEditSwitchChange("for_owner", checked)
-                          }
-                        />
-                        <Label htmlFor="for_owner">For Owners</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="for_dealer"
-                          checked={editFormData.for_dealer}
-                          onCheckedChange={(checked) =>
-                            handleEditSwitchChange("for_dealer", checked)
-                          }
-                        />
-                        <Label htmlFor="for_dealer">For Dealers</Label>
-                      </div>
-                      {idDeleting ? (
-                        <CircularProgress />
-                      ) : (
-                        <Button onClick={handleEdit} className="w-full">
-                          Update
-                        </Button>
+      {/* Plans Grid */}
+      {fetchSubscriptions ? (
+        <div className="w-full h-64 flex flex-col items-center justify-center bg-white rounded-2xl border border-slate-200">
+          <CircularProgress size={32} className="text-emerald-600 mb-2" />
+          <p className="text-xs text-slate-500 font-medium">Fetching subscription plans...</p>
+        </div>
+      ) : subscriptions.length === 0 ? (
+        <div className="w-full py-16 flex flex-col items-center justify-center bg-white rounded-2xl border border-dashed border-slate-200 text-center p-6">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
+            <Sparkles className="w-7 h-7" />
+          </div>
+          <h3 className="text-base font-bold text-slate-800">No subscription plans found</h3>
+          <p className="text-xs text-slate-500 max-w-sm mt-1">
+            Get started by creating a membership plan tailored for tractor owners or equipment dealers.
+          </p>
+          <Button onClick={handleOpenCreate} className="mt-4 bg-emerald-600 text-white rounded-xl text-xs font-bold">
+            <PlusCircle className="mr-1.5 h-4 w-4" />
+            Create First Plan
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {subscriptions.map((sub) => {
+            const disc = Number(sub.discount_cost) || 0;
+            const act = Number(sub.actual_cost) || disc;
+            const savings = act > disc ? Math.round(((act - disc) / act) * 100) : 0;
+
+            return (
+              <Card
+                key={sub.id}
+                className="group relative flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden"
+              >
+                {/* Top Role & Tier Bar */}
+                <div className="p-5 pb-3 flex items-start justify-between gap-2 border-b border-slate-100 bg-slate-50/50">
+                  <div>
+                    <h3 className="font-extrabold text-slate-900 text-lg group-hover:text-emerald-600 transition-colors">
+                      {sub.name}
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                      {sub.for_owner && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md border border-emerald-200">
+                          <Tractor className="w-3 h-3" /> Owner
+                        </span>
+                      )}
+                      {sub.for_dealer && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md border border-indigo-200">
+                          <Building2 className="w-3 h-3" /> Dealer
+                        </span>
                       )}
                     </div>
-                  </DialogContent>
-                </Dialog>
-                <Dialog
-                  open={deleteSubscription}
-                  onOpenChange={setDeleteSubscription}
-                >
-                  <DialogTrigger asChild>
-                    <Button variant="destructive">Delete</Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogTitle>
-                      Are you sure you want to delete it?
-                    </DialogTitle>
-                    <DialogFooter>
-                      <Button
-                        variant="outline"
-                        onClick={() => setDeleteSubscription(false)}
-                      >
-                        Cancel
-                      </Button>
-                      {idDeleting ? (
-                        <CircularProgress />
-                      ) : (
-                        <Button
-                          variant="destructive"
-                          onClick={() => handleDelete(subscription.id)}
-                        >
-                          Delete
-                        </Button>
-                      )}
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </CardFooter>
-            </Card>
-          ))
-        )}
-      </div>
+                  </div>
+
+                  <Badge
+                    className={`font-bold text-xs uppercase px-2.5 py-0.5 ${
+                      sub.type === "Premium"
+                        ? "bg-amber-100 text-amber-800 border-amber-200"
+                        : sub.type === "Business"
+                        ? "bg-blue-100 text-blue-800 border-blue-200"
+                        : "bg-slate-200 text-slate-800"
+                    }`}
+                  >
+                    {sub.type || "Basic"}
+                  </Badge>
+                </div>
+
+                {/* Price Display */}
+                <CardContent className="p-5 flex-grow space-y-4">
+                  <div className="flex items-baseline justify-between pb-3 border-b border-slate-100">
+                    <div>
+                      <span className="text-3xl font-extrabold text-slate-900">${disc}</span>
+                      <span className="text-xs text-slate-500 font-medium"> / {sub.total_days} days</span>
+                    </div>
+                    {savings > 0 && (
+                      <div className="text-right">
+                        <span className="text-xs text-slate-400 line-through block">${act}</span>
+                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[10px] font-bold">
+                          Save {savings}%
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quotas Grid */}
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Stores</span>
+                      <span className="font-bold text-slate-800">{sub.total_stores ?? 1} Max</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Tractors</span>
+                      <span className="font-bold text-slate-800">{sub.total_tractors ?? 5} Max</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Attachments</span>
+                      <span className="font-bold text-slate-800">{sub.total_attachments ?? 5} Max</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Duration</span>
+                      <span className="font-bold text-slate-800">{sub.total_days ?? 30} Days</span>
+                    </div>
+                  </div>
+
+                  {/* Focused VIP Features */}
+                  {Array.isArray(sub.focused_features) && sub.focused_features.length > 0 && (
+                    <div className="space-y-1.5 pt-1">
+                      {sub.focused_features.map((feat, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-xs font-semibold text-amber-700 bg-amber-50/80 px-2.5 py-1 rounded-lg border border-amber-200/60">
+                          <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                          <span>{feat}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* General Features */}
+                  {Array.isArray(sub.features) && sub.features.length > 0 && (
+                    <div className="space-y-1 pt-1">
+                      {sub.features.map((feat, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-xs text-slate-600">
+                          <CircleCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                          <span>{feat}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+
+                {/* Actions Footer */}
+                <CardFooter className="p-4 pt-0 border-t border-slate-100 flex items-center justify-between gap-2 mt-auto">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleOpenEdit(sub)}
+                    className="flex-1 rounded-xl text-xs font-semibold border-slate-200 hover:bg-slate-50"
+                  >
+                    <Edit3 className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                    Edit Plan
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setDeletingId(sub.id);
+                      setDeleteDialogOpen(true);
+                    }}
+                    className="rounded-xl text-xs font-semibold text-red-500 hover:bg-red-50 hover:text-red-600"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </CardFooter>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modern Create/Edit Modal */}
+      <CreateSubscriptionModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        onSuccess={() => fetchAllSubscriptions()}
+        initialData={selectedPlan}
+        mode={modalMode}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      {deleteDialogOpen && deletingId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-2xl border border-slate-200">
+            <h3 className="text-base font-bold text-slate-900">Delete Subscription Plan?</h3>
+            <p className="text-xs text-slate-500">
+              Are you sure you want to delete this subscription plan? Existing subscribed users will retain their active period, but no new users will be able to purchase it.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDeleteDialogOpen(false)}
+                className="rounded-xl text-xs"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={isDeleting}
+                onClick={() => handleDelete(deletingId)}
+                className="rounded-xl text-xs font-bold"
+              >
+                {isDeleting ? "Deleting..." : "Delete Plan"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+const logger = {
+  error: (msg: any) => console.error(msg),
+};

@@ -7,10 +7,11 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const dealerId = searchParams.get("dealer_id") || searchParams.get("dealerId") || "cmb7lih4v000ez5ms8nhvegf6";
+    const period = searchParams.get("period") || "30D";
 
     const fastApiUrl = getBackendBaseUrl();
     try {
-      const fastRes = await fetch(`${fastApiUrl}/dealer/leads/conversion?dealer_id=${dealerId}`, {
+      const fastRes = await fetch(`${fastApiUrl}/dealer/leads/conversion?dealer_id=${dealerId}&period=${period}`, {
         cache: "no-store",
       });
       if (fastRes.ok) {

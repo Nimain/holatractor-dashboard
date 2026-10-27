@@ -1,17 +1,18 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Search, Plus, Package, Filter, X } from "lucide-react";
+import { Search, Plus, Package, Filter, X, Edit, Trash2 } from "lucide-react";
 import { useCookie } from "next-cookie";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
 import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
 import { getAuthToken, getAuthUser } from "@/utils/auth/clientAuth";
 import { CircularProgress } from "@mui/material";
 import AddPartsModal from "./AddPartsModal";
+import EditPartsModal from "./EditPartsModal";
 
 // Type for the inventory part object
 interface InventoryPart {
-  id: string | number;
+  id: string;
   part_name: string;
   part_number: string;
   description: string;
@@ -29,63 +30,65 @@ const CATEGORIES = [
 ];
 
 export default function PartsInventory() {
+  const cookie = useCookie();
+  const rawCookieUser = cookie?.get ? cookie.get("user") : null;
+  const cookieToken = cookie?.get ? cookie.get("access_token") : null;
+  const authUser = getAuthUser();
+
+  const targetDealerId = useMemo(() => {
+    try {
+      const parsed = typeof rawCookieUser === "string" ? JSON.parse(rawCookieUser) : rawCookieUser;
+      return (
+        parsed?.dealer_id ||
+        parsed?.dealerId ||
+        (authUser as any)?.dealer_id ||
+        (typeof window !== "undefined" ? localStorage.getItem("dealer_id") : null) ||
+        parsed?.userId ||
+        parsed?.id ||
+        authUser?.userId ||
+        authUser?.id ||
+        ""
+      );
+    } catch {
+      return (authUser as any)?.dealer_id || authUser?.userId || authUser?.id || "";
+    }
+  }, [rawCookieUser, authUser]);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedPartForEdit, setSelectedPartForEdit] = useState<any>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [inventoryData, setInventoryData] = useState<InventoryPart[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dealerId, setDealerId] = useState<string>("");
-
-  const { cookie } = useCookie();
-  const cookieToken = cookie?.get("access_token");
 
   const fetchInventory = useCallback(async () => {
     const activeToken = getAuthToken() || cookieToken || "";
-    const authUser = getAuthUser();
     const headers = activeToken ? { Authorization: `Bearer ${activeToken}` } : undefined;
 
     setLoading(true);
 
     try {
-      const activeDealerId = dealerId || authUser?.dealer_id || authUser?.userId;
+      const params: Record<string, string> = {};
+      if (targetDealerId) params.dealer_id = targetDealerId;
+      if (selectedCategory && selectedCategory !== "all") params.category = selectedCategory;
+      if (searchTerm.trim()) params.search = searchTerm.trim();
+
+      const res = await renderInstance.get("/dealer/tractor-parts/all", { headers, params });
       
-      const queryParams: string[] = [];
-      if (activeDealerId) queryParams.push(`dealer_id=${activeDealerId}`);
-      if (selectedCategory) queryParams.push(`category=${encodeURIComponent(selectedCategory)}`);
-      if (searchTerm.trim()) queryParams.push(`search=${encodeURIComponent(searchTerm.trim())}`);
-      
-      const queryStr = queryParams.length > 0 ? `?${queryParams.join("&")}` : "";
-      const res = await renderInstance.get(`/dealer/tractor-parts/all${queryStr}`, { headers });
-      
-      let parts = Array.isArray(res.data?.parts) 
+      const parts = Array.isArray(res.data?.parts) 
         ? res.data.parts 
         : (Array.isArray(res.data?.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []));
-
-      // If filtered by dealer_id yielded 0 items, fallback to general catalog so dealer can view available parts
-      if (parts.length === 0 && activeDealerId && !selectedCategory && !searchTerm.trim()) {
-        const fallbackRes = await renderInstance.get("/dealer/tractor-parts/all", { headers });
-        const fallbackParts = Array.isArray(fallbackRes.data?.parts) ? fallbackRes.data.parts : [];
-        if (fallbackParts.length > 0) {
-          parts = fallbackParts;
-        }
-      }
 
       setInventoryData(parts);
     } catch (err: any) {
       console.error("Error fetching inventory:", err);
-      // Fallback try without dealer_id
-      try {
-        const res = await renderInstance.get("/dealer/tractor-parts/all", { headers });
-        const parts = Array.isArray(res.data?.parts) ? res.data.parts : [];
-        setInventoryData(parts);
-      } catch (fallbackErr) {
-        setInventoryData([]);
-      }
+      setInventoryData([]);
     } finally {
       setLoading(false);
     }
-  }, [cookieToken, dealerId, selectedCategory, searchTerm]);
+  }, [cookieToken, targetDealerId, selectedCategory, searchTerm]);
 
   useEffect(() => {
     fetchInventory();
@@ -93,10 +96,28 @@ export default function PartsInventory() {
 
   const handleAddSuccess = () => {
     setIsModalOpen(false);
-    successMessage("Part added successfully! Refreshing list...");
-    setTimeout(() => {
+    successMessage("Part added successfully!");
+    fetchInventory();
+  };
+
+  const handleEditClick = (part: any) => {
+    setSelectedPartForEdit(part);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDeletePart = async (partId: string) => {
+    if (!window.confirm("Are you sure you want to delete this part from inventory?")) return;
+
+    try {
+      const activeToken = getAuthToken() || cookieToken || "";
+      const headers = activeToken ? { Authorization: `Bearer ${activeToken}` } : undefined;
+      await renderInstance.delete(`/dealer/tractor-parts/${partId}`, { headers });
+      successMessage("Part deleted successfully!");
       fetchInventory();
-    }, 500);
+    } catch (err: any) {
+      console.error("Error deleting part:", err);
+      errorMessage(err?.response?.data?.detail || "Failed to delete part");
+    }
   };
 
   const handleCategorySelect = (category: string) => {
@@ -232,14 +253,14 @@ export default function PartsInventory() {
                 <table className="w-full">
                   <thead className="bg-gray-50 text-red-600">
                     <tr>
-                      {["Part Name", "Part Number", "Category", "Model", "Stock", "Price", "Status"].map(h => (
+                      {["Part Name", "Part Number", "Category", "Model", "Stock", "Price", "Status", "Actions"].map(h => (
                         <th key={h} className="px-6 py-4 text-left font-semibold text-sm">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="bg-gradient-to-r from-[#A10A0C] to-[#3B0404]">
                     {inventoryData.map((part) => (
-                      <tr key={part.id} className="hover:bg-white/20">
+                      <tr key={part.id} className="hover:bg-white/20 transition-colors">
                         <td className="px-6 py-4 font-medium text-white whitespace-nowrap">{part.part_name}</td>
                         <td className="px-6 py-4 text-white">{part.part_number}</td>
                         <td className="px-6 py-4 text-white">
@@ -254,6 +275,24 @@ export default function PartsInventory() {
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${part.status === 1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                             {part.status === 1 ? 'Active' : 'Inactive'}
                           </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleEditClick(part)}
+                              title="Edit Part"
+                              className="p-1.5 bg-white/10 hover:bg-white/30 text-white rounded-lg transition-colors"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDeletePart(String(part.id))}
+                              title="Delete Part"
+                              className="p-1.5 bg-white/10 hover:bg-red-500/80 text-white rounded-lg transition-colors"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -271,9 +310,23 @@ export default function PartsInventory() {
                           <h3 className="font-bold text-lg text-gray-900">{part.part_name}</h3>
                           <p className="text-sm text-gray-500">{part.part_number}</p>
                         </div>
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${part.status === 1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                          {part.status === 1 ? 'Active' : 'Inactive'}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${part.status === 1 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                            {part.status === 1 ? 'Active' : 'Inactive'}
+                          </span>
+                          <button
+                            onClick={() => handleEditClick(part)}
+                            className="p-1 text-gray-500 hover:text-blue-600 rounded"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDeletePart(String(part.id))}
+                            className="p-1 text-gray-500 hover:text-red-600 rounded"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </div>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                         <div>
@@ -307,6 +360,19 @@ export default function PartsInventory() {
           onClose={() => setIsModalOpen(false)} 
           onAddSuccess={handleAddSuccess} 
           inventoryData={inventoryData}
+          dealerId={targetDealerId}
+        />
+
+        <EditPartsModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedPartForEdit(null);
+          }}
+          onUpdateSuccess={() => {
+            fetchInventory();
+          }}
+          part={selectedPartForEdit}
         />
       </div>
     </div>

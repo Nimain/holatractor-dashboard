@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { 
   Wrench, 
@@ -16,7 +16,7 @@ import {
   Plus
 } from "lucide-react";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
-import { getAuthToken } from "@/utils/auth/clientAuth";
+import { getAuthToken, getAuthUser } from "@/utils/auth/clientAuth";
 import { useCookie } from "next-cookie";
 import AddScheduleRepairModal from "@/components/Dashboards/Dealer/Repairs/AddScheduleRepair";
 import AssignMechanicModal from "@/components/Dashboards/Dealer/Repairs/AssignMechanicModal";
@@ -42,8 +42,29 @@ interface Repair {
 }
 
 export default function RepairOverviewPage() {
-  const { cookie } = useCookie();
-  const cookieToken = cookie?.get("access_token");
+  const cookie = useCookie();
+  const rawCookieUser = cookie?.get ? cookie.get("user") : null;
+  const cookieToken = cookie?.get ? cookie.get("access_token") : null;
+  const authUser = getAuthUser();
+
+  const targetDealerId = useMemo(() => {
+    try {
+      const parsed = typeof rawCookieUser === "string" ? JSON.parse(rawCookieUser) : rawCookieUser;
+      return (
+        parsed?.dealer_id ||
+        parsed?.dealerId ||
+        (authUser as any)?.dealer_id ||
+        (typeof window !== "undefined" ? localStorage.getItem("dealer_id") : null) ||
+        parsed?.userId ||
+        parsed?.id ||
+        authUser?.userId ||
+        authUser?.id ||
+        ""
+      );
+    } catch {
+      return (authUser as any)?.dealer_id || authUser?.userId || authUser?.id || "";
+    }
+  }, [rawCookieUser, authUser]);
 
   const [repairs, setRepairs] = useState<Repair[]>([]);
   const [partsCount, setPartsCount] = useState<number>(0);
@@ -59,12 +80,14 @@ export default function RepairOverviewPage() {
     setLoading(true);
     const activeToken = getAuthToken() || cookieToken || "";
     const headers = activeToken ? { Authorization: `Bearer ${activeToken}` } : undefined;
+    const params: Record<string, string> = {};
+    if (targetDealerId) params.dealer_id = targetDealerId;
 
     try {
       const [repairsRes, partsRes, mechanicsRes] = await Promise.allSettled([
-        renderInstance.get("/dealer/repair-service", { headers }),
-        renderInstance.get("/dealer/tractor-parts/all", { headers }),
-        renderInstance.get("/dealer/mechanic", { headers }),
+        renderInstance.get("/dealer/repair-service", { headers, params }),
+        renderInstance.get("/dealer/tractor-parts/all", { headers, params }),
+        renderInstance.get("/dealer/mechanic", { headers, params }),
       ]);
 
       if (repairsRes.status === "fulfilled") {
@@ -95,7 +118,7 @@ export default function RepairOverviewPage() {
     } finally {
       setLoading(false);
     }
-  }, [cookieToken]);
+  }, [cookieToken, targetDealerId]);
 
   useEffect(() => {
     fetchOverviewData();

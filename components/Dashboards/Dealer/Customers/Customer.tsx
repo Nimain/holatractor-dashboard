@@ -455,79 +455,50 @@ export default function EnhancedOwnerTable() {
     console.log("=== Starting fetchCustomers ===");
     setFetching(true);
 
-    let resolvedDealerId = authUser.userId || "all";
-    let resolvedBaseId = "default";
+    const directDealerId = cookie?.get("dealer_id");
+    const cookieUser = cookie?.get("user");
+    let parsedUser: any = null;
+    try {
+      parsedUser = typeof cookieUser === "string" ? JSON.parse(decodeURIComponent(cookieUser)) : cookieUser;
+    } catch {}
+
+    const targetDealerId =
+      (directDealerId && directDealerId !== "all" ? directDealerId : "") ||
+      (authUser as any)?.dealer_id ||
+      parsedUser?.dealer_id ||
+      authUser?.userId ||
+      parsedUser?.userId ||
+      parsedUser?.id ||
+      "";
+
+    setDealerId(targetDealerId);
 
     try {
-      // Step 1: Attempt to resolve dealer info
-      try {
-        const dealerRes = await renderInstance.get("/dealer", {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        if (Array.isArray(dealerRes.data) && dealerRes.data.length > 0) {
-          const currentDealer =
-            dealerRes.data.find(
-              (d: any) => d.user_id === authUser.userId || d.id === authUser.userId
-            ) || dealerRes.data[0];
-          resolvedDealerId = currentDealer?.id || currentDealer?.dealer_id || resolvedDealerId;
-          resolvedBaseId = currentDealer?.base_id || "default";
-        } else if (dealerRes.data && typeof dealerRes.data === "object") {
-          resolvedDealerId = dealerRes.data?.id || dealerRes.data?.dealer_id || resolvedDealerId;
-          resolvedBaseId = dealerRes.data?.base_id || "default";
+      // Fetch customers directly from FastAPI (b2bholatractor)
+      if (targetDealerId) {
+        console.log(`Fetching dealer customers from FastAPI for dealer: ${targetDealerId}...`);
+        const remoteRes = await renderInstance.get(
+          `/dealer/customers?dealer_id=${encodeURIComponent(targetDealerId)}`,
+          { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+        );
+
+        let customersData: Owner[] = [];
+        if (Array.isArray(remoteRes.data)) {
+          customersData = remoteRes.data;
+        } else if (remoteRes.data?.customers && Array.isArray(remoteRes.data.customers)) {
+          customersData = remoteRes.data.customers;
+        } else if (remoteRes.data?.data && Array.isArray(remoteRes.data.data)) {
+          customersData = remoteRes.data.data;
         }
-      } catch (dealerErr) {
-        console.warn("Notice: /dealer resolution using auth user fallback:", dealerErr);
+        setOwners(customersData);
+      } else {
+        setOwners([]);
       }
-
-      setDealerId(resolvedDealerId);
-      setBaseId(resolvedBaseId);
-
-      // Step 2: Fetch customers directly from local database endpoint
-      console.log("Fetching live database customers from /api/dealer/customers...");
-      const localRes = await fetch(`/api/dealer/customers?dealer_id=${resolvedDealerId}`);
-      if (localRes.ok) {
-        const localData = await localRes.json();
-        if (Array.isArray(localData) && localData.length > 0) {
-          console.log("✅ Loaded live database customers:", localData);
-          setOwners(localData);
-          setFetching(false);
-          return;
-        }
-      }
-
-      // Step 3: Fallback to renderInstance if local empty
-      console.log("Fallback fetching from renderInstance...");
-      const remoteRes = await renderInstance.get(
-        `/dealer/customers/all?dealer_id=${resolvedDealerId}`,
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-      );
-
-      let customersData: Owner[] = [];
-      if (Array.isArray(remoteRes.data)) {
-        customersData = remoteRes.data;
-      } else if (remoteRes.data?.customers && Array.isArray(remoteRes.data.customers)) {
-        customersData = remoteRes.data.customers;
-      } else if (remoteRes.data?.data && Array.isArray(remoteRes.data.data)) {
-        customersData = remoteRes.data.data;
-      }
-      setOwners(customersData);
     } catch (err: any) {
-      console.error("❌ Error fetching customer data:", err);
-      // Final attempt to load from /api/dealer/customers unconditionally
-      try {
-        const directRes = await fetch("/api/dealer/customers");
-        if (directRes.ok) {
-          const directData = await directRes.json();
-          if (Array.isArray(directData) && directData.length > 0) {
-            setOwners(directData);
-            return;
-          }
-        }
-      } catch {}
+      console.error("FastAPI error fetching customer data:", err);
+      setOwners([]);
       if (err.response?.status === 401) {
         errorMessage("Unauthorized. Please login again.");
-      } else if (err.response?.status === 404) {
-        setOwners([]);
       } else {
         errorMessage("Error fetching customers");
       }

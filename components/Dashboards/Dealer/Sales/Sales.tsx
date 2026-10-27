@@ -18,6 +18,7 @@ import {
   Flame,
   ShieldCheck,
   ChevronRight,
+  ChevronDown,
   ExternalLink,
   CheckCircle2,
   Calendar,
@@ -27,7 +28,7 @@ import {
 } from "lucide-react";
 import { useCookie } from "next-cookie";
 import { renderInstance } from "@/utils/Axios/RenderInstance";
-import { errorMessage, successMessage } from "@/utils/Toastify/Messages";
+import { errorMessage } from "@/utils/Toastify/Messages";
 
 interface ApiTractor {
   id: string;
@@ -130,7 +131,6 @@ export default function SalesPage() {
 
       if (Array.isArray(data)) {
         setLeads(data);
-        if (isRefresh) successMessage(`Updated ${data.length} sales leads`);
       }
     } catch (err: any) {
       console.error("Error fetching sales leads:", err);
@@ -282,54 +282,63 @@ export default function SalesPage() {
       <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row md:items-center gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-2.5 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               placeholder="Search by buyer name, city, phone, or tractor model..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:text-white"
+              className="w-full pl-10 pr-4 h-10 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:text-white transition"
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2.5">
             {/* Stage Filter */}
-            <select
-              value={stageFilter}
-              onChange={(e) => setStageFilter(e.target.value)}
-              className="px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-semibold text-gray-700 dark:text-gray-300 focus:outline-none"
-            >
-              <option value="all">All CRM Stages</option>
-              <option value="NEW">New Inquiry</option>
-              <option value="CONTACTED">Contacted</option>
-              <option value="TEST_DRIVE">Test Drive / Demo</option>
-              <option value="QUOTATION">Quotation Sent</option>
-              <option value="CLOSED_WON">Closed Won</option>
-            </select>
+            <div className="relative">
+              <select
+                value={stageFilter}
+                onChange={(e) => setStageFilter(e.target.value)}
+                className="h-10 pl-3.5 pr-8 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600 focus:ring-2 focus:ring-emerald-500 focus:outline-none appearance-none cursor-pointer transition"
+              >
+                <option value="all">All CRM Stages</option>
+                <option value="NEW">New Inquiry</option>
+                <option value="CONTACTED">Contacted</option>
+                <option value="TEST_DRIVE">Test Drive / Demo</option>
+                <option value="QUOTATION">Quotation Sent</option>
+                <option value="CLOSED_WON">Closed Won</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
 
             {/* Urgency Filter */}
-            <select
-              value={urgencyFilter}
-              onChange={(e) => setUrgencyFilter(e.target.value)}
-              className="px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-semibold text-gray-700 dark:text-gray-300 focus:outline-none"
-            >
-              <option value="all">All Urgency</option>
-              <option value="HOT">🔥 Hot (Immediate / 1-7d)</option>
-              <option value="WARM">⚡ Warm (16-30d)</option>
-              <option value="COLD">❄ Cold (&gt;30d)</option>
-            </select>
+            <div className="relative">
+              <select
+                value={urgencyFilter}
+                onChange={(e) => setUrgencyFilter(e.target.value)}
+                className="h-10 pl-3.5 pr-8 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600 focus:ring-2 focus:ring-emerald-500 focus:outline-none appearance-none cursor-pointer transition"
+              >
+                <option value="all">All Urgency</option>
+                <option value="HOT">🔥 Hot (Immediate / 1-7d)</option>
+                <option value="WARM">⚡ Warm (16-30d)</option>
+                <option value="COLD">❄ Cold (&gt;30d)</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
 
             {/* Sort */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-semibold text-gray-700 dark:text-gray-300 focus:outline-none"
-            >
-              <option value="score-high">Highest AI Score</option>
-              <option value="newest">Newest First</option>
-              <option value="price-high">Price: High to Low</option>
-              <option value="price-low">Price: Low to High</option>
-            </select>
+            <div className="relative">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="h-10 pl-3.5 pr-8 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600 focus:ring-2 focus:ring-emerald-500 focus:outline-none appearance-none cursor-pointer transition"
+              >
+                <option value="score-high">Highest AI Score</option>
+                <option value="newest">Newest First</option>
+                <option value="price-high">Price: High to Low</option>
+                <option value="price-low">Price: Low to High</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
           </div>
         </div>
       </div>

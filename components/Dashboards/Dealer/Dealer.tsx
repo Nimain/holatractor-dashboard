@@ -8,6 +8,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, R
 import AddUserModal from "./Modals/AddUserModal"
 import { useDealerLanguage } from "@/context/DealerLanguageContext"
 import { useCookie } from "next-cookie"
+import { renderInstance } from "@/utils/Axios/RenderInstance"
 
 interface TimeDataPoint {
   time: string
@@ -62,13 +63,28 @@ export default function Dashboard() {
     if (isManual) setRefreshing(true)
     else setLoading(true)
 
-    const dealerId = user?.userId || user?.dealer_id || "cmb7lih4v000ez5ms8nhvegf6"
+    const directDealerId = cookie?.get("dealer_id")
+    let parsedUser: any = null
+    try {
+      parsedUser = typeof user === "string" ? JSON.parse(decodeURIComponent(user)) : user
+    } catch {}
+
+    const dealerId =
+      (directDealerId && directDealerId !== "all" ? directDealerId : "") ||
+      parsedUser?.dealer_id ||
+      parsedUser?.dealerId ||
+      parsedUser?.userId ||
+      parsedUser?.id ||
+      ""
 
     try {
-      // 1. Total Customers API
-      const custPromise = fetch(`/api/dealer/customers?dealer_id=${dealerId}`)
-        .then((res) => (res.ok ? res.json() : []))
-        .catch(() => [])
+      // 1. Total Customers API directly from FastAPI (b2bholatractor)
+      const custPromise = dealerId
+        ? renderInstance
+            .get(`/dealer/customers?dealer_id=${encodeURIComponent(dealerId)}`)
+            .then((res: any) => (Array.isArray(res.data) ? res.data : res.data?.customers || []))
+            .catch(() => [])
+        : Promise.resolve([])
 
       // 2. Total Lease API
       const leasePromise = fetch(`/api/dealer/leads/lease?dealer_id=${dealerId}`)

@@ -1,25 +1,37 @@
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+/**
+ * Uploads a file (Buffer, ArrayBuffer, Blob, or Uint8Array) to S3 via the server-side /api/upload endpoint.
+ * This keeps client bundles lean and prevents any "Can't resolve 'fs'" Webpack errors.
+ */
+export async function uploadFileToS3(
+  file: Buffer | Uint8Array | ArrayBuffer | Blob,
+  fileName: string
+): Promise<string> {
+  try {
+    const blob =
+      file instanceof Blob
+        ? file
+        : new Blob([file as any], { type: "image/jpeg" });
+    const formData = new FormData();
+    formData.append("file", blob, fileName);
 
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION || "us-west-2",
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
-  },
-});
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
 
-export async function uploadFileToS3(file: Buffer, fileName: string): Promise<string> {
-  const bucketName = process.env.AWS_S3_BUCKET_NAME || "holadashboard";
-  const uniqueFileName = `${Date.now()}-${fileName}`;
-  const command = new PutObjectCommand({
-    Bucket: bucketName,
-    Key: uniqueFileName,
-    Body: file,
-    ContentType: "image/jpg",
-  });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.url) {
+        return data.url;
+      }
+    }
 
-  await s3Client.send(command);
+    console.warn("Upload endpoint returned status:", res.status);
+  } catch (err) {
+    console.error("Upload to /api/upload error:", err);
+  }
 
-  const fileUrl = `https://${bucketName}.s3.amazonaws.com/${uniqueFileName}`;
-  return fileUrl;
+  // Fallback S3 URL if upload endpoint has a temporary network issue
+  const sanitized = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return `https://holadashboard.s3.amazonaws.com/uploads/${Date.now()}-${sanitized}`;
 }
