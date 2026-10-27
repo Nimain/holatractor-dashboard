@@ -97,12 +97,13 @@ export default function SalesPage() {
     else setFetching(true);
 
     try {
-      const dealerId = user?.userId || "cmb7lih4v000ez5ms8nhvegf6";
+      const dealerId = (user as any)?.dealer_id || user?.userId || (user as any)?.id || "";
       let data: any = null;
 
       // 1. Try Next.js API first
       try {
-        const localRes = await fetch(`/api/dealer/leads/sales?dealer_id=${dealerId}`);
+        const query = dealerId ? `?dealer_id=${dealerId}` : "";
+        const localRes = await fetch(`/api/dealer/leads/sales${query}`);
         if (localRes.ok) {
           const json = await localRes.json();
           if (json.success && Array.isArray(json.leads)) {
@@ -114,7 +115,8 @@ export default function SalesPage() {
       // 2. Try FastAPI directly
       if (!data) {
         try {
-          const fastRes = await renderInstance.get(`/dealer/leads/sales?dealer_id=${dealerId}`);
+          const query = dealerId ? `?dealer_id=${dealerId}` : "";
+          const fastRes = await renderInstance.get(`/dealer/leads/sales${query}`);
           if (fastRes.data?.leads) {
             data = fastRes.data.leads;
           } else if (Array.isArray(fastRes.data)) {

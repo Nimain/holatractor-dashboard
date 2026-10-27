@@ -40,7 +40,7 @@ function getDealerIdFromRequest(request: NextRequest, explicit?: string | null):
       if (found) return found;
     }
   } catch {}
-  return "cmb7lih4v000ez5ms8nhvegf6"; // Active dealer ID
+  return "";
 }
 
 export async function GET(request: NextRequest) {
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     // Call FastAPI directly with dealer_id
     const endpoint = effectiveDealerId && effectiveDealerId !== "all"
       ? `${fastApiUrl}/dealer/stores?dealer_id=${encodeURIComponent(effectiveDealerId)}`
-      : `${fastApiUrl}/dealer/stores?dealer_id=cmb7lih4v000ez5ms8nhvegf6`;
+      : `${fastApiUrl}/dealer/stores`;
 
     const fastRes = await fetch(endpoint, {
       headers,

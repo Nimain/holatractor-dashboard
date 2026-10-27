@@ -165,10 +165,10 @@ export default function AutomationWorkflow() {
         parsed?.id ||
         authUser?.userId ||
         authUser?.id ||
-        "cmb7lih4v000ez5ms8nhvegf6"
+        ""
       )
     } catch {
-      return (authUser as any)?.dealer_id || authUser?.userId || authUser?.id || "cmb7lih4v000ez5ms8nhvegf6"
+      return (authUser as any)?.dealer_id || authUser?.userId || authUser?.id || ""
     }
   }, [rawCookieUser, authUser])
 

@@ -12,12 +12,13 @@ export async function DELETE(
   try {
     const { id } = params;
     const { searchParams } = new URL(request.url);
-    const dealerId = searchParams.get("dealer_id") || "cmb7lih4v000ez5ms8nhvegf6";
+    const dealerId = searchParams.get("dealer_id") || searchParams.get("dealerId") || "";
 
     // 1. Try FastAPI
     const fastApiUrl = getBackendBaseUrl();
     try {
-      const fastRes = await fetch(`${fastApiUrl}/dealer/settings/security/sessions/${id}?dealer_id=${dealerId}`, {
+      const url = dealerId ? `${fastApiUrl}/dealer/settings/security/sessions/${id}?dealer_id=${dealerId}` : `${fastApiUrl}/dealer/settings/security/sessions/${id}`;
+      const fastRes = await fetch(url, {
         method: "DELETE",
       });
       if (fastRes.ok) {
@@ -31,21 +32,26 @@ export async function DELETE(
     // 2. Direct PostgreSQL fallback
     const client = await pool.connect();
     try {
+      let resolvedDealerId = dealerId;
+      if (!resolvedDealerId) {
+        const dRes = await client.query('SELECT id FROM "Dealer" ORDER BY "createdAt" ASC LIMIT 1');
+        if (dRes.rows.length > 0) resolvedDealerId = dRes.rows[0].id;
+      }
       const row = await client.query(
-        'SELECT device_name FROM "DealerSecuritySession" WHERE id = $1 AND dealer_id = $2;',
-        [id, dealerId]
+        'SELECT device_name FROM "DealerSecuritySession" WHERE id = $1 AND ($2 = \'\' OR dealer_id = $2);',
+        [id, resolvedDealerId || ""]
       );
       const devName = row.rows[0]?.device_name || "Device";
 
       await client.query(
-        'DELETE FROM "DealerSecuritySession" WHERE id = $1 AND dealer_id = $2;',
-        [id, dealerId]
+        'DELETE FROM "DealerSecuritySession" WHERE id = $1 AND ($2 = \'\' OR dealer_id = $2);',
+        [id, resolvedDealerId || ""]
       );
 
       await client.query(`
         INSERT INTO "DealerSecurityLog" (id, dealer_id, event_type, description, ip_address, location, status, created_at)
         VALUES ($1, $2, 'SESSION_TERMINATED', $3, '190.181.42.18', 'Santa Cruz, Bolivia', 'SUCCESS', NOW());
-      `, [`log_${crypto.randomBytes(4).toString("hex")}`, dealerId, `Session for '${devName}' terminated`]);
+      `, [`log_${crypto.randomBytes(4).toString("hex")}`, resolvedDealerId || "", `Session for '${devName}' terminated`]);
 
       return NextResponse.json({
         success: true,

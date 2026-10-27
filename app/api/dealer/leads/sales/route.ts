@@ -7,12 +7,15 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const dealerId = searchParams.get("dealer_id") || searchParams.get("dealerId") || "cmb7lih4v000ez5ms8nhvegf6";
+    const dealerId = searchParams.get("dealer_id") || searchParams.get("dealerId") || "";
 
     // Forward to FastAPI for rich AI scoring or query DB directly
     const fastApiUrl = getBackendBaseUrl();
     try {
-      const fastRes = await fetch(`${fastApiUrl}/dealer/leads/sales?dealer_id=${dealerId}`, {
+      const endpoint = dealerId && dealerId !== "all"
+        ? `${fastApiUrl}/dealer/leads/sales?dealer_id=${encodeURIComponent(dealerId)}`
+        : `${fastApiUrl}/dealer/leads/sales`;
+      const fastRes = await fetch(endpoint, {
         cache: "no-store",
       });
       if (fastRes.ok) {
@@ -58,7 +61,7 @@ export async function GET(request: NextRequest) {
         LEFT JOIN "SellTractor" st ON tl."tractorId" = st.id
         LEFT JOIN "TractorSpecification" ts ON st."tractorSpecificationId" = ts.id
         LEFT JOIN "User" u ON tl.user_id = u.id
-        WHERE st."dealerId" = $1 OR st."dealerId" IS NULL OR $1 = 'all'
+        WHERE ($1 = '' OR $1 = 'all' OR st."dealerId" = $1 OR st."dealerId" IS NULL)
         ORDER BY tl."createdAt" DESC;
       `;
       const res = await client.query(sql, [dealerId]);

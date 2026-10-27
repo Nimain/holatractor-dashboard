@@ -7,13 +7,14 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const dealerId = searchParams.get("dealer_id") || "cmb7lih4v000ez5ms8nhvegf6";
+    const dealerId = searchParams.get("dealer_id") || searchParams.get("dealerId") || "";
 
     const fastApiUrl = getBackendBaseUrl();
 
     // 1. Try FastAPI
     try {
-      const fastRes = await fetch(`${fastApiUrl}/dealer/analytics/time-worked?dealer_id=${dealerId}`, {
+      const fastUrl = dealerId ? `${fastApiUrl}/dealer/analytics/time-worked?dealer_id=${dealerId}` : `${fastApiUrl}/dealer/analytics/time-worked`;
+      const fastRes = await fetch(fastUrl, {
         cache: "no-store",
       });
       if (fastRes.ok) {

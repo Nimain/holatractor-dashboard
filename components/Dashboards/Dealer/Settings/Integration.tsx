@@ -34,6 +34,7 @@ import {
   FaStripe,
   FaPaypal
 } from "react-icons/fa"
+import { getAuthUser } from "@/utils/auth/clientAuth"
 
 interface IntegrationField {
   key: string
@@ -122,7 +123,10 @@ export default function Integration() {
     else setLoading(true)
 
     try {
-      const res = await fetch("/api/dealer/settings/integration?dealer_id=cmb7lih4v000ez5ms8nhvegf6", {
+      const authUser = getAuthUser()
+      const did = (authUser as any)?.dealer_id || authUser?.userId || (authUser as any)?.id || ""
+      const url = did ? `/api/dealer/settings/integration?dealer_id=${did}` : "/api/dealer/settings/integration"
+      const res = await fetch(url, {
         cache: "no-store",
       })
       const data = await res.json()

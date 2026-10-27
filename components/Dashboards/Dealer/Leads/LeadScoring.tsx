@@ -76,11 +76,12 @@ export default function LeadScoring() {
     else setLoading(true);
 
     try {
-      const dealerId = user?.userId || "cmb7lih4v000ez5ms8nhvegf6";
+      const dealerId = (user as any)?.dealer_id || user?.userId || (user as any)?.id || "";
       let data: any = null;
 
       try {
-        const localRes = await fetch(`/api/dealer/leads/scoring?dealer_id=${dealerId}`);
+        const query = dealerId ? `?dealer_id=${dealerId}` : "";
+        const localRes = await fetch(`/api/dealer/leads/scoring${query}`);
         if (localRes.ok) {
           const json = await localRes.json();
           if (json.success) data = json;
@@ -88,7 +89,8 @@ export default function LeadScoring() {
       } catch (err) {}
 
       if (!data) {
-        const fastRes = await renderInstance.get(`/dealer/leads/scoring?dealer_id=${dealerId}`);
+        const query = dealerId ? `?dealer_id=${dealerId}` : "";
+        const fastRes = await renderInstance.get(`/dealer/leads/scoring${query}`);
         data = fastRes.data;
       }
 

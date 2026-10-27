@@ -80,11 +80,12 @@ export default function ConversionRates() {
     else setLoading(true);
 
     try {
-      const dealerId = user?.userId || "cmb7lih4v000ez5ms8nhvegf6";
+      const dealerId = (user as any)?.dealer_id || user?.userId || (user as any)?.id || "";
       let data: any = null;
 
       try {
-        const localRes = await fetch(`/api/dealer/leads/conversion?dealer_id=${dealerId}&period=${timePeriod}`);
+        const query = dealerId ? `dealer_id=${dealerId}&period=${timePeriod}` : `period=${timePeriod}`;
+        const localRes = await fetch(`/api/dealer/leads/conversion?${query}`);
         if (localRes.ok) {
           const json = await localRes.json();
           if (json.success) data = json;
@@ -92,7 +93,8 @@ export default function ConversionRates() {
       } catch (err) {}
 
       if (!data) {
-        const fastRes = await renderInstance.get(`/dealer/leads/conversion?dealer_id=${dealerId}&period=${timePeriod}`);
+        const query = dealerId ? `dealer_id=${dealerId}&period=${timePeriod}` : `period=${timePeriod}`;
+        const fastRes = await renderInstance.get(`/dealer/leads/conversion?${query}`);
         data = fastRes.data;
       }
 

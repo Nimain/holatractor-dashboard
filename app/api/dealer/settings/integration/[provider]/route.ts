@@ -11,10 +11,11 @@ export async function PUT(
     const { provider } = params;
     const body = await request.json();
     const { searchParams } = new URL(request.url);
-    const dealerId = searchParams.get("dealer_id") || body.dealer_id || "cmb7lih4v000ez5ms8nhvegf6";
+    const dealerId = searchParams.get("dealer_id") || searchParams.get("dealerId") || body.dealer_id || body.dealerId || "";
 
     const fastApiUrl = getBackendBaseUrl();
-    const fastRes = await fetch(`${fastApiUrl}/dealer/integrations/${provider}?dealer_id=${dealerId}`, {
+    const url = dealerId ? `${fastApiUrl}/dealer/integrations/${provider}?dealer_id=${dealerId}` : `${fastApiUrl}/dealer/integrations/${provider}`;
+    const fastRes = await fetch(url, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -38,10 +39,11 @@ export async function PATCH(
     const { provider } = params;
     const body = await request.json().catch(() => ({}));
     const { searchParams } = new URL(request.url);
-    const dealerId = searchParams.get("dealer_id") || body.dealer_id || "cmb7lih4v000ez5ms8nhvegf6";
+    const dealerId = searchParams.get("dealer_id") || searchParams.get("dealerId") || body.dealer_id || body.dealerId || "";
 
     const fastApiUrl = getBackendBaseUrl();
-    const fastRes = await fetch(`${fastApiUrl}/dealer/integrations/${provider}/toggle?dealer_id=${dealerId}`, {
+    const url = dealerId ? `${fastApiUrl}/dealer/integrations/${provider}/toggle?dealer_id=${dealerId}` : `${fastApiUrl}/dealer/integrations/${provider}/toggle`;
+    const fastRes = await fetch(url, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -64,10 +66,11 @@ export async function DELETE(
   try {
     const { provider } = params;
     const { searchParams } = new URL(request.url);
-    const dealerId = searchParams.get("dealer_id") || "cmb7lih4v000ez5ms8nhvegf6";
+    const dealerId = searchParams.get("dealer_id") || searchParams.get("dealerId") || "";
 
     const fastApiUrl = getBackendBaseUrl();
-    const fastRes = await fetch(`${fastApiUrl}/dealer/integrations/${provider}?dealer_id=${dealerId}`, {
+    const url = dealerId ? `${fastApiUrl}/dealer/integrations/${provider}?dealer_id=${dealerId}` : `${fastApiUrl}/dealer/integrations/${provider}`;
+    const fastRes = await fetch(url, {
       method: "DELETE",
     });
 

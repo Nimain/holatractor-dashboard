@@ -6,10 +6,13 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const dealerId = searchParams.get("dealer_id") || searchParams.get("dealerId") || "cmb7lih4v000ez5ms8nhvegf6";
+    const dealerId = searchParams.get("dealer_id") || searchParams.get("dealerId") || "";
 
     const fastApiUrl = getBackendBaseUrl();
-    const fastRes = await fetch(`${fastApiUrl}/dealer/leads/scoring?dealer_id=${dealerId}`, {
+    const endpoint = dealerId && dealerId !== "all"
+      ? `${fastApiUrl}/dealer/leads/scoring?dealer_id=${encodeURIComponent(dealerId)}`
+      : `${fastApiUrl}/dealer/leads/scoring`;
+    const fastRes = await fetch(endpoint, {
       cache: "no-store",
     });
     if (fastRes.ok) {

@@ -56,7 +56,7 @@ interface SecurityLogItem {
 
 export default function Security() {
   const [loading, setLoading] = useState(true)
-  const [dealerId, setDealerId] = useState("cmb7lih4v000ez5ms8nhvegf6")
+  const [dealerId, setDealerId] = useState("")
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null)
 
   // Security Settings State
@@ -175,7 +175,7 @@ export default function Security() {
 
   useEffect(() => {
     const authUser = getAuthUser()
-    const activeId = authUser?.userId || "cmb7lih4v000ez5ms8nhvegf6"
+    const activeId = (authUser as any)?.dealer_id || authUser?.userId || (authUser as any)?.id || ""
     setDealerId(activeId)
     registerCurrentClientSession(activeId).then(() => {
       fetchSecurityData(activeId)

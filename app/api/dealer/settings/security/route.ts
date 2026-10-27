@@ -7,12 +7,13 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const dealerId = searchParams.get("dealer_id") || searchParams.get("dealerId") || "cmb7lih4v000ez5ms8nhvegf6";
+    const dealerId = searchParams.get("dealer_id") || searchParams.get("dealerId") || "";
 
     // 1. Try FastAPI backend
     const fastApiUrl = getBackendBaseUrl();
     try {
-      const fastRes = await fetch(`${fastApiUrl}/dealer/settings/security?dealer_id=${dealerId}`, {
+      const fastUrl = dealerId ? `${fastApiUrl}/dealer/settings/security?dealer_id=${dealerId}` : `${fastApiUrl}/dealer/settings/security`;
+      const fastRes = await fetch(fastUrl, {
         cache: "no-store",
       });
       if (fastRes.ok) {
@@ -26,20 +27,25 @@ export async function GET(request: NextRequest) {
     // 2. Direct PostgreSQL fallback
     const client = await pool.connect();
     try {
+      let resolvedDealerId = dealerId;
+      if (!resolvedDealerId) {
+        const dRes = await client.query('SELECT id FROM "Dealer" ORDER BY "createdAt" ASC LIMIT 1');
+        if (dRes.rows.length > 0) resolvedDealerId = dRes.rows[0].id;
+      }
       const setRes = await client.query(
-        'SELECT two_factor_enabled, login_alerts, session_timeout_minutes, updated_at FROM "DealerSettings" WHERE dealer_id = $1 LIMIT 1;',
-        [dealerId]
+        'SELECT two_factor_enabled, login_alerts, session_timeout_minutes, updated_at FROM "DealerSettings" WHERE ($1 = \'\' OR dealer_id = $1) LIMIT 1;',
+        [resolvedDealerId || ""]
       );
       const setRow = setRes.rows[0];
 
       const sessRes = await client.query(
-        'SELECT id, dealer_id, device_name, device_type, browser, os, ip_address, location, is_current, last_active, created_at FROM "DealerSecuritySession" WHERE dealer_id = $1 ORDER BY is_current DESC, last_active DESC;',
-        [dealerId]
+        'SELECT id, dealer_id, device_name, device_type, browser, os, ip_address, location, is_current, last_active, created_at FROM "DealerSecuritySession" WHERE ($1 = \'\' OR dealer_id = $1) ORDER BY is_current DESC, last_active DESC;',
+        [resolvedDealerId || ""]
       );
 
       const logRes = await client.query(
-        'SELECT id, event_type, description, ip_address, location, status, created_at FROM "DealerSecurityLog" WHERE dealer_id = $1 ORDER BY created_at DESC LIMIT 15;',
-        [dealerId]
+        'SELECT id, event_type, description, ip_address, location, status, created_at FROM "DealerSecurityLog" WHERE ($1 = \'\' OR dealer_id = $1) ORDER BY created_at DESC LIMIT 15;',
+        [resolvedDealerId || ""]
       );
 
       return NextResponse.json({

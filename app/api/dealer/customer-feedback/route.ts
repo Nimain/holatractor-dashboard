@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
-      dealer_id = "cmb7lih4v000ez5ms8nhvegf6",
+      dealer_id = null,
       customer_id = null,
       customer_name,
       customer_email = null,
@@ -210,6 +210,12 @@ export async function POST(request: NextRequest) {
 
     const client = await pool.connect();
     try {
+      let resolvedDealerId = dealer_id || body.dealerId || null;
+      if (!resolvedDealerId) {
+        const dRes = await client.query('SELECT id FROM "Dealer" ORDER BY "createdAt" ASC LIMIT 1');
+        if (dRes.rows.length > 0) resolvedDealerId = dRes.rows[0].id;
+      }
+
       const insertSql = `
         INSERT INTO "DealerCustomerFeedback" (
           id, dealer_id, customer_id, customer_name, customer_email, customer_phone,
@@ -220,7 +226,7 @@ export async function POST(request: NextRequest) {
         ) RETURNING id;
       `;
       const res = await client.query(insertSql, [
-        id, dealer_id, customer_id, customer_name, customer_email, customer_phone,
+        id, resolvedDealerId, customer_id, customer_name, customer_email, customer_phone,
         avatar, store_id, service_type, numRating, reviewTitle, comment,
         sentiment.toUpperCase(), status.toUpperCase()
       ]);

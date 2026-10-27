@@ -187,7 +187,7 @@ export default function CreateTicketModal({ isOpen, onClose, onCreated }: Create
     }
 
     const authUser = getAuthUser();
-    const dealerId = (authUser as any)?.dealer_id || authUser?.userId || "cmb7lih4v000ez5ms8nhvegf6";
+    const dealerId = (authUser as any)?.dealer_id || authUser?.userId || (authUser as any)?.id || "";
 
     const payload = {
       ...formData,

@@ -24,7 +24,7 @@ export default function AddFeedbackModal({
   isOpen,
   onClose,
   onSuccess,
-  dealerId = "cmb7lih4v000ez5ms8nhvegf6",
+  dealerId = "",
 }: AddFeedbackModalProps) {
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");

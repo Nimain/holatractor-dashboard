@@ -47,7 +47,7 @@ export default function GeneralSettings() {
   const [copied, setCopied] = useState(false)
   const [showRegenModal, setShowRegenModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [dealerId, setDealerId] = useState("cmb7lih4v000ez5ms8nhvegf6")
+  const [dealerId, setDealerId] = useState("")
 
   // Show notification for 4 seconds
   const showNotice = (type: "success" | "error", message: string) => {
@@ -90,7 +90,7 @@ export default function GeneralSettings() {
 
   useEffect(() => {
     const authUser = getAuthUser()
-    const activeId = authUser?.userId || "cmb7lih4v000ez5ms8nhvegf6"
+    const activeId = (authUser as any)?.dealer_id || authUser?.userId || (authUser as any)?.id || ""
     setDealerId(activeId)
     fetchSettings(activeId)
   }, [])

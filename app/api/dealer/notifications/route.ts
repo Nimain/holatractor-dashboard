@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const dealerId = searchParams.get("dealer_id") || "cmb7lih4v000ez5ms8nhvegf6";
+    const dealerId = searchParams.get("dealer_id") || searchParams.get("dealerId") || "";
     const status = searchParams.get("status") || "";
     const category = searchParams.get("category") || "";
     const search = searchParams.get("search") || "";
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     // 1. Try FastAPI
     try {
       const url = new URL(`${fastApiUrl}/dealer/notifications`);
-      url.searchParams.set("dealer_id", dealerId);
+      if (dealerId) url.searchParams.set("dealer_id", dealerId);
       if (status && status !== "all") url.searchParams.set("status", status);
       if (category && category !== "all") url.searchParams.set("category", category);
       if (search) url.searchParams.set("search", search);
@@ -34,14 +34,19 @@ export async function GET(request: NextRequest) {
     // 2. Direct PostgreSQL fallback
     const client = await pool.connect();
     try {
+      let resolvedDealerId = dealerId;
+      if (!resolvedDealerId) {
+        const dealerRes = await client.query('SELECT id FROM "Dealer" ORDER BY "createdAt" ASC LIMIT 1');
+        if (dealerRes.rows.length > 0) resolvedDealerId = dealerRes.rows[0].id;
+      }
       let query = `
         SELECT id, dealer_id, user_id, title, message, category, channel,
                status, is_read, active_from, active_to, target_audience,
                created_at, updated_at
         FROM "DealerNotification"
-        WHERE dealer_id = $1
+        WHERE ($1 = '' OR dealer_id = $1)
       `;
-      const params: any[] = [dealerId];
+      const params: any[] = [resolvedDealerId || ""];
       let paramIndex = 2;
 
       if (status && status.toLowerCase() !== "all") {
@@ -157,8 +162,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const dealerId = body.dealer_id || "cmb7lih4v000ez5ms8nhvegf6";
-    const userId = body.user_id || "cmb7lifc50005z5msact2jzxf";
+    let dealerId = body.dealer_id || body.dealerId || "";
+    let userId = body.user_id || body.userId || "";
 
     const fastApiUrl = getBackendBaseUrl();
 
@@ -167,7 +172,7 @@ export async function POST(request: NextRequest) {
       const fastRes = await fetch(`${fastApiUrl}/dealer/notifications`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...body, dealer_id: dealerId, user_id: userId }),
+        body: JSON.stringify({ ...body, ...(dealerId ? { dealer_id: dealerId } : {}), ...(userId ? { user_id: userId } : {}) }),
       });
       if (fastRes.ok) {
         const data = await fastRes.json();
@@ -180,6 +185,14 @@ export async function POST(request: NextRequest) {
     // 2. Direct PostgreSQL fallback
     const client = await pool.connect();
     try {
+      if (!dealerId) {
+        const dRes = await client.query('SELECT id FROM "Dealer" ORDER BY "createdAt" ASC LIMIT 1');
+        if (dRes.rows.length > 0) dealerId = dRes.rows[0].id;
+      }
+      if (!userId) {
+        const uRes = await client.query('SELECT id FROM "User" ORDER BY "createdAt" ASC LIMIT 1');
+        if (uRes.rows.length > 0) userId = uRes.rows[0].id;
+      }
       const idRes = await client.query(`
         SELECT id FROM "DealerNotification"
         WHERE id LIKE '#%'

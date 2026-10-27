@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { X, Upload, ChevronDown } from "lucide-react"
+import { getAuthUser } from "@/utils/auth/clientAuth"
 
 interface AddUserModalProps {
   isOpen: boolean
@@ -12,6 +13,9 @@ interface AddUserModalProps {
 }
 
 export default function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
+  const user = getAuthUser()
+  const dealerId = (user as any)?.dealer_id || user?.userId || (user as any)?.id || ""
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -64,7 +68,7 @@ export default function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserMo
           city: formData.location || "Default",
           gender: "Male",
           status: "Active",
-          dealer_id: "cmb7lih4v000ez5ms8nhvegf6",
+          dealer_id: dealerId,
         }),
       })
 

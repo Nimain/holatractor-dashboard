@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const dealerId = body.dealer_id || "cmb7lih4v000ez5ms8nhvegf6";
+    let dealerId = body.dealer_id || body.dealerId || "";
     const enabled = Boolean(body.enabled);
 
     // 1. Try FastAPI
@@ -17,7 +17,7 @@ export async function PATCH(request: NextRequest) {
       const fastRes = await fetch(`${fastApiUrl}/dealer/settings/security/two-factor`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...body, ...(dealerId ? { dealer_id: dealerId } : {}) }),
       });
       if (fastRes.ok) {
         const data = await fastRes.json();
@@ -30,6 +30,10 @@ export async function PATCH(request: NextRequest) {
     // 2. Direct PostgreSQL fallback
     const client = await pool.connect();
     try {
+      if (!dealerId) {
+        const dRes = await client.query('SELECT id FROM "Dealer" ORDER BY "createdAt" ASC LIMIT 1');
+        if (dRes.rows.length > 0) dealerId = dRes.rows[0].id;
+      }
       await client.query(
         'UPDATE "DealerSettings" SET two_factor_enabled = $1, updated_at = NOW() WHERE dealer_id = $2;',
         [enabled, dealerId]

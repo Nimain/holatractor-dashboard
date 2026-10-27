@@ -7,13 +7,14 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const dealerId = searchParams.get("dealer_id") || "cmb7lih4v000ez5ms8nhvegf6";
+    const dealerId = searchParams.get("dealer_id") || searchParams.get("dealerId") || "";
 
     const fastApiUrl = getBackendBaseUrl();
 
     // 1. Try FastAPI
     try {
-      const fastRes = await fetch(`${fastApiUrl}/dealer/notifications/settings?dealer_id=${dealerId}`, {
+      const fastUrl = dealerId ? `${fastApiUrl}/dealer/notifications/settings?dealer_id=${dealerId}` : `${fastApiUrl}/dealer/notifications/settings`;
+      const fastRes = await fetch(fastUrl, {
         cache: "no-store",
       });
       if (fastRes.ok) {
@@ -27,15 +28,20 @@ export async function GET(request: NextRequest) {
     // 2. Direct PostgreSQL fallback
     const client = await pool.connect();
     try {
+      let resolvedDealerId = dealerId;
+      if (!resolvedDealerId) {
+        const dRes = await client.query('SELECT id FROM "Dealer" ORDER BY "createdAt" ASC LIMIT 1');
+        if (dRes.rows.length > 0) resolvedDealerId = dRes.rows[0].id;
+      }
       const res = await client.query(`
         SELECT id, dealer_id, user_id, desktop_notification, unread_badge,
                push_timeout, communication_emails, announcements_updates,
                disable_all_sounds, lead_alerts, repair_alerts, marketing_alerts,
                created_at, updated_at
         FROM "DealerNotificationSettings"
-        WHERE dealer_id = $1
+        WHERE ($1 = '' OR dealer_id = $1)
         LIMIT 1;
-      `, [dealerId]);
+      `, [resolvedDealerId || ""]);
 
       if (res.rows.length === 0) {
         return NextResponse.json({
@@ -102,7 +108,7 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const dealerId = body.dealer_id || "cmb7lih4v000ez5ms8nhvegf6";
+    let dealerId = body.dealer_id || body.dealerId || "";
 
     const fastApiUrl = getBackendBaseUrl();
 
@@ -111,7 +117,7 @@ export async function PUT(request: NextRequest) {
       const fastRes = await fetch(`${fastApiUrl}/dealer/notifications/settings`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...body, dealer_id: dealerId }),
+        body: JSON.stringify({ ...body, ...(dealerId ? { dealer_id: dealerId } : {}) }),
       });
       if (fastRes.ok) {
         const data = await fastRes.json();
@@ -124,6 +130,10 @@ export async function PUT(request: NextRequest) {
     // 2. Direct PostgreSQL fallback
     const client = await pool.connect();
     try {
+      if (!dealerId) {
+        const dRes = await client.query('SELECT id FROM "Dealer" ORDER BY "createdAt" ASC LIMIT 1');
+        if (dRes.rows.length > 0) dealerId = dRes.rows[0].id;
+      }
       const updates: string[] = [];
       const values: any[] = [];
       let idx = 1;

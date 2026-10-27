@@ -10,10 +10,11 @@ export async function POST(
   try {
     const { provider } = params;
     const { searchParams } = new URL(request.url);
-    const dealerId = searchParams.get("dealer_id") || "cmb7lih4v000ez5ms8nhvegf6";
+    const dealerId = searchParams.get("dealer_id") || searchParams.get("dealerId") || "";
 
     const fastApiUrl = getBackendBaseUrl();
-    const fastRes = await fetch(`${fastApiUrl}/dealer/integrations/${provider}/test-ping?dealer_id=${dealerId}`, {
+    const url = dealerId ? `${fastApiUrl}/dealer/integrations/${provider}/test-ping?dealer_id=${dealerId}` : `${fastApiUrl}/dealer/integrations/${provider}/test-ping`;
+    const fastRes = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
     });

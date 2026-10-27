@@ -79,12 +79,13 @@ export default function LeaseLeadsPage() {
     else setFetching(true);
 
     try {
-      const dealerId = user?.userId || "cmb7lih4v000ez5ms8nhvegf6";
+      const dealerId = (user as any)?.dealer_id || user?.userId || (user as any)?.id || "";
       let data: any = null;
 
       // 1. Next.js API
       try {
-        const res = await fetch(`/api/dealer/leads/lease?dealer_id=${dealerId}`);
+        const query = dealerId ? `?dealer_id=${dealerId}` : "";
+        const res = await fetch(`/api/dealer/leads/lease${query}`);
         if (res.ok) {
           const json = await res.json();
           if (json.success && Array.isArray(json.leads)) {
@@ -96,7 +97,8 @@ export default function LeaseLeadsPage() {
       // 2. FastAPI fallback
       if (!data) {
         try {
-          const fastRes = await renderInstance.get(`/dealer/leads/lease?dealer_id=${dealerId}`);
+          const query = dealerId ? `?dealer_id=${dealerId}` : "";
+          const fastRes = await renderInstance.get(`/dealer/leads/lease${query}`);
           if (fastRes.data?.leads) {
             data = fastRes.data.leads;
           } else if (Array.isArray(fastRes.data)) {
@@ -106,7 +108,7 @@ export default function LeaseLeadsPage() {
       }
 
       // 3. Legacy route fallback
-      if (!data) {
+      if (!data && dealerId) {
         const legRes = await renderInstance.get(`/dealer/store/tractorleaselead/${dealerId}`);
         data = Array.isArray(legRes.data) ? legRes.data : legRes.data?.data || [];
       }

@@ -8,12 +8,13 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const dealerId = searchParams.get("dealer_id") || searchParams.get("dealerId") || "cmb7lih4v000ez5ms8nhvegf6";
+    const dealerId = searchParams.get("dealer_id") || searchParams.get("dealerId") || "";
 
     // 1. Try FastAPI backend
     const fastApiUrl = getBackendBaseUrl();
     try {
-      const fastRes = await fetch(`${fastApiUrl}/dealer/settings/general?dealer_id=${dealerId}`, {
+      const fastUrl = dealerId ? `${fastApiUrl}/dealer/settings/general?dealer_id=${dealerId}` : `${fastApiUrl}/dealer/settings/general`;
+      const fastRes = await fetch(fastUrl, {
         cache: "no-store",
       });
       if (fastRes.ok) {
@@ -27,6 +28,11 @@ export async function GET(request: NextRequest) {
     // 2. Direct PostgreSQL query
     const client = await pool.connect();
     try {
+      let resolvedDealerId = dealerId;
+      if (!resolvedDealerId) {
+        const dRes = await client.query('SELECT id FROM "Dealer" ORDER BY "createdAt" ASC LIMIT 1');
+        if (dRes.rows.length > 0) resolvedDealerId = dRes.rows[0].id;
+      }
       const query = `
         SELECT 
           s.id,
@@ -52,10 +58,10 @@ export async function GET(request: NextRequest) {
         FROM "DealerSettings" s
         LEFT JOIN "Dealer" d ON s.dealer_id = d.id
         LEFT JOIN "User" u ON d.user_id = u.id
-        WHERE s.dealer_id = $1
+        WHERE ($1 = '' OR s.dealer_id = $1)
         LIMIT 1;
       `;
-      const res = await client.query(query, [dealerId]);
+      const res = await client.query(query, [resolvedDealerId || ""]);
 
       if (res.rows.length > 0) {
         const row = res.rows[0];
@@ -134,7 +140,7 @@ export async function PATCH(request: NextRequest) {
 async function handleUpdate(request: NextRequest) {
   try {
     const body = await request.json();
-    const dealerId = body.dealer_id || "cmb7lih4v000ez5ms8nhvegf6";
+    let dealerId = body.dealer_id || body.dealerId || "";
 
     // 1. Try FastAPI backend
     const fastApiUrl = getBackendBaseUrl();
@@ -142,7 +148,7 @@ async function handleUpdate(request: NextRequest) {
       const fastRes = await fetch(`${fastApiUrl}/dealer/settings/general`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...body, ...(dealerId ? { dealer_id: dealerId } : {}) }),
       });
       if (fastRes.ok) {
         const data = await fastRes.json();
@@ -155,6 +161,10 @@ async function handleUpdate(request: NextRequest) {
     // 2. Direct PostgreSQL fallback
     const client = await pool.connect();
     try {
+      if (!dealerId) {
+        const dRes = await client.query('SELECT id FROM "Dealer" ORDER BY "createdAt" ASC LIMIT 1');
+        if (dRes.rows.length > 0) dealerId = dRes.rows[0].id;
+      }
       await client.query("BEGIN");
       const updates: string[] = [];
       const values: any[] = [dealerId];
