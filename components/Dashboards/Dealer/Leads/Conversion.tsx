@@ -56,14 +56,14 @@ interface ConversionSummary {
 
 export default function ConversionRates() {
   const [summary, setSummary] = useState<ConversionSummary>({
-    overall_conversion_rate: 25.0,
-    total_leads_in_pipeline: 28,
-    sales_leads_count: 12,
-    lease_leads_count: 16,
-    closed_deals_count: 7,
-    avg_sales_cycle_days: 11,
-    sales_revenue_won: 223800.0,
-    lease_mrr_won: 19200.0,
+    overall_conversion_rate: 0,
+    total_leads_in_pipeline: 0,
+    sales_leads_count: 0,
+    lease_leads_count: 0,
+    closed_deals_count: 0,
+    avg_sales_cycle_days: 0,
+    sales_revenue_won: 0,
+    lease_mrr_won: 0,
   });
   const [funnel, setFunnel] = useState<FunnelStage[]>([]);
   const [weeklyTrend, setWeeklyTrend] = useState<WeeklyTrendItem[]>([]);
@@ -203,80 +203,89 @@ export default function ConversionRates() {
         </div>
       </div>
 
-      {/* KPI Highlights */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition">
-          <div className="flex items-center justify-between text-xs font-semibold text-gray-500 mb-2">
-            <span>Overall Conversion Rate</span>
-            <span className="flex items-center gap-1 text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full">
-              <ArrowUpRight className="w-3 h-3" /> +3.2%
-            </span>
-          </div>
-          <div className="text-4xl font-extrabold text-rose-600 dark:text-rose-400 tracking-tight">
-            {summary.overall_conversion_rate}%
-          </div>
-          <p className="mt-2 text-xs text-gray-500">
-            {summary.closed_deals_count} won from {summary.total_leads_in_pipeline} total prospects
+      {loading ? (
+        <div className="p-16 text-center bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-4">
+          <RefreshCw className="w-8 h-8 text-rose-500 animate-spin mx-auto" />
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            Loading real-time conversion and funnel analytics from FastAPI...
           </p>
         </div>
-
-        <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition">
-          <div className="flex items-center justify-between text-xs font-semibold text-gray-500 mb-2">
-            <span>Sales Revenue Won</span>
-            <DollarSign className="w-4 h-4 text-emerald-600" />
-          </div>
-          <div className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-            ${summary.sales_revenue_won.toLocaleString()}
-          </div>
-          <p className="mt-2 text-xs text-emerald-600 font-semibold">
-            From {summary.sales_leads_count} purchase leads
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition">
-          <div className="flex items-center justify-between text-xs font-semibold text-gray-500 mb-2">
-            <span>Lease MRR Added</span>
-            <TrendingUp className="w-4 h-4 text-blue-600" />
-          </div>
-          <div className="text-3xl font-extrabold text-blue-600 dark:text-blue-400 tracking-tight">
-            ${summary.lease_mrr_won.toLocaleString()}/mo
-          </div>
-          <p className="mt-2 text-xs text-gray-500">
-            From {summary.lease_leads_count} rental leads
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition">
-          <div className="flex items-center justify-between text-xs font-semibold text-gray-500 mb-2">
-            <span>Average Sales Velocity</span>
-            <Target className="w-4 h-4 text-purple-600" />
-          </div>
-          <div className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-            {summary.avg_sales_cycle_days} Days
-          </div>
-          <p className="mt-2 text-xs text-purple-600 font-semibold">
-            Inquiry to tractor handover
-          </p>
-        </div>
-      </div>
-
-      {/* Main Grid: Funnel Stages + Weekly Trend Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Funnel Pipeline (7 Cols) */}
-        <div className="lg:col-span-7 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-bold text-gray-900 dark:text-white text-base">
-                Full Lead Conversion Funnel
-              </h3>
-              <p className="text-xs text-gray-500">
-                Conversion health & drop-off metrics across each stage
+      ) : (
+        <>
+          {/* KPI Highlights */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition">
+              <div className="flex items-center justify-between text-xs font-semibold text-gray-500 mb-2">
+                <span>Overall Conversion Rate</span>
+                <span className="flex items-center gap-1 text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full">
+                  <ArrowUpRight className="w-3 h-3" /> {summary.total_leads_in_pipeline > 0 ? "Active" : "Ready"}
+                </span>
+              </div>
+              <div className="text-4xl font-extrabold text-rose-600 dark:text-rose-400 tracking-tight">
+                {summary.overall_conversion_rate}%
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                {summary.closed_deals_count} won from {summary.total_leads_in_pipeline} total prospects
               </p>
             </div>
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600">
-              5 Key Milestones
-            </span>
+
+            <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition">
+              <div className="flex items-center justify-between text-xs font-semibold text-gray-500 mb-2">
+                <span>Sales Revenue Won</span>
+                <DollarSign className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                ${summary.sales_revenue_won.toLocaleString()}
+              </div>
+              <p className="mt-2 text-xs text-emerald-600 font-semibold">
+                From {summary.sales_leads_count} purchase leads
+              </p>
+            </div>
+
+            <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition">
+              <div className="flex items-center justify-between text-xs font-semibold text-gray-500 mb-2">
+                <span>Lease MRR Added</span>
+                <TrendingUp className="w-4 h-4 text-blue-600" />
+              </div>
+              <div className="text-3xl font-extrabold text-blue-600 dark:text-blue-400 tracking-tight">
+                ${summary.lease_mrr_won.toLocaleString()}/mo
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                From {summary.lease_leads_count} rental leads
+              </p>
+            </div>
+
+            <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition">
+              <div className="flex items-center justify-between text-xs font-semibold text-gray-500 mb-2">
+                <span>Average Sales Velocity</span>
+                <Target className="w-4 h-4 text-purple-600" />
+              </div>
+              <div className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                {summary.avg_sales_cycle_days} Days
+              </div>
+              <p className="mt-2 text-xs text-purple-600 font-semibold">
+                Inquiry to tractor handover
+              </p>
+            </div>
           </div>
+
+          {/* Main Grid: Funnel Stages + Weekly Trend Chart */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Funnel Pipeline (7 Cols) */}
+            <div className="lg:col-span-7 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-white text-base">
+                    Full Lead Conversion Funnel
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    Conversion health & drop-off metrics across each stage
+                  </p>
+                </div>
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600">
+                  {funnel.length} Funnel Stages
+                </span>
+              </div>
 
           <div className="space-y-4 pt-2">
             {funnel.map((f, idx) => (
@@ -329,7 +338,7 @@ export default function ConversionRates() {
                 </p>
               </div>
               <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
-                <TrendingUp className="w-3.5 h-3.5" /> +18.4%
+                <TrendingUp className="w-3.5 h-3.5" /> {weeklyTrend.reduce((acc, c) => acc + c.deals, 0)} Total Deals
               </span>
             </div>
 
@@ -413,6 +422,8 @@ export default function ConversionRates() {
           ))}
         </div>
       </div>
-    </div>
+    </>
+  )}
+</div>
   );
 }
